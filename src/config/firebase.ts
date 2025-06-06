@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider as FirebaseGoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth'; // Cambiado aquí: quitado el alias FirebaseGoogleAuthProvider
 import { getFirestore, doc, setDoc, getDoc, collection } from 'firebase/firestore';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'; // Keep storage for other potential uses
 
@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
   authDomain: "app-iestp.firebaseapp.com",
   projectId: "app-iestp",
-  storageBucket: "app-iestp.appspot.com", // Corrected from your previous input, ensuring it ends with .com
+  storageBucket: "app-iestp.appspot.com", 
   messagingSenderId: "599711250596",
   appId: "1:599711250596:web:a570b99c0db17039540e31"
 };
@@ -26,7 +26,7 @@ const db = getFirestore(app);
 const firebaseStorage = getStorage(app); // Renamed to avoid conflict if you use 'storage' as a variable
 
 // Export real Firebase services
-export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider };
+export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider }; // Esto ahora funcionará correctamente
 
 
 // Helper to save user role and additional info to Firestore
@@ -75,3 +75,4 @@ export const setLoginPageImageURL = async (imageUrl: string): Promise<void> => {
     throw error;
   }
 };
+
