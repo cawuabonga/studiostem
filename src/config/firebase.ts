@@ -1,0 +1,120 @@
+// This is a mock Firebase configuration.
+// In a real application, use your actual Firebase project credentials
+// and initialize Firebase App.
+
+// import { initializeApp, getApp, getApps } from 'firebase/app';
+// import { getAuth } from 'firebase/auth';
+// import { getFirestore } from 'firebase/firestore';
+// import { getStorage } from 'firebase/storage';
+
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID",
+};
+
+// Initialize Firebase
+// let app;
+// if (!getApps().length) {
+//   app = initializeApp(firebaseConfig);
+// } else {
+//   app = getApp();
+// }
+
+// const auth = getAuth(app);
+// const db = getFirestore(app);
+// const storage = getStorage(app);
+
+// Mocked exports for UI development
+export const auth = {
+  onAuthStateChanged: (callback: (user: any) => void) => {
+    console.warn("Firebase auth.onAuthStateChanged is mocked. Call `setCurrentUser` in AuthContext for testing.");
+    // Simulate no user initially
+    setTimeout(() => callback(null), 100); 
+    return () => {}; // Unsubscribe function
+  },
+  // Add other mocked auth methods as needed for compilation
+  signInWithEmailAndPassword: async (email?: string, password?: string) => {
+    console.warn("signInWithEmailAndPassword mock called");
+    if (email === "admin@capfap.com" && password === "password") {
+      return { user: { uid: "admin123", email, displayName: "Admin User", photoURL: "https://placehold.co/100x100.png" } };
+    }
+    if (email === "student@capfap.com" && password === "password") {
+      return { user: { uid: "student123", email, displayName: "Student User", photoURL: "https://placehold.co/100x100.png" } };
+    }
+    throw new Error("Mock auth error: Invalid credentials");
+  },
+  createUserWithEmailAndPassword: async (email?: string, password?: string) => {
+     console.warn("createUserWithEmailAndPassword mock called");
+     if (email && password) {
+        return { user: { uid: `new-${Date.now()}`, email, displayName: "New User", photoURL: "https://placehold.co/100x100.png" } };
+     }
+     throw new Error("Mock auth error: Email and password required");
+  },
+  signInWithPopup: async (provider?: any) => {
+    console.warn("signInWithPopup mock called with provider:", provider);
+    return { user: { uid: "google123", email: "googleuser@capfap.com", displayName: "Google User", photoURL: "https://placehold.co/100x100.png" } };
+  },
+  signOut: async () => {
+    console.warn("signOut mock called");
+  },
+  updateProfile: async (user: any, profile: any) => {
+    console.warn("updateProfile mock called for user:", user, "with profile:", profile);
+    return { ...user, ...profile };
+  }
+};
+
+export const db = {
+  // Mocked Firestore
+  collection: (path: string) => ({
+    doc: (id?: string) => ({
+      set: async (data: any) => console.warn(`Mock Firestore set: ${path}/${id || '(auto-id)'}`, data),
+      get: async () => {
+        console.warn(`Mock Firestore get: ${path}/${id}`);
+        if (path === 'users' && id) {
+            // Simulate fetching user data with role
+            if (id === "admin123") return { exists: true, data: () => ({ role: 'Admin' })};
+            if (id === "student123") return { exists: true, data: () => ({ role: 'Student' })};
+            if (id === "google123") return { exists: true, data: () => ({ role: 'Student' })};
+            if (id?.startsWith("new-")) return { exists: true, data: () => ({ role: 'Student' })}; // Default new users to student
+        }
+        return { exists: false, data: () => undefined };
+      },
+      update:  async (data: any) => console.warn(`Mock Firestore update: ${path}/${id}`, data),
+    })
+  })
+};
+
+export const storage = {
+  // Mocked Storage
+  ref: (path: string) => ({
+    put: async (file: File) => {
+      console.warn(`Mock Storage put: ${path}`, file.name);
+      return {
+        ref: {
+          getDownloadURL: async () => {
+            console.warn(`Mock Storage getDownloadURL for: ${path}`);
+            return `https://placehold.co/200x200.png?text=${encodeURIComponent(file.name)}`;
+          }
+        }
+      };
+    }
+  })
+};
+
+// Mock GoogleAuthProvider
+export class GoogleAuthProvider {
+  // Mock provider methods if needed
+  static PROVIDER_ID = 'google.com';
+}
+
+
+// Helper to simulate saving user role and additional info
+export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: string) => {
+  console.warn(`Mock saveUserAdditionalData for UID: ${user.uid}, Role: ${role}, photoURL: ${user.photoURL}`);
+  // In a real app, this would write to Firestore:
+  // await db.collection('users').doc(user.uid).set({ role, email: user.email, displayName: user.displayName, photoURL: user.photoURL }, { merge: true });
+};

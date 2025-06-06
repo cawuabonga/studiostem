@@ -1,12 +1,12 @@
 "use client";
 import AuthPageLayout from "@/components/layout/AuthPageLayout";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { RegisterForm } from "@/components/auth/RegisterForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -17,8 +17,7 @@ export default function LoginPage() {
   }, [user, loading, router]);
 
   if (loading || (!loading && user)) {
-    // Show a loading skeleton or a blank screen while checking auth / redirecting
-    return (
+     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-full max-w-md space-y-4 p-8">
           <Skeleton className="h-10 w-3/4 mx-auto" />
@@ -29,10 +28,10 @@ export default function LoginPage() {
       </div>
     );
   }
-  
+
   return (
-    <AuthPageLayout title="Welcome Back!">
-      <LoginForm />
+    <AuthPageLayout title="Create Your Account">
+      <RegisterForm />
     </AuthPageLayout>
   );
 }
