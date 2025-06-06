@@ -11,7 +11,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
+// import Autoplay from "embla-carousel-autoplay"; // Temporarily removed
 
 const announcements = [
   { id: 1, src: "https://placehold.co/600x850.png", alt: "Campus event", dataAiHint: "campus event" },
@@ -21,18 +21,18 @@ const announcements = [
 ];
 
 export function AnnouncementsCarousel() {
-  const plugin = React.useRef(
-    Autoplay({ delay: 3000, stopOnInteraction: true })
-  );
+  // const plugin = React.useRef(
+  //   Autoplay({ delay: 3000, stopOnInteraction: true })
+  // );
 
   return (
     <Carousel
-      plugins={[plugin.current]}
+      // plugins={[plugin.current]} // Temporarily removed
       className="w-full h-full"
-      onMouseEnter={plugin.current.stop}
-      onMouseLeave={plugin.current.reset}
+      // onMouseEnter={plugin.current.stop} // Temporarily removed
+      // onMouseLeave={plugin.current.reset} // Temporarily removed
       opts={{
-        loop: true,
+        // loop: true, // Temporarily removed
         axis: "y",
       }}
       orientation="vertical"
@@ -46,7 +46,7 @@ export function AnnouncementsCarousel() {
                   <Image
                     src={announcement.src}
                     alt={announcement.alt}
-                    width={600} 
+                    width={600}
                     height={850}
                     className="object-cover w-full h-full"
                     data-ai-hint={announcement.dataAiHint}
