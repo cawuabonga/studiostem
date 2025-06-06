@@ -7,20 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import type { UserRole } from '@/types';
 import Link from 'next/link';
 
-const roles: UserRole[] = ['Student', 'Teacher', 'Coordinator', 'Admin'];
-
+// Role selection is removed. Users will be registered as 'Student' by default.
 const registerSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
-  role: z.enum(roles, { errorMap: () => ({ message: "Please select a role."}) }),
+  name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres' }),
+  email: z.string().email({ message: 'Dirección de correo inválida' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres' }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -34,12 +29,12 @@ export function RegisterForm() {
       name: '',
       email: '',
       password: '',
-      role: 'Student',
     },
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    await signUpWithEmail(data.name, data.email, data.password, data.role as UserRole);
+    // Role is no longer passed from the form. It will be handled by signUpWithEmail.
+    await signUpWithEmail(data.name, data.email, data.password);
   };
 
   return (
@@ -50,7 +45,7 @@ export function RegisterForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Full Name</FormLabel>
+              <FormLabel>Nombre Completo</FormLabel>
               <FormControl>
                 <Input placeholder="John Doe" {...field} />
               </FormControl>
@@ -65,7 +60,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="your@email.com" {...field} />
+                <Input type="email" placeholder="tu@email.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -76,7 +71,7 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -84,41 +79,17 @@ export function RegisterForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select your role" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Role selection removed */}
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Creating Account...' : 'Create Account'}
+          {loading ? 'Creando Cuenta...' : 'Crear Cuenta'}
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          ¿Ya tienes una cuenta?{' '}
           <Link href="/" className="font-medium text-primary hover:underline">
-            Sign in
+            Iniciar Sesión
           </Link>
         </p>
       </form>
     </Form>
   );
 }
-

@@ -1,8 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth'; // Cambiado aquí: quitado el alias FirebaseGoogleAuthProvider
-import { getFirestore, doc, setDoc, getDoc, collection } from 'firebase/firestore';
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'; // Keep storage for other potential uses
+import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import type { AppUser, UserRole } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -13,7 +14,6 @@ const firebaseConfig = {
   appId: "1:599711250596:web:a570b99c0db17039540e31"
 };
 
-// Initialize Firebase
 let app;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
@@ -23,18 +23,16 @@ if (!getApps().length) {
 
 const auth = getAuth(app);
 const db = getFirestore(app);
-const firebaseStorage = getStorage(app); // Renamed to avoid conflict if you use 'storage' as a variable
+const firebaseStorage = getStorage(app);
 
-// Export real Firebase services
-export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider }; // Esto ahora funcionará correctamente
+export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider };
 
-
-// Helper to save user role and additional info to Firestore
-export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: string) => {
+export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Name: ${user.displayName}, photoURL: ${user.photoURL}`);
   try {
     const userDocRef = doc(collection(db, 'users'), user.uid);
     await setDoc(userDocRef, { 
+      uid: user.uid, // Ensure UID is also stored in the document
       role, 
       email: user.email, 
       displayName: user.displayName, 
@@ -50,7 +48,6 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
 const APP_SETTINGS_COLLECTION = 'appSettings';
 const LOGIN_PAGE_CONFIG_DOC = 'loginPageConfig';
 
-// Function to get the login page image URL
 export const getLoginPageImageURL = async (): Promise<string | null> => {
   try {
     const docRef = doc(db, APP_SETTINGS_COLLECTION, LOGIN_PAGE_CONFIG_DOC);
@@ -65,7 +62,6 @@ export const getLoginPageImageURL = async (): Promise<string | null> => {
   }
 };
 
-// Function to set the login page image URL
 export const setLoginPageImageURL = async (imageUrl: string): Promise<void> => {
   try {
     const docRef = doc(db, APP_SETTINGS_COLLECTION, LOGIN_PAGE_CONFIG_DOC);
@@ -76,3 +72,32 @@ export const setLoginPageImageURL = async (imageUrl: string): Promise<void> => {
   }
 };
 
+// Functions for Admin User Management
+export const getAllUsers = async (): Promise<AppUser[]> => {
+  try {
+    const usersCol = collection(db, 'users');
+    // It's good practice to order results, e.g., by email or displayName
+    const q = query(usersCol, orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
+    const users: AppUser[] = [];
+    querySnapshot.forEach((docSnap) => {
+      // Ensure uid is part of the AppUser, either from doc.id or a field
+      users.push({ uid: docSnap.id, ...docSnap.data() } as AppUser);
+    });
+    return users;
+  } catch (error) {
+    console.error("Error fetching all users:", error);
+    throw error;
+  }
+};
+
+export const updateUserByAdmin = async (uid: string, data: { displayName?: string; role?: UserRole }) => {
+  try {
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, data);
+    console.log(`User ${uid} updated by admin with data:`, data);
+  } catch (error) {
+    console.error(`Error updating user ${uid} by admin:`, error);
+    throw error;
+  }
+};

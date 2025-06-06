@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users } from 'lucide-react'; // Added Users icon
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,15 +25,16 @@ export function AppSidebarContents() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
-    { href: '/dashboard/profile', label: 'Profile', icon: User },
-    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+    // { href: '/dashboard/profile', label: 'Profile', icon: User }, // Profile can be part of settings or a dropdown
+    // { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ];
 
   // Admin-only items
   if (user?.role === 'Admin') {
     navItems.push(
-      { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion },
-      { href: '/dashboard/admin/manage-login-image', label: 'Login Image', icon: ImageIcon }
+      // { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion }, // General admin panel can be a group
+      { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users },
+      { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon }
     );
   }
 

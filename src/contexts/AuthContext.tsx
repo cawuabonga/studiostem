@@ -26,7 +26,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
+  signUpWithEmail: (name: string, email: string, password: string) => Promise<void>; // Role removed
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
 }
@@ -54,15 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = userDocSnap.data();
             role = userData?.role || 'Student';
             displayName = userData?.displayName || firebaseUser.displayName;
-            // Use photoURL from DB if available, otherwise from auth, then default
             photoURL = userData?.photoURL || firebaseUser.photoURL; 
           } else {
-            // For new users (especially via Google Sign-In before custom data is set)
-            // ensure we save initial data, role defaults to Student here if not provided
-            // This case might be less frequent now due to handleAuthSuccess logic
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName, photoURL },
-              role 
+              role // This will be 'Student' if new user
             );
           }
           
@@ -75,7 +71,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);
-          toast({ title: 'Authentication Error', description: 'Could not load user profile.', variant: 'destructive' });
+          toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
         }
       } else {
@@ -91,14 +87,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     let photoURL = firebaseUser.photoURL; 
     let displayName = nameInput || firebaseUser.displayName;
     
-    // Ensure Firebase Auth profile has the latest displayName and photoURL if provided
     const currentAuthUser = auth.currentUser;
     if (currentAuthUser) {
       const profileUpdates: { displayName?: string | null; photoURL?: string | null } = {};
       if (displayName && currentAuthUser.displayName !== displayName) {
         profileUpdates.displayName = displayName;
       }
-      if (photoURL && currentAuthUser.photoURL !== photoURL) { // Only if a new photoURL is explicitly available
+      if (photoURL && currentAuthUser.photoURL !== photoURL) {
         profileUpdates.photoURL = photoURL;
       }
 
@@ -107,12 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await firebaseUpdateProfile(currentAuthUser, profileUpdates);
         } catch (error) {
           console.error("Error updating Firebase Auth profile:", error);
-          // Non-critical, so don't toast, but log it.
         }
       }
-       // Re-fetch the potentially updated FirebaseUser to ensure displayName and photoURL are current
-       // This is important if firebaseUpdateProfile changed them.
-       if (auth.currentUser) { // Check again as it might have changed
+       if (auth.currentUser) { 
           displayName = auth.currentUser.displayName || displayName;
           photoURL = auth.currentUser.photoURL || photoURL;
        }
@@ -121,18 +113,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDocRef = doc(collection(db, 'users'), firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
     
-    // Determine role: use input role, then existing DB role, then default to 'Student'
+    // Default role is 'Student' if not provided (e.g., for Google sign-in or initial email sign-up)
     const finalRole = roleInput || (userDocSnap.exists() ? userDocSnap.data()?.role : 'Student');
     
     try {
-      // Save/update displayName, photoURL, and role in Firestore
       await saveUserAdditionalData(
         { uid: firebaseUser.uid, email: firebaseUser.email, displayName, photoURL },
         finalRole
       );
     } catch (error) {
-       toast({ title: 'Database Error', description: 'Could not save user details.', variant: 'destructive' });
-       // Potentially revert user state or sign out if this is critical
+       toast({ title: 'Error de Base de Datos', description: 'No se pudieron guardar los detalles del usuario.', variant: 'destructive' });
     }
 
     setUser({
@@ -149,28 +139,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle user state update and data fetching
     } catch (error: any) {
       console.error("Sign in error:", error);
-      toast({ title: 'Login Failed', description: error.message || 'Please check your credentials.', variant: 'destructive' });
-      setUser(null); // Ensure user is null on error
+      toast({ title: 'Fallo de Inicio de Sesión', description: error.message || 'Por favor, verifica tus credenciales.', variant: 'destructive' });
+      setUser(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const signUpWithEmail = async (name: string, email: string, password: string, role: UserRole) => {
+  // Role parameter removed, defaults to 'Student'
+  const signUpWithEmail = async (name: string, email: string, password: string) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
-        // Pass name and role to handleAuthSuccess
-        await handleAuthSuccess(userCredential.user, role, name);
+        // Pass name and 'Student' role to handleAuthSuccess
+        await handleAuthSuccess(userCredential.user, 'Student', name);
       }
     } catch (error: any) {
       console.error("Sign up error:", error);
-      toast({ title: 'Registration Failed', description: error.message || 'Could not create account.', variant: 'destructive' });
-      setUser(null); // Ensure user is null on error
+      toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -180,19 +170,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      // User object from result.user might not have role yet.
-      // onAuthStateChanged will be triggered, which calls fetch user data logic.
-      // Or, we can call handleAuthSuccess directly if needed, but onAuthStateChanged is preferred for consistency.
-      // For Google Sign-In, role and name are not provided upfront, so handleAuthSuccess will use defaults or existing data.
-      if (result.user) {
-         // We don't pass role or name here, handleAuthSuccess will fetch or default.
-         // onAuthStateChanged should pick up the new auth state and handle it.
-      }
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the rest, including calling handleAuthSuccess
+      // which will default to 'Student' if it's a new user.
     } catch (error: any) {
       console.error("Google sign in error:", error);
-      toast({ title: 'Google Sign-In Failed', description: error.message || 'Could not sign in with Google.', variant: 'destructive' });
-      setUser(null); // Ensure user is null on error
+      toast({ title: 'Fallo de Inicio de Sesión con Google', description: error.message || 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -206,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       router.push('/');
     } catch (error: any) {
       console.error("Sign out error:", error);
-      toast({ title: 'Sign Out Failed', description: error.message || 'Could not sign out.', variant: 'destructive' });
+      toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
