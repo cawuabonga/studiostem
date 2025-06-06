@@ -39,7 +39,7 @@ export function AnnouncementsCarousel() {
     >
       <CarouselContent className="-mt-1 h-full">
         {announcements.map((announcement) => (
-          <CarouselItem key={announcement.id} className="pt-1 md:basis-full">
+          <CarouselItem key={announcement.id} className="pt-1 basis-full">
             <div className="p-1 h-full">
               <Card className="overflow-hidden h-full">
                 <CardContent className="flex h-full items-center justify-center p-0">
@@ -50,7 +50,7 @@ export function AnnouncementsCarousel() {
                     height={850}
                     className="object-cover w-full h-full"
                     data-ai-hint={announcement.dataAiHint}
-                    priority={announcement.id === 1} // Prioritize loading the first image
+                    priority={announcement.id === 1}
                   />
                 </CardContent>
               </Card>
