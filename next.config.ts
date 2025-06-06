@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/account123/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'idiprojects.ca',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
