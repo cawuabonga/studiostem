@@ -1,7 +1,7 @@
 
 import React from 'react';
 import AppLogo from '@/components/common/AppLogo';
-import { AnnouncementsCarousel } from '@/components/common/AnnouncementsCarousel';
+import { LoginPageImageDisplay } from '@/components/common/LoginPageImageDisplay'; // Updated import
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -20,9 +20,9 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, title }) => {
             {children}
           </div>
 
-          {/* Carousel Side */}
-          <div className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 p-8 md:p-12 flex flex-col">
-            <AnnouncementsCarousel />
+          {/* Image Side */}
+          <div className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 p-8 md:p-12 flex flex-col justify-center items-center">
+            <LoginPageImageDisplay /> {/* Updated component */}
           </div>
         </div>
       </div>

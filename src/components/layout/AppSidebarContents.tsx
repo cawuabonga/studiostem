@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -13,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion } from 'lucide-react'; // Example icons
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon } from 'lucide-react'; // Added ImageIcon
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -28,9 +29,12 @@ export function AppSidebarContents() {
     { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ];
 
-  // Example admin-only item
+  // Admin-only items
   if (user?.role === 'Admin') {
-    navItems.push({ href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion });
+    navItems.push(
+      { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion },
+      { href: '/dashboard/admin/manage-login-image', label: 'Login Image', icon: ImageIcon }
+    );
   }
 
   return (
