@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -27,24 +28,26 @@ export function AnnouncementsCarousel() {
   return (
     <Carousel
       plugins={[plugin.current]}
-      className="w-full max-w-xl"
+      className="w-full h-full" // Changed to h-full, removed max-w-xl
       onMouseEnter={plugin.current.stop}
       onMouseLeave={plugin.current.reset}
       opts={{
         loop: true,
+        axis: "y", // Added for vertical orientation
       }}
+      orientation="vertical" // Explicitly set orientation
     >
-      <CarouselContent>
+      <CarouselContent className="-mt-1 h-full"> {/* Added h-full for vertical layout */}
         {announcements.map((announcement) => (
-          <CarouselItem key={announcement.id}>
-            <div className="p-1">
-              <Card className="overflow-hidden">
-                <CardContent className="flex aspect-video items-center justify-center p-0">
+          <CarouselItem key={announcement.id} className="pt-1 md:basis-full"> {/* Adjusted for vertical */}
+            <div className="p-1 h-full">
+              <Card className="overflow-hidden h-full">
+                <CardContent className="flex h-full items-center justify-center p-0"> {/* Changed aspect-video to h-full */}
                   <Image
                     src={announcement.src}
                     alt={announcement.alt}
-                    width={600}
-                    height={400}
+                    width={600} // Intrinsic width for aspect ratio
+                    height={400} // Intrinsic height for aspect ratio
                     className="object-cover w-full h-full"
                     data-ai-hint={announcement.dataAiHint}
                   />
@@ -54,8 +57,9 @@ export function AnnouncementsCarousel() {
           </CarouselItem>
         ))}
       </CarouselContent>
-      <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
-      <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
+      {/* Removed custom classNames from CarouselPrevious and CarouselNext to use ShadCN's vertical defaults */}
+      <CarouselPrevious />
+      <CarouselNext />
     </Carousel>
   );
 }

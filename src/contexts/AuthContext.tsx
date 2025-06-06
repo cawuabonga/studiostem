@@ -8,7 +8,6 @@ import {
   db, 
   GoogleAuthProvider, 
   saveUserAdditionalData, 
-  storage,
   firebaseUpdateProfile
 } from '@/config/firebase'; // Real Firebase config
 import { 
@@ -20,7 +19,8 @@ import {
   type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc, collection } from 'firebase/firestore';
-import { ref as storageRef, uploadBytes, getDownloadURL as getStorageDownloadURL } from 'firebase/storage';
+// Storage related imports are no longer needed here for profile picture upload
+// import { ref as storageRef, uploadBytes, getDownloadURL as getStorageDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,7 +28,7 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (name: string, email: string, password: string, role: UserRole, profilePicture?: File) => Promise<void>;
+  signUpWithEmail: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
 }
@@ -55,11 +55,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             role = userData?.role || 'Student';
-            // Firestore data might be more up-to-date for displayName and photoURL
             displayName = userData?.displayName || firebaseUser.displayName;
             photoURL = userData?.photoURL || firebaseUser.photoURL;
           } else {
-            // If user doc doesn't exist, create it with default role (especially for Google sign-in first time)
             await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName, photoURL },
               role
@@ -70,13 +68,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             displayName: displayName,
-            photoURL: photoURL || `https://placehold.co/100x100.png?text=${displayName?.[0] || 'U'}`,
+            photoURL: photoURL || `https://placehold.co/100x100.png?text=${displayName?.[0]?.toUpperCase() || 'U'}`,
             role: role,
           });
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Authentication Error', description: 'Could not load user profile.', variant: 'destructive' });
-          setUser(null); // Or handle more gracefully
+          setUser(null); 
         }
       } else {
         setUser(null);
@@ -87,29 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, [toast]);
 
-  const handleAuthSuccess = async (firebaseUser: FirebaseUser, roleInput?: UserRole, nameInput?: string, photoFile?: File) => {
-    let photoURL = firebaseUser.photoURL;
+  const handleAuthSuccess = async (firebaseUser: FirebaseUser, roleInput?: UserRole, nameInput?: string) => {
+    let photoURL = firebaseUser.photoURL; // Use photoURL from auth provider (e.g. Google)
     let displayName = nameInput || firebaseUser.displayName;
-
-    if (photoFile) {
-      try {
-        const fileRef = storageRef(storage, `profilePictures/${firebaseUser.uid}/${photoFile.name}`);
-        const snapshot = await uploadBytes(fileRef, photoFile);
-        photoURL = await getStorageDownloadURL(snapshot.ref);
-      } catch (error) {
-        console.error("Error uploading profile picture: ", error);
-        toast({ title: 'Upload Failed', description: 'Could not upload profile picture.', variant: 'destructive' });
-        // Continue without new photoURL if upload fails
-      }
-    }
     
-    // Update Firebase Auth profile if necessary
-    const currentAuthUser = auth.currentUser; // Get the most current auth user state
+    const currentAuthUser = auth.currentUser;
     if (currentAuthUser) {
       const profileUpdates: { displayName?: string | null; photoURL?: string | null } = {};
       if (displayName && currentAuthUser.displayName !== displayName) {
         profileUpdates.displayName = displayName;
       }
+      // Only update photoURL if it's explicitly provided (e.g., from Google) and different
       if (photoURL && currentAuthUser.photoURL !== photoURL) {
         profileUpdates.photoURL = photoURL;
       }
@@ -123,7 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
     
-    // Fetch/set role, ensure Firestore document is up-to-date
     const userDocRef = doc(collection(db, 'users'), firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
     
@@ -135,7 +120,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         finalRole
       );
     } catch (error) {
-       // Error already logged in saveUserAdditionalData
        toast({ title: 'Database Error', description: 'Could not save user details.', variant: 'destructive' });
     }
 
@@ -143,7 +127,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       uid: firebaseUser.uid,
       email: firebaseUser.email,
       displayName: displayName,
-      photoURL: photoURL || `https://placehold.co/100x100.png?text=${displayName?.[0] || 'U'}`,
+      photoURL: photoURL || `https://placehold.co/100x100.png?text=${displayName?.[0]?.toUpperCase() || 'U'}`,
       role: finalRole as UserRole,
     });
     router.push('/dashboard');
@@ -153,10 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      if (userCredential.user) {
-        // Role and other details will be fetched by onAuthStateChanged
-        // No need to call handleAuthSuccess directly, as onAuthStateChanged will handle it
-      }
+      // onAuthStateChanged will handle setting user state and redirecting
     } catch (error: any) {
       console.error("Sign in error:", error);
       toast({ title: 'Login Failed', description: error.message || 'Please check your credentials.', variant: 'destructive' });
@@ -166,12 +147,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUpWithEmail = async (name: string, email: string, password: string, role: UserRole, profilePicture?: File) => {
+  const signUpWithEmail = async (name: string, email: string, password: string, role: UserRole) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
-        await handleAuthSuccess(userCredential.user, role, name, profilePicture);
+        await handleAuthSuccess(userCredential.user, role, name);
       }
     } catch (error: any) {
       console.error("Sign up error:", error);
@@ -186,15 +167,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Role and other details will be handled by onAuthStateChanged and its logic
-        // for new or existing users from Firestore.
-        // A call to handleAuthSuccess might be redundant if onAuthStateChanged correctly
-        // creates/updates the user doc. However, ensuring the doc is created with
-        // at least a default role ('Student') on first Google sign-in is crucial.
-        // The onAuthStateChanged logic already attempts to do this.
-      }
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle setting user state and redirecting
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Google Sign-In Failed', description: error.message || 'Could not sign in with Google.', variant: 'destructive' });

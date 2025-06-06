@@ -1,3 +1,4 @@
+
 import React from 'react';
 import AppLogo from '@/components/common/AppLogo';
 import { AnnouncementsCarousel } from '@/components/common/AnnouncementsCarousel';
@@ -20,7 +21,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, title }) => {
           </div>
 
           {/* Carousel Side */}
-          <div className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 p-8 md:p-12 flex items-center justify-center">
+          <div className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 p-8 md:p-12 flex flex-col">
             <AnnouncementsCarousel />
           </div>
         </div>
