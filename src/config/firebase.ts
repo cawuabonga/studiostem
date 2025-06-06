@@ -56,14 +56,30 @@ export const auth = {
   },
   signInWithPopup: async (provider?: any) => {
     console.warn("signInWithPopup mock called with provider:", provider);
-    return { user: { uid: "google123", email: "googleuser@capfap.com", displayName: "Google User", photoURL: "https://placehold.co/100x100.png" } };
+    // Simulate a generic Google user for the mock
+    const mockUser = { 
+      uid: "google" + Date.now(), 
+      email: "googleuser@example.com", 
+      displayName: "Google User", 
+      photoURL: "https://placehold.co/100x100.png?text=G" 
+    };
+    // Simulate saving this mock Google user's details with a default role
+    await db.collection('users').doc(mockUser.uid).set({ 
+      role: 'Student', // Default role for new Google sign-ins in mock
+      email: mockUser.email, 
+      displayName: mockUser.displayName, 
+      photoURL: mockUser.photoURL 
+    });
+    return { user: mockUser };
   },
   signOut: async () => {
     console.warn("signOut mock called");
   },
   updateProfile: async (user: any, profile: any) => {
     console.warn("updateProfile mock called for user:", user, "with profile:", profile);
-    return { ...user, ...profile };
+    // Simulate profile update by merging
+    Object.assign(user, profile); // This mutates the mock user object passed in
+    return user; // Should return void, but mock can return user for chaining if needed
   }
 };
 
@@ -74,14 +90,15 @@ export const db = {
       set: async (data: any) => console.warn(`Mock Firestore set: ${path}/${id || '(auto-id)'}`, data),
       get: async () => {
         console.warn(`Mock Firestore get: ${path}/${id}`);
+        // Simulate fetching user data with role
         if (path === 'users' && id) {
-            // Simulate fetching user data with role
-            if (id === "admin123") return { exists: true, data: () => ({ role: 'Admin' })};
-            if (id === "student123") return { exists: true, data: () => ({ role: 'Student' })};
-            if (id === "google123") return { exists: true, data: () => ({ role: 'Student' })};
-            if (id?.startsWith("new-")) return { exists: true, data: () => ({ role: 'Student' })}; // Default new users to student
+            if (id === "admin123") return { exists: true, id, data: () => ({ role: 'Admin', displayName: "Admin User", email: "admin@capfap.com", photoURL: "https://placehold.co/100x100.png" })};
+            if (id === "student123") return { exists: true, id, data: () => ({ role: 'Student', displayName: "Student User", email: "student@capfap.com", photoURL: "https://placehold.co/100x100.png" })};
+            // For mock Google users, data would have been set during signInWithPopup mock
+            if (id.startsWith("google")) return { exists: true, id, data: () => ({ role: 'Student', email: "googleuser@example.com", displayName: "Google User", photoURL: "https://placehold.co/100x100.png?text=G" })};
+            if (id?.startsWith("new-")) return { exists: true, id, data: () => ({ role: 'Student', displayName: "New User", email: "newuser@example.com", photoURL: "https://placehold.co/100x100.png" })}; // Default new users to student
         }
-        return { exists: false, data: () => undefined };
+        return { exists: false, id, data: () => undefined };
       },
       update:  async (data: any) => console.warn(`Mock Firestore update: ${path}/${id}`, data),
     })
@@ -97,7 +114,12 @@ export const storage = {
         ref: {
           getDownloadURL: async () => {
             console.warn(`Mock Storage getDownloadURL for: ${path}`);
-            return `https://placehold.co/200x200.png?text=${encodeURIComponent(file.name)}`;
+            // Create a blob URL for local preview if possible, otherwise placeholder
+            try {
+              return URL.createObjectURL(file);
+            } catch (e) {
+              return `https://placehold.co/200x200.png?text=${encodeURIComponent(file.name)}`;
+            }
           }
         }
       };
@@ -108,13 +130,16 @@ export const storage = {
 // Mock GoogleAuthProvider
 export class GoogleAuthProvider {
   // Mock provider methods if needed
-  static PROVIDER_ID = 'google.com';
+  static PROVIDER_ID = 'google.com'; // Standard provider ID
+  constructor() {
+    // console.warn("Mock GoogleAuthProvider instantiated");
+  }
 }
 
 
 // Helper to simulate saving user role and additional info
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: string) => {
-  console.warn(`Mock saveUserAdditionalData for UID: ${user.uid}, Role: ${role}, photoURL: ${user.photoURL}`);
+  console.warn(`Mock saveUserAdditionalData for UID: ${user.uid}, Role: ${role}, Name: ${user.displayName}, photoURL: ${user.photoURL}`);
   // In a real app, this would write to Firestore:
-  // await db.collection('users').doc(user.uid).set({ role, email: user.email, displayName: user.displayName, photoURL: user.photoURL }, { merge: true });
+  await db.collection('users').doc(user.uid).set({ role, email: user.email, displayName: user.displayName, photoURL: user.photoURL }, { merge: true });
 };
