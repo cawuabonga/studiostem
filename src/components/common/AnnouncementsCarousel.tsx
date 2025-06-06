@@ -14,10 +14,10 @@ import {
 // import Autoplay from "embla-carousel-autoplay"; // Temporarily removed
 
 const announcements = [
-  { id: 1, src: "https://placehold.co/600x850.png", alt: "Campus event", dataAiHint: "campus event" },
-  { id: 2, src: "https://placehold.co/600x850.png", alt: "New course offering", dataAiHint: "education learning" },
-  { id: 3, src: "https://placehold.co/600x850.png", alt: "Important deadline", dataAiHint: "deadline reminder" },
-  { id: 4, src: "https://placehold.co/600x850.png", alt: "Student achievements", dataAiHint: "student achievement" },
+  { id: 1, src: "https://placehold.co/600x700.png", alt: "Campus event", dataAiHint: "campus event" },
+  { id: 2, src: "https://placehold.co/600x700.png", alt: "New course offering", dataAiHint: "education learning" },
+  { id: 3, src: "https://placehold.co/600x700.png", alt: "Important deadline", dataAiHint: "deadline reminder" },
+  { id: 4, src: "https://placehold.co/600x700.png", alt: "Student achievements", dataAiHint: "student achievement" },
 ];
 
 export function AnnouncementsCarousel() {
@@ -47,7 +47,7 @@ export function AnnouncementsCarousel() {
                     src={announcement.src}
                     alt={announcement.alt}
                     width={600}
-                    height={850}
+                    height={700}
                     className="object-cover w-full h-full"
                     data-ai-hint={announcement.dataAiHint}
                     priority={announcement.id === 1}
