@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -9,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { addDidacticUnit } from '@/config/firebase';
-import type { DidacticUnit, UnitPeriod } from '@/types';
+import { addDidacticUnit, getStudyPrograms } from '@/config/firebase';
+import type { DidacticUnit, StudyProgram, UnitPeriod } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const addUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  studyProgram: z.string().min(3, { message: 'El programa de estudios debe tener al menos 3 caracteres.' }),
+  studyProgram: z.string({ required_error: 'Debe seleccionar un programa de estudios.' }),
   period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
   module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
@@ -37,12 +36,32 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [totalHours, setTotalHours] = useState(0);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+  const [programsLoading, setProgramsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrograms = async () => {
+      try {
+        const programs = await getStudyPrograms();
+        setStudyPrograms(programs);
+      } catch (error) {
+        console.error("Failed to fetch study programs:", error);
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los programas de estudio.',
+          variant: 'destructive',
+        });
+      } finally {
+        setProgramsLoading(false);
+      }
+    };
+    fetchPrograms();
+  }, [toast]);
 
   const form = useForm<AddUnitFormValues>({
     resolver: zodResolver(addUnitSchema),
     defaultValues: {
       name: '',
-      studyProgram: '',
       credits: 0,
       theoreticalHours: 0,
       practicalHours: 0,
@@ -113,9 +132,16 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Programa de Estudios</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={programsLoading}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder={programsLoading ? "Cargando programas..." : "Seleccione un programa"} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {studyPrograms.map(program => <SelectItem key={program.id} value={program.name}>{program.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

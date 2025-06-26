@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -18,14 +17,14 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { DidacticUnit, UnitPeriod } from '@/types';
-import { updateDidacticUnit } from '@/config/firebase';
+import type { DidacticUnit, StudyProgram, UnitPeriod } from '@/types';
+import { updateDidacticUnit, getStudyPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 const editUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  studyProgram: z.string().min(3, { message: 'El programa de estudios debe tener al menos 3 caracteres.' }),
+  studyProgram: z.string({ required_error: 'Debe seleccionar un programa de estudios.' }),
   period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
   module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
@@ -49,12 +48,36 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [totalHours, setTotalHours] = useState(unit.totalHours);
+  const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
+  const [programsLoading, setProgramsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchPrograms = async () => {
+      setProgramsLoading(true);
+      try {
+        const programs = await getStudyPrograms();
+        setStudyPrograms(programs);
+      } catch (error) {
+        console.error("Failed to fetch study programs:", error);
+        toast({
+          title: 'Error',
+          description: 'No se pudieron cargar los programas de estudio.',
+          variant: 'destructive',
+        });
+      } finally {
+        setProgramsLoading(false);
+      }
+    };
+    fetchPrograms();
+  }, [isOpen, toast]);
 
   const form = useForm<EditUnitFormValues>({
     resolver: zodResolver(editUnitSchema),
     defaultValues: {
       name: unit?.name || '',
-      studyProgram: unit?.studyProgram || '',
+      studyProgram: unit?.studyProgram || undefined,
       period: unit?.period || undefined,
       module: unit?.module || undefined,
       credits: unit?.credits || 0,
@@ -146,13 +169,20 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     control={form.control}
                     name="studyProgram"
                     render={({ field }) => (
-                    <FormItem>
+                        <FormItem>
                         <FormLabel>Programa de Estudios</FormLabel>
-                        <FormControl>
-                        <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
-                        </FormControl>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={programsLoading}>
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder={programsLoading ? "Cargando programas..." : "Seleccione un programa"} />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {studyPrograms.map(program => <SelectItem key={program.id} value={program.name}>{program.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
-                    </FormItem>
+                        </FormItem>
                     )}
                 />
             </div>
