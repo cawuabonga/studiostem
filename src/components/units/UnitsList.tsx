@@ -6,8 +6,9 @@ import { getDidacticUnits } from '@/config/firebase';
 import type { DidacticUnit } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { EditUnitDialog } from './EditUnitDialog';
+import { DeleteUnitDialog } from './DeleteUnitDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,6 +21,7 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<DidacticUnit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const fetchUnits = useCallback(async () => {
@@ -47,9 +49,15 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
     setSelectedUnit(unit);
     setIsEditDialogOpen(true);
   };
+  
+  const handleDeleteUnit = (unit: DidacticUnit) => {
+    setSelectedUnit(unit);
+    setIsDeleteDialogOpen(true);
+  };
 
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
+    setIsDeleteDialogOpen(false);
     setSelectedUnit(null);
     if (updated) {
       fetchUnits();
@@ -108,16 +116,27 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
                     <Edit2 className="h-4 w-4" />
                     <span className="sr-only">Editar Unidad</span>
                   </Button>
+                   <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(unit)} className="text-destructive hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar Unidad</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-      {selectedUnit && (
+      {selectedUnit && isEditDialogOpen && (
         <EditUnitDialog
           unit={selectedUnit}
           isOpen={isEditDialogOpen}
+          onClose={handleDialogClose}
+        />
+      )}
+       {selectedUnit && isDeleteDialogOpen && (
+        <DeleteUnitDialog
+          unit={selectedUnit}
+          isOpen={isDeleteDialogOpen}
           onClose={handleDialogClose}
         />
       )}

@@ -139,6 +139,17 @@ export const updateDidacticUnit = async (id: string, data: Partial<Omit<Didactic
   }
 };
 
+export const deleteDidacticUnit = async (id: string): Promise<void> => {
+  try {
+    const unitDocRef = doc(db, 'didacticUnits', id);
+    await deleteDoc(unitDocRef);
+    console.log(`Didactic Unit ${id} deleted.`);
+  } catch (error) {
+    console.error(`Error deleting didactic unit ${id}:`, error);
+    throw error;
+  }
+};
+
 // Functions for Study Programs
 export const addStudyProgram = async (programData: Omit<StudyProgram, 'id'>): Promise<void> => {
   try {
