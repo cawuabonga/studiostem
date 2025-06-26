@@ -76,12 +76,10 @@ export const setLoginPageImageURL = async (imageUrl: string): Promise<void> => {
 export const getAllUsers = async (): Promise<AppUser[]> => {
   try {
     const usersCol = collection(db, 'users');
-    // It's good practice to order results, e.g., by email or displayName
     const q = query(usersCol, orderBy("displayName"));
     const querySnapshot = await getDocs(q);
     const users: AppUser[] = [];
     querySnapshot.forEach((docSnap) => {
-      // Ensure uid is part of the AppUser, either from doc.id or a field
       users.push({ uid: docSnap.id, ...docSnap.data() } as AppUser);
     });
     return users;
@@ -102,7 +100,7 @@ export const updateUserByAdmin = async (uid: string, data: { displayName?: strin
   }
 };
 
-// Function to add a new Didactic Unit
+// Functions for Didactic Units
 export const addDidacticUnit = async (unitData: Omit<DidacticUnit, 'id'>): Promise<void> => {
   try {
     const unitsCollectionRef = collection(db, 'didacticUnits');
@@ -110,6 +108,33 @@ export const addDidacticUnit = async (unitData: Omit<DidacticUnit, 'id'>): Promi
     console.log("Didactic Unit added successfully with data:", unitData);
   } catch (error) {
     console.error("Error adding Didactic Unit to Firestore:", error);
+    throw error;
+  }
+};
+
+export const getDidacticUnits = async (): Promise<DidacticUnit[]> => {
+  try {
+    const unitsCol = collection(db, 'didacticUnits');
+    const q = query(unitsCol, orderBy("name"));
+    const querySnapshot = await getDocs(q);
+    const units: DidacticUnit[] = [];
+    querySnapshot.forEach((docSnap) => {
+      units.push({ id: docSnap.id, ...docSnap.data() } as DidacticUnit);
+    });
+    return units;
+  } catch (error) {
+    console.error("Error fetching all didactic units:", error);
+    throw error;
+  }
+};
+
+export const updateDidacticUnit = async (id: string, data: Partial<Omit<DidacticUnit, 'id'>>): Promise<void> => {
+  try {
+    const unitDocRef = doc(db, 'didacticUnits', id);
+    await updateDoc(unitDocRef, data);
+    console.log(`Didactic Unit ${id} updated with data:`, data);
+  } catch (error) {
+    console.error(`Error updating didactic unit ${id}:`, error);
     throw error;
   }
 };

@@ -1,3 +1,4 @@
+
 export type UserRole = 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
@@ -9,11 +10,11 @@ export interface AppUser {
 }
 
 export interface DidacticUnit {
-  id?: string;
+  id: string;
   name: string;
   credits: number;
   theoreticalHours: number;
   practicalHours: number;
-  hasGroups: boolean;
+  numberOfGroups: number;
   totalHours: number;
 }

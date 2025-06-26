@@ -8,22 +8,25 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { addDidacticUnit } from '@/config/firebase';
-import { DidacticUnit } from '@/types';
+import type { DidacticUnit } from '@/types';
 
 const addUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
-  hasGroups: z.boolean().default(false),
+  numberOfGroups: z.coerce.number().min(1, { message: 'Debe haber al menos 1 grupo.' }).default(1),
 });
 
 type AddUnitFormValues = z.infer<typeof addUnitSchema>;
 
-export function AddUnitForm() {
+interface AddUnitFormProps {
+  onUnitAdded: () => void;
+}
+
+export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [totalHours, setTotalHours] = useState(0);
@@ -35,22 +38,22 @@ export function AddUnitForm() {
       credits: 0,
       theoreticalHours: 0,
       practicalHours: 0,
-      hasGroups: false,
+      numberOfGroups: 1,
     },
   });
 
   const { watch } = form;
   const theoreticalHours = watch('theoreticalHours');
   const practicalHours = watch('practicalHours');
-  const hasGroups = watch('hasGroups');
+  const numberOfGroups = watch('numberOfGroups');
 
   useEffect(() => {
     const th = Number(theoreticalHours) || 0;
     const ph = Number(practicalHours) || 0;
-    const multiplier = hasGroups ? 2 : 1;
+    const multiplier = Number(numberOfGroups) || 1;
     const total = (th + ph) * multiplier;
     setTotalHours(total);
-  }, [theoreticalHours, practicalHours, hasGroups]);
+  }, [theoreticalHours, practicalHours, numberOfGroups]);
 
   const onSubmit = async (data: AddUnitFormValues) => {
     setLoading(true);
@@ -66,6 +69,7 @@ export function AddUnitForm() {
         description: 'La unidad didáctica ha sido registrada correctamente.',
       });
       form.reset();
+      onUnitAdded();
     } catch (error) {
       console.error('Error adding didactic unit:', error);
       toast({
@@ -94,65 +98,61 @@ export function AddUnitForm() {
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="credits"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Créditos</FormLabel>
-              <FormControl>
-                <Input type="number" placeholder="Ej: 4" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FormField
             control={form.control}
-            name="theoreticalHours"
+            name="credits"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Horas Teóricas</FormLabel>
+                <FormItem>
+                <FormLabel>Créditos</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="Ej: 2" {...field} />
+                    <Input type="number" placeholder="Ej: 4" {...field} />
                 </FormControl>
                 <FormMessage />
-              </FormItem>
+                </FormItem>
             )}
-          />
-          <FormField
-            control={form.control}
-            name="practicalHours"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Horas Prácticas</FormLabel>
-                <FormControl>
-                  <Input type="number" placeholder="Ej: 4" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            />
+            <FormField
+                control={form.control}
+                name="theoreticalHours"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Horas Teóricas</FormLabel>
+                    <FormControl>
+                    <Input type="number" placeholder="Ej: 2" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="practicalHours"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Horas Prácticas</FormLabel>
+                    <FormControl>
+                    <Input type="number" placeholder="Ej: 4" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
         </div>
 
         <FormField
           control={form.control}
-          name="hasGroups"
+          name="numberOfGroups"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">¿Tiene grupos?</FormLabel>
-                <FormDescription>
-                  Activa si esta unidad se divide en grupos. Esto duplicará las horas totales.
-                </FormDescription>
-              </div>
+            <FormItem>
+              <FormLabel>Número de Grupos</FormLabel>
               <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                />
+                <Input type="number" min="1" placeholder="1" {...field} />
               </FormControl>
+               <FormDescription>
+                El total de horas se multiplicará por esta cantidad.
+              </FormDescription>
+              <FormMessage />
             </FormItem>
           )}
         />
