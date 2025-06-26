@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole } from '@/types';
+import type { AppUser, UserRole, DidacticUnit } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -98,6 +98,18 @@ export const updateUserByAdmin = async (uid: string, data: { displayName?: strin
     console.log(`User ${uid} updated by admin with data:`, data);
   } catch (error) {
     console.error(`Error updating user ${uid} by admin:`, error);
+    throw error;
+  }
+};
+
+// Function to add a new Didactic Unit
+export const addDidacticUnit = async (unitData: Omit<DidacticUnit, 'id'>): Promise<void> => {
+  try {
+    const unitsCollectionRef = collection(db, 'didacticUnits');
+    await addDoc(unitsCollectionRef, unitData);
+    console.log("Didactic Unit added successfully with data:", unitData);
+  } catch (error) {
+    console.error("Error adding Didactic Unit to Firestore:", error);
     throw error;
   }
 };
