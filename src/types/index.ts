@@ -23,3 +23,9 @@ export interface DidacticUnit {
   numberOfGroups: number;
   totalHours: number;
 }
+
+export interface StudyProgram {
+  id: string;
+  code: string;
+  name: string;
+}

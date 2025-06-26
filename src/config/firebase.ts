@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit } from '@/types';
+import type { AppUser, UserRole, DidacticUnit, StudyProgram } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -135,6 +135,56 @@ export const updateDidacticUnit = async (id: string, data: Partial<Omit<Didactic
     console.log(`Didactic Unit ${id} updated with data:`, data);
   } catch (error) {
     console.error(`Error updating didactic unit ${id}:`, error);
+    throw error;
+  }
+};
+
+// Functions for Study Programs
+export const addStudyProgram = async (programData: Omit<StudyProgram, 'id'>): Promise<void> => {
+  try {
+    const programsCollectionRef = collection(db, 'studyPrograms');
+    await addDoc(programsCollectionRef, programData);
+    console.log("Study Program added successfully with data:", programData);
+  } catch (error) {
+    console.error("Error adding Study Program to Firestore:", error);
+    throw error;
+  }
+};
+
+export const getStudyPrograms = async (): Promise<StudyProgram[]> => {
+  try {
+    const programsCol = collection(db, 'studyPrograms');
+    const q = query(programsCol, orderBy("name"));
+    const querySnapshot = await getDocs(q);
+    const programs: StudyProgram[] = [];
+    querySnapshot.forEach((docSnap) => {
+      programs.push({ id: docSnap.id, ...docSnap.data() } as StudyProgram);
+    });
+    return programs;
+  } catch (error) {
+    console.error("Error fetching all study programs:", error);
+    throw error;
+  }
+};
+
+export const updateStudyProgram = async (id: string, data: Partial<Omit<StudyProgram, 'id'>>): Promise<void> => {
+  try {
+    const programDocRef = doc(db, 'studyPrograms', id);
+    await updateDoc(programDocRef, data);
+    console.log(`Study Program ${id} updated with data:`, data);
+  } catch (error) {
+    console.error(`Error updating study program ${id}:`, error);
+    throw error;
+  }
+};
+
+export const deleteStudyProgram = async (id: string): Promise<void> => {
+  try {
+    const programDocRef = doc(db, 'studyPrograms', id);
+    await deleteDoc(programDocRef);
+    console.log(`Study Program ${id} deleted.`);
+  } catch (error) {
+    console.error(`Error deleting study program ${id}:`, error);
     throw error;
   }
 };

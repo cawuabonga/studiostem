@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy } from 'lucide-react';
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library } from 'lucide-react';
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -34,6 +34,7 @@ export function AppSidebarContents() {
     navItems.push(
       // { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion }, // General admin panel can be a group
       { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users },
+      { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library },
       { href: '/dashboard/admin/manage-units', label: 'Unidades Didácticas', icon: BookCopy },
       { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon }
     );
