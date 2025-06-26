@@ -60,7 +60,7 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
   if (loading) {
     return (
       <div className="space-y-2">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
@@ -73,29 +73,35 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
 
   return (
     <>
-      <div className="rounded-md border">
+      <div className="rounded-md border relative">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead className="w-[250px]">Nombre</TableHead>
+              <TableHead className="min-w-[200px]">Nombre</TableHead>
+              <TableHead className="min-w-[200px]">P. de Estudios</TableHead>
+              <TableHead>Período</TableHead>
+              <TableHead>Módulo</TableHead>
               <TableHead>Créditos</TableHead>
-              <TableHead>H. Teóricas</TableHead>
-              <TableHead>H. Prácticas</TableHead>
+              <TableHead>H. T.</TableHead>
+              <TableHead>H. P.</TableHead>
               <TableHead>Grupos</TableHead>
               <TableHead>Total Horas</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
+              <TableHead className="text-right sticky right-0 bg-background pr-4">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {units.map((unit) => (
               <TableRow key={unit.id}>
                 <TableCell className="font-medium">{unit.name}</TableCell>
+                <TableCell>{unit.studyProgram}</TableCell>
+                <TableCell>{unit.period}</TableCell>
+                <TableCell>{unit.module}</TableCell>
                 <TableCell>{unit.credits}</TableCell>
                 <TableCell>{unit.theoreticalHours}</TableCell>
                 <TableCell>{unit.practicalHours}</TableCell>
                 <TableCell>{unit.numberOfGroups}</TableCell>
                 <TableCell className="font-semibold">{unit.totalHours}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right sticky right-0 bg-background pr-4">
                   <Button variant="ghost" size="icon" onClick={() => handleEditUnit(unit)}>
                     <Edit2 className="h-4 w-4" />
                     <span className="sr-only">Editar Unidad</span>

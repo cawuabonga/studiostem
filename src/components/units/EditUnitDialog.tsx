@@ -18,11 +18,16 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { DidacticUnit } from '@/types';
+import type { DidacticUnit, UnitPeriod } from '@/types';
 import { updateDidacticUnit } from '@/config/firebase';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+
 
 const editUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  studyProgram: z.string().min(3, { message: 'El programa de estudios debe tener al menos 3 caracteres.' }),
+  period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
+  module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
@@ -30,6 +35,9 @@ const editUnitSchema = z.object({
 });
 
 type EditUnitFormValues = z.infer<typeof editUnitSchema>;
+
+const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
+const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
 
 interface EditUnitDialogProps {
   unit: DidacticUnit;
@@ -46,6 +54,9 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
     resolver: zodResolver(editUnitSchema),
     defaultValues: {
       name: unit?.name || '',
+      studyProgram: unit?.studyProgram || '',
+      period: unit?.period || undefined,
+      module: unit?.module || undefined,
       credits: unit?.credits || 0,
       theoreticalHours: unit?.theoreticalHours || 0,
       practicalHours: unit?.practicalHours || 0,
@@ -69,6 +80,9 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
     if (unit) {
       reset({
         name: unit.name,
+        studyProgram: unit.studyProgram,
+        period: unit.period,
+        module: unit.module,
         credits: unit.credits,
         theoreticalHours: unit.theoreticalHours,
         practicalHours: unit.practicalHours,
@@ -105,7 +119,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Editar Unidad Didáctica</DialogTitle>
           <DialogDescription>
@@ -114,19 +128,76 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-             <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="studyProgram"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Programa de Estudios</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="period"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Período</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un período" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {periodOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="module"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Módulo</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un módulo" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {moduleOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                     control={form.control}
@@ -168,27 +239,29 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     )}
                 />
             </div>
-             <FormField
-                control={form.control}
-                name="numberOfGroups"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Número de Grupos</FormLabel>
-                    <FormControl>
-                        <Input type="number" min="1" placeholder="1" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                        El total de horas se multiplicará por esta cantidad.
-                    </FormDescription>
-                    <FormMessage />
-                    </FormItem>
-                )}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                <FormField
+                    control={form.control}
+                    name="numberOfGroups"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Número de Grupos</FormLabel>
+                        <FormControl>
+                            <Input type="number" min="1" placeholder="1" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                            El total de horas se multiplicará por esta cantidad.
+                        </FormDescription>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
-            <div className="rounded-md border bg-muted p-4 text-center">
-                <h3 className="text-lg font-medium text-muted-foreground">Total de Horas Calculadas</h3>
-                <p className="text-4xl font-bold text-primary">{totalHours}</p>
+                <div className="rounded-md border bg-muted p-3 text-center">
+                    <h3 className="text-sm font-medium text-muted-foreground">Total de Horas Calculadas</h3>
+                    <p className="text-3xl font-bold text-primary">{totalHours}</p>
+                </div>
             </div>
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={() => onClose()}>
                   Cancelar

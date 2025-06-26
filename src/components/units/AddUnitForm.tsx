@@ -10,10 +10,14 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addDidacticUnit } from '@/config/firebase';
-import type { DidacticUnit } from '@/types';
+import type { DidacticUnit, UnitPeriod } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const addUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  studyProgram: z.string().min(3, { message: 'El programa de estudios debe tener al menos 3 caracteres.' }),
+  period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
+  module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
@@ -21,6 +25,9 @@ const addUnitSchema = z.object({
 });
 
 type AddUnitFormValues = z.infer<typeof addUnitSchema>;
+
+const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
+const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
 
 interface AddUnitFormProps {
   onUnitAdded: () => void;
@@ -35,6 +42,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
     resolver: zodResolver(addUnitSchema),
     defaultValues: {
       name: '',
+      studyProgram: '',
       credits: 0,
       theoreticalHours: 0,
       practicalHours: 0,
@@ -84,33 +92,90 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
-              <FormControl>
-                <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FormField
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
             control={form.control}
-            name="credits"
+            name="name"
             render={({ field }) => (
-                <FormItem>
-                <FormLabel>Créditos</FormLabel>
+              <FormItem>
+                <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
                 <FormControl>
-                    <Input type="number" placeholder="Ej: 4" {...field} />
+                  <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
                 </FormControl>
                 <FormMessage />
-                </FormItem>
+              </FormItem>
             )}
+          />
+          <FormField
+            control={form.control}
+            name="studyProgram"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Programa de Estudios</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="period"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Período</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un período" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {periodOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="module"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Módulo</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un módulo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {moduleOptions.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="credits"
+              render={({ field }) => (
+                  <FormItem>
+                  <FormLabel>Créditos</FormLabel>
+                  <FormControl>
+                      <Input type="number" placeholder="Ej: 4" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                  </FormItem>
+              )}
             />
             <FormField
                 control={form.control}
@@ -139,27 +204,27 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 )}
             />
         </div>
-
-        <FormField
-          control={form.control}
-          name="numberOfGroups"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Número de Grupos</FormLabel>
-              <FormControl>
-                <Input type="number" min="1" placeholder="1" {...field} />
-              </FormControl>
-               <FormDescription>
-                El total de horas se multiplicará por esta cantidad.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="rounded-md border bg-muted p-4 text-center">
-            <h3 className="text-lg font-medium text-muted-foreground">Total de Horas Calculadas</h3>
-            <p className="text-4xl font-bold text-primary">{totalHours}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <FormField
+            control={form.control}
+            name="numberOfGroups"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Número de Grupos</FormLabel>
+                <FormControl>
+                    <Input type="number" min="1" placeholder="1" {...field} />
+                </FormControl>
+                <FormDescription>
+                    El total de horas se multiplicará por esta cantidad.
+                </FormDescription>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <div className="rounded-md border bg-muted p-3 text-center">
+                <h3 className="text-sm font-medium text-muted-foreground">Total de Horas Calculadas</h3>
+                <p className="text-3xl font-bold text-primary">{totalHours}</p>
+            </div>
         </div>
 
         <Button type="submit" className="w-full" disabled={loading}>

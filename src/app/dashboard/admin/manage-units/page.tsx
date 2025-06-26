@@ -33,29 +33,29 @@ export default function ManageUnitsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <div className="flex flex-col h-full gap-6">
+      <Card className="flex-shrink-0">
         <CardHeader>
           <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
           <CardDescription>
             Complete el formulario para añadir una nueva unidad al sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4">
           <AddUnitForm onUnitAdded={handleDataChange} />
         </CardContent>
       </Card>
       
       <Separator />
 
-      <Card>
+      <Card className="flex-grow flex flex-col overflow-hidden">
         <CardHeader>
           <CardTitle>Unidades Didácticas Registradas</CardTitle>
           <CardDescription>
             Ver y editar las unidades existentes en el sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow overflow-y-auto">
           <UnitsList key={refreshKey} onUnitUpdated={handleDataChange} />
         </CardContent>
       </Card>

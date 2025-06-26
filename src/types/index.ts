@@ -9,9 +9,14 @@ export interface AppUser {
   role: UserRole;
 }
 
+export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';
+
 export interface DidacticUnit {
   id: string;
   name: string;
+  studyProgram: string;
+  period: UnitPeriod;
+  module: string;
   credits: number;
   theoreticalHours: number;
   practicalHours: number;
