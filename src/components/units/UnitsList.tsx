@@ -79,6 +79,7 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
             <TableRow>
               <TableHead className="min-w-[200px]">Nombre</TableHead>
               <TableHead className="min-w-[200px]">P. de Estudios</TableHead>
+              <TableHead>Tipo</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Módulo</TableHead>
               <TableHead>Créditos</TableHead>
@@ -94,6 +95,7 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
               <TableRow key={unit.id}>
                 <TableCell className="font-medium">{unit.name}</TableCell>
                 <TableCell>{unit.studyProgram}</TableCell>
+                <TableCell>{unit.unitType}</TableCell>
                 <TableCell>{unit.period}</TableCell>
                 <TableCell>{unit.module}</TableCell>
                 <TableCell>{unit.credits}</TableCell>

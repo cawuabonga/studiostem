@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addDidacticUnit, getStudyPrograms } from '@/config/firebase';
-import type { DidacticUnit, StudyProgram, UnitPeriod } from '@/types';
+import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const addUnitSchema = z.object({
@@ -17,6 +17,7 @@ const addUnitSchema = z.object({
   studyProgram: z.string({ required_error: 'Debe seleccionar un programa de estudios.' }),
   period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
   module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
+  unitType: z.enum(['Específica', 'Empleabilidad'], { required_error: 'Debe seleccionar un tipo de unidad.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
@@ -27,6 +28,7 @@ type AddUnitFormValues = z.infer<typeof addUnitSchema>;
 
 const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
 const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
+const unitTypeOptions: UnitType[] = ['Específica', 'Empleabilidad'];
 
 interface AddUnitFormProps {
   onUnitAdded: () => void;
@@ -112,8 +114,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
+        <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
@@ -126,6 +127,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
               </FormItem>
             )}
           />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="studyProgram"
@@ -140,6 +142,26 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                   </FormControl>
                   <SelectContent>
                     {studyPrograms.map(program => <SelectItem key={program.id} value={program.name}>{program.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="unitType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tipo de Unidad</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un tipo" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {unitTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <FormMessage />

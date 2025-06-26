@@ -10,6 +10,7 @@ export interface AppUser {
 }
 
 export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';
+export type UnitType = 'Específica' | 'Empleabilidad';
 
 export interface DidacticUnit {
   id: string;
@@ -22,6 +23,7 @@ export interface DidacticUnit {
   practicalHours: number;
   numberOfGroups: number;
   totalHours: number;
+  unitType: UnitType;
 }
 
 export interface StudyProgram {

@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { DidacticUnit, StudyProgram, UnitPeriod } from '@/types';
+import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
 import { updateDidacticUnit, getStudyPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
@@ -27,6 +27,7 @@ const editUnitSchema = z.object({
   studyProgram: z.string({ required_error: 'Debe seleccionar un programa de estudios.' }),
   period: z.enum(['MAR-JUL', 'AGOS-DIC'], { required_error: 'Debe seleccionar un período.' }),
   module: z.string({ required_error: 'Debe seleccionar un módulo.' }),
+  unitType: z.enum(['Específica', 'Empleabilidad'], { required_error: 'Debe seleccionar un tipo de unidad.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
@@ -37,6 +38,7 @@ type EditUnitFormValues = z.infer<typeof editUnitSchema>;
 
 const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
 const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
+const unitTypeOptions: UnitType[] = ['Específica', 'Empleabilidad'];
 
 interface EditUnitDialogProps {
   unit: DidacticUnit;
@@ -80,6 +82,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
       studyProgram: unit?.studyProgram || undefined,
       period: unit?.period || undefined,
       module: unit?.module || undefined,
+      unitType: unit?.unitType || undefined,
       credits: unit?.credits || 0,
       theoreticalHours: unit?.theoreticalHours || 0,
       practicalHours: unit?.practicalHours || 0,
@@ -106,6 +109,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         studyProgram: unit.studyProgram,
         period: unit.period,
         module: unit.module,
+        unitType: unit.unitType,
         credits: unit.credits,
         theoreticalHours: unit.theoreticalHours,
         practicalHours: unit.practicalHours,
@@ -151,20 +155,20 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
-                        <FormControl>
-                            <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
+             <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Nombre de la Unidad Didáctica</FormLabel>
+                    <FormControl>
+                        <Input placeholder="Ej: Programación Orientada a Objetos" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <FormField
                     control={form.control}
                     name="studyProgram"
@@ -183,6 +187,26 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                         </Select>
                         <FormMessage />
                         </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="unitType"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Tipo de Unidad</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Seleccione un tipo" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {unitTypeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
                     )}
                 />
             </div>
