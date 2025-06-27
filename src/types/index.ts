@@ -31,3 +31,10 @@ export interface StudyProgram {
   code: string;
   name: string;
 }
+
+export interface UnitFilters {
+  name?: string;
+  studyProgram?: string;
+  period?: string;
+  module?: string;
+}

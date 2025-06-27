@@ -33,29 +33,29 @@ export default function ManageProgramsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-6">
-      <Card className="flex-shrink-0">
+    <div className="space-y-6">
+      <Card>
         <CardHeader>
           <CardTitle>Registrar Nuevo Programa de Estudios</CardTitle>
           <CardDescription>
             Complete el formulario para añadir un nuevo programa de estudios al sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent>
           <AddProgramForm onProgramAdded={handleDataChange} />
         </CardContent>
       </Card>
       
       <Separator />
 
-      <Card className="flex-grow flex flex-col overflow-hidden">
+      <Card>
         <CardHeader>
           <CardTitle>Programas de Estudios Registrados</CardTitle>
           <CardDescription>
             Ver, editar y eliminar los programas existentes en el sistema.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex-grow overflow-y-auto">
+        <CardContent>
           <ProgramsList key={refreshKey} onDataChange={handleDataChange} />
         </CardContent>
       </Card>

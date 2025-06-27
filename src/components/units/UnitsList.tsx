@@ -1,9 +1,9 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getDidacticUnits } from '@/config/firebase';
-import type { DidacticUnit } from '@/types';
+import type { DidacticUnit, UnitFilters } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2 } from 'lucide-react';
@@ -13,10 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 interface UnitsListProps {
-    onUnitUpdated: () => void;
+    onDataChange: () => void;
+    filters: UnitFilters;
 }
 
-export function UnitsList({ onUnitUpdated }: UnitsListProps) {
+export function UnitsList({ onDataChange, filters }: UnitsListProps) {
   const [units, setUnits] = useState<DidacticUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<DidacticUnit | null>(null);
@@ -48,6 +49,22 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
     fetchUnits();
   }, [fetchUnits]);
 
+  const filteredUnits = useMemo(() => {
+    return units.filter(unit => {
+      const { studyProgram, period, module, name } = filters;
+      if (studyProgram && unit.studyProgram !== studyProgram) return false;
+      if (period && unit.period !== period) return false;
+      if (module && unit.module !== module) return false;
+      if (name && !unit.name.toLowerCase().includes(name.toLowerCase())) return false;
+      return true;
+    });
+  }, [units, filters]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+
   const handleEditUnit = (unit: DidacticUnit) => {
     setSelectedUnit(unit);
     setIsEditDialogOpen(true);
@@ -64,15 +81,15 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
     setSelectedUnit(null);
     if (updated) {
       fetchUnits();
-      onUnitUpdated();
+      onDataChange();
     }
   };
 
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = units.slice(firstItemIndex, lastItemIndex);
-  const totalPages = Math.ceil(units.length / itemsPerPage);
+  const currentItems = filteredUnits.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(filteredUnits.length / itemsPerPage);
 
 
   if (loading) {
@@ -86,7 +103,11 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
   }
   
   if (!units.length) {
-    return <p className="text-center text-muted-foreground">No hay unidades didácticas registradas.</p>;
+    return <p className="text-center text-muted-foreground py-8">No hay unidades didácticas registradas.</p>;
+  }
+  
+  if (filteredUnits.length === 0 && !loading) {
+    return <p className="text-center text-muted-foreground py-8">No se encontraron unidades con los filtros aplicados.</p>;
   }
 
   return (
@@ -128,11 +149,11 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
       </div>
       <div className="flex items-center justify-between pt-4">
         <div className="text-sm text-muted-foreground">
-          Mostrando {Math.min(firstItemIndex + 1, units.length)} a {Math.min(lastItemIndex, units.length)} de {units.length} unidades.
+          Mostrando {Math.min(firstItemIndex + 1, filteredUnits.length)} a {Math.min(lastItemIndex, filteredUnits.length)} de {filteredUnits.length} unidades.
         </div>
         <div className="flex items-center space-x-2">
            <span className="text-sm text-muted-foreground">
-             Página {currentPage} de {totalPages}
+             Página {currentPage} de {totalPages > 0 ? totalPages : 1}
           </span>
           <Button
             variant="outline"
