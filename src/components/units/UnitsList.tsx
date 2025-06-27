@@ -113,7 +113,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
   return (
     <>
       <div className="rounded-md border relative">
-        <Table>
+        <Table className="text-xs">
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
               <TableHead className="min-w-[150px]">P. de Estudios</TableHead>
@@ -121,7 +121,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
               <TableHead>Período</TableHead>
               <TableHead>Módulo</TableHead>
               <TableHead>Total Horas</TableHead>
-              <TableHead className="text-right sticky right-0 bg-background pr-4">Acciones</TableHead>
+              <TableHead className="w-[100px] text-right sticky right-0 bg-background pr-4">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
