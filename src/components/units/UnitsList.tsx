@@ -133,14 +133,16 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
                 <TableCell>{unit.module}</TableCell>
                 <TableCell className="font-semibold">{unit.totalHours}</TableCell>
                 <TableCell className="text-right sticky right-0 bg-background pr-4">
-                  <Button variant="ghost" size="icon" onClick={() => handleEditUnit(unit)}>
-                    <Edit2 className="h-4 w-4" />
-                    <span className="sr-only">Editar Unidad</span>
-                  </Button>
-                   <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(unit)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar Unidad</span>
-                  </Button>
+                  <div className="inline-flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleEditUnit(unit)}>
+                      <Edit2 className="h-4 w-4" />
+                      <span className="sr-only">Editar Unidad</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(unit)} className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar Unidad</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

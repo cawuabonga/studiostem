@@ -96,14 +96,16 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
                 <TableCell className="font-mono">{program.code}</TableCell>
                 <TableCell className="font-medium">{program.name}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(program)}>
-                    <Edit2 className="h-4 w-4" />
-                    <span className="sr-only">Editar Programa</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(program)} className="text-destructive hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar Programa</span>
-                  </Button>
+                  <div className="inline-flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(program)}>
+                      <Edit2 className="h-4 w-4" />
+                      <span className="sr-only">Editar Programa</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(program)} className="text-destructive hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar Programa</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
