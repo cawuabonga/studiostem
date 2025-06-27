@@ -10,7 +10,6 @@ import { addDidacticUnit } from '@/config/firebase';
 import type { DidacticUnit, UnitPeriod, UnitType } from '@/types';
 import { Label } from '../ui/label';
 import { FileDown, Upload } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
 interface BulkUploadUnitsProps {
   onUploadComplete: () => void;
@@ -159,26 +158,26 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex justify-end">
-        <Button variant="outline" onClick={handleDownloadTemplate}>
+        <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
             <FileDown className="mr-2 h-4 w-4" />
             Descargar Plantilla
         </Button>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="bulk-upload-input">Subir Archivo Excel</Label>
+      <div className="space-y-1">
+        <Label htmlFor="bulk-upload-input" className="text-sm font-normal">Subir Archivo Excel</Label>
         <div className="flex items-center gap-2">
             <Input
                 id="bulk-upload-input"
                 type="file"
                 accept=".xlsx, .xls"
                 onChange={handleFileChange}
-                className="flex-grow"
+                className="flex-grow h-9"
                 disabled={isUploading}
             />
-            <Button onClick={handleUpload} disabled={!selectedFile || isUploading}>
+            <Button size="sm" onClick={handleUpload} disabled={!selectedFile || isUploading}>
                 {isUploading ? (
                     'Cargando...'
                 ) : (
@@ -189,9 +188,6 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
                 )}
             </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
-            Sube el archivo Excel con las unidades didácticas. Asegúrate de que las columnas coincidan con la plantilla.
-        </p>
       </div>
     </div>
   );

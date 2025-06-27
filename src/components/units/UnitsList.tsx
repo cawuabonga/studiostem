@@ -24,6 +24,9 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const fetchUnits = useCallback(async () => {
     setLoading(true);
     try {
@@ -65,11 +68,18 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
     }
   };
 
+  // Pagination logic
+  const lastItemIndex = currentPage * itemsPerPage;
+  const firstItemIndex = lastItemIndex - itemsPerPage;
+  const currentItems = units.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(units.length / itemsPerPage);
+
+
   if (loading) {
     return (
       <div className="space-y-2">
-        {[...Array(5)].map((_, i) => (
-          <Skeleton key={i} className="h-12 w-full" />
+        {[...Array(itemsPerPage)].map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
         ))}
       </div>
     );
@@ -85,8 +95,8 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead className="min-w-[200px]">Nombre</TableHead>
-              <TableHead className="min-w-[200px]">P. de Estudios</TableHead>
+              <TableHead className="min-w-[150px]">Nombre</TableHead>
+              <TableHead className="min-w-[150px]">P. de Estudios</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Módulo</TableHead>
@@ -99,7 +109,7 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {units.map((unit) => (
+            {currentItems.map((unit) => (
               <TableRow key={unit.id}>
                 <TableCell className="font-medium">{unit.name}</TableCell>
                 <TableCell>{unit.studyProgram}</TableCell>
@@ -125,6 +135,32 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
             ))}
           </TableBody>
         </Table>
+      </div>
+      <div className="flex items-center justify-between pt-4">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {Math.min(firstItemIndex + 1, units.length)} a {Math.min(lastItemIndex, units.length)} de {units.length} unidades.
+        </div>
+        <div className="flex items-center space-x-2">
+           <span className="text-sm text-muted-foreground">
+             Página {currentPage} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage >= totalPages}
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
       {selectedUnit && isEditDialogOpen && (
         <EditUnitDialog

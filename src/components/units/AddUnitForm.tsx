@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -113,7 +114,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
         <FormField
             control={form.control}
             name="name"
@@ -269,13 +270,13 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 </FormItem>
             )}
             />
-            <div className="rounded-md border bg-muted p-3 text-center">
-                <h3 className="text-sm font-medium text-muted-foreground">Total de Horas Calculadas</h3>
-                <p className="text-3xl font-bold text-primary">{totalHours}</p>
+            <div className="rounded-md border bg-muted p-2 text-center">
+                <h3 className="text-xs font-medium text-muted-foreground">Total de Horas Calculadas</h3>
+                <p className="text-2xl font-bold text-primary">{totalHours}</p>
             </div>
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
+        <Button type="submit" className="w-full md:w-auto" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Unidad'}
         </Button>
       </form>

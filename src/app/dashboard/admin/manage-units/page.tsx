@@ -4,7 +4,6 @@
 import { AddUnitForm } from "@/components/units/AddUnitForm";
 import { UnitsList } from "@/components/units/UnitsList";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,16 +34,18 @@ export default function ManageUnitsPage() {
   }
 
   return (
-    <div className="flex flex-col h-full gap-6">
-       <Accordion type="single" collapsible className="w-full">
-        <AccordionItem value="item-1">
-          <AccordionTrigger className="text-lg font-semibold">Carga Masiva desde Excel</AccordionTrigger>
+    <div className="flex flex-col h-full gap-4">
+       <Accordion type="single" collapsible className="w-full border-b">
+        <AccordionItem value="item-1" className="border-b-0">
+          <AccordionTrigger className="text-base font-semibold py-3">
+            Carga Masiva desde Excel
+          </AccordionTrigger>
           <AccordionContent>
             <Card>
-                <CardHeader>
-                    <CardTitle>Subir Múltiples Unidades</CardTitle>
+                <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">Subir Múltiples Unidades</CardTitle>
                     <CardDescription>
-                        Descarga la plantilla, llénala con la información y súbela para registrar varias unidades a la vez.
+                        Sube la plantilla de Excel para registrar varias unidades a la vez.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -57,24 +58,16 @@ export default function ManageUnitsPage() {
 
       <Card className="flex-shrink-0">
         <CardHeader>
-          <CardTitle>Registrar Nueva Unidad Didáctica (Individual)</CardTitle>
-          <CardDescription>
-            Complete el formulario para añadir una nueva unidad al sistema.
-          </CardDescription>
+          <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent className="p-4 pt-0">
           <AddUnitForm onUnitAdded={handleDataChange} />
         </CardContent>
       </Card>
       
-      <Separator />
-
       <Card className="flex-grow flex flex-col overflow-hidden">
         <CardHeader>
           <CardTitle>Unidades Didácticas Registradas</CardTitle>
-          <CardDescription>
-            Ver y editar las unidades existentes en el sistema.
-          </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow overflow-y-auto">
           <UnitsList key={refreshKey} onUnitUpdated={handleDataChange} />
