@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit, StudyProgram } from '@/types';
+import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -196,6 +196,57 @@ export const deleteStudyProgram = async (id: string): Promise<void> => {
     console.log(`Study Program ${id} deleted.`);
   } catch (error) {
     console.error(`Error deleting study program ${id}:`, error);
+    throw error;
+  }
+};
+
+
+// Functions for Teachers
+export const addTeacher = async (teacherData: Omit<Teacher, 'id'>): Promise<void> => {
+  try {
+    const teachersCollectionRef = collection(db, 'teachers');
+    await addDoc(teachersCollectionRef, teacherData);
+    console.log("Teacher added successfully with data:", teacherData);
+  } catch (error) {
+    console.error("Error adding Teacher to Firestore:", error);
+    throw error;
+  }
+};
+
+export const getTeachers = async (): Promise<Teacher[]> => {
+  try {
+    const teachersCol = collection(db, 'teachers');
+    const q = query(teachersCol, orderBy("fullName"));
+    const querySnapshot = await getDocs(q);
+    const teachers: Teacher[] = [];
+    querySnapshot.forEach((docSnap) => {
+      teachers.push({ id: docSnap.id, ...docSnap.data() } as Teacher);
+    });
+    return teachers;
+  } catch (error) {
+    console.error("Error fetching all teachers:", error);
+    throw error;
+  }
+};
+
+export const updateTeacher = async (id: string, data: Partial<Omit<Teacher, 'id'>>): Promise<void> => {
+  try {
+    const teacherDocRef = doc(db, 'teachers', id);
+    await updateDoc(teacherDocRef, data);
+    console.log(`Teacher ${id} updated with data:`, data);
+  } catch (error) {
+    console.error(`Error updating teacher ${id}:`, error);
+    throw error;
+  }
+};
+
+export const deleteTeacher = async (id: string): Promise<void> => {
+  try {
+    const teacherDocRef = doc(db, 'teachers', id);
+    await deleteDoc(teacherDocRef);
+    console.log(`Teacher ${id} deleted.`);
+  } catch (error) {
+    console.error(`Error deleting teacher ${id}:`, error);
     throw error;
   }
 };

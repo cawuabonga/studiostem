@@ -38,3 +38,15 @@ export interface UnitFilters {
   period?: string;
   module?: string;
 }
+
+export type TeacherCondition = 'Nombrado' | 'Contratado';
+
+export interface Teacher {
+  id: string;
+  dni: string;
+  fullName: string;
+  studyProgram: string;
+  condition: TeacherCondition;
+  email: string;
+  phone: string;
+}
