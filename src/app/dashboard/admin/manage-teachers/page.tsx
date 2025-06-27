@@ -6,7 +6,7 @@ import { BulkUploadTeachers } from "@/components/teachers/BulkUploadTeachers";
 import { TeachersList } from "@/components/teachers/TeachersList";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,8 +35,26 @@ export default function ManageTeachersPage() {
   }
 
   return (
-    <div className="space-y-6">
-       <Accordion type="single" collapsible className="w-full">
+    <Tabs defaultValue="list" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="list">Listado de Docentes</TabsTrigger>
+        <TabsTrigger value="register">Registrar Docentes</TabsTrigger>
+      </TabsList>
+      <TabsContent value="list">
+        <Card>
+          <CardHeader>
+            <CardTitle>Docentes Registrados</CardTitle>
+            <CardDescription>
+              Ver, editar y eliminar los docentes existentes en el sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <TeachersList key={refreshKey} onDataChange={handleDataChange} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="register" className="space-y-6 pt-4">
+        <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
               <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
                   Carga Masiva de Docentes desde Excel
@@ -57,31 +75,18 @@ export default function ManageTeachersPage() {
             </AccordionItem>
         </Accordion>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Registrar Nuevo Docente</CardTitle>
-          <CardDescription>
-            Complete el formulario para añadir un nuevo docente al sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <AddTeacherForm onTeacherAdded={handleDataChange} />
-        </CardContent>
-      </Card>
-      
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Docentes Registrados</CardTitle>
-          <CardDescription>
-            Ver, editar y eliminar los docentes existentes en el sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TeachersList key={refreshKey} onDataChange={handleDataChange} />
-        </CardContent>
-      </Card>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Registrar Nuevo Docente</CardTitle>
+            <CardDescription>
+              Complete el formulario para añadir un nuevo docente al sistema.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AddTeacherForm onTeacherAdded={handleDataChange} />
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
 }

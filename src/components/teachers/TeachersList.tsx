@@ -25,6 +25,8 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchTeachers = useCallback(async () => {
     setLoading(true);
@@ -73,12 +75,23 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
       teacher.dni.includes(filter)
     );
   }, [teachers, filter]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
+
+  // Pagination logic
+  const lastItemIndex = currentPage * itemsPerPage;
+  const firstItemIndex = lastItemIndex - itemsPerPage;
+  const currentItems = filteredTeachers.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(filteredTeachers.length / itemsPerPage);
+
 
   if (loading) {
     return (
       <div className="space-y-2">
         <Skeleton className="h-10 w-1/3 mb-4" />
-        {[...Array(5)].map((_, i) => (
+        {[...Array(itemsPerPage)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
       </div>
@@ -107,8 +120,8 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredTeachers.length > 0 ? (
-              filteredTeachers.map((teacher) => (
+            {currentItems.length > 0 ? (
+              currentItems.map((teacher) => (
                 <TableRow key={teacher.id}>
                   <TableCell className="font-mono">{teacher.dni}</TableCell>
                   <TableCell className="font-medium">{teacher.fullName}</TableCell>
@@ -137,6 +150,33 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+       <div className="flex items-center justify-between pt-4">
+        <div className="text-sm text-muted-foreground">
+          Mostrando {Math.min(firstItemIndex + 1, filteredTeachers.length)} a {Math.min(lastItemIndex, filteredTeachers.length)} de {filteredTeachers.length} docentes.
+        </div>
+        <div className="flex items-center space-x-2">
+           <span className="text-sm text-muted-foreground">
+             Página {currentPage} de {totalPages > 0 ? totalPages : 1}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage >= totalPages}
+          >
+            Siguiente
+          </Button>
+        </div>
       </div>
       {selectedTeacher && isEditDialogOpen && (
         <EditTeacherDialog
