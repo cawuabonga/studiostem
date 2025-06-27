@@ -95,15 +95,10 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
         <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
             <TableRow>
-              <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead className="min-w-[150px]">P. de Estudios</TableHead>
-              <TableHead>Tipo</TableHead>
+              <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Módulo</TableHead>
-              <TableHead>Créditos</TableHead>
-              <TableHead>H. T.</TableHead>
-              <TableHead>H. P.</TableHead>
-              <TableHead>Grupos</TableHead>
               <TableHead>Total Horas</TableHead>
               <TableHead className="text-right sticky right-0 bg-background pr-4">Acciones</TableHead>
             </TableRow>
@@ -111,15 +106,10 @@ export function UnitsList({ onUnitUpdated }: UnitsListProps) {
           <TableBody>
             {currentItems.map((unit) => (
               <TableRow key={unit.id}>
-                <TableCell className="font-medium">{unit.name}</TableCell>
                 <TableCell>{unit.studyProgram}</TableCell>
-                <TableCell>{unit.unitType}</TableCell>
+                <TableCell className="font-medium">{unit.name}</TableCell>
                 <TableCell>{unit.period}</TableCell>
                 <TableCell>{unit.module}</TableCell>
-                <TableCell>{unit.credits}</TableCell>
-                <TableCell>{unit.theoreticalHours}</TableCell>
-                <TableCell>{unit.practicalHours}</TableCell>
-                <TableCell>{unit.numberOfGroups}</TableCell>
                 <TableCell className="font-semibold">{unit.totalHours}</TableCell>
                 <TableCell className="text-right sticky right-0 bg-background pr-4">
                   <Button variant="ghost" size="icon" onClick={() => handleEditUnit(unit)}>
