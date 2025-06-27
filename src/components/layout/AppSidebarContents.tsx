@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library } from 'lucide-react';
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List } from 'lucide-react';
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -24,7 +24,7 @@ export function AppSidebarContents() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true },
     // { href: '/dashboard/profile', label: 'Profile', icon: User }, // Profile can be part of settings or a dropdown
     // { href: '/dashboard/settings', label: 'Settings', icon: Settings },
   ];
@@ -35,7 +35,8 @@ export function AppSidebarContents() {
       // { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion }, // General admin panel can be a group
       { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users },
       { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library },
-      { href: '/dashboard/admin/manage-units', label: 'Unidades Didácticas', icon: BookCopy },
+      { href: '/dashboard/admin/manage-units', label: 'Listado de Unidades', icon: List, exact: true },
+      { href: '/dashboard/admin/manage-units/register', label: 'Registrar Unidad', icon: BookCopy },
       { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon }
     );
   }
@@ -70,7 +71,10 @@ export function AppSidebarContents() {
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton 
                   asChild 
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
+                  isActive={
+                    // @ts-ignore
+                    item.exact ? pathname === item.href : pathname.startsWith(item.href)
+                  }
                   tooltip={{children: item.label, side: 'right', align: 'center'}}
                 >
                   <a>
