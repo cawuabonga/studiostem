@@ -50,3 +50,14 @@ export interface Teacher {
   email: string;
   phone: string;
 }
+
+export interface UnitAssignment {
+  id: string;
+  year: number;
+  period: UnitPeriod;
+  unitId: string;
+  unitName: string;
+  teacherId: string;
+  teacherName: string;
+  studyProgram: string;
+}

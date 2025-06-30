@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher } from '@/types';
+import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -247,6 +247,50 @@ export const deleteTeacher = async (id: string): Promise<void> => {
     console.log(`Teacher ${id} deleted.`);
   } catch (error) {
     console.error(`Error deleting teacher ${id}:`, error);
+    throw error;
+  }
+};
+
+// Functions for Unit Assignments
+export const addUnitAssignment = async (assignmentData: Omit<UnitAssignment, 'id'>): Promise<string> => {
+  try {
+    const assignmentsCollectionRef = collection(db, 'unitAssignments');
+    const docRef = await addDoc(assignmentsCollectionRef, assignmentData);
+    console.log("Unit Assignment added successfully with ID:", docRef.id);
+    return docRef.id;
+  } catch (error) {
+    console.error("Error adding Unit Assignment to Firestore:", error);
+    throw error;
+  }
+};
+
+export const getUnitAssignments = async (year: number, studyProgram: string): Promise<UnitAssignment[]> => {
+  try {
+    const assignmentsCol = collection(db, 'unitAssignments');
+    const q = query(
+      assignmentsCol,
+      where("year", "==", year),
+      where("studyProgram", "==", studyProgram)
+    );
+    const querySnapshot = await getDocs(q);
+    const assignments: UnitAssignment[] = [];
+    querySnapshot.forEach((docSnap) => {
+      assignments.push({ id: docSnap.id, ...docSnap.data() } as UnitAssignment);
+    });
+    return assignments;
+  } catch (error) {
+    console.error("Error fetching unit assignments:", error);
+    throw error;
+  }
+};
+
+export const deleteUnitAssignment = async (id: string): Promise<void> => {
+  try {
+    const assignmentDocRef = doc(db, 'unitAssignments', id);
+    await deleteDoc(assignmentDocRef);
+    console.log(`Unit Assignment ${id} deleted.`);
+  } catch (error) {
+    console.error(`Error deleting unit assignment ${id}:`, error);
     throw error;
   }
 };
