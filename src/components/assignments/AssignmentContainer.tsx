@@ -92,6 +92,13 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     }, {} as Record<'MAR-JUL' | 'AGOS-DIC', UnitAssignment[]>);
   }, [assignments]);
   
+  const unitsByPeriod = useMemo(() => {
+    return {
+      'MAR-JUL': units.filter(u => u.period === 'MAR-JUL'),
+      'AGOS-DIC': units.filter(u => u.period === 'AGOS-DIC'),
+    };
+  }, [units]);
+  
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -114,7 +121,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <AssignmentPeriodColumn
         period="MAR-JUL"
-        allUnits={units}
+        allUnits={unitsByPeriod['MAR-JUL']}
         allTeachers={teachers}
         assignments={assignmentsByPeriod['MAR-JUL'] || []}
         onAssign={handleAssign}
@@ -122,7 +129,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
       />
       <AssignmentPeriodColumn
         period="AGOS-DIC"
-        allUnits={units}
+        allUnits={unitsByPeriod['AGOS-DIC']}
         allTeachers={teachers}
         assignments={assignmentsByPeriod['AGOS-DIC'] || []}
         onAssign={handleAssign}
