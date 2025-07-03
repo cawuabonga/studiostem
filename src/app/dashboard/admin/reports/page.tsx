@@ -10,6 +10,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TeacherReportCard } from "@/components/reports/TeacherReportCard";
+import { Button } from "@/components/ui/button";
+import { Printer } from "lucide-react";
+import "./print.css";
 
 interface ProcessedTeacherData {
   teacher: Teacher;
@@ -113,11 +116,19 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Reporte de Carga Horaria por Docente</CardTitle>
-          <CardDescription>
-            Seleccione el año y el programa de estudios para generar el reporte.
-          </CardDescription>
+        <CardHeader className="report-header">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle>Reporte de Carga Horaria por Docente</CardTitle>
+              <CardDescription>
+                Seleccione el año y el programa de estudios para generar el reporte.
+              </CardDescription>
+            </div>
+            <Button onClick={() => window.print()}>
+              <Printer className="mr-2 h-4 w-4" />
+              Imprimir Reporte
+            </Button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
             <Select value={selectedYear} onValueChange={setSelectedYear}>
               <SelectTrigger>
@@ -143,7 +154,7 @@ export default function ReportsPage() {
               {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-80 w-full" />)}
             </div>
           ) : reportData.length > 0 ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 print-grid">
               {reportData.map(data => (
                 <TeacherReportCard 
                   key={data.teacher.id}

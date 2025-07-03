@@ -26,12 +26,12 @@ export default function DashboardMainLayout({
 
   return (
     <SidebarProvider defaultOpen={true} >
-      <Sidebar variant="sidebar" collapsible="icon" side="left">
+      <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container">
         <AppSidebarContents />
       </Sidebar>
-      <SidebarRail />
-      <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4">
+      <SidebarRail className="sidebar-container" />
+      <SidebarInset className="main-content">
+        <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4">
             <SidebarTrigger className="md:hidden" />
             <h1 className="text-xl font-semibold font-headline ml-auto md:ml-0">CAP FAP Connect</h1>
         </header>

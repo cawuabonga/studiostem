@@ -25,7 +25,7 @@ export function TeacherReportCard({
 }: TeacherReportCardProps) {
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col h-full print-card">
       <CardHeader className="flex flex-row items-center gap-4">
         <Avatar className="w-16 h-16">
           <AvatarImage src={`https://placehold.co/100x100.png?text=${teacher.fullName?.[0] || 'T'}`} alt={teacher.fullName} data-ai-hint="teacher profile" />
