@@ -59,6 +59,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
       teacherId,
       teacherName: teacher.fullName,
       studyProgram,
+      totalHours: unit.totalHours,
     };
     
     try {

@@ -60,4 +60,5 @@ export interface UnitAssignment {
   teacherId: string;
   teacherName: string;
   studyProgram: string;
+  totalHours: number;
 }
