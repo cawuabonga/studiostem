@@ -3,11 +3,11 @@
 
 import type { DidacticUnit, Teacher, UnitAssignment } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useMemo, useState } from "react";
 import { Button } from "../ui/button";
 import { Trash2, User, BookOpen, Search } from "lucide-react";
 import { Input } from "../ui/input";
+import { TeacherAssignmentSelect } from "./TeacherAssignmentSelect";
 
 interface AssignmentPeriodColumnProps {
   period: 'MAR-JUL' | 'AGOS-DIC';
@@ -71,18 +71,10 @@ export function AssignmentPeriodColumn({ period, allUnits, allTeachers, assignme
               availableUnits.map(unit => (
                 <div key={unit.id} className="flex items-center gap-2 p-2 border rounded-md">
                   <span className="flex-grow text-sm">{unit.name}</span>
-                  <Select onValueChange={(teacherId) => handleAssign(unit.id, teacherId)}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Asignar a..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allTeachers.map(teacher => (
-                        <SelectItem key={teacher.id} value={teacher.id}>
-                          {teacher.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <TeacherAssignmentSelect 
+                    teachers={allTeachers}
+                    onAssign={(teacherId) => handleAssign(unit.id, teacherId)}
+                  />
                 </div>
               ))
             ) : (
