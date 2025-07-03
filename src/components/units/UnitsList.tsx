@@ -1,12 +1,11 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getDidacticUnits } from '@/config/firebase';
+import { getDidacticUnits, addDidacticUnit } from '@/config/firebase';
 import type { DidacticUnit, UnitFilters } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Copy } from 'lucide-react';
 import { EditUnitDialog } from './EditUnitDialog';
 import { DeleteUnitDialog } from './DeleteUnitDialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -75,6 +74,35 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleDuplicateUnit = async (unitToDuplicate: DidacticUnit) => {
+    const { id, ...unitData } = unitToDuplicate;
+    
+    toast({
+        title: 'Duplicando unidad...',
+        description: `Creando una copia de "${unitData.name}".`,
+    });
+
+    try {
+        await addDidacticUnit({
+            ...unitData,
+            name: `${unitData.name} (Copia)`,
+        });
+        toast({
+            title: '¡Unidad Duplicada!',
+            description: 'La lista se ha actualizado.',
+        });
+        fetchUnits();
+        onDataChange();
+    } catch (error) {
+        console.error('Error duplicating unit:', error);
+        toast({
+            title: 'Error',
+            description: 'No se pudo duplicar la unidad.',
+            variant: 'destructive',
+        });
+    }
+  };
+
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
@@ -136,6 +164,10 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
                 <TableCell className="font-semibold">{unit.totalHours}</TableCell>
                 <TableCell className="text-right sticky right-0 bg-background pr-4">
                   <div className="inline-flex items-center">
+                    <Button variant="ghost" size="icon" onClick={() => handleDuplicateUnit(unit)}>
+                      <Copy className="h-4 w-4" />
+                      <span className="sr-only">Duplicar Unidad</span>
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleEditUnit(unit)}>
                       <Edit2 className="h-4 w-4" />
                       <span className="sr-only">Editar Unidad</span>
