@@ -3,52 +3,58 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Rules for Users collection
+  
+    // Helper function to check for Admin role
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    }
+
+    // --- USERS ---
+    // Users can read/update their own data. Admins can manage all users.
     match /users/{userId} {
-      // Read: Admins can list and get all users. Users can only get their own profile.
-      allow get: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-      
-      // Create: Users can create their own document upon signup.
-      allow create: if request.auth.uid == userId;
-
-      // Update: Admins can update any profile. Users can update their own.
-      allow update: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-
-      // Delete: Only admins can delete user documents.
-      allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow create: if request.auth.uid == userId; // User can create their own document on signup
+      allow update: if request.auth.uid == userId || isAdmin(); // User or Admin can update
+      allow list, delete: if isAdmin(); // Only Admins can list and delete users
     }
-
-    // Rules for App Settings (login image)
+    
+    // --- APP SETTINGS ---
+    // General app settings like the login image.
     match /appSettings/{settingId} {
-      // Read: Anyone can read settings (e.g., login image for unauthenticated users).
-      allow read: if true;
-      // Write: Only admins can change settings.
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    // Rules for core academic data collections.
-    // Read: Any authenticated user can read this data (e.g., for dropdowns, reports).
-    // Write: Only admins can create, update, or delete records.
-    match /studyPrograms/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    match /didacticUnits/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      allow read: if true; // Anyone can read settings
+      allow write: if isAdmin(); // Only Admins can change settings
     }
     
-    match /teachers/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    // --- STUDY PROGRAMS ---
+    // Academic program information.
+    match /studyPrograms/{programId} {
+      allow read: if request.auth.uid != null; // Any authenticated user can read
+      // Admins can create/update programs, with validation for required fields.
+      allow create, update: if isAdmin() && 
+                              request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                              request.resource.data.code is string && request.resource.data.code.size() > 0 &&
+                              request.resource.data.abbreviation is string && request.resource.data.abbreviation.size() > 0;
+      allow delete: if isAdmin(); // Admins can delete programs.
     }
     
-    match /unitAssignments/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+    // --- DIDACTIC UNITS, TEACHERS, ASSIGNMENTS ---
+    // These collections follow a simple pattern:
+    // Any authenticated user can read, only Admins can write (create, update, delete).
+    
+    match /didacticUnits/{unitId} {
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin();
+    }
+    
+    match /teachers/{teacherId} {
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /unitAssignments/{assignmentId} {
+      allow read: if request.auth.uid != null;
+      allow create, update, delete: if isAdmin();
     }
   }
 }
