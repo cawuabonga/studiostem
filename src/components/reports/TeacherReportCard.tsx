@@ -12,6 +12,7 @@ interface TeacherReportCardProps {
   assignmentsAgosDic: UnitAssignment[];
   totalHoursMarJul: number;
   totalHoursAgosDic: number;
+  programAbbrMap: Map<string, string>;
 }
 
 export function TeacherReportCard({
@@ -20,16 +21,8 @@ export function TeacherReportCard({
   assignmentsAgosDic,
   totalHoursMarJul,
   totalHoursAgosDic,
+  programAbbrMap,
 }: TeacherReportCardProps) {
-
-  const getInitials = (name: string): string => {
-    if (!name) return '';
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase();
-  };
 
   return (
     <Card className="flex flex-col h-full">
@@ -52,7 +45,7 @@ export function TeacherReportCard({
               {assignmentsMarJul.map(a => (
                 <li key={a.id}>
                   {a.unitName} {a.shift && `(${a.shift})`}
-                  <span className="text-muted-foreground italic ml-1">({getInitials(a.studyProgram)})</span>
+                  <span className="text-muted-foreground italic ml-1">({programAbbrMap.get(a.studyProgram) || 'N/A'})</span>
                 </li>
               ))}
             </ul>
@@ -71,7 +64,7 @@ export function TeacherReportCard({
               {assignmentsAgosDic.map(a => (
                  <li key={a.id}>
                   {a.unitName} {a.shift && `(${a.shift})`}
-                  <span className="text-muted-foreground italic ml-1">({getInitials(a.studyProgram)})</span>
+                  <span className="text-muted-foreground italic ml-1">({programAbbrMap.get(a.studyProgram) || 'N/A'})</span>
                 </li>
               ))}
             </ul>

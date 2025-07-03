@@ -37,6 +37,8 @@ export default function ReportsPage() {
     return Array.from({ length: 5 }, (_, i) => (currentYear + 2 - i).toString());
   }, []);
 
+  const programAbbrMap = useMemo(() => new Map(studyPrograms.map(p => [p.name, p.abbreviation || ''])), [studyPrograms]);
+
   useEffect(() => {
     if (!authLoading && (!user || user.role !== 'Admin')) {
       router.push('/dashboard');
@@ -150,6 +152,7 @@ export default function ReportsPage() {
                   assignmentsAgosDic={data.assignmentsAgosDic}
                   totalHoursMarJul={data.totalHoursMarJul}
                   totalHoursAgosDic={data.totalHoursAgosDic}
+                  programAbbrMap={programAbbrMap}
                 />
               ))}
             </div>
