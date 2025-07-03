@@ -1,3 +1,4 @@
+
 @media print {
   /* Hide the entire sidebar and the page header */
   .sidebar-container, .page-header {
@@ -19,9 +20,10 @@
     border: 1px solid #e5e7eb !important;
   }
 
-  /* Force 2-column grid */
+  /* Force single-column grid for print. Cards will stack vertically. */
   .print-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+    gap: 1rem !important;
   }
 
   /* Hide the filter/print header on the page */

@@ -36,9 +36,12 @@ export function TeacherReportCard({
           <CardDescription>DNI: {teacher.dni} | {teacher.studyProgram}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 space-y-4">
+      
+      {/* For print, this becomes a flex-row container. For screen, it remains a block with space-y. */}
+      <CardContent className="flex-1 space-y-4 print:flex print:flex-row print:space-y-0 print:gap-4">
+        
         {/* Periodo MAR-JUL */}
-        <div>
+        <div className="print:w-1/2">
           <h4 className="font-semibold text-sm mb-2">Periodo: MAR-JUL</h4>
           {assignmentsMarJul.length > 0 ? (
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
@@ -54,10 +57,10 @@ export function TeacherReportCard({
           )}
         </div>
 
-        <Separator />
+        <Separator className="print:hidden" />
 
         {/* Periodo AGOS-DIC */}
-        <div>
+        <div className="print:w-1/2">
           <h4 className="font-semibold text-sm mb-2">Periodo: AGOS-DIC</h4>
            {assignmentsAgosDic.length > 0 ? (
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
@@ -73,6 +76,7 @@ export function TeacherReportCard({
           )}
         </div>
       </CardContent>
+
       <CardFooter className="bg-muted/50 p-4 flex justify-around text-center rounded-b-lg">
         <div>
           <p className="text-xs font-bold text-muted-foreground">HORAS MAR-JUL</p>
