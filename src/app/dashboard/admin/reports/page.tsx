@@ -70,15 +70,17 @@ export default function ReportsPage() {
     const generateReport = async () => {
       setReportLoading(true);
       try {
-        const [allTeachers, allAssignments] = await Promise.all([
+        const [allTeachers, allAssignmentsForYear] = await Promise.all([
           getTeachers(),
-          getUnitAssignments(parseInt(selectedYear), selectedProgram)
+          getUnitAssignments(parseInt(selectedYear)) // Fetch all assignments for the year
         ]);
 
+        // Filter teachers to display based on the selected program
         const teachersInProgram = allTeachers.filter(t => t.studyProgram === selectedProgram);
         
+        // For each teacher, find all their assignments from the complete yearly list
         const processedData = teachersInProgram.map(teacher => {
-          const teacherAssignments = allAssignments.filter(a => a.teacherId === teacher.id);
+          const teacherAssignments = allAssignmentsForYear.filter(a => a.teacherId === teacher.id);
           
           const assignmentsMarJul = teacherAssignments.filter(a => a.period === 'MAR-JUL');
           const assignmentsAgosDic = teacherAssignments.filter(a => a.period === 'AGOS-DIC');

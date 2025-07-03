@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment } from '@/types';
 
@@ -264,14 +264,14 @@ export const addUnitAssignment = async (assignmentData: Omit<UnitAssignment, 'id
   }
 };
 
-export const getUnitAssignments = async (year: number, studyProgram: string): Promise<UnitAssignment[]> => {
+export const getUnitAssignments = async (year: number, studyProgram?: string): Promise<UnitAssignment[]> => {
   try {
     const assignmentsCol = collection(db, 'unitAssignments');
-    const q = query(
-      assignmentsCol,
-      where("year", "==", year),
-      where("studyProgram", "==", studyProgram)
-    );
+    const constraints: QueryConstraint[] = [where("year", "==", year)];
+    if (studyProgram) {
+      constraints.push(where("studyProgram", "==", studyProgram));
+    }
+    const q = query(assignmentsCol, ...constraints);
     const querySnapshot = await getDocs(q);
     const assignments: UnitAssignment[] = [];
     querySnapshot.forEach((docSnap) => {

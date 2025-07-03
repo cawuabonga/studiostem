@@ -41,7 +41,12 @@ export function TeacherReportCard({
           <h4 className="font-semibold text-sm mb-2">Periodo: MAR-JUL</h4>
           {assignmentsMarJul.length > 0 ? (
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
-              {assignmentsMarJul.map(a => <li key={a.id}>{a.unitName}</li>)}
+              {assignmentsMarJul.map(a => (
+                <li key={a.id}>
+                  {a.unitName}
+                  <span className="text-muted-foreground italic ml-1">({a.studyProgram})</span>
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="text-xs text-muted-foreground italic">Sin unidades asignadas.</p>
@@ -55,7 +60,12 @@ export function TeacherReportCard({
           <h4 className="font-semibold text-sm mb-2">Periodo: AGOS-DIC</h4>
            {assignmentsAgosDic.length > 0 ? (
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
-              {assignmentsAgosDic.map(a => <li key={a.id}>{a.unitName}</li>)}
+              {assignmentsAgosDic.map(a => (
+                 <li key={a.id}>
+                  {a.unitName}
+                  <span className="text-muted-foreground italic ml-1">({a.studyProgram})</span>
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="text-xs text-muted-foreground italic">Sin unidades asignadas.</p>
