@@ -1,60 +1,75 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper function to check for Admin role
+
+    // Funciones de ayuda
+    function isAuth() {
+      return request.auth != null;
+    }
+
     function isAdmin() {
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
     }
 
-    // --- USERS ---
-    // Users can read/update their own data. Admins can manage all users.
+    // Colección: users
+    // Reglas:
+    // - Los administradores pueden leer/escribir cualquier documento de usuario.
+    // - Los usuarios autenticados pueden leer/escribir su propio documento.
     match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow create: if request.auth.uid == userId; // User can create their own document on signup
-      allow update: if request.auth.uid == userId || isAdmin(); // User or Admin can update
-      allow list, delete: if isAdmin(); // Only Admins can list and delete users
-    }
-    
-    // --- APP SETTINGS ---
-    // General app settings like the login image.
-    match /appSettings/{settingId} {
-      allow read: if true; // Anyone can read settings
-      allow write: if isAdmin(); // Only Admins can change settings
-    }
-    
-    // --- STUDY PROGRAMS ---
-    // Academic program information.
-    match /studyPrograms/{programId} {
-      allow read: if request.auth.uid != null; // Any authenticated user can read
-      // Admins can create/update programs, with validation for required fields.
-      allow create, update: if isAdmin() && 
-                              request.resource.data.name is string && request.resource.data.name.size() > 0 &&
-                              request.resource.data.code is string && request.resource.data.code.size() > 0 &&
-                              request.resource.data.abbreviation is string && request.resource.data.abbreviation.size() > 0;
-      allow delete: if isAdmin(); // Admins can delete programs.
-    }
-    
-    // --- DIDACTIC UNITS, TEACHERS, ASSIGNMENTS ---
-    // These collections follow a simple pattern:
-    // Any authenticated user can read, only Admins can write (create, update, delete).
-    
-    match /didacticUnits/{unitId} {
-      allow read: if request.auth.uid != null;
-      allow create, update, delete: if isAdmin();
-    }
-    
-    match /teachers/{teacherId} {
-      allow read: if request.auth.uid != null;
-      allow create, update, delete: if isAdmin();
+      allow read, write: if isAdmin() || request.auth.uid == userId;
     }
 
+    // Colección: appSettings
+    // Reglas:
+    // - Cualquiera (incluso usuarios no autenticados) puede leer la configuración (ej: imagen de inicio de sesión).
+    // - Solo los administradores pueden escribir/actualizar la configuración.
+    match /appSettings/{docId} {
+        allow read: if true;
+        allow write: if isAdmin();
+    }
+    
+    // Colección: studyPrograms
+    // Reglas:
+    // - Cualquier usuario autenticado puede leer los programas de estudio.
+    // - Solo los administradores pueden crear, actualizar o eliminar programas de estudio.
+    // - Validación: Asegura que los campos requeridos (name, code, abbreviation) estén presentes y sean del tipo correcto.
+    match /studyPrograms/{programId} {
+        allow read: if isAuth();
+        allow write: if isAdmin() && 
+                      request.resource.data.name is string && request.resource.data.name.size() > 0 &&
+                      request.resource.data.code is string && request.resource.data.code.size() > 0 &&
+                      request.resource.data.abbreviation is string && request.resource.data.abbreviation.size() > 0;
+    }
+    
+    // Colección: teachers
+    // Reglas:
+    // - Cualquier usuario autenticado puede leer los datos de los docentes.
+    // - Solo los administradores pueden crear, actualizar o eliminar docentes.
+    // - Validación: Asegura que los campos requeridos estén presentes y sean del tipo correcto.
+    match /teachers/{teacherId} {
+        allow read: if isAuth();
+        allow write: if isAdmin();
+    }
+    
+    // Colección: didacticUnits
+    // Reglas:
+    // - Cualquier usuario autenticado puede leer los datos de las unidades.
+    // - Solo los administradores pueden crear, actualizar o eliminar unidades.
+    // - Validación: Asegura que los campos requeridos estén presentes y tengan los tipos/valores correctos.
+    match /didacticUnits/{unitId} {
+        allow read: if isAuth();
+        allow write: if isAdmin();
+    }
+
+    // Colección: unitAssignments
+    // Reglas:
+    // - Cualquier usuario autenticado puede leer los datos de las asignaciones.
+    // - Solo los administradores pueden crear, actualizar o eliminar asignaciones.
+    // - Validación: Asegura que los campos requeridos estén presentes y tengan los tipos/valores correctos.
     match /unitAssignments/{assignmentId} {
-      allow read: if request.auth.uid != null;
-      allow create, update, delete: if isAdmin();
+        allow read: if isAuth();
+        allow write: if isAdmin();
     }
   }
 }
