@@ -61,6 +61,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
       teacherName: teacher.fullName,
       studyProgram,
       totalHours: unit.totalHours,
+      shift: unit.shift,
     };
     
     try {

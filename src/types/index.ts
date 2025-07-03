@@ -11,6 +11,7 @@ export interface AppUser {
 
 export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';
 export type UnitType = 'Específica' | 'Empleabilidad';
+export type Shift = 'Mañana' | 'Tarde' | 'Noche';
 
 export interface DidacticUnit {
   id: string;
@@ -23,6 +24,7 @@ export interface DidacticUnit {
   practicalHours: number;
   totalHours: number;
   unitType: UnitType;
+  shift?: Shift;
 }
 
 export interface StudyProgram {
@@ -60,4 +62,5 @@ export interface UnitAssignment {
   teacherName: string;
   studyProgram: string;
   totalHours: number;
+  shift?: Shift;
 }

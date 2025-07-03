@@ -7,11 +7,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addDidacticUnit, getStudyPrograms } from '@/config/firebase';
-import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
+import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType, Shift } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Checkbox } from '../ui/checkbox';
+import { Separator } from '../ui/separator';
 
 const addUnitSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -22,6 +24,9 @@ const addUnitSchema = z.object({
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
+  shifts: z.array(z.string()).refine((value) => value.length > 0, {
+    message: "Debe seleccionar al menos un turno.",
+  }),
 });
 
 type AddUnitFormValues = z.infer<typeof addUnitSchema>;
@@ -29,6 +34,7 @@ type AddUnitFormValues = z.infer<typeof addUnitSchema>;
 const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
 const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
 const unitTypeOptions: UnitType[] = ['Específica', 'Empleabilidad'];
+const shiftOptions: Shift[] = ['Mañana', 'Tarde', 'Noche'];
 
 interface AddUnitFormProps {
   onUnitAdded: () => void;
@@ -66,6 +72,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
       credits: 0,
       theoreticalHours: 0,
       practicalHours: 0,
+      shifts: [],
     },
   });
 
@@ -74,24 +81,40 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
     const th = Number(data.theoreticalHours) || 0;
     const ph = Number(data.practicalHours) || 0;
     
-    const unitData: Omit<DidacticUnit, 'id'> = {
-      ...data,
+    const baseUnitData: Omit<DidacticUnit, 'id' | 'shift'> = {
+      name: data.name,
+      studyProgram: data.studyProgram,
+      period: data.period,
+      module: data.module,
+      credits: data.credits,
+      theoreticalHours: th,
+      practicalHours: ph,
       totalHours: th + ph,
+      unitType: data.unitType,
     };
 
     try {
-      await addDidacticUnit(unitData);
+      const creationPromises = data.shifts.map(shift => {
+        const unitDataForShift: Omit<DidacticUnit, 'id'> = {
+            ...baseUnitData,
+            shift: shift as Shift,
+        };
+        return addDidacticUnit(unitDataForShift);
+      });
+      
+      await Promise.all(creationPromises);
+
       toast({
         title: '¡Éxito!',
-        description: 'La unidad didáctica ha sido registrada correctamente.',
+        description: `Se han registrado ${data.shifts.length} unidad(es) didáctica(s) para los turnos seleccionados.`,
       });
       form.reset();
       onUnitAdded();
     } catch (error) {
-      console.error('Error adding didactic unit:', error);
+      console.error('Error adding didactic unit(s):', error);
       toast({
         title: 'Error',
-        description: 'No se pudo registrar la unidad didáctica. Intenta de nuevo.',
+        description: 'No se pudieron registrar las unidades didácticas. Intenta de nuevo.',
         variant: 'destructive',
       });
     } finally {
@@ -101,7 +124,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
             control={form.control}
             name="name"
@@ -199,6 +222,62 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
             )}
           />
         </div>
+
+        <Separator className="my-6" />
+
+        <FormField
+          control={form.control}
+          name="shifts"
+          render={() => (
+            <FormItem>
+              <div className="mb-4">
+                <FormLabel>Turnos/Grupos a Crear</FormLabel>
+                <FormDescription>
+                  Seleccione uno o más turnos. Se creará una unidad didáctica separada para cada turno.
+                </FormDescription>
+              </div>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {shiftOptions.map((item) => (
+                  <FormField
+                    key={item}
+                    control={form.control}
+                    name="shifts"
+                    render={({ field }) => {
+                      return (
+                        <FormItem
+                          key={item}
+                          className="flex flex-row items-start space-x-3 space-y-0"
+                        >
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value?.includes(item)}
+                              onCheckedChange={(checked) => {
+                                return checked
+                                  ? field.onChange([...(field.value || []), item])
+                                  : field.onChange(
+                                      (field.value || []).filter(
+                                        (value) => value !== item
+                                      )
+                                    )
+                              }}
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            {item}
+                          </FormLabel>
+                        </FormItem>
+                      )
+                    }}
+                  />
+                ))}
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <Separator className="my-6" />
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
@@ -218,7 +297,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 name="theoreticalHours"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Horas Teóricas (por grupo)</FormLabel>
+                    <FormLabel>Horas Teóricas</FormLabel>
                     <FormControl>
                     <Input type="number" placeholder="Ej: 2" {...field} />
                     </FormControl>
@@ -231,7 +310,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 name="practicalHours"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Horas Prácticas (por grupo)</FormLabel>
+                    <FormLabel>Horas Prácticas</FormLabel>
                     <FormControl>
                     <Input type="number" placeholder="Ej: 4" {...field} />
                     </FormControl>
@@ -241,7 +320,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
             />
         </div>
         <Button type="submit" className="w-full md:w-auto" disabled={loading}>
-          {loading ? 'Registrando...' : 'Registrar Unidad'}
+          {loading ? 'Registrando...' : 'Registrar Unidad(es)'}
         </Button>
       </form>
     </Form>

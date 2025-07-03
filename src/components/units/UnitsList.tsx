@@ -120,6 +120,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
               <TableHead className="min-w-[150px]">Nombre</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Módulo</TableHead>
+              <TableHead>Turno</TableHead>
               <TableHead>Total Horas</TableHead>
               <TableHead className="w-[100px] text-right sticky right-0 bg-background pr-4">Acciones</TableHead>
             </TableRow>
@@ -131,6 +132,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
                 <TableCell className="font-medium">{unit.name}</TableCell>
                 <TableCell>{unit.period}</TableCell>
                 <TableCell>{unit.module}</TableCell>
+                <TableCell>{unit.shift || '---'}</TableCell>
                 <TableCell className="font-semibold">{unit.totalHours}</TableCell>
                 <TableCell className="text-right sticky right-0 bg-background pr-4">
                   <div className="inline-flex items-center">

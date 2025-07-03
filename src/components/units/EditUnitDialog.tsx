@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
+import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType, Shift } from '@/types';
 import { updateDidacticUnit, getStudyPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -32,6 +32,7 @@ const editUnitSchema = z.object({
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
+  shift: z.enum(['Mañana', 'Tarde', 'Noche']).optional(),
 });
 
 type EditUnitFormValues = z.infer<typeof editUnitSchema>;
@@ -39,6 +40,8 @@ type EditUnitFormValues = z.infer<typeof editUnitSchema>;
 const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i + 1).padStart(2, '0')}`);
 const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
 const unitTypeOptions: UnitType[] = ['Específica', 'Empleabilidad'];
+const shiftOptions: Shift[] = ['Mañana', 'Tarde', 'Noche'];
+
 
 interface EditUnitDialogProps {
   unit: DidacticUnit;
@@ -85,6 +88,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
       credits: unit?.credits || 0,
       theoreticalHours: unit?.theoreticalHours || 0,
       practicalHours: unit?.practicalHours || 0,
+      shift: unit?.shift || undefined,
     },
   });
 
@@ -101,6 +105,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         credits: unit.credits,
         theoreticalHours: unit.theoreticalHours,
         practicalHours: unit.practicalHours,
+        shift: unit.shift,
       });
     }
   }, [unit, reset, isOpen]);
@@ -201,7 +206,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     )}
                 />
             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                     control={form.control}
                     name="period"
@@ -242,6 +247,26 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     </FormItem>
                     )}
                 />
+                 <FormField
+                    control={form.control}
+                    name="shift"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Turno</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="No asignado" />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {shiftOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
@@ -262,7 +287,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     name="theoreticalHours"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Horas Teóricas (por grupo)</FormLabel>
+                        <FormLabel>Horas Teóricas</FormLabel>
                         <FormControl>
                         <Input type="number" placeholder="Ej: 2" {...field} />
                         </FormControl>
@@ -275,7 +300,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     name="practicalHours"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Horas Prácticas (por grupo)</FormLabel>
+                        <FormLabel>Horas Prácticas</FormLabel>
                         <FormControl>
                         <Input type="number" placeholder="Ej: 4" {...field} />
                         </FormControl>
