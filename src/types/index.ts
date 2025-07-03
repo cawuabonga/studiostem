@@ -31,6 +31,7 @@ export interface StudyProgram {
   id: string;
   code: string;
   name: string;
+  abbreviation: string;
 }
 
 export interface UnitFilters {

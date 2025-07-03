@@ -87,6 +87,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
             <TableRow>
               <TableHead>Código</TableHead>
               <TableHead>Denominación</TableHead>
+              <TableHead>Abreviatura</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -95,6 +96,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
               <TableRow key={program.id}>
                 <TableCell className="font-mono">{program.code}</TableCell>
                 <TableCell className="font-medium">{program.name}</TableCell>
+                <TableCell className="font-mono">{program.abbreviation}</TableCell>
                 <TableCell className="text-right">
                   <div className="inline-flex items-center">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(program)}>

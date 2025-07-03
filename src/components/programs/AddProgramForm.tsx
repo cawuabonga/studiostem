@@ -14,6 +14,7 @@ import { addStudyProgram } from '@/config/firebase';
 const addProgramSchema = z.object({
   code: z.string().min(1, { message: 'El código del programa es requerido.' }),
   name: z.string().min(3, { message: 'La denominación debe tener al menos 3 caracteres.' }),
+  abbreviation: z.string().min(2, { message: 'La abreviatura debe tener al menos 2 caracteres.' }),
 });
 
 type AddProgramFormValues = z.infer<typeof addProgramSchema>;
@@ -31,6 +32,7 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
     defaultValues: {
       code: '',
       name: '',
+      abbreviation: '',
     },
   });
 
@@ -59,6 +61,19 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+         <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Denominación</FormLabel>
+                <FormControl>
+                  <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -75,12 +90,12 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
           />
           <FormField
             control={form.control}
-            name="name"
+            name="abbreviation"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Denominación</FormLabel>
+                <FormLabel>Abreviatura</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ej: Desarrollo de Sistemas de Información" {...field} />
+                  <Input placeholder="Ej: DSI" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
