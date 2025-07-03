@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addDidacticUnit, getStudyPrograms } from '@/config/firebase';
 import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
@@ -22,7 +22,6 @@ const addUnitSchema = z.object({
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
-  numberOfGroups: z.coerce.number().min(1, { message: 'Debe haber al menos 1 grupo.' }).default(1),
 });
 
 type AddUnitFormValues = z.infer<typeof addUnitSchema>;
@@ -38,7 +37,6 @@ interface AddUnitFormProps {
 export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
-  const [totalHours, setTotalHours] = useState(0);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
 
@@ -68,28 +66,17 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
       credits: 0,
       theoreticalHours: 0,
       practicalHours: 0,
-      numberOfGroups: 1,
     },
   });
 
-  const { watch } = form;
-  const theoreticalHours = watch('theoreticalHours');
-  const practicalHours = watch('practicalHours');
-  const numberOfGroups = watch('numberOfGroups');
-
-  useEffect(() => {
-    const th = Number(theoreticalHours) || 0;
-    const ph = Number(practicalHours) || 0;
-    const multiplier = Number(numberOfGroups) || 1;
-    const total = (th + ph) * multiplier;
-    setTotalHours(total);
-  }, [theoreticalHours, practicalHours, numberOfGroups]);
-
   const onSubmit = async (data: AddUnitFormValues) => {
     setLoading(true);
+    const th = Number(data.theoreticalHours) || 0;
+    const ph = Number(data.practicalHours) || 0;
+    
     const unitData: Omit<DidacticUnit, 'id'> = {
       ...data,
-      totalHours: totalHours,
+      totalHours: th + ph,
     };
 
     try {
@@ -231,7 +218,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 name="theoreticalHours"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Horas Teóricas</FormLabel>
+                    <FormLabel>Horas Teóricas (por grupo)</FormLabel>
                     <FormControl>
                     <Input type="number" placeholder="Ej: 2" {...field} />
                     </FormControl>
@@ -244,7 +231,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 name="practicalHours"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Horas Prácticas</FormLabel>
+                    <FormLabel>Horas Prácticas (por grupo)</FormLabel>
                     <FormControl>
                     <Input type="number" placeholder="Ej: 4" {...field} />
                     </FormControl>
@@ -253,29 +240,6 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
                 )}
             />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-            <FormField
-            control={form.control}
-            name="numberOfGroups"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Número de Grupos</FormLabel>
-                <FormControl>
-                    <Input type="number" min="1" placeholder="1" {...field} />
-                </FormControl>
-                <FormDescription>
-                    El total de horas se multiplicará por esta cantidad.
-                </FormDescription>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <div className="rounded-md border bg-muted p-2 text-center">
-                <h3 className="text-xs font-medium text-muted-foreground">Total de Horas Calculadas</h3>
-                <p className="text-2xl font-bold text-primary">{totalHours}</p>
-            </div>
-        </div>
-
         <Button type="submit" className="w-full md:w-auto" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Unidad'}
         </Button>

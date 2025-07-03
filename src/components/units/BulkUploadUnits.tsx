@@ -17,7 +17,7 @@ interface BulkUploadUnitsProps {
 
 const REQUIRED_HEADERS = [
   'name', 'studyProgram', 'period', 'module', 'unitType', 
-  'credits', 'theoreticalHours', 'practicalHours', 'numberOfGroups'
+  'credits', 'theoreticalHours', 'practicalHours'
 ];
 
 export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
@@ -53,7 +53,6 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
         credits: 4,
         theoreticalHours: 2,
         practicalHours: 4,
-        numberOfGroups: 2
       }
     ];
     const worksheet = XLSX.utils.json_to_sheet(templateData, { header: REQUIRED_HEADERS });
@@ -98,8 +97,7 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
 
           const th = Number(row.theoreticalHours) || 0;
           const ph = Number(row.practicalHours) || 0;
-          const groups = Number(row.numberOfGroups) || 1;
-          const totalHours = (th + ph) * groups;
+          const totalHours = th + ph;
 
           const unit: Omit<DidacticUnit, 'id'> = {
             name: String(row.name),
@@ -110,7 +108,6 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
             credits: Number(row.credits),
             theoreticalHours: th,
             practicalHours: ph,
-            numberOfGroups: groups,
             totalHours: totalHours,
           };
           // Basic validation

@@ -2,7 +2,7 @@
 "use client";
 
 import { getDidacticUnits, getTeachers, getUnitAssignments, addUnitAssignment, deleteUnitAssignment } from "@/config/firebase";
-import type { DidacticUnit, Teacher, UnitAssignment } from "@/types";
+import type { DidacticUnit, Teacher, UnitAssignment, Shift } from "@/types";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { AssignmentPeriodColumn } from "./AssignmentPeriodColumn";
 import { Skeleton } from "../ui/skeleton";
@@ -46,7 +46,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     fetchData();
   }, [fetchData]);
 
-  const handleAssign = async (period: 'MAR-JUL' | 'AGOS-DIC', unitId: string, teacherId: string) => {
+  const handleAssign = async (period: 'MAR-JUL' | 'AGOS-DIC', unitId: string, teacherId: string, shift: Shift) => {
     const unit = units.find(u => u.id === unitId);
     const teacher = teachers.find(t => t.id === teacherId);
 
@@ -55,6 +55,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     const newAssignment: Omit<UnitAssignment, 'id'> = {
       year,
       period,
+      shift,
       unitId,
       unitName: unit.name,
       teacherId,
@@ -66,7 +67,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     try {
       const newId = await addUnitAssignment(newAssignment);
       setAssignments(prev => [...prev, { ...newAssignment, id: newId }]);
-      toast({ title: '¡Éxito!', description: `Unidad "${unit.name}" asignada a ${teacher.fullName}.` });
+      toast({ title: '¡Éxito!', description: `Unidad "${unit.name}" (${shift}) asignada a ${teacher.fullName}.` });
     } catch (error) {
       console.error("Failed to assign unit:", error);
       toast({ title: 'Error', description: 'No se pudo realizar la asignación.', variant: 'destructive' });

@@ -1,5 +1,6 @@
 
 export type UserRole = 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
+export type Shift = 'Mañana' | 'Tarde' | 'Noche';
 
 export interface AppUser {
   uid: string;
@@ -21,7 +22,6 @@ export interface DidacticUnit {
   credits: number;
   theoreticalHours: number;
   practicalHours: number;
-  numberOfGroups: number;
   totalHours: number;
   unitType: UnitType;
 }
@@ -55,6 +55,7 @@ export interface UnitAssignment {
   id: string;
   year: number;
   period: UnitPeriod;
+  shift: Shift;
   unitId: string;
   unitName: string;
   teacherId: string;

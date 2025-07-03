@@ -5,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import type { Teacher, UnitAssignment } from "@/types";
-import { BookOpen } from "lucide-react";
 
 interface TeacherReportCardProps {
   teacher: Teacher;
@@ -52,7 +51,7 @@ export function TeacherReportCard({
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
               {assignmentsMarJul.map(a => (
                 <li key={a.id}>
-                  {a.unitName}
+                  {a.unitName} {a.shift && `(${a.shift})`}
                   <span className="text-muted-foreground italic ml-1">({getInitials(a.studyProgram)})</span>
                 </li>
               ))}
@@ -71,7 +70,7 @@ export function TeacherReportCard({
             <ul className="space-y-1 text-xs list-disc list-inside text-muted-foreground">
               {assignmentsAgosDic.map(a => (
                  <li key={a.id}>
-                  {a.unitName}
+                  {a.unitName} {a.shift && `(${a.shift})`}
                   <span className="text-muted-foreground italic ml-1">({getInitials(a.studyProgram)})</span>
                 </li>
               ))}

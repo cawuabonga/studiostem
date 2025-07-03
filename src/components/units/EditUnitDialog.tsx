@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -15,11 +16,11 @@ import {
   DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType } from '@/types';
 import { updateDidacticUnit, getStudyPrograms } from '@/config/firebase';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const editUnitSchema = z.object({
@@ -31,7 +32,6 @@ const editUnitSchema = z.object({
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
-  numberOfGroups: z.coerce.number().min(1, { message: 'Debe haber al menos 1 grupo.' }).default(1),
 });
 
 type EditUnitFormValues = z.infer<typeof editUnitSchema>;
@@ -49,7 +49,6 @@ interface EditUnitDialogProps {
 export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [totalHours, setTotalHours] = useState(unit.totalHours);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
 
@@ -86,21 +85,10 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
       credits: unit?.credits || 0,
       theoreticalHours: unit?.theoreticalHours || 0,
       practicalHours: unit?.practicalHours || 0,
-      numberOfGroups: unit?.numberOfGroups || 1,
     },
   });
 
-  const { watch, reset } = form;
-  const theoreticalHours = watch('theoreticalHours');
-  const practicalHours = watch('practicalHours');
-  const numberOfGroups = watch('numberOfGroups');
-
-  useEffect(() => {
-    const th = Number(theoreticalHours) || 0;
-    const ph = Number(practicalHours) || 0;
-    const multiplier = Number(numberOfGroups) || 1;
-    setTotalHours((th + ph) * multiplier);
-  }, [theoreticalHours, practicalHours, numberOfGroups]);
+  const { reset } = form;
 
   useEffect(() => {
     if (unit) {
@@ -113,7 +101,6 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         credits: unit.credits,
         theoreticalHours: unit.theoreticalHours,
         practicalHours: unit.practicalHours,
-        numberOfGroups: unit.numberOfGroups,
       });
     }
   }, [unit, reset, isOpen]);
@@ -122,6 +109,10 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
     if (!unit?.id) return;
     setIsSubmitting(true);
     try {
+      const th = Number(data.theoreticalHours) || 0;
+      const ph = Number(data.practicalHours) || 0;
+      const totalHours = th + ph;
+
       const updatedData: Partial<Omit<DidacticUnit, 'id'>> = {
         ...data,
         totalHours: totalHours,
@@ -271,7 +262,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     name="theoreticalHours"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Horas Teóricas</FormLabel>
+                        <FormLabel>Horas Teóricas (por grupo)</FormLabel>
                         <FormControl>
                         <Input type="number" placeholder="Ej: 2" {...field} />
                         </FormControl>
@@ -284,7 +275,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     name="practicalHours"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Horas Prácticas</FormLabel>
+                        <FormLabel>Horas Prácticas (por grupo)</FormLabel>
                         <FormControl>
                         <Input type="number" placeholder="Ej: 4" {...field} />
                         </FormControl>
@@ -292,28 +283,6 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                     </FormItem>
                     )}
                 />
-            </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <FormField
-                    control={form.control}
-                    name="numberOfGroups"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Número de Grupos</FormLabel>
-                        <FormControl>
-                            <Input type="number" min="1" placeholder="1" {...field} />
-                        </FormControl>
-                        <FormDescription>
-                            El total de horas se multiplicará por esta cantidad.
-                        </FormDescription>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                />
-                <div className="rounded-md border bg-muted p-3 text-center">
-                    <h3 className="text-sm font-medium text-muted-foreground">Total de Horas Calculadas</h3>
-                    <p className="text-3xl font-bold text-primary">{totalHours}</p>
-                </div>
             </div>
             <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
               <DialogClose asChild>
