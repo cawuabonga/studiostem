@@ -29,8 +29,9 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
         getUnitAssignments(year, studyProgram),
       ]);
 
+      // Filter units by the selected program, but load all teachers
       setUnits(fetchedUnits.filter(u => u.studyProgram === studyProgram));
-      setTeachers(fetchedTeachers.filter(t => t.studyProgram === studyProgram));
+      setTeachers(fetchedTeachers);
       setAssignments(fetchedAssignments);
 
     } catch (error) {
