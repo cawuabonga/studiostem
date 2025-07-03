@@ -83,8 +83,8 @@ export default function ReportsPage() {
           const assignmentsMarJul = teacherAssignments.filter(a => a.period === 'MAR-JUL');
           const assignmentsAgosDic = teacherAssignments.filter(a => a.period === 'AGOS-DIC');
 
-          const totalHoursMarJul = assignmentsMarJul.reduce((sum, a) => sum + a.totalHours, 0);
-          const totalHoursAgosDic = assignmentsAgosDic.reduce((sum, a) => sum + a.totalHours, 0);
+          const totalHoursMarJul = assignmentsMarJul.reduce((sum, a) => sum + (a.totalHours || 0), 0);
+          const totalHoursAgosDic = assignmentsAgosDic.reduce((sum, a) => sum + (a.totalHours || 0), 0);
 
           return { teacher, assignmentsMarJul, assignmentsAgosDic, totalHoursMarJul, totalHoursAgosDic };
         });
