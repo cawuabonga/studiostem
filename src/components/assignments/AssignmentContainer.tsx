@@ -2,7 +2,7 @@
 "use client";
 
 import { getDidacticUnits, getTeachers, getUnitAssignments, addUnitAssignment, deleteUnitAssignment } from "@/config/firebase";
-import type { DidacticUnit, Teacher, UnitAssignment, Shift } from "@/types";
+import type { DidacticUnit, Teacher, UnitAssignment } from "@/types";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { AssignmentPeriodColumn } from "./AssignmentPeriodColumn";
 import { Skeleton } from "../ui/skeleton";
@@ -46,7 +46,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     fetchData();
   }, [fetchData]);
 
-  const handleAssign = async (period: 'MAR-JUL' | 'AGOS-DIC', unitId: string, teacherId: string, shift: Shift) => {
+  const handleAssign = async (period: 'MAR-JUL' | 'AGOS-DIC', unitId: string, teacherId: string) => {
     const unit = units.find(u => u.id === unitId);
     const teacher = teachers.find(t => t.id === teacherId);
 
@@ -55,7 +55,6 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     const newAssignment: Omit<UnitAssignment, 'id'> = {
       year,
       period,
-      shift,
       unitId,
       unitName: unit.name,
       teacherId,
@@ -67,7 +66,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     try {
       const newId = await addUnitAssignment(newAssignment);
       setAssignments(prev => [...prev, { ...newAssignment, id: newId }]);
-      toast({ title: '¡Éxito!', description: `Unidad "${unit.name}" (${shift}) asignada a ${teacher.fullName}.` });
+      toast({ title: '¡Éxito!', description: `Unidad "${unit.name}" asignada a ${teacher.fullName}.` });
     } catch (error) {
       console.error("Failed to assign unit:", error);
       toast({ title: 'Error', description: 'No se pudo realizar la asignación.', variant: 'destructive' });
@@ -95,12 +94,18 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     }, {} as Record<'MAR-JUL' | 'AGOS-DIC', UnitAssignment[]>);
   }, [assignments]);
   
-  const unitsByPeriod = useMemo(() => {
+  const availableUnitsByPeriod = useMemo(() => {
+    const assignedInMarJul = new Set(assignmentsByPeriod['MAR-JUL']?.map(a => a.unitId) || []);
+    const assignedInAgosDic = new Set(assignmentsByPeriod['AGOS-DIC']?.map(a => a.unitId) || []);
+
+    const marJulUnits = units.filter(u => u.period === 'MAR-JUL' && !assignedInMarJul.has(u.id));
+    const agosDicUnits = units.filter(u => u.period === 'AGOS-DIC' && !assignedInAgosDic.has(u.id));
+    
     return {
-      'MAR-JUL': units.filter(u => u.period === 'MAR-JUL'),
-      'AGOS-DIC': units.filter(u => u.period === 'AGOS-DIC'),
+      'MAR-JUL': marJulUnits,
+      'AGOS-DIC': agosDicUnits,
     };
-  }, [units]);
+  }, [units, assignmentsByPeriod]);
   
   if (loading) {
     return (
@@ -124,7 +129,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <AssignmentPeriodColumn
         period="MAR-JUL"
-        allUnits={unitsByPeriod['MAR-JUL']}
+        availableUnits={availableUnitsByPeriod['MAR-JUL']}
         allTeachers={teachers}
         assignments={assignmentsByPeriod['MAR-JUL'] || []}
         onAssign={handleAssign}
@@ -132,7 +137,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
       />
       <AssignmentPeriodColumn
         period="AGOS-DIC"
-        allUnits={unitsByPeriod['AGOS-DIC']}
+        availableUnits={availableUnitsByPeriod['AGOS-DIC']}
         allTeachers={teachers}
         assignments={assignmentsByPeriod['AGOS-DIC'] || []}
         onAssign={handleAssign}
