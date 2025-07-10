@@ -15,8 +15,9 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, title }) => {
         <div className="flex flex-col md:flex-row rounded-lg shadow-2xl overflow-hidden bg-card">
           {/* Form Side */}
           <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-            <AppLogo className="mb-8 text-center" />
-            <h1 className="text-3xl font-headline font-bold text-primary mb-6 text-center">{title}</h1>
+            <AppLogo className="mb-4 text-center text-3xl" useAcronym={true} />
+            <h2 className="text-xl font-headline text-primary mb-6 text-center">Bienvenido a MADI</h2>
+            <h1 className="text-2xl font-headline font-bold text-card-foreground mb-6 text-center">{title}</h1>
             {children}
           </div>
 

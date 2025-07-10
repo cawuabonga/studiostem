@@ -33,7 +33,7 @@ export default function DashboardMainLayout({
       <SidebarInset className="main-content">
         <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="text-xl font-semibold font-headline ml-auto md:ml-0">SA-NM-50</h1>
+            <h1 className="text-xl font-semibold font-headline ml-auto md:ml-0">Módulo de Asignación Docente Integrado</h1>
         </header>
         <main className="flex-1 p-4 md:p-6">
             {children}
