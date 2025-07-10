@@ -1,3 +1,4 @@
+
 "use client";
 import AuthPageLayout from "@/components/layout/AuthPageLayout";
 import { LoginForm } from "@/components/auth/LoginForm";
@@ -31,7 +32,7 @@ export default function LoginPage() {
   }
   
   return (
-    <AuthPageLayout title="¡Bienvenido de Nuevo!">
+    <AuthPageLayout title="">
       <LoginForm />
     </AuthPageLayout>
   );
