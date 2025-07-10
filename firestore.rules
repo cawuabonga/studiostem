@@ -3,73 +3,106 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Funciones de ayuda
-    function isAuth() {
+    // --- Funciones Auxiliares ---
+    // Verifica si el usuario ha iniciado sesión.
+    function isSignedIn() {
       return request.auth != null;
     }
 
+    // Verifica si el usuario que hace la solicitud es el propietario del documento.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Obtiene el rol del usuario que hace la solicitud desde la colección 'users'.
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Verifica si el usuario es un Administrador.
     function isAdmin() {
-      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      return isSignedIn() && getRole() == 'Admin';
+    }
+     
+    // Verifica si el usuario es un Coordinador.
+    function isCoordinator() {
+       return isSignedIn() && getRole() == 'Coordinator';
     }
 
-    // Colección: users
-    // Reglas:
-    // - Los administradores pueden leer/escribir cualquier documento de usuario.
-    // - Los usuarios autenticados pueden leer/escribir su propio documento.
+    // --- Reglas para Colecciones ---
+
+    // Colección de Usuarios (users)
+    // Almacena información adicional del usuario, como su rol.
     match /users/{userId} {
-      allow read, write: if isAdmin() || request.auth.uid == userId;
-    }
+      // Un usuario puede leer su propio perfil.
+      // Un administrador puede leer cualquier perfil.
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      
+      // La lista de usuarios solo la pueden ver los administradores.
+      allow list: if isAdmin();
 
-    // Colección: appSettings
-    // Reglas:
-    // - Cualquiera (incluso usuarios no autenticados) puede leer la configuración (ej: imagen de inicio de sesión).
-    // - Solo los administradores pueden escribir/actualizar la configuración.
-    match /appSettings/{docId} {
-        allow read: if true;
-        allow write: if isAdmin();
+      // Los nuevos usuarios pueden crear su propio documento de perfil.
+      allow create: if isSignedIn() && isOwner(userId);
+      
+      // Un usuario puede actualizar su propio perfil (por ejemplo, nombre).
+      // Un administrador puede actualizar cualquier perfil (por ejemplo, cambiar un rol).
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
     }
     
-    // Colección: studyPrograms
-    // Reglas:
-    // - Cualquier usuario autenticado puede leer los programas de estudio.
-    // - Solo los administradores pueden crear, actualizar o eliminar programas de estudio.
-    // - Validación: Asegura que los campos requeridos (name, code, abbreviation) estén presentes y sean del tipo correcto.
+    // Colección de Imágenes de Inicio (loginImages)
+    // Almacena URLs para la imagen de la página de inicio de sesión.
+    match /loginImages/{imageId} {
+      // CUALQUIERA puede leer una imagen individual si conoce su ID.
+      // Esto es necesario para que la página de inicio de sesión (sin autenticación) pueda cargar la imagen activa.
+      allow get: if true;
+      
+      // SOLO los administradores pueden listar todas las imágenes para gestionarlas.
+      allow list: if isAdmin();
+      
+      // SOLO los administradores pueden añadir nuevas imágenes.
+      // Valida que los datos creados sean correctos.
+      allow create: if isAdmin()
+                    && request.resource.data.url is string
+                    && request.resource.data.isActive == false
+                    && request.resource.data.createdAt == request.time;
+      
+      // SOLO los administradores pueden actualizar una imagen (por ejemplo, para activarla).
+      // No se permite cambiar la URL después de la creación.
+      allow update: if isAdmin()
+                    && request.resource.data.url == resource.data.url;
+      
+      // SOLO los administradores pueden eliminar una imagen.
+      allow delete: if isAdmin();
+    }
+    
+    // Colección de Programas de Estudio (studyPrograms)
     match /studyPrograms/{programId} {
-        allow read: if isAuth();
-        allow write: if isAdmin() && 
-                      request.resource.data.name is string && request.resource.data.name.size() > 0 &&
-                      request.resource.data.code is string && request.resource.data.code.size() > 0 &&
-                      request.resource.data.abbreviation is string && request.resource.data.abbreviation.size() > 0;
+      // Cualquiera que haya iniciado sesión puede leer los programas (necesario para formularios).
+      allow get, list: if isSignedIn();
+      // Solo los administradores pueden crear, actualizar o eliminar programas.
+      allow write: if isAdmin();
     }
     
-    // Colección: teachers
-    // Reglas:
-    // - Cualquier usuario autenticado puede leer los datos de los docentes.
-    // - Solo los administradores pueden crear, actualizar o eliminar docentes.
-    // - Validación: Asegura que los campos requeridos estén presentes y sean del tipo correcto.
+    // Colección de Docentes (teachers)
     match /teachers/{teacherId} {
-        allow read: if isAuth();
-        allow write: if isAdmin();
-    }
-    
-    // Colección: didacticUnits
-    // Reglas:
-    // - Cualquier usuario autenticado puede leer los datos de las unidades.
-    // - Solo los administradores pueden crear, actualizar o eliminar unidades.
-    // - Validación: Asegura que los campos requeridos estén presentes y tengan los tipos/valores correctos.
-    match /didacticUnits/{unitId} {
-        allow read: if isAuth();
-        allow write: if isAdmin();
+      // Administradores y Coordinadores pueden leer y listar docentes.
+      allow get, list: if isAdmin() || isCoordinator();
+      // Administradores y Coordinadores pueden crear, actualizar y eliminar docentes.
+      allow write: if isAdmin() || isCoordinator();
     }
 
-    // Colección: unitAssignments
-    // Reglas:
-    // - Cualquier usuario autenticado puede leer los datos de las asignaciones.
-    // - Solo los administradores pueden crear, actualizar o eliminar asignaciones.
-    // - Validación: Asegura que los campos requeridos estén presentes y tengan los tipos/valores correctos.
+    // Colección de Unidades Didácticas (didacticUnits)
+    match /didacticUnits/{unitId} {
+       // Administradores y Coordinadores pueden leer y listar unidades.
+      allow get, list: if isAdmin() || isCoordinator();
+      // Administradores y Coordinadores pueden crear, actualizar y eliminar unidades.
+      allow write: if isAdmin() || isCoordinator();
+    }
+    
+    // Colección de Asignaciones de Unidades (unitAssignments)
     match /unitAssignments/{assignmentId} {
-        allow read: if isAuth();
-        allow write: if isAdmin();
+      // Administradores y Coordinadores pueden leer, listar y escribir asignaciones.
+      allow read, write: if isAdmin() || isCoordinator();
     }
   }
 }
