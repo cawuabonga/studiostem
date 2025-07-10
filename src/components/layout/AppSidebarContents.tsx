@@ -47,7 +47,7 @@ export function AppSidebarContents() {
   return (
     <>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/dashboard" aria-label="Go to dashboard home">
+        <Link href="/dashboard" aria-label="Ir al dashboard">
            <AppLogo className="text-xl text-sidebar-foreground" />
         </Link>
       </SidebarHeader>
@@ -56,7 +56,7 @@ export function AppSidebarContents() {
         {user && (
           <div className="mb-4 p-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
             <Avatar className="w-16 h-16 mb-2 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:mb-0">
-              <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.[0] || 'U'}`} alt={user.displayName || 'User'} data-ai-hint="profile avatar" />
+              <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.[0] || 'U'}`} alt={user.displayName || 'Usuario'} data-ai-hint="profile avatar" />
               <AvatarFallback className="text-xl group-data-[collapsible=icon]:text-sm">
                 {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
@@ -96,10 +96,10 @@ export function AppSidebarContents() {
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             buttonText={''}
             showIcon={true}
-            aria-label="Sign Out"
-            tooltip={{children: 'Sign Out', side: 'right', align: 'center'}}
+            aria-label="Cerrar Sesión"
+            tooltip={{children: 'Cerrar Sesión', side: 'right', align: 'center'}}
           >
-            <span className="group-data-[collapsible=icon]:hidden">Sign Out</span>
+            <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
         </SignOutButton>
       </SidebarFooter>
     </>

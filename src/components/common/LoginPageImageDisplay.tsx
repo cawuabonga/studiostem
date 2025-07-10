@@ -45,7 +45,7 @@ export function LoginPageImageDisplay() {
           {imageUrl && (
             <Image
               src={imageUrl}
-              alt="Institutional Image"
+              alt="Imagen Institucional"
               width={600}
               height={700}
               className="object-cover w-full h-full"

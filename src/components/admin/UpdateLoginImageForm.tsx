@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getLoginPageImageURL, setLoginPageImageURL } from '@/config/firebase';
 
 const updateImageSchema = z.object({
-  imageUrl: z.string().url({ message: 'Please enter a valid URL.' }).min(1, { message: 'Image URL cannot be empty.' }),
+  imageUrl: z.string().url({ message: 'Por favor, ingresa una URL válida.' }).min(1, { message: 'La URL de la imagen no puede estar vacía.' }),
 });
 
 type UpdateImageFormValues = z.infer<typeof updateImageSchema>;
@@ -40,7 +40,7 @@ export function UpdateLoginImageForm() {
       } catch (error) {
         toast({
           title: 'Error',
-          description: 'Could not fetch current image URL.',
+          description: 'No se pudo obtener la URL de la imagen actual.',
           variant: 'destructive',
         });
       } finally {
@@ -55,14 +55,14 @@ export function UpdateLoginImageForm() {
     try {
       await setLoginPageImageURL(data.imageUrl);
       toast({
-        title: 'Success!',
-        description: 'Login page image URL updated successfully.',
+        title: '¡Éxito!',
+        description: 'La URL de la imagen de inicio de sesión se actualizó correctamente.',
       });
     } catch (error) {
       console.error('Error updating image URL:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update image URL. Please try again.',
+        description: 'No se pudo actualizar la URL de la imagen. Por favor, intenta de nuevo.',
         variant: 'destructive',
       });
     } finally {
@@ -71,7 +71,7 @@ export function UpdateLoginImageForm() {
   };
 
   if (fetchingCurrent) {
-    return <p>Loading current image setting...</p>;
+    return <p>Cargando configuración actual de la imagen...</p>;
   }
 
   return (
@@ -82,11 +82,11 @@ export function UpdateLoginImageForm() {
           name="imageUrl"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Image URL</FormLabel>
+              <FormLabel>URL de la Imagen</FormLabel>
               <FormControl>
                 <Input
                   type="url"
-                  placeholder="https://example.com/image.png"
+                  placeholder="https://ejemplo.com/imagen.png"
                   {...field}
                 />
               </FormControl>
@@ -95,7 +95,7 @@ export function UpdateLoginImageForm() {
           )}
         />
         <Button type="submit" className="w-full" disabled={loading || fetchingCurrent}>
-          {loading ? 'Updating...' : 'Update Image URL'}
+          {loading ? 'Actualizando...' : 'Actualizar URL de la Imagen'}
         </Button>
       </form>
     </Form>

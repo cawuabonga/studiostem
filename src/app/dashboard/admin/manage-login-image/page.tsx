@@ -20,7 +20,7 @@ export default function ManageLoginImagePage() {
   if (loading || !user || user.role !== 'Admin') {
     return (
       <div className="flex justify-center items-center h-full">
-        <p>Loading or unauthorized...</p>
+        <p>Cargando o no autorizado...</p>
       </div>
     );
   }
@@ -29,10 +29,10 @@ export default function ManageLoginImagePage() {
     <div className="container mx-auto py-10">
       <Card className="max-w-2xl mx-auto">
         <CardHeader>
-          <CardTitle>Manage Login Page Image</CardTitle>
+          <CardTitle>Gestionar Imagen de Inicio de Sesión</CardTitle>
           <CardDescription>
-            Update the image displayed on the login and registration pages.
-            Enter a valid image URL.
+            Actualiza la imagen que se muestra en las páginas de inicio de sesión y registro.
+            Ingresa una URL de imagen válida.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -30,7 +30,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <AuthPageLayout title="Create Your Account">
+    <AuthPageLayout title="Crear Cuenta">
       <RegisterForm />
     </AuthPageLayout>
   );

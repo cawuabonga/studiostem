@@ -13,8 +13,8 @@ import Link from 'next/link';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 const loginSchema = z.object({
-  email: z.string().email({ message: 'Invalid email address' }),
-  password: z.string().min(6, { message: 'Password must be at least 6 characters' }),
+  email: z.string().email({ message: 'Dirección de correo inválida.' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -41,9 +41,9 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Correo Electrónico</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="your@email.com" {...field} />
+                <Input type="email" placeholder="tu@email.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -54,7 +54,7 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Contraseña</FormLabel>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -63,7 +63,7 @@ export function LoginForm() {
           )}
         />
         <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? 'Iniciando Sesión...' : 'Iniciar Sesión'}
         </Button>
         
         <div className="relative my-4">
@@ -72,7 +72,7 @@ export function LoginForm() {
           </div>
           <div className="relative flex justify-center text-xs uppercase">
             <span className="bg-card px-2 text-muted-foreground">
-              Or continue with
+              O continuar con
             </span>
           </div>
         </div>
@@ -80,9 +80,9 @@ export function LoginForm() {
         <GoogleSignInButton />
 
         <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{' '}
+          ¿No tienes una cuenta?{' '}
           <Link href="/register" className="font-medium text-primary hover:underline">
-            Sign up
+            Regístrate
           </Link>
         </p>
       </form>

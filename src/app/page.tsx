@@ -31,7 +31,7 @@ export default function LoginPage() {
   }
   
   return (
-    <AuthPageLayout title="Welcome Back!">
+    <AuthPageLayout title="¡Bienvenido de Nuevo!">
       <LoginForm />
     </AuthPageLayout>
   );

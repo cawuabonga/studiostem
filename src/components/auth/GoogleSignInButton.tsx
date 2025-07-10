@@ -29,7 +29,7 @@ export const GoogleSignInButton = () => {
       disabled={loading}
     >
       <GoogleIcon />
-      Sign in with Google
+      Iniciar sesión con Google
     </Button>
   );
 };

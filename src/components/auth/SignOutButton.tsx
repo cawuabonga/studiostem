@@ -10,7 +10,7 @@ interface SignOutButtonProps extends ButtonProps {
   buttonText?: string;
 }
 
-export const SignOutButton: React.FC<SignOutButtonProps> = ({ className, showIcon = true, buttonText = "Sign Out", ...props }) => {
+export const SignOutButton: React.FC<SignOutButtonProps> = ({ className, showIcon = true, buttonText = "Cerrar Sesión", ...props }) => {
   const { signOutUser, loading } = useAuth();
 
   return (
