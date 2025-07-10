@@ -48,7 +48,7 @@ export function AppSidebarContents() {
     <>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/dashboard" aria-label="Ir al dashboard">
-           <AppLogo className="text-sm text-sidebar-foreground" />
+           <AppLogo className="text-sm text-sidebar-foreground" useAcronym={true} />
         </Link>
       </SidebarHeader>
 
