@@ -2,63 +2,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    function isAuth() {
+      return request.auth != null;
+    }
 
-    // REGLAS PARA USUARIOS
-    // Permite a cualquier usuario autenticado leer su propia información.
-    // Solo los administradores pueden listar todos los usuarios o modificar el rol de un usuario.
+    function hasRole(role) {
+      return isAuth() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isAdmin() {
+      return hasRole('Admin');
+    }
+
+    function isCoordinator() {
+      return hasRole('Coordinator');
+    }
+    
     match /users/{userId} {
-      allow read: if request.auth.uid == userId;
-      allow list: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-      allow create: if request.auth != null; // Cualquier usuario autenticado puede crear su propio registro.
-      allow update: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'; // Solo un admin puede modificar.
+      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isAdmin() || (isAuth() && request.auth.uid == userId && request.resource.data.keys().hasOnly(['displayName', 'photoURL']));
     }
 
-    // REGLAS PARA IMÁGENES DE INICIO DE SESIÓN
-    // Permite a cualquiera consultar la imagen activa para la página de inicio de sesión.
-    // Solo los administradores pueden gestionar la lista completa de imágenes.
     match /loginImages/{imageId} {
-      // Permite a cualquiera realizar la consulta específica para obtener la imagen activa.
-      allow list: if request.query.where.size() == 1 &&
-                     request.query.where[0][0] == 'isActive' &&
-                     request.query.where[0][1] == '==' &&
-                     request.query.where[0][2] == true &&
-                     request.query.limit <= 1;
+      // Allow anyone to perform the specific query for the active image
+      allow list: if request.query.resource.data.isActive == true && request.query.limit == 1;
 
-      // Solo los administradores pueden ver la lista completa de imágenes (por ejemplo, ordenadas por fecha).
-      allow list: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-
-      // Permite a cualquiera leer un documento de imagen activo si conocen su ID.
-      allow get: if resource.data.isActive == true;
-
-      // Solo los administradores pueden leer imágenes inactivas o crear/actualizar/eliminar cualquier imagen.
-      allow read, write: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-
-      // Valida los datos que se están escribiendo al crear.
-      // La URL debe ser un Data URI de imagen en Base64.
-      allow create: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
-                      && request.resource.data.url is string
-                      && request.resource.data.url.matches('^data:image/(png|jpeg|webp);base64,.*')
-                      && request.resource.data.isActive is bool
-                      && request.resource.data.createdAt == request.time;
-                      
-      // Valida los datos que se están escribiendo al actualizar.
-      // La URL, si se modifica, debe ser un Data URI de imagen.
-      allow update: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
-                      && request.resource.data.url is string
-                      && request.resource.data.url.matches('^data:image/(png|jpeg|webp);base64,.*')
-                      && request.resource.data.isActive is bool;
-    }
-
-    // REGLAS PARA COLECCIONES ACADÉMICAS (Unidades, Programas, Docentes, Asignaciones)
-    // Estas colecciones solo pueden ser leídas y escritas por administradores o coordinadores.
-    match /{collection}/{docId} 
-    where collection in ['didacticUnits', 'studyPrograms', 'teachers', 'unitAssignments'] {
-      function isAdminOrCoordinator() {
-        let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-        return request.auth.uid != null && (userRole == 'Admin' || userRole == 'Coordinator');
-      }
+      // Admins can see the full list of images
+      allow get, list: if isAdmin();
       
-      allow read, write: if isAdminOrCoordinator();
+      // Admins can create new images if the URL is a valid data URI
+      allow create: if isAdmin()
+                    && request.resource.data.url.matches('^data:image/.*;base64,.*$');
+
+      // Admins can update images. The URL format is only checked if it's being changed.
+      allow update: if isAdmin() && 
+                    (!('url' in request.resource.data) || request.resource.data.url.matches('^data:image/.*;base64,.*$'));
+      
+      // Admins can delete images
+      allow delete: if isAdmin();
+    }
+    
+    match /{collection}/{docId} 
+        where collection in ['didacticUnits', 'studyPrograms', 'teachers', 'unitAssignments'] {
+        allow read, write: if isAdmin() || isCoordinator();
     }
   }
 }
