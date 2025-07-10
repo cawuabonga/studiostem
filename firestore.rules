@@ -3,57 +3,62 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Función para verificar si un usuario es administrador
-    function isAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
-    }
-
-    // Función para verificar si un usuario es coordinador
-    function isCoordinator() {
-        return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator';
-    }
-
-    // Usuarios: Solo el dueño del perfil o un administrador puede escribir. Cualquiera autenticado puede leer.
+    // REGLAS PARA USUARIOS
+    // Permite a cualquier usuario autenticado leer su propia información.
+    // Solo los administradores pueden listar todos los usuarios o modificar el rol de un usuario.
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId || isAdmin();
+      allow read: if request.auth.uid == userId;
+      allow list: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      allow create: if request.auth != null; // Cualquier usuario autenticado puede crear su propio registro.
+      allow update: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'; // Solo un admin puede modificar.
     }
 
-    // loginImages: Cualquiera puede consultar la imagen activa. Solo los administradores pueden gestionar la colección.
+    // REGLAS PARA IMÁGENES DE INICIO DE SESIÓN
+    // Permite a cualquiera consultar la imagen activa para la página de inicio de sesión.
+    // Solo los administradores pueden gestionar la lista completa de imágenes.
     match /loginImages/{imageId} {
-      // Permite la consulta específica para encontrar la imagen activa para la página de inicio de sesión.
-      // ¡Esta es la corrección clave!
-      allow list: if request.query.limit == 1 && request.query.get("where")[0][1] == "isActive" && request.query.get("where")[0][2] == true;
+      // Permite a cualquiera realizar la consulta específica para obtener la imagen activa.
+      allow list: if request.query.where.size() == 1 &&
+                     request.query.where[0][0] == 'isActive' &&
+                     request.query.where[0][1] == '==' &&
+                     request.query.where[0][2] == true &&
+                     request.query.limit <= 1;
 
-      // Un administrador puede leer un documento individual directamente si lo necesita.
-      allow get: if isAdmin();
+      // Solo los administradores pueden ver la lista completa de imágenes (por ejemplo, ordenadas por fecha).
+      allow list: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+
+      // Permite a cualquiera leer un documento de imagen activo si conocen su ID.
+      allow get: if resource.data.isActive == true;
+
+      // Solo los administradores pueden leer imágenes inactivas o crear/actualizar/eliminar cualquier imagen.
+      allow read, write: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+
+      // Valida los datos que se están escribiendo al crear.
+      // La URL debe ser un Data URI de imagen en Base64.
+      allow create: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                      && request.resource.data.url is string
+                      && request.resource.data.url.matches('^data:image/(png|jpeg|webp);base64,.*')
+                      && request.resource.data.isActive is bool
+                      && request.resource.data.createdAt == request.time;
+                      
+      // Valida los datos que se están escribiendo al actualizar.
+      // La URL, si se modifica, debe ser un Data URI de imagen.
+      allow update: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
+                      && request.resource.data.url is string
+                      && request.resource.data.url.matches('^data:image/(png|jpeg|webp);base64,.*')
+                      && request.resource.data.isActive is bool;
+    }
+
+    // REGLAS PARA COLECCIONES ACADÉMICAS (Unidades, Programas, Docentes, Asignaciones)
+    // Estas colecciones solo pueden ser leídas y escritas por administradores o coordinadores.
+    match /{collection}/{docId} 
+    where collection in ['didacticUnits', 'studyPrograms', 'teachers', 'unitAssignments'] {
+      function isAdminOrCoordinator() {
+        let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+        return request.auth.uid != null && (userRole == 'Admin' || userRole == 'Coordinator');
+      }
       
-      // Solo los administradores pueden crear, actualizar o eliminar imágenes.
-      allow write: if isAdmin();
-    }
-
-    // StudyPrograms: Solo los administradores pueden gestionar los programas de estudio.
-    match /studyPrograms/{programId} {
-        allow read: if request.auth != null; // Cualquier usuario autenticado puede leer la lista de programas
-        allow write: if isAdmin();
-    }
-
-    // Teachers: Solo administradores o coordinadores pueden gestionar los docentes.
-    match /teachers/{teacherId} {
-        allow read: if request.auth != null; // Cualquier usuario autenticado puede leer la lista
-        allow write: if isAdmin() || isCoordinator();
-    }
-
-    // DidacticUnits: Solo administradores o coordinadores pueden gestionar las unidades didácticas.
-    match /didacticUnits/{unitId} {
-        allow read: if request.auth != null; // Cualquier usuario autenticado puede leer la lista
-        allow write: if isAdmin() || isCoordinator();
-    }
-    
-    // UnitAssignments: Solo administradores o coordinadores pueden gestionar las asignaciones.
-    match /unitAssignments/{assignmentId} {
-        allow read: if request.auth != null; // Cualquier usuario autenticado puede leer la lista
-        allow write: if isAdmin() || isCoordinator();
+      allow read, write: if isAdminOrCoordinator();
     }
   }
 }
