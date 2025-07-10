@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment } from '@/types';
+import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment, LoginImage } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -45,32 +45,86 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
   }
 };
 
-const APP_SETTINGS_COLLECTION = 'appSettings';
-const LOGIN_PAGE_CONFIG_DOC = 'loginPageConfig';
+// --- Login Image Management ---
 
 export const getLoginPageImageURL = async (): Promise<string | null> => {
   try {
-    const docRef = doc(db, APP_SETTINGS_COLLECTION, LOGIN_PAGE_CONFIG_DOC);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data()?.imageUrl || null;
+    const imagesRef = collection(db, 'loginImages');
+    const q = query(imagesRef, where("isActive", "==", true), limit(1));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].data().url;
     }
     return null;
   } catch (error) {
-    console.error("Error fetching login page image URL from Firestore:", error);
+    console.error("Error fetching active login page image URL:", error);
     return null;
   }
 };
 
-export const setLoginPageImageURL = async (imageUrl: string): Promise<void> => {
-  try {
-    const docRef = doc(db, APP_SETTINGS_COLLECTION, LOGIN_PAGE_CONFIG_DOC);
-    await setDoc(docRef, { imageUrl }, { merge: true });
-  } catch (error) {
-    console.error("Error setting login page image URL in Firestore:", error);
-    throw error;
-  }
+export const getLoginImages = async (): Promise<LoginImage[]> => {
+    try {
+        const imagesRef = collection(db, 'loginImages');
+        const q = query(imagesRef, orderBy("createdAt", "desc"));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data(),
+            createdAt: docSnap.data().createdAt.toDate(),
+        } as LoginImage));
+    } catch (error) {
+        console.error("Error fetching login images:", error);
+        throw error;
+    }
 };
+
+export const addLoginImageURL = async (url: string): Promise<void> => {
+    try {
+        const imagesRef = collection(db, 'loginImages');
+        await addDoc(imagesRef, {
+            url: url,
+            isActive: false,
+            createdAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error("Error adding login image URL:", error);
+        throw error;
+    }
+};
+
+export const setActiveLoginImage = async (id: string): Promise<void> => {
+    const batch = writeBatch(db);
+    try {
+        // Find currently active image(s) to deactivate them
+        const imagesRef = collection(db, 'loginImages');
+        const q = query(imagesRef, where("isActive", "==", true));
+        const activeDocs = await getDocs(q);
+
+        activeDocs.forEach(doc => {
+            batch.update(doc.ref, { isActive: false });
+        });
+
+        // Set the new image as active
+        const newActiveRef = doc(db, 'loginImages', id);
+        batch.update(newActiveRef, { isActive: true });
+
+        await batch.commit();
+    } catch (error) {
+        console.error("Error setting active login image:", error);
+        throw error;
+    }
+};
+
+export const deleteLoginImage = async (id: string): Promise<void> => {
+    try {
+        const imageDocRef = doc(db, 'loginImages', id);
+        await deleteDoc(imageDocRef);
+    } catch (error) {
+        console.error("Error deleting login image:", error);
+        throw error;
+    }
+};
+
 
 // Functions for Admin User Management
 export const getAllUsers = async (): Promise<AppUser[]> => {

@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
@@ -64,4 +65,11 @@ export interface UnitAssignment {
   studyProgram: string;
   totalHours: number;
   shift?: Shift;
+}
+
+export interface LoginImage {
+    id: string;
+    url: string;
+    isActive: boolean;
+    createdAt: Date;
 }

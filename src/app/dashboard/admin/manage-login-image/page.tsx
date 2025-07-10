@@ -1,21 +1,27 @@
 
 "use client";
 
-import { UpdateLoginImageForm } from "@/components/admin/UpdateLoginImageForm";
+import { AddLoginImageForm } from "@/components/admin/AddLoginImageForm";
+import { LoginImagesTable } from "@/components/admin/LoginImagesTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function ManageLoginImagePage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'Admin')) {
-      router.push('/dashboard'); // Redirect if not admin or not logged in
+      router.push('/dashboard');
     }
   }, [user, loading, router]);
+  
+  const handleDataChange = () => {
+    setRefreshKey(prev => prev + 1);
+  };
 
   if (loading || !user || user.role !== 'Admin') {
     return (
@@ -26,17 +32,28 @@ export default function ManageLoginImagePage() {
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="max-w-2xl mx-auto">
+    <div className="container mx-auto py-10 space-y-8">
+      <Card>
         <CardHeader>
-          <CardTitle>Gestionar Imagen de Inicio de Sesión</CardTitle>
+          <CardTitle>Añadir Nueva Imagen de Inicio</CardTitle>
           <CardDescription>
-            Actualiza la imagen que se muestra en las páginas de inicio de sesión y registro.
-            Ingresa una URL de imagen válida.
+            Agrega la URL de una nueva imagen a la colección. Podrás activarla desde la tabla.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UpdateLoginImageForm />
+          <AddLoginImageForm onImageAdded={handleDataChange} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Imágenes de Inicio Guardadas</CardTitle>
+            <CardDescription>
+                Activa o elimina las imágenes disponibles para la página de inicio de sesión.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <LoginImagesTable key={refreshKey} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>
