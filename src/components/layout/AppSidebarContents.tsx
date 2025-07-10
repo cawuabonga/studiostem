@@ -24,25 +24,25 @@ export function AppSidebarContents() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true },
-    // { href: '/dashboard/profile', label: 'Profile', icon: User }, // Profile can be part of settings or a dropdown
-    // { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true, roles: ['Admin', 'Coordinator', 'Teacher', 'Student'] },
+  ];
+  
+  const adminItems = [
+    { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin'] },
+    { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library, roles: ['Admin'] },
+    { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon, roles: ['Admin'] }
   ];
 
-  // Admin-only items
-  if (user?.role === 'Admin') {
-    navItems.push(
-      // { href: '/dashboard/admin', label: 'Admin Panel', icon: ShieldQuestion }, // General admin panel can be a group
-      { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users },
-      { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library },
-      { href: '/dashboard/admin/manage-teachers', label: 'Gestionar Docentes', icon: Contact },
-      { href: '/dashboard/admin/manage-units', label: 'Listado de Unidades', icon: List, exact: true },
-      { href: '/dashboard/admin/manage-units/register', label: 'Registrar Unidad', icon: BookCopy },
-      { href: '/dashboard/admin/assign-units', label: 'Asignar Unidades', icon: ClipboardCheck },
-      { href: '/dashboard/admin/reports', label: 'Reportes', icon: BarChart },
-      { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon }
-    );
-  }
+  const academicItems = [
+      { href: '/dashboard/academic/manage-teachers', label: 'Gestionar Docentes', icon: Contact, roles: ['Admin', 'Coordinator'] },
+      { href: '/dashboard/academic/manage-units', label: 'Listado de Unidades', icon: List, exact: true, roles: ['Admin', 'Coordinator'] },
+      { href: '/dashboard/academic/manage-units/register', label: 'Registrar Unidad', icon: BookCopy, roles: ['Admin', 'Coordinator'] },
+      { href: '/dashboard/academic/assign-units', label: 'Asignar Unidades', icon: ClipboardCheck, roles: ['Admin', 'Coordinator'] },
+      { href: '/dashboard/academic/reports', label: 'Reportes', icon: BarChart, roles: ['Admin', 'Coordinator'] },
+  ];
+
+  const allNavItems = [...navItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
+
 
   return (
     <>
@@ -69,7 +69,7 @@ export function AppSidebarContents() {
         )}
         <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
-          {navItems.map((item) => (
+          {allNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton 
