@@ -6,7 +6,7 @@ import { getLoginImages, setActiveLoginImage, deleteLoginImage } from '@/config/
 import type { LoginImage } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Circle, Trash2, ExternalLink } from 'lucide-react';
+import { CheckCircle, Circle, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
@@ -20,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
 
@@ -94,7 +93,7 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[100px]">Vista Previa</TableHead>
-            <TableHead>URL</TableHead>
+            <TableHead>Fuente</TableHead>
             <TableHead className="w-[120px]">Estado</TableHead>
             <TableHead className="w-[200px] text-right">Acciones</TableHead>
           </TableRow>
@@ -112,11 +111,8 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
                     unoptimized
                 />
               </TableCell>
-              <TableCell className="font-medium truncate max-w-xs">
-                <a href={image.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
-                    {image.url}
-                    <ExternalLink className="h-3 w-3" />
-                </a>
+              <TableCell className="font-medium truncate max-w-xs text-muted-foreground">
+                Imagen guardada (Data URI)
               </TableCell>
               <TableCell>
                 {image.isActive ? (
@@ -142,7 +138,7 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
                         <AlertDialogHeader>
                         <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente la URL de la imagen.
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente la imagen.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

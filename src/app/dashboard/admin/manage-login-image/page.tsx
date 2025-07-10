@@ -37,7 +37,7 @@ export default function ManageLoginImagePage() {
         <CardHeader>
           <CardTitle>Añadir Nueva Imagen de Inicio</CardTitle>
           <CardDescription>
-            Agrega la URL de una nueva imagen a la colección. Podrás activarla desde la tabla.
+            Sube una imagen desde tu dispositivo. Podrás activarla desde la tabla.
           </CardDescription>
         </CardHeader>
         <CardContent>

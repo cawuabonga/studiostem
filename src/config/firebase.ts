@@ -78,16 +78,16 @@ export const getLoginImages = async (): Promise<LoginImage[]> => {
     }
 };
 
-export const addLoginImageURL = async (url: string): Promise<void> => {
+export const addLoginImage = async (imageDataUri: string): Promise<void> => {
     try {
         const imagesRef = collection(db, 'loginImages');
         await addDoc(imagesRef, {
-            url: url,
+            url: imageDataUri, // Storing the Base64 data URI
             isActive: false,
             createdAt: serverTimestamp(),
         });
     } catch (error) {
-        console.error("Error adding login image URL:", error);
+        console.error("Error adding login image:", error);
         throw error;
     }
 };
