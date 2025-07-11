@@ -26,9 +26,10 @@ interface AuthContextType {
   user: AppUser | null;
   loading: boolean;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (name: string, email: string, password: string) => Promise<void>; // Role removed
+  signUpWithEmail: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
+  reloadUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,10 +40,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
   const { toast } = useToast();
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      if (firebaseUser) {
-        try {
+  const fetchAndSetUser = async (firebaseUser: FirebaseUser) => {
+      try {
           const userDocRef = doc(collection(db, 'users'), firebaseUser.uid);
           const userDocSnap = await getDoc(userDocRef);
           
@@ -58,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } else {
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName, photoURL },
-              role // This will be 'Student' if new user
+              role
             );
           }
           
@@ -73,15 +72,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
+        } finally {
+            setLoading(false);
         }
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      if (firebaseUser) {
+        setLoading(true);
+        await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [toast]);
+  
+  const reloadUser = async () => {
+    const firebaseUser = auth.currentUser;
+    if (firebaseUser) {
+        setLoading(true);
+        await firebaseUser.reload(); // Fetches the latest user data from Firebase Auth
+        const refreshedFirebaseUser = auth.currentUser; // The user object is updated
+        if(refreshedFirebaseUser) {
+            await fetchAndSetUser(refreshedFirebaseUser);
+        }
+    }
+  };
+
 
   const handleAuthSuccess = async (firebaseUser: FirebaseUser, roleInput?: UserRole, nameInput?: string) => {
     let photoURL = firebaseUser.photoURL; 
@@ -113,7 +134,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDocRef = doc(collection(db, 'users'), firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
     
-    // Default role is 'Student' if not provided (e.g., for Google sign-in or initial email sign-up)
     const finalRole = roleInput || (userDocSnap.exists() ? userDocSnap.data()?.role : 'Student');
     
     try {
@@ -148,13 +168,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Role parameter removed, defaults to 'Student'
   const signUpWithEmail = async (name: string, email: string, password: string) => {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
-        // Pass name and 'Student' role to handleAuthSuccess
         await handleAuthSuccess(userCredential.user, 'Student', name);
       }
     } catch (error: any) {
@@ -171,8 +189,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest, including calling handleAuthSuccess
-      // which will default to 'Student' if it's a new user.
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: error.message || 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -197,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser }}>
+    <AuthContext.Provider value={{ user, loading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser }}>
       {children}
     </AuthContext.Provider>
   );
