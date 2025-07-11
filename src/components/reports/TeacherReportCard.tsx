@@ -4,6 +4,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type { Teacher, UnitAssignment } from "@/types";
 
 interface TeacherReportCardProps {
@@ -23,6 +24,12 @@ export function TeacherReportCard({
   totalHoursAgosDic,
   programAbbrMap,
 }: TeacherReportCardProps) {
+  
+  const getHourColorClass = (hours: number) => {
+    if (hours > 21) return 'text-destructive';
+    if (hours >= 18) return 'text-green-600';
+    return 'text-muted-foreground';
+  }
 
   return (
     <Card className="flex flex-col h-full print-card">
@@ -80,12 +87,12 @@ export function TeacherReportCard({
       <CardFooter className="bg-muted/50 p-4 flex justify-around text-center rounded-b-lg">
         <div>
           <p className="text-xs font-bold text-muted-foreground">HORAS MAR-JUL</p>
-          <p className="text-lg font-bold text-primary">{totalHoursMarJul}</p>
+          <p className={cn("text-lg font-bold", getHourColorClass(totalHoursMarJul))}>{totalHoursMarJul}</p>
         </div>
         <Separator orientation="vertical" className="h-10" />
         <div>
           <p className="text-xs font-bold text-muted-foreground">HORAS AGO-DIC</p>
-          <p className="text-lg font-bold text-primary">{totalHoursAgosDic}</p>
+          <p className={cn("text-lg font-bold", getHourColorClass(totalHoursAgosDic))}>{totalHoursAgosDic}</p>
         </div>
         <Separator orientation="vertical" className="h-10" />
         <div>
