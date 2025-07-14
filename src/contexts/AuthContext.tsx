@@ -48,12 +48,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let role: UserRole = 'Student'; 
           let displayName = firebaseUser.displayName;
           let photoURL = firebaseUser.photoURL;
+          let dni = '';
 
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             role = userData?.role || 'Student';
             displayName = userData?.displayName || firebaseUser.displayName;
-            photoURL = userData?.photoURL || firebaseUser.photoURL; 
+            photoURL = userData?.photoURL || firebaseUser.photoURL;
+            dni = userData?.dni || '';
           } else {
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName, photoURL },
@@ -67,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: displayName,
             photoURL: photoURL || `https://placehold.co/100x100.png?text=${displayName?.[0]?.toUpperCase() || 'U'}`,
             role: role,
+            dni: dni
           });
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);

@@ -8,6 +8,7 @@ export interface AppUser {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
+  dni?: string;
 }
 
 export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';

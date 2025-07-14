@@ -25,6 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const editProfileSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).optional(),
   photoURL: z.string().url({ message: 'Por favor, ingrese una URL válida.' }).or(z.literal('')).optional(),
+  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).optional().or(z.literal('')),
 });
 
 type EditProfileFormValues = z.infer<typeof editProfileSchema>;
@@ -45,6 +46,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
     defaultValues: {
       displayName: user.displayName || '',
       photoURL: user.photoURL || '',
+      dni: user.dni || '',
     },
   });
 
@@ -53,6 +55,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       form.reset({
         displayName: user.displayName || '',
         photoURL: user.photoURL || '',
+        dni: user.dni || '',
       });
     }
   }, [user, form, isOpen]);
@@ -63,6 +66,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       await updateUserProfile({
         displayName: data.displayName,
         photoURL: data.photoURL,
+        dni: data.dni,
       });
 
       toast({
@@ -87,7 +91,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar Perfil</DialogTitle>
           <DialogDescription>
@@ -109,7 +113,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
               name="photoURL"
               render={({ field }) => (
@@ -122,7 +126,20 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                 </FormItem>
               )}
             />
-            <DialogFooter>
+            <FormField
+              control={form.control}
+              name="dni"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>DNI</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Tu DNI de 8 dígitos" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter className="pt-4">
               <DialogClose asChild>
                 <Button type="button" variant="outline" onClick={onClose}>
                   Cancelar

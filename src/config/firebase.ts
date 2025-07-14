@@ -45,23 +45,28 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
   }
 };
 
-export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null }) => {
+export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, dni?: string | null }) => {
     const user = auth.currentUser;
     if (!user) throw new Error("No user is currently signed in.");
 
     try {
-        // Update Firebase Auth profile
-        await firebaseUpdateProfile(user, {
-            displayName: data.displayName,
-            photoURL: data.photoURL,
-        });
+        const authUpdates: { displayName?: string | null; photoURL?: string | null } = {};
+        if (data.displayName !== undefined) authUpdates.displayName = data.displayName;
+        if (data.photoURL !== undefined) authUpdates.photoURL = data.photoURL;
 
-        // Update Firestore user document
-        const userDocRef = doc(db, 'users', user.uid);
-        await updateDoc(userDocRef, {
-            displayName: data.displayName,
-            photoURL: data.photoURL,
-        });
+        if (Object.keys(authUpdates).length > 0) {
+            await firebaseUpdateProfile(user, authUpdates);
+        }
+
+        const firestoreUpdates: { [key: string]: any } = {};
+        if (data.displayName !== undefined) firestoreUpdates.displayName = data.displayName;
+        if (data.photoURL !== undefined) firestoreUpdates.photoURL = data.photoURL;
+        if (data.dni !== undefined) firestoreUpdates.dni = data.dni;
+        
+        if (Object.keys(firestoreUpdates).length > 0) {
+            const userDocRef = doc(db, 'users', user.uid);
+            await updateDoc(userDocRef, firestoreUpdates);
+        }
 
         console.log(`User profile for ${user.uid} updated successfully.`);
     } catch (error) {
