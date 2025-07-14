@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart } from 'lucide-react';
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart, BookOpenCheck } from 'lucide-react';
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -40,8 +40,12 @@ export function AppSidebarContents() {
       { href: '/dashboard/academic/assign-units', label: 'Asignar Unidades', icon: ClipboardCheck, roles: ['Admin', 'Coordinator'] },
       { href: '/dashboard/academic/reports', label: 'Reportes', icon: BarChart, roles: ['Admin', 'Coordinator'] },
   ];
+  
+  const teacherItems = [
+    { href: '/dashboard/teacher/my-schedule', label: 'Mi Carga Horaria', icon: BookOpenCheck, roles: ['Teacher'] },
+  ];
 
-  const allNavItems = [...navItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
+  const allNavItems = [...navItems, ...teacherItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
 
 
   return (
