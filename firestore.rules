@@ -3,69 +3,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+  
+    function isSignedIn() {
+      return request.auth != null;
+    }
     
-    // --- Users Collection ---
-    // Anyone can create their own user document on sign up.
-    // Users can update their own displayName, photoURL, and dni.
+    function isRole(role) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     match /users/{userId} {
-      allow read, create: if request.auth != null;
-      allow update: if request.auth != null && request.auth.uid == userId
-                    && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'dni', 'role', 'email', 'uid'])
-                    && request.resource.data.keys().size() == 6;
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isOwner(userId) && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'dni']);
     }
 
-    // --- Login Images Collection ---
     match /loginImages/{imageId} {
-      // Any user (even unauthenticated) can list the active image.
-      allow list: if (query.where('isActive', '==', true) && query.limit <= 1)
-                  || (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin');
-      allow read: if resource.data.isActive == true 
-                  || (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin');
-      
-      // Admins can create new image documents
-      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
-                    && request.resource.data.url.matches('^data:image/.*;base64,.*$');
+      // Unauthenticated users can query for the active image
+      allow list: if request.query.resource.data.isActive == true;
+      allow get: if resource.data.isActive == true;
 
-      // Admins can activate/deactivate or delete images
-      allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin'
-                    && (!('url' in request.resource.data) || request.resource.data.url.matches('^data:image/.*;base64,.*$'));
-
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      // Admins have full access to the list and documents
+      allow list, get: if isRole('Admin');
+      allow create, update, delete: if isRole('Admin');
     }
 
-    // --- Study Programs Collection ---
-    // Admins can do anything. All authenticated users can read.
     match /studyPrograms/{programId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin';
+      allow read: if isSignedIn();
+      allow write: if isRole('Admin');
     }
 
-    // --- Teachers Collection ---
-    // Admins and Coordinators can do anything.
     match /teachers/{teacherId} {
-        allow read, write: if request.auth != null && (
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator'
-        );
+      allow read: if isSignedIn();
+      allow write: if isRole('Admin') || isRole('Coordinator');
     }
     
-    // --- Didactic Units Collection ---
-    // Admins and Coordinators can do anything.
     match /didacticUnits/{unitId} {
-        allow read, write: if request.auth != null && (
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator'
-        );
+      allow read: if isRole('Admin') || isRole('Coordinator');
+      allow write: if isRole('Admin') || isRole('Coordinator');
     }
-
-    // --- Unit Assignments Collection ---
-    // Admins and Coordinators can do anything.
+    
     match /unitAssignments/{assignmentId} {
-        allow read, write: if request.auth != null && (
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator'
-        );
+      allow read: if isSignedIn();
+      allow write: if isRole('Admin') || isRole('Coordinator');
     }
-
   }
 }
