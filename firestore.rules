@@ -12,44 +12,49 @@ service cloud.firestore {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
     }
     
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isOneOfRoles(roles) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
     }
 
     match /users/{userId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isOwner(userId) && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'dni']);
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if request.auth.uid == userId && request.resource.data.keys().hasOnly(['displayName', 'photoURL', 'dni']);
     }
 
     match /loginImages/{imageId} {
-      // Unauthenticated users can query for the active image
-      allow list: if request.query.resource.data.isActive == true;
-      allow get: if resource.data.isActive == true;
-
-      // Admins have full access to the list and documents
-      allow list, get: if isRole('Admin');
-      allow create, update, delete: if isRole('Admin');
-    }
-
-    match /studyPrograms/{programId} {
-      allow read: if isSignedIn();
-      allow write: if isRole('Admin');
-    }
-
-    match /teachers/{teacherId} {
-      allow read: if isSignedIn();
-      allow write: if isRole('Admin') || isRole('Coordinator');
+      // Anyone can read the login images
+      allow read;
+      // Only Admins can create or delete login images
+      allow create, delete: if isRole('Admin');
+      // Only Admins can update.
+      // The rule allows updating only 'isActive' or 'url' fields.
+      // The URL validation only runs if the 'url' field is being changed.
+      allow update: if isRole('Admin')
+                    && (
+                        (request.resource.data.keys().hasAll(['isActive']) && !request.resource.data.keys().hasAny(['url', 'createdAt'])) ||
+                        (request.resource.data.url.matches('^data:image/.*;base64,.*$'))
+                      );
     }
     
     match /didacticUnits/{unitId} {
-      allow read: if isRole('Admin') || isRole('Coordinator');
-      allow write: if isRole('Admin') || isRole('Coordinator');
+      allow read: if isSignedIn();
+      allow create, update, delete: if isOneOfRoles(['Admin', 'Coordinator']);
+    }
+    
+    match /studyPrograms/{programId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isRole('Admin');
+    }
+    
+    match /teachers/{teacherId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isOneOfRoles(['Admin', 'Coordinator']);
     }
     
     match /unitAssignments/{assignmentId} {
       allow read: if isSignedIn();
-      allow write: if isRole('Admin') || isRole('Coordinator');
+      allow create, delete: if isOneOfRoles(['Admin', 'Coordinator']);
     }
   }
 }
