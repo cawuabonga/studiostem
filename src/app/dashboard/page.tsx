@@ -12,8 +12,28 @@ export default function DashboardRedirectPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      // Redirect to the institute selector page which will handle the next step.
-      router.push('/dashboard/institute');
+      // Redirect based on user role to the most relevant dashboard page.
+      switch (user.role) {
+        case 'SuperAdmin':
+          router.push('/dashboard/superadmin/manage-institutes');
+          break;
+        case 'Admin':
+        case 'Coordinator':
+          router.push('/dashboard/academic/manage-teachers');
+          break;
+        case 'Teacher':
+           router.push('/dashboard/teacher/my-schedule');
+          break;
+        case 'Student':
+           router.push('/dashboard/student');
+          break;
+        default:
+          // Fallback to the institute selector which will handle the next step.
+          router.push('/dashboard/institute');
+          break;
+      }
+    } else if (!loading && !user) {
+        router.push('/');
     }
   }, [user, loading, router]);
 
