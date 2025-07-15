@@ -83,13 +83,16 @@ export const getLoginPageImageURL = async (): Promise<string | null> => {
     const imagesRef = collection(db, 'loginImages');
     const q = query(imagesRef, where("isActive", "==", true), limit(1));
     const querySnapshot = await getDocs(q);
+
     if (!querySnapshot.empty) {
-      return querySnapshot.docs[0].data().url;
+      const docData = querySnapshot.docs[0].data();
+      return docData.url;
     }
+    
     return null;
   } catch (error) {
     console.error("Error fetching active login page image URL:", error);
-    return null;
+    return null; // Return null on error to avoid breaking the UI
   }
 };
 
