@@ -1,60 +1,86 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
+    // Helper functions
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    function isRole(role) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-    
-    function isOneOfRoles(roles) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    function isAdmin(userId) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'Admin';
+    }
+    
+    function isCoordinator(userId) {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'Coordinator';
+    }
+
+    // AUTH: Users can manage their own profile. Admins can manage any user.
     match /users/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if request.auth.uid == userId && request.resource.data.keys().hasOnly(['displayName', 'photoURL', 'dni']);
+      allow create: if true; // Anyone can create a user document during signup
+      allow read: if isSignedIn(); // Any signed-in user can read any profile (for names, etc.)
+      allow update: if isUser(userId) && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'dni'])
+                    || isAdmin(request.auth.uid); // User can update their own profile, or an admin can update any
+      allow delete: if isAdmin(request.auth.uid); // Only admins can delete users
     }
 
+    // ADMIN: Admins can list all users
+    match /users/{document=**} {
+      allow list: if isAdmin(request.auth.uid);
+    }
+    
+    // Login Images can be read by anyone, but only managed by Admins.
     match /loginImages/{imageId} {
-      // Anyone can read the login images
-      allow read;
-      // Only Admins can create or delete login images
-      allow create, delete: if isRole('Admin');
-      // Only Admins can update.
-      // The rule allows updating only 'isActive' or 'url' fields.
-      // The URL validation only runs if the 'url' field is being changed.
-      allow update: if isRole('Admin')
-                    && (
-                        (request.resource.data.keys().hasAll(['isActive']) && !request.resource.data.keys().hasAny(['url', 'createdAt'])) ||
-                        (request.resource.data.url.matches('^data:image/.*;base64,.*$'))
-                      );
+      allow read: if true;
+      allow create: if isAdmin(request.auth.uid) 
+                     && request.resource.data.url.matches('^data:image/.*;base64,.*$');
+      allow update: if isAdmin(request.auth.uid) 
+                     && (request.resource.data.url.matches('^data:image/.*;base64,.*$') || !request.resource.data.keys().hasAny(['url']));
+      allow delete: if isAdmin(request.auth.uid);
     }
-    
-    match /didacticUnits/{unitId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isOneOfRoles(['Admin', 'Coordinator']);
+     match /loginImages/{document=**} {
+      allow list: if isAdmin(request.auth.uid);
     }
-    
+
+
+    // STUDY PROGRAMS, TEACHERS, UNITS, ASSIGNMENTS
+    // Any authenticated user can read these collections.
+    // Only Admin or Coordinator can write to them.
     match /studyPrograms/{programId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isRole('Admin');
+      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
     }
-    
+    match /studyPrograms/{document=**} {
+      allow list: if isSignedIn();
+    }
+
     match /teachers/{teacherId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isOneOfRoles(['Admin', 'Coordinator']);
+      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
+    }
+     match /teachers/{document=**} {
+      allow list: if isSignedIn();
+    }
+
+    match /didacticUnits/{unitId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
+    }
+     match /didacticUnits/{document=**} {
+      allow list: if isSignedIn();
     }
     
     match /unitAssignments/{assignmentId} {
       allow read: if isSignedIn();
-      allow create, delete: if isOneOfRoles(['Admin', 'Coordinator']);
+      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
+    }
+    match /unitAssignments/{document=**} {
+        allow list: if isSignedIn();
     }
   }
 }
