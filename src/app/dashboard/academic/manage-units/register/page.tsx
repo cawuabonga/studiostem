@@ -51,7 +51,7 @@ export default function RegisterUnitPage() {
                           <CardDescription>
                               Sube la plantilla de Excel para registrar varias unidades a la vez.
                           </CardDescription>
-                      </CardHeader>
+                      </Header>
                       <CardContent>
                           <BulkUploadUnits onUploadComplete={handleDataChange} />
                       </CardContent>
