@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +23,7 @@ interface ProcessedTeacherData {
 }
 
 export default function ReportsPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, instituteId } = useAuth();
   const router = useRouter();
 
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
@@ -50,10 +49,11 @@ export default function ReportsPage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
+    if (!instituteId) return;
     const fetchPrograms = async () => {
       setProgramsLoading(true);
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
         if (programs.length > 0) {
             setSelectedProgram(programs[0].name);
@@ -65,10 +65,10 @@ export default function ReportsPage() {
       }
     };
     fetchPrograms();
-  }, []);
+  }, [instituteId]);
 
   useEffect(() => {
-    if (!selectedYear || !selectedProgram) {
+    if (!selectedYear || !selectedProgram || !instituteId) {
       setReportData([]);
       return;
     };
@@ -77,8 +77,8 @@ export default function ReportsPage() {
       setReportLoading(true);
       try {
         const [allTeachers, allAssignmentsForYear] = await Promise.all([
-          getTeachers(),
-          getUnitAssignments(parseInt(selectedYear)) // Fetch all assignments for the year
+          getTeachers(instituteId),
+          getUnitAssignments(instituteId, parseInt(selectedYear)) // Fetch all assignments for the year
         ]);
 
         // Filter teachers to display based on the selected program
@@ -107,7 +107,7 @@ export default function ReportsPage() {
     };
 
     generateReport();
-  }, [selectedYear, selectedProgram]);
+  }, [selectedYear, selectedProgram, instituteId]);
 
 
   if (authLoading || !user || (user.role !== 'Admin' && user.role !== 'Coordinator')) {

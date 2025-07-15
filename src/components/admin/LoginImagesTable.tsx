@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 interface LoginImagesTableProps {
@@ -32,11 +33,13 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
   const [images, setImages] = useState<LoginImage[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { instituteId } = useAuth();
 
   const fetchImages = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedImages = await getLoginImages();
+      const fetchedImages = await getLoginImages(instituteId);
       setImages(fetchedImages);
     } catch (error) {
       console.error("Error fetching images:", error);
@@ -48,15 +51,16 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, instituteId]);
 
   useEffect(() => {
     fetchImages();
   }, [fetchImages]);
 
   const handleSetActive = async (id: string) => {
+    if (!instituteId) return;
     try {
-        await setActiveLoginImage(id);
+        await setActiveLoginImage(instituteId, id);
         toast({ title: "¡Éxito!", description: "La imagen de inicio de sesión ha sido actualizada."});
         onDataChange();
         fetchImages();
@@ -66,8 +70,9 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
   };
 
   const handleDelete = async (id: string) => {
+    if (!instituteId) return;
     try {
-        await deleteLoginImage(id);
+        await deleteLoginImage(instituteId, id);
         toast({ title: "¡Eliminada!", description: "La imagen ha sido eliminada."});
         onDataChange();
         fetchImages();

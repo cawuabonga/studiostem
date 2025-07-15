@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EditTeacherDialog } from './EditTeacherDialog';
 import { DeleteTeacherDialog } from './DeleteTeacherDialog';
 import { Input } from '../ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeachersListProps {
   onDataChange: () => void;
@@ -26,12 +27,14 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const { instituteId } = useAuth();
   const itemsPerPage = 10;
 
   const fetchTeachers = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedTeachers = await getTeachers();
+      const fetchedTeachers = await getTeachers(instituteId);
       setTeachers(fetchedTeachers);
     } catch (error) {
       console.error("Error fetching teachers:", error);
@@ -43,7 +46,7 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, instituteId]);
 
   useEffect(() => {
     fetchTeachers();

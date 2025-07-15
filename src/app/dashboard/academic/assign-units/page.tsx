@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { AssignmentContainer } from "@/components/assignments/AssignmentContainer";
@@ -12,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 export default function AssignUnitsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
   
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
@@ -33,10 +32,11 @@ export default function AssignUnitsPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
+    if (!instituteId) return;
     const fetchPrograms = async () => {
       setProgramsLoading(true);
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
         if (programs.length > 0) {
             setSelectedProgram(programs[0].name);
@@ -48,7 +48,7 @@ export default function AssignUnitsPage() {
       }
     };
     fetchPrograms();
-  }, []);
+  }, [instituteId]);
 
   if (loading || !user || (user.role !== 'Admin' && user.role !== 'Coordinator')) {
     return <p>Cargando o no autorizado...</p>;
@@ -82,10 +82,11 @@ export default function AssignUnitsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {selectedYear && selectedProgram ? (
+          {selectedYear && selectedProgram && instituteId ? (
             <AssignmentContainer 
               year={parseInt(selectedYear)} 
               studyProgram={selectedProgram} 
+              instituteId={instituteId}
             />
           ) : (
             <div className="text-center text-muted-foreground py-12">

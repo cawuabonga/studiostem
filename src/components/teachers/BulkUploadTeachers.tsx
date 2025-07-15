@@ -10,6 +10,7 @@ import { addTeacher } from '@/config/firebase';
 import type { Teacher, TeacherCondition } from '@/types';
 import { Label } from '../ui/label';
 import { FileDown, Upload } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface BulkUploadTeachersProps {
   onUploadComplete: () => void;
@@ -23,6 +24,7 @@ export function BulkUploadTeachers({ onUploadComplete }: BulkUploadTeachersProps
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const { instituteId } = useAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -61,6 +63,10 @@ export function BulkUploadTeachers({ onUploadComplete }: BulkUploadTeachersProps
   const handleUpload = async () => {
     if (!selectedFile) {
       toast({ title: 'No hay archivo', description: 'Por favor, seleccione un archivo.', variant: 'destructive' });
+      return;
+    }
+    if (!instituteId) {
+      toast({ title: 'Error', description: 'ID de instituto no encontrado. No se puede continuar.', variant: 'destructive' });
       return;
     }
 
@@ -106,7 +112,7 @@ export function BulkUploadTeachers({ onUploadComplete }: BulkUploadTeachersProps
           teachersToUpload.push(teacher);
         }
 
-        await Promise.all(teachersToUpload.map(teacher => addTeacher(teacher)));
+        await Promise.all(teachersToUpload.map(teacher => addTeacher(instituteId, teacher)));
 
         toast({
           title: '¡Éxito!',

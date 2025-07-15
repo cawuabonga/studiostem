@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { AddLoginImageForm } from "@/components/admin/AddLoginImageForm";
@@ -10,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ManageLoginImagePage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -24,7 +23,7 @@ export default function ManageLoginImagePage() {
     setRefreshKey(prev => prev + 1);
   };
 
-  if (loading || !user || user.role !== 'Admin') {
+  if (loading || !user || !instituteId || user.role !== 'Admin') {
     return (
       <div className="flex justify-center items-center h-full">
         <p>Cargando o no autorizado...</p>
@@ -42,7 +41,7 @@ export default function ManageLoginImagePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddLoginImageForm onImageAdded={handleDataChange} />
+          <AddLoginImageForm onImageAdded={handleDataChange} instituteId={instituteId} />
         </CardContent>
       </Card>
 

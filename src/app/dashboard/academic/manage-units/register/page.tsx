@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { AddUnitForm } from "@/components/units/AddUnitForm";
@@ -11,7 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { BulkUploadUnits } from "@/components/units/BulkUploadUnits";
 
 export default function RegisterUnitPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
 
   // This state is used by child components to signal data changes.
@@ -29,7 +28,7 @@ export default function RegisterUnitPage() {
     setRefreshKey(prevKey => prevKey + 1);
   };
   
-  if (loading || !user || (user.role !== 'Admin' && user.role !== 'Coordinator')) {
+  if (loading || !user || !instituteId || (user.role !== 'Admin' && user.role !== 'Coordinator')) {
     return (
       <div className="flex justify-center items-center h-full">
         <p>Cargando o no autorizado...</p>
@@ -53,7 +52,7 @@ export default function RegisterUnitPage() {
                           </CardDescription>
                       </Header>
                       <CardContent>
-                          <BulkUploadUnits onUploadComplete={handleDataChange} />
+                          <BulkUploadUnits onUploadComplete={handleDataChange} instituteId={instituteId} />
                       </CardContent>
                   </Card>
               </AccordionContent>
@@ -65,7 +64,7 @@ export default function RegisterUnitPage() {
             <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-            <AddUnitForm onUnitAdded={handleDataChange} />
+            <AddUnitForm onUnitAdded={handleDataChange} instituteId={instituteId} />
             </CardContent>
         </Card>
     </div>

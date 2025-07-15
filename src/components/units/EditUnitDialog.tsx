@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { DidacticUnit, StudyProgram, UnitPeriod, UnitType, Shift } from '@/types';
 import { updateDidacticUnit, getStudyPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
 
 
 const editUnitSchema = z.object({
@@ -54,14 +55,15 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
+  const { instituteId } = useAuth();
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !instituteId) return;
 
     const fetchPrograms = async () => {
       setProgramsLoading(true);
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
       } catch (error) {
         console.error("Failed to fetch study programs:", error);
@@ -75,7 +77,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
       }
     };
     fetchPrograms();
-  }, [isOpen, toast]);
+  }, [isOpen, toast, instituteId]);
 
   const form = useForm<EditUnitFormValues>({
     resolver: zodResolver(editUnitSchema),
@@ -111,7 +113,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
   }, [unit, reset, isOpen]);
 
   const onSubmit = async (data: EditUnitFormValues) => {
-    if (!unit?.id) return;
+    if (!unit?.id || !instituteId) return;
     setIsSubmitting(true);
     try {
       const th = Number(data.theoreticalHours) || 0;
@@ -122,7 +124,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         ...data,
         totalHours: totalHours,
       };
-      await updateDidacticUnit(unit.id, updatedData);
+      await updateDidacticUnit(instituteId, unit.id, updatedData);
       toast({
         title: '¡Éxito!',
         description: 'La unidad didáctica ha sido actualizada.',

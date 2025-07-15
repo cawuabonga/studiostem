@@ -21,9 +21,10 @@ type AddProgramFormValues = z.infer<typeof addProgramSchema>;
 
 interface AddProgramFormProps {
   onProgramAdded: () => void;
+  instituteId: string;
 }
 
-export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
+export function AddProgramForm({ onProgramAdded, instituteId }: AddProgramFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
 
@@ -39,7 +40,7 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
   const onSubmit = async (data: AddProgramFormValues) => {
     setLoading(true);
     try {
-      await addStudyProgram(data);
+      await addStudyProgram(instituteId, data);
       toast({
         title: '¡Éxito!',
         description: 'El programa de estudios ha sido registrado correctamente.',

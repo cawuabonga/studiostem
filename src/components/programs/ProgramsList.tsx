@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EditProgramDialog } from './EditProgramDialog';
 import { DeleteProgramDialog } from './DeleteProgramDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface ProgramsListProps {
     onDataChange: () => void;
@@ -23,11 +24,13 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { instituteId } = useAuth();
 
   const fetchPrograms = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedPrograms = await getStudyPrograms();
+      const fetchedPrograms = await getStudyPrograms(instituteId);
       setPrograms(fetchedPrograms);
     } catch (error) {
       console.error("Error fetching programs:", error);
@@ -39,7 +42,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, instituteId]);
 
   useEffect(() => {
     fetchPrograms();

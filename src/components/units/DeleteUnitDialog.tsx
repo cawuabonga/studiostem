@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { DidacticUnit } from '@/types';
 import { deleteDidacticUnit } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DeleteUnitDialogProps {
   unit: DidacticUnit;
@@ -25,12 +26,13 @@ interface DeleteUnitDialogProps {
 export function DeleteUnitDialog({ unit, isOpen, onClose }: DeleteUnitDialogProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { instituteId } = useAuth();
 
   const handleDelete = async () => {
-    if (!unit?.id) return;
+    if (!unit?.id || !instituteId) return;
     setIsDeleting(true);
     try {
-      await deleteDidacticUnit(unit.id);
+      await deleteDidacticUnit(instituteId, unit.id);
       toast({
         title: '¡Eliminada!',
         description: 'La unidad didáctica ha sido eliminada.',

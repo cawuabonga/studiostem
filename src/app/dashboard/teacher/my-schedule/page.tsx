@@ -13,7 +13,7 @@ import { AlertCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function MySchedulePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, instituteId } = useAuth();
   const router = useRouter();
 
   const [teacher, setTeacher] = useState<Teacher | null>(null);
@@ -29,7 +29,7 @@ export default function MySchedulePage() {
   }, [user, authLoading, router]);
 
   useEffect(() => {
-    if (!authLoading && user && user.role === 'Teacher') {
+    if (!authLoading && user && user.role === 'Teacher' && instituteId) {
       const fetchData = async () => {
         setLoading(true);
         setError(null);
@@ -39,8 +39,8 @@ export default function MySchedulePage() {
           }
 
           const [allTeachers, programs] = await Promise.all([
-            getTeachers(),
-            getStudyPrograms()
+            getTeachers(instituteId),
+            getStudyPrograms(instituteId)
           ]);
           setStudyPrograms(programs);
           
@@ -51,7 +51,7 @@ export default function MySchedulePage() {
           setTeacher(currentTeacher);
 
           const currentYear = new Date().getFullYear();
-          const allAssignments = await getUnitAssignments(currentYear);
+          const allAssignments = await getUnitAssignments(instituteId, currentYear);
           const teacherAssignments = allAssignments.filter(a => a.teacherId === currentTeacher.id);
           setAssignments(teacherAssignments);
 
@@ -64,7 +64,7 @@ export default function MySchedulePage() {
       };
       fetchData();
     }
-  }, [user, authLoading]);
+  }, [user, authLoading, instituteId]);
 
   const programAbbrMap = useMemo(() => new Map(studyPrograms.map(p => [p.name, p.abbreviation || ''])), [studyPrograms]);
 

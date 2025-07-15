@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { UnitsList } from "@/components/units/UnitsList";
@@ -18,7 +17,7 @@ const moduleOptions = Array.from({ length: 10 }, (_, i) => `Módulo ${String(i +
 const periodOptions: UnitPeriod[] = ['MAR-JUL', 'AGOS-DIC'];
 
 export default function ListUnitsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
   const [filters, setFilters] = useState<UnitFilters>({});
@@ -32,10 +31,11 @@ export default function ListUnitsPage() {
   }, [user, loading, router]);
   
   useEffect(() => {
+    if (!instituteId) return;
     const fetchPrograms = async () => {
       setProgramsLoading(true);
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
       } catch (error) {
         console.error("Failed to fetch study programs:", error);
@@ -44,7 +44,7 @@ export default function ListUnitsPage() {
       }
     };
     fetchPrograms();
-  }, []);
+  }, [instituteId]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);

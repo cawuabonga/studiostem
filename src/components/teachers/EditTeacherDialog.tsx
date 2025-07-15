@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { updateTeacher, getStudyPrograms } from '@/config/firebase';
 import type { Teacher, StudyProgram, TeacherCondition } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const teacherSchema = z.object({
   dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
@@ -46,6 +47,7 @@ export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
+  const { instituteId } = useAuth();
 
   const form = useForm<EditTeacherFormValues>({
     resolver: zodResolver(teacherSchema),
@@ -53,11 +55,11 @@ export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialo
   });
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && instituteId) {
       const fetchPrograms = async () => {
         setProgramsLoading(true);
         try {
-          const programs = await getStudyPrograms();
+          const programs = await getStudyPrograms(instituteId);
           setStudyPrograms(programs);
         } catch (error) {
           console.error("Failed to fetch study programs:", error);
@@ -68,13 +70,13 @@ export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialo
       fetchPrograms();
       form.reset(teacher);
     }
-  }, [teacher, form, isOpen]);
+  }, [teacher, form, isOpen, instituteId]);
 
   const onSubmit = async (data: EditTeacherFormValues) => {
-    if (!teacher?.id) return;
+    if (!teacher?.id || !instituteId) return;
     setIsSubmitting(true);
     try {
-      await updateTeacher(teacher.id, data);
+      await updateTeacher(instituteId, teacher.id, data);
       toast({
         title: '¡Éxito!',
         description: 'La información del docente ha sido actualizada.',

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { addTeacher, getStudyPrograms } from '@/config/firebase';
 import type { StudyProgram, TeacherCondition } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 
 const teacherSchema = z.object({
   dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
@@ -35,11 +36,13 @@ export function AddTeacherForm({ onTeacherAdded }: AddTeacherFormProps) {
   const [loading, setLoading] = useState(false);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
   const [programsLoading, setProgramsLoading] = useState(true);
+  const { instituteId } = useAuth();
 
   useEffect(() => {
+    if (!instituteId) return;
     const fetchPrograms = async () => {
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
       } catch (error) {
         console.error("Failed to fetch study programs:", error);
@@ -53,7 +56,7 @@ export function AddTeacherForm({ onTeacherAdded }: AddTeacherFormProps) {
       }
     };
     fetchPrograms();
-  }, [toast]);
+  }, [toast, instituteId]);
 
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherSchema),
@@ -66,9 +69,10 @@ export function AddTeacherForm({ onTeacherAdded }: AddTeacherFormProps) {
   });
 
   const onSubmit = async (data: TeacherFormValues) => {
+    if (!instituteId) return;
     setLoading(true);
     try {
-      await addTeacher(data);
+      await addTeacher(instituteId, data);
       toast({
         title: '¡Éxito!',
         description: 'El docente ha sido registrado correctamente.',

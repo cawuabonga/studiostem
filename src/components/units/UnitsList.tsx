@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -10,6 +11,7 @@ import { EditUnitDialog } from './EditUnitDialog';
 import { DeleteUnitDialog } from './DeleteUnitDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UnitsListProps {
     onDataChange: () => void;
@@ -23,14 +25,16 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
+  const { instituteId } = useAuth();
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const fetchUnits = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedUnits = await getDidacticUnits();
+      const fetchedUnits = await getDidacticUnits(instituteId);
       setUnits(fetchedUnits);
     } catch (error) {
       console.error("Error fetching units:", error);
@@ -42,7 +46,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, instituteId]);
 
   useEffect(() => {
     fetchUnits();
@@ -75,6 +79,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
   };
 
   const handleDuplicateUnit = async (unitToDuplicate: DidacticUnit) => {
+    if (!instituteId) return;
     const { id, ...unitData } = unitToDuplicate;
     
     toast({
@@ -83,7 +88,7 @@ export function UnitsList({ onDataChange, filters }: UnitsListProps) {
     });
 
     try {
-        await addDidacticUnit({
+        await addDidacticUnit(instituteId, {
             ...unitData,
             name: `${unitData.name} (Copia)`,
         });

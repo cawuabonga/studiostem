@@ -38,9 +38,10 @@ const shiftOptions: Shift[] = ['Mañana', 'Tarde', 'Noche'];
 
 interface AddUnitFormProps {
   onUnitAdded: () => void;
+  instituteId: string;
 }
 
-export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
+export function AddUnitForm({ onUnitAdded, instituteId }: AddUnitFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
   const [studyPrograms, setStudyPrograms] = useState<StudyProgram[]>([]);
@@ -49,7 +50,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   useEffect(() => {
     const fetchPrograms = async () => {
       try {
-        const programs = await getStudyPrograms();
+        const programs = await getStudyPrograms(instituteId);
         setStudyPrograms(programs);
       } catch (error) {
         console.error("Failed to fetch study programs:", error);
@@ -63,7 +64,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
       }
     };
     fetchPrograms();
-  }, [toast]);
+  }, [toast, instituteId]);
 
   const form = useForm<AddUnitFormValues>({
     resolver: zodResolver(addUnitSchema),
@@ -99,7 +100,7 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
             ...baseUnitData,
             shift: shift as Shift,
         };
-        return addDidacticUnit(unitDataForShift);
+        return addDidacticUnit(instituteId, unitDataForShift);
       });
       
       await Promise.all(creationPromises);

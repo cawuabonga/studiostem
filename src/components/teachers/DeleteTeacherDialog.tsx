@@ -15,6 +15,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher } from '@/types';
 import { deleteTeacher } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DeleteTeacherDialogProps {
   teacher: Teacher;
@@ -25,12 +26,13 @@ interface DeleteTeacherDialogProps {
 export function DeleteTeacherDialog({ teacher, isOpen, onClose }: DeleteTeacherDialogProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const { instituteId } = useAuth();
 
   const handleDelete = async () => {
-    if (!teacher?.id) return;
+    if (!teacher?.id || !instituteId) return;
     setIsDeleting(true);
     try {
-      await deleteTeacher(teacher.id);
+      await deleteTeacher(instituteId, teacher.id);
       toast({
         title: '¡Eliminado!',
         description: 'El docente ha sido eliminado.',

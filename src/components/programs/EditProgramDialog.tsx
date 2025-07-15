@@ -20,6 +20,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import type { StudyProgram } from '@/types';
 import { updateStudyProgram } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const editProgramSchema = z.object({
   code: z.string().min(1, { message: 'El código del programa es requerido.' }),
@@ -38,6 +39,7 @@ interface EditProgramDialogProps {
 export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { instituteId } = useAuth();
 
   const form = useForm<EditProgramFormValues>({
     resolver: zodResolver(editProgramSchema),
@@ -59,10 +61,10 @@ export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialo
   }, [program, form, isOpen]);
 
   const onSubmit = async (data: EditProgramFormValues) => {
-    if (!program?.id) return;
+    if (!program?.id || !instituteId) return;
     setIsSubmitting(true);
     try {
-      await updateStudyProgram(program.id, data);
+      await updateStudyProgram(instituteId, program.id, data);
       toast({
         title: '¡Éxito!',
         description: 'El programa de estudios ha sido actualizado.',

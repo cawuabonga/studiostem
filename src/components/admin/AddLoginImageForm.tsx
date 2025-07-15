@@ -30,9 +30,10 @@ type AddImageFormValues = z.infer<typeof addImageSchema>;
 
 interface AddLoginImageFormProps {
   onImageAdded: () => void;
+  instituteId: string;
 }
 
-export function AddLoginImageForm({ onImageAdded }: AddLoginImageFormProps) {
+export function AddLoginImageForm({ onImageAdded, instituteId }: AddLoginImageFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -67,7 +68,7 @@ export function AddLoginImageForm({ onImageAdded }: AddLoginImageFormProps) {
     
     setLoading(true);
     try {
-      await addLoginImage(preview);
+      await addLoginImage(instituteId, preview);
       toast({
         title: '¡Éxito!',
         description: 'La imagen se ha guardado correctamente.',

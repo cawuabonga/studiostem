@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { AddProgramForm } from "@/components/programs/AddProgramForm";
@@ -11,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ManageProgramsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -25,7 +24,7 @@ export default function ManageProgramsPage() {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
-  if (loading || !user || user.role !== 'Admin') {
+  if (loading || !user || !instituteId || user.role !== 'Admin') {
     return (
       <div className="flex justify-center items-center h-full">
         <p>Cargando o no autorizado...</p>
@@ -43,7 +42,7 @@ export default function ManageProgramsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddProgramForm onProgramAdded={handleDataChange} />
+          <AddProgramForm onProgramAdded={handleDataChange} instituteId={instituteId} />
         </CardContent>
       </Card>
       

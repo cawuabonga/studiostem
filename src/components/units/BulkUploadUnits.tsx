@@ -13,6 +13,7 @@ import { FileDown, Upload } from 'lucide-react';
 
 interface BulkUploadUnitsProps {
   onUploadComplete: () => void;
+  instituteId: string;
 }
 
 const REQUIRED_HEADERS = [
@@ -20,7 +21,7 @@ const REQUIRED_HEADERS = [
   'credits', 'theoreticalHours', 'practicalHours'
 ];
 
-export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
+export function BulkUploadUnits({ onUploadComplete, instituteId }: BulkUploadUnitsProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
@@ -117,7 +118,7 @@ export function BulkUploadUnits({ onUploadComplete }: BulkUploadUnitsProps) {
           unitsToUpload.push(unit);
         }
 
-        await Promise.all(unitsToUpload.map(unit => addDidacticUnit(unit)));
+        await Promise.all(unitsToUpload.map(unit => addDidacticUnit(instituteId, unit)));
 
         toast({
           title: '¡Éxito!',

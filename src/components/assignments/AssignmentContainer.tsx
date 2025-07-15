@@ -11,9 +11,10 @@ import { useToast } from "@/hooks/use-toast";
 interface AssignmentContainerProps {
   year: number;
   studyProgram: string;
+  instituteId: string;
 }
 
-export function AssignmentContainer({ year, studyProgram }: AssignmentContainerProps) {
+export function AssignmentContainer({ year, studyProgram, instituteId }: AssignmentContainerProps) {
   const [units, setUnits] = useState<DidacticUnit[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<UnitAssignment[]>([]);
@@ -24,9 +25,9 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     setLoading(true);
     try {
       const [fetchedUnits, fetchedTeachers, fetchedAssignments] = await Promise.all([
-        getDidacticUnits(),
-        getTeachers(),
-        getUnitAssignments(year, studyProgram),
+        getDidacticUnits(instituteId),
+        getTeachers(instituteId),
+        getUnitAssignments(instituteId, year, studyProgram),
       ]);
 
       // Filter units by the selected program, but load all teachers
@@ -40,7 +41,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     } finally {
       setLoading(false);
     }
-  }, [year, studyProgram, toast]);
+  }, [year, studyProgram, toast, instituteId]);
 
   useEffect(() => {
     fetchData();
@@ -65,7 +66,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
     };
     
     try {
-      const newId = await addUnitAssignment(newAssignment);
+      const newId = await addUnitAssignment(instituteId, newAssignment);
       setAssignments(prev => [...prev, { ...newAssignment, id: newId }]);
       toast({ title: '¡Éxito!', description: `Unidad "${unit.name}" asignada a ${teacher.fullName}.` });
     } catch (error) {
@@ -79,7 +80,7 @@ export function AssignmentContainer({ year, studyProgram }: AssignmentContainerP
      if (!assignment) return;
 
     try {
-      await deleteUnitAssignment(assignmentId);
+      await deleteUnitAssignment(instituteId, assignmentId);
       setAssignments(prev => prev.filter(a => a.id !== assignmentId));
       toast({ title: '¡Éxito!', description: `Asignación de "${assignment.unitName}" eliminada.` });
     } catch (error) {
