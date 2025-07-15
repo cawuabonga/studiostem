@@ -67,7 +67,7 @@ export default function ManageTeachersPage() {
                             <CardDescription>
                                 Sube la plantilla de Excel para registrar varios docentes a la vez.
                             </CardDescription>
-                        </Header>
+                        </CardHeader>
                         <CardContent>
                             <BulkUploadTeachers onUploadComplete={handleDataChange} />
                         </CardContent>
