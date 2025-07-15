@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { AddTeacherForm } from "@/components/teachers/AddTeacherForm";
