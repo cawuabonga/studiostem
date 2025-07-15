@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment, LoginImage } from '@/types';
+import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment, LoginImage, Institute } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -80,8 +80,28 @@ const getInstituteDocRef = (instituteId: string) => {
 };
 
 
-// --- Login Image Management (Per Institute) ---
+// --- Institute Management (for SuperAdmins) ---
+export const addInstitute = async (instituteId: string, data: { name: string }): Promise<void> => {
+    const instituteRef = doc(db, 'institutes', instituteId);
+    const docSnap = await getDoc(instituteRef);
+    if (docSnap.exists()) {
+        throw new Error(`Institute with ID "${instituteId}" already exists.`);
+    }
+    await setDoc(instituteRef, data);
+};
 
+export const getInstitutes = async (): Promise<Institute[]> => {
+    const institutesCol = collection(db, 'institutes');
+    const q = query(institutesCol, orderBy("name"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+    } as Institute));
+};
+
+
+// --- Login Image Management (Per Institute) ---
 export const getLoginPageImageURL = async (instituteId: string): Promise<string | null> => {
   try {
     const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');

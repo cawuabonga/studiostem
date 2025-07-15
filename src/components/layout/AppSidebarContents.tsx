@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart, BookOpenCheck } from 'lucide-react';
+import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart, BookOpenCheck, Building2 } from 'lucide-react';
 import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -25,7 +25,11 @@ export function AppSidebarContents() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true, roles: ['Admin', 'Coordinator', 'Teacher', 'Student'] },
+    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true, roles: ['SuperAdmin', 'Admin', 'Coordinator', 'Teacher', 'Student'] },
+  ];
+  
+  const superAdminItems = [
+    { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, roles: ['SuperAdmin'] },
   ];
   
   const adminItems = [
@@ -46,7 +50,7 @@ export function AppSidebarContents() {
     { href: '/dashboard/teacher/my-schedule', label: 'Mi Carga Horaria', icon: BookOpenCheck, roles: ['Teacher'] },
   ];
 
-  const allNavItems = [...navItems, ...teacherItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
+  const allNavItems = [...navItems, ...superAdminItems, ...teacherItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
 
 
   return (

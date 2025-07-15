@@ -1,6 +1,6 @@
 
 
-export type UserRole = 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
+export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
   uid: string;
@@ -9,6 +9,7 @@ export interface AppUser {
   photoURL: string | null;
   role: UserRole;
   dni?: string;
+  instituteId?: string; // Users might belong to one institute
 }
 
 export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';
@@ -73,4 +74,9 @@ export interface LoginImage {
     url: string;
     isActive: boolean;
     createdAt: Date;
+}
+
+export interface Institute {
+  id: string;
+  name: string;
 }
