@@ -1,70 +1,119 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
     // --- Helper Functions ---
+    // Check if the user is authenticated.
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+
+    // Check if the user has a specific role within an institute.
+    function hasRole(instituteId, role) {
+      return get(/databases/$(database)/documents/institutes/$(instituteId)/users/$(request.auth.uid)).data.role == role;
     }
     
+    // Check if the user is a SuperAdmin. SuperAdmins have their role in the global /users collection.
+    function isSuperAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // Check if the user belongs to the specified institute.
     function isUserOfInstitute(instituteId) {
-      // For this to work, the user's document in the GLOBAL users collection
-      // would need a field like `instituteId` or a map of `institutes`.
-      // This is a simplified check assuming a user belongs to one institute.
-      // A more complex check might be needed if a user can belong to multiple institutes.
-      // For now, we will allow any authenticated user to access any institute data
-      // as we don't have the user-to-institute mapping yet.
-      // THIS SHOULD BE TIGHTENED IN A PRODUCTION SCENARIO.
-      return isSignedIn();
+        return exists(/databases/$(database)/documents/institutes/$(instituteId)/users/$(request.auth.uid));
+    }
+
+    // Check if the user is an Admin or Coordinator for a specific institute.
+    function isAdminOrCoordinator(instituteId) {
+      return hasRole(instituteId, 'Admin') || hasRole(instituteId, 'Coordinator');
     }
     
-    // --- Global User Profiles ---
-    // Users collection remains global. It stores login info and roles.
-    // In a true multi-tenant system, this might also store which institutes a user belongs to.
+    // Check if the user is a Teacher for a specific institute.
+    function isTeacher(instituteId) {
+        return hasRole(instituteId, 'Teacher');
+    }
+    
+    // --- Global Rules ---
+    // The 'users' collection at the root is for global user profiles, mainly for SuperAdmins.
     match /users/{userId} {
-      // A user can read their own profile.
-      allow get: if isSignedIn() && request.auth.uid == userId;
-      
-      // A user can create their own profile document (on signup).
-      allow create: if isSignedIn() && request.auth.uid == userId;
-
-      // A user can update their own displayName, photoURL, and DNI.
-      allow update: if isSignedIn() && request.auth.uid == userId
-                    && request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['displayName', 'photoURL', 'dni']);
-                       
-      // Admins can read and update any user's profile (e.g., to change their role).
-      // This admin check needs to know which institute the admin belongs to
-      // and which user they are trying to manage. For now, we assume a global admin.
-      // This part of the logic will need refinement as the multi-tenant model matures.
-      allow get, update: if isSignedIn() && getUserData(request.auth.uid).role == 'Admin';
+      // Any authenticated user can read their own global profile.
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      // Only a SuperAdmin can update a user's global profile (e.g., to assign SuperAdmin role).
+      allow write: if isSuperAdmin();
     }
 
-    // --- Institute-Specific Data ---
-    // All data like teachers, units, etc., is nested under an institute.
+    // --- Institute-Specific Rules ---
+    // All institute-specific data is nested under /institutes/{instituteId}.
     match /institutes/{instituteId} {
-      // Allow reading/writing institute data only if the user belongs to that institute.
-      allow read, write: if isUserOfInstitute(instituteId);
-      
-      // Allow any authenticated user to see the list of institutes for now.
-      // This could be tightened later.
-      allow list: if isSignedIn();
-
-      // Subcollections for each institute
-      match /{collection}/{docId} {
+        // Only SuperAdmins can create new institutes.
+        // Reading/updating/deleting institute documents might be restricted for now.
+        allow read, create: if isSuperAdmin();
+    }
+    
+    // Allow SuperAdmins to list all institutes.
+    match /institutes/{document=**} {
+        allow list: if isSuperAdmin();
+    }
+    
+    match /institutes/{instituteId}/{collection}/{docId} {
+        // Generic rule: a user must belong to the institute to perform any action within it.
         allow read, write: if isUserOfInstitute(instituteId);
-      }
-      
-      // Specific rule for loginImages: allow anyone to read them for the login page.
-      match /loginImages/{imageId} {
-        allow read: if true; // Publicly readable for the login screen
-        allow write: if isUserOfInstitute(instituteId) && getUserData(request.auth.uid).role == 'Admin';
-      }
+    }
+    
+    // Rules for data within a specific institute.
+    match /institutes/{instituteId}/users/{userId} {
+        // Any user of the institute can read their own profile.
+        allow get: if isUserOfInstitute(instituteId) && request.auth.uid == userId;
+        // Admins can read any user profile within their institute.
+        allow get: if hasRole(instituteId, 'Admin');
+        
+        // Any user of the institute can update their own profile.
+        allow update: if isUserOfInstitute(instituteId) && request.auth.uid == userId;
+        // Admins can update any user profile within their institute (e.g., change role).
+        allow update: if hasRole(instituteId, 'Admin');
+
+        // Only Admins or Coordinators can list all users in the institute.
+        allow list: if isAdminOrCoordinator(instituteId);
+        
+        // Creation of user documents is handled by the application logic upon sign-up/first login.
+        allow create: if isSignedIn();
+    }
+    
+    match /institutes/{instituteId}/loginImages/{imageId} {
+      // Anyone can see the active login image.
+      allow get: if resource.data.isActive == true;
+      // Any authenticated user can list the images (needed to find the active one).
+      allow list: if isSignedIn();
+      // Only Admins of the institute can create, update, or delete images.
+      allow write: if hasRole(instituteId, 'Admin');
+    }
+
+    match /institutes/{instituteId}/studyPrograms/{programId} {
+        // Admins/Coordinators and Teachers can read/list programs.
+        allow get, list: if isAdminOrCoordinator(instituteId) || isTeacher(instituteId);
+        // Only Admins can create/update/delete programs.
+        allow write: if hasRole(instituteId, 'Admin');
+    }
+    
+    match /institutes/{instituteId}/teachers/{teacherId} {
+      // Admins/Coordinators can manage teachers.
+      allow read, write: if isAdminOrCoordinator(instituteId);
+      // Teachers can read the list to find their own record.
+      allow list: if isTeacher(instituteId);
+    }
+
+    match /institutes/{instituteId}/didacticUnits/{unitId} {
+        // Admins/Coordinators can manage didactic units.
+        allow read, write: if isAdminOrCoordinator(instituteId);
+    }
+    
+    match /institutes/{instituteId}/unitAssignments/{assignmentId} {
+        // Admins/Coordinators can manage all assignments.
+        allow read, write: if isAdminOrCoordinator(instituteId);
+        // Teachers can read assignments to see their own schedule.
+        allow list: if isTeacher(instituteId);
     }
   }
 }
