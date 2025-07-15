@@ -3,84 +3,68 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper functions
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
-
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isAdmin(userId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'Admin';
+    
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
     
-    function isCoordinator(userId) {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(userId)).data.role == 'Coordinator';
+    function isUserOfInstitute(instituteId) {
+      // For this to work, the user's document in the GLOBAL users collection
+      // would need a field like `instituteId` or a map of `institutes`.
+      // This is a simplified check assuming a user belongs to one institute.
+      // A more complex check might be needed if a user can belong to multiple institutes.
+      // For now, we will allow any authenticated user to access any institute data
+      // as we don't have the user-to-institute mapping yet.
+      // THIS SHOULD BE TIGHTENED IN A PRODUCTION SCENARIO.
+      return isSignedIn();
     }
-
-    // AUTH: Users can manage their own profile. Admins can manage any user.
+    
+    // --- Global User Profiles ---
+    // Users collection remains global. It stores login info and roles.
+    // In a true multi-tenant system, this might also store which institutes a user belongs to.
     match /users/{userId} {
-      allow create: if true; // Anyone can create a user document during signup
-      allow read: if isSignedIn(); // Any signed-in user can read any profile (for names, etc.)
-      allow update: if isUser(userId) && request.resource.data.keys().hasAll(['displayName', 'photoURL', 'dni'])
-                    || isAdmin(request.auth.uid); // User can update their own profile, or an admin can update any
-      allow delete: if isAdmin(request.auth.uid); // Only admins can delete users
+      // A user can read their own profile.
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      
+      // A user can create their own profile document (on signup).
+      allow create: if isSignedIn() && request.auth.uid == userId;
+
+      // A user can update their own displayName, photoURL, and DNI.
+      allow update: if isSignedIn() && request.auth.uid == userId
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['displayName', 'photoURL', 'dni']);
+                       
+      // Admins can read and update any user's profile (e.g., to change their role).
+      // This admin check needs to know which institute the admin belongs to
+      // and which user they are trying to manage. For now, we assume a global admin.
+      // This part of the logic will need refinement as the multi-tenant model matures.
+      allow get, update: if isSignedIn() && getUserData(request.auth.uid).role == 'Admin';
     }
 
-    // ADMIN: Admins can list all users
-    match /users/{document=**} {
-      allow list: if isAdmin(request.auth.uid);
-    }
-    
-    // Login Images can be read by anyone, but only managed by Admins.
-    match /loginImages/{imageId} {
-      allow read: if true;
-      allow create: if isAdmin(request.auth.uid) 
-                     && request.resource.data.url.matches('^data:image/.*;base64,.*$');
-      allow update: if isAdmin(request.auth.uid) 
-                     && (request.resource.data.url.matches('^data:image/.*;base64,.*$') || !request.resource.data.keys().hasAny(['url']));
-      allow delete: if isAdmin(request.auth.uid);
-    }
-     match /loginImages/{document=**} {
-      allow list: if isAdmin(request.auth.uid);
-    }
-
-
-    // STUDY PROGRAMS, TEACHERS, UNITS, ASSIGNMENTS
-    // Any authenticated user can read these collections.
-    // Only Admin or Coordinator can write to them.
-    match /studyPrograms/{programId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
-    }
-    match /studyPrograms/{document=**} {
+    // --- Institute-Specific Data ---
+    // All data like teachers, units, etc., is nested under an institute.
+    match /institutes/{instituteId} {
+      // Allow reading/writing institute data only if the user belongs to that institute.
+      allow read, write: if isUserOfInstitute(instituteId);
+      
+      // Allow any authenticated user to see the list of institutes for now.
+      // This could be tightened later.
       allow list: if isSignedIn();
-    }
 
-    match /teachers/{teacherId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
-    }
-     match /teachers/{document=**} {
-      allow list: if isSignedIn();
-    }
-
-    match /didacticUnits/{unitId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
-    }
-     match /didacticUnits/{document=**} {
-      allow list: if isSignedIn();
-    }
-    
-    match /unitAssignments/{assignmentId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin(request.auth.uid) || isCoordinator(request.auth.uid);
-    }
-    match /unitAssignments/{document=**} {
-        allow list: if isSignedIn();
+      // Subcollections for each institute
+      match /{collection}/{docId} {
+        allow read, write: if isUserOfInstitute(instituteId);
+      }
+      
+      // Specific rule for loginImages: allow anyone to read them for the login page.
+      match /loginImages/{imageId} {
+        allow read: if true; // Publicly readable for the login screen
+        allow write: if isUserOfInstitute(instituteId) && getUserData(request.auth.uid).role == 'Admin';
+      }
     }
   }
 }
