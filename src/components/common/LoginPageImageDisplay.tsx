@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getLoginPageImageURL } from "@/config/firebase"; 
+import { getInstituteLoginPageImage } from "@/config/firebase"; 
 import { useAuth } from "@/contexts/AuthContext";
 
 const DEFAULT_IMAGE_URL = "https://placehold.co/600x700.png";
@@ -14,17 +14,12 @@ const DEFAULT_AI_HINT = "login graphic";
 export function LoginPageImageDisplay() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const { instituteId } = useAuth(); // Use a mock or default for login page
 
   useEffect(() => {
     async function fetchImageUrl() {
-      // On the login page, we don't have a selected institute yet.
-      // This is a placeholder for a more complex institute detection logic.
-      const instituteForLoginPage = instituteId || 'istp-principal'; 
-
       setLoading(true);
       try {
-        const urlFromDB = await getLoginPageImageURL(instituteForLoginPage);
+        const urlFromDB = await getInstituteLoginPageImage();
         setImageUrl(urlFromDB || DEFAULT_IMAGE_URL);
       } catch (error) {
         console.error("Error fetching login page image URL:", error);
@@ -34,7 +29,7 @@ export function LoginPageImageDisplay() {
       }
     }
     fetchImageUrl();
-  }, [instituteId]);
+  }, []);
 
   if (loading) {
     return (

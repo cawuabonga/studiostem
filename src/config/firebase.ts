@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment, LoginImage, Institute } from '@/types';
+import type { AppUser, UserRole, Institute } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -73,11 +73,6 @@ export const updateUserProfile = async (data: { displayName?: string | null; pho
     }
 };
 
-const getInstituteDocRef = (instituteId: string) => {
-    if (!instituteId) throw new Error("Institute ID is required for this operation.");
-    return doc(db, 'institutes', instituteId);
-};
-
 
 // --- Institute Management (for SuperAdmins) ---
 export const addInstitute = async (instituteId: string, data: Omit<Institute, 'id'>): Promise<void> => {
@@ -108,6 +103,15 @@ export const getInstitute = async (instituteId: string): Promise<Institute | nul
     return null;
 }
 
+export const getInstituteLoginPageImage = async (): Promise<string | null> => {
+    // This is a simplified function that fetches the logo for a "main" institute
+    // to display on the login page. In a real multi-tenant app, you might have
+    // a more complex way of determining this (e.g., based on domain).
+    const mainInstituteId = 'istp-principal'; 
+    const institute = await getInstitute(mainInstituteId);
+    return institute?.logoUrl || null;
+}
+
 export const updateInstitute = async (instituteId: string, data: Partial<Omit<Institute, 'id'>>): Promise<void> => {
     await updateDoc(doc(db, 'institutes', instituteId), data);
 };
@@ -116,70 +120,7 @@ export const deleteInstitute = async (instituteId: string): Promise<void> => {
     await deleteDoc(doc(db, 'institutes', instituteId));
 };
 
-
-// --- Login Image Management (Per Institute) ---
-export const getLoginPageImageURL = async (instituteId: string): Promise<string | null> => {
-  try {
-    const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');
-    const q = query(imagesRef, where("isActive", "==", true), limit(1));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        return querySnapshot.docs[0].data().url;
-    }
-    // Fallback to institute logo if no active login image
-    const institute = await getInstitute(instituteId);
-    return institute?.logoUrl || null;
-
-  } catch (error) {
-    console.error("Error fetching active login page image URL:", error);
-    return null;
-  }
-};
-
-export const getLoginImages = async (instituteId: string): Promise<LoginImage[]> => {
-    const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');
-    const q = query(imagesRef, orderBy("createdAt", "desc"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-        createdAt: docSnap.data().createdAt.toDate(),
-    } as LoginImage));
-};
-
-export const addLoginImage = async (instituteId: string, imageDataUri: string): Promise<void> => {
-    const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');
-    await addDoc(imagesRef, {
-        url: imageDataUri,
-        isActive: false,
-        createdAt: serverTimestamp(),
-    });
-};
-
-export const setActiveLoginImage = async (instituteId: string, imageId: string): Promise<void> => {
-    const batch = writeBatch(db);
-    const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');
-    const q = query(imagesRef, where("isActive", "==", true));
-    const activeDocs = await getDocs(q);
-    activeDocs.forEach(doc => batch.update(doc.ref, { isActive: false }));
-    const newActiveRef = doc(imagesRef, imageId);
-    batch.update(newActiveRef, { isActive: true });
-    await batch.commit();
-};
-
-export const deleteLoginImage = async (instituteId: string, imageId: string): Promise<void> => {
-    await deleteDoc(doc(collection(getInstituteDocRef(instituteId), 'loginImages'), imageId));
-};
-
-
 // --- User Management ---
-export const getUsersInInstitute = async (instituteId: string): Promise<AppUser[]> => {
-  const usersCol = collection(db, 'users');
-  const q = query(usersCol, where("instituteId", "==", instituteId), orderBy("displayName"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
-};
-
 export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
     const usersCol = collection(db, 'users');
     const q = query(usersCol, orderBy("displayName"));
@@ -187,100 +128,7 @@ export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
     return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
 };
 
-
-export const updateUserByAdmin = async (instituteId: string, uid: string, data: { displayName?: string; role?: UserRole }) => {
-  // Admin can only update users within their own institute.
-  const userRef = doc(db, 'users', uid);
-  const userSnap = await getDoc(userRef);
-  if (userSnap.exists() && userSnap.data().instituteId === instituteId) {
-    await updateDoc(userRef, data);
-  } else {
-    throw new Error("Permission denied or user does not belong to this institute.");
-  }
-};
-
 export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>) => {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, data);
-};
-
-// --- Didactic Units (Per Institute) ---
-export const addDidacticUnit = async (instituteId: string, unitData: Omit<DidacticUnit, 'id'>): Promise<void> => {
-  await addDoc(collection(getInstituteDocRef(instituteId), 'didacticUnits'), unitData);
-};
-
-export const getDidacticUnits = async (instituteId: string): Promise<DidacticUnit[]> => {
-  const unitsCol = collection(getInstituteDocRef(instituteId), 'didacticUnits');
-  const q = query(unitsCol, orderBy("name"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as DidacticUnit));
-};
-
-export const updateDidacticUnit = async (instituteId: string, unitId: string, data: Partial<Omit<DidacticUnit, 'id'>>): Promise<void> => {
-  await updateDoc(doc(collection(getInstituteDocRef(instituteId), 'didacticUnits'), unitId), data);
-};
-
-export const deleteDidacticUnit = async (instituteId: string, unitId: string): Promise<void> => {
-  await deleteDoc(doc(collection(getInstituteDocRef(instituteId), 'didacticUnits'), unitId));
-};
-
-// --- Study Programs (Per Institute) ---
-export const addStudyProgram = async (instituteId: string, programData: Omit<StudyProgram, 'id'>): Promise<void> => {
-  await addDoc(collection(getInstituteDocRef(instituteId), 'studyPrograms'), programData);
-};
-
-export const getStudyPrograms = async (instituteId: string): Promise<StudyProgram[]> => {
-  const programsCol = collection(getInstituteDocRef(instituteId), 'studyPrograms');
-  const q = query(programsCol, orderBy("name"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as StudyProgram));
-};
-
-export const updateStudyProgram = async (instituteId: string, programId: string, data: Partial<Omit<StudyProgram, 'id'>>): Promise<void> => {
-  await updateDoc(doc(collection(getInstituteDocRef(instituteId), 'studyPrograms'), programId), data);
-};
-
-export const deleteStudyProgram = async (instituteId: string, programId: string): Promise<void> => {
-  await deleteDoc(doc(collection(getInstituteDocRef(instituteId), 'studyPrograms'), programId));
-};
-
-// --- Teachers (Per Institute) ---
-export const addTeacher = async (instituteId: string, teacherData: Omit<Teacher, 'id'>): Promise<void> => {
-  await addDoc(collection(getInstituteDocRef(instituteId), 'teachers'), teacherData);
-};
-
-export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
-  const teachersCol = collection(getInstituteDocRef(instituteId), 'teachers');
-  const q = query(teachersCol, orderBy("fullName"));
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Teacher));
-};
-
-export const updateTeacher = async (instituteId: string, teacherId: string, data: Partial<Omit<Teacher, 'id'>>): Promise<void> => {
-  await updateDoc(doc(collection(getInstituteDocRef(instituteId), 'teachers'), teacherId), data);
-};
-
-export const deleteTeacher = async (instituteId: string, teacherId: string): Promise<void> => {
-  await deleteDoc(doc(collection(getInstituteDocRef(instituteId), 'teachers'), teacherId));
-};
-
-// --- Unit Assignments (Per Institute) ---
-export const addUnitAssignment = async (instituteId: string, assignmentData: Omit<UnitAssignment, 'id'>): Promise<string> => {
-  const docRef = await addDoc(collection(getInstituteDocRef(instituteId), 'unitAssignments'), assignmentData);
-  return docRef.id;
-};
-
-export const getUnitAssignments = async (instituteId: string, year: number, studyProgram?: string): Promise<UnitAssignment[]> => {
-  const assignmentsCol = collection(getInstituteDocRef(instituteId), 'unitAssignments');
-  const constraints: QueryConstraint[] = [where("year", "==", year)];
-  if (studyProgram) {
-    constraints.push(where("studyProgram", "==", studyProgram));
-  }
-  const q = query(assignmentsCol, ...constraints);
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as UnitAssignment));
-};
-
-export const deleteUnitAssignment = async (instituteId: string, assignmentId: string): Promise<void> => {
-  await deleteDoc(doc(collection(getInstituteDocRef(instituteId), 'unitAssignments'), assignmentId));
 };

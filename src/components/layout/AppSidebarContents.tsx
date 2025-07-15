@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart, BookOpenCheck, Building2 } from 'lucide-react';
+import { Home, Users, Building2 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -23,34 +23,12 @@ export function AppSidebarContents() {
   const { user, institute } = useAuth();
   const pathname = usePathname();
 
-  const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: Home, exact: true, roles: ['SuperAdmin', 'Admin', 'Coordinator', 'Teacher', 'Student'] },
-  ];
-  
   const superAdminItems = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, roles: ['SuperAdmin'] },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['SuperAdmin'] },
   ];
-  
-  const adminItems = [
-    { href: '/dashboard/admin/manage-users', label: 'Usuarios del Instituto', icon: Users, roles: ['Admin'] },
-    { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library, roles: ['Admin'] },
-    { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon, roles: ['Admin'] }
-  ];
 
-  const academicItems = [
-      { href: '/dashboard/academic/manage-teachers', label: 'Gestionar Docentes', icon: Contact, roles: ['Admin', 'Coordinator'] },
-      { href: '/dashboard/academic/manage-units', label: 'Listado de Unidades', icon: List, exact: true, roles: ['Admin', 'Coordinator'] },
-      { href: '/dashboard/academic/manage-units/register', label: 'Registrar Unidad', icon: BookCopy, roles: ['Admin', 'Coordinator'] },
-      { href: '/dashboard/academic/assign-units', label: 'Asignar Unidades', icon: ClipboardCheck, roles: ['Admin', 'Coordinator'] },
-      { href: '/dashboard/academic/reports', label: 'Reportes', icon: BarChart, roles: ['Admin', 'Coordinator'] },
-  ];
-  
-  const teacherItems = [
-    { href: '/dashboard/teacher/my-schedule', label: 'Mi Carga Horaria', icon: BookOpenCheck, roles: ['Teacher'] },
-  ];
-
-  const allNavItems = [...navItems, ...superAdminItems, ...teacherItems, ...adminItems, ...academicItems].filter(item => user?.role && item.roles.includes(user.role));
+  const allNavItems = [...superAdminItems].filter(item => user?.role && item.roles.includes(user.role));
 
 
   return (
@@ -85,15 +63,26 @@ export function AppSidebarContents() {
         )}
         <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
+          <SidebarMenuItem>
+              <Link href="/dashboard" legacyBehavior passHref>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={pathname === '/dashboard'}
+                  tooltip={{children: "Dashboard", side: 'right', align: 'center'}}
+                >
+                  <a>
+                    <Home />
+                    <span>Dashboard</span>
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            </SidebarMenuItem>
           {allNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton 
                   asChild 
-                  isActive={
-                    // @ts-ignore
-                    item.exact ? pathname === item.href : pathname.startsWith(item.href)
-                  }
+                  isActive={pathname.startsWith(item.href)}
                   tooltip={{children: item.label, side: 'right', align: 'center'}}
                 >
                   <a>

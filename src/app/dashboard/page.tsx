@@ -17,18 +17,8 @@ export default function DashboardRedirectPage() {
         case 'SuperAdmin':
           router.push('/dashboard/superadmin/manage-institutes');
           break;
-        case 'Admin':
-        case 'Coordinator':
-          router.push('/dashboard/academic/manage-teachers');
-          break;
-        case 'Teacher':
-           router.push('/dashboard/teacher/my-schedule');
-          break;
-        case 'Student':
-           router.push('/dashboard/student');
-          break;
         default:
-          // Fallback to the institute selector which will handle the next step.
+          // Fallback for any other roles to the institute selector.
           router.push('/dashboard/institute');
           break;
       }

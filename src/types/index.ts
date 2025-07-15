@@ -1,4 +1,5 @@
 
+// Keeping Student as a default role for new sign-ups.
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
