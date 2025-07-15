@@ -34,39 +34,39 @@ export default function RegisterUnitPage() {
         <p>Cargando o no autorizado...</p>
       </div>
     );
+  } else {
+    return (
+      <div className="flex flex-col gap-4">
+          <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="item-1">
+                <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
+                    Carga Masiva desde Excel
+                </AccordionTrigger>
+                <AccordionContent>
+                    <Card className="rounded-t-none border-t-0">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-lg">Subir Múltiples Unidades</CardTitle>
+                            <CardDescription>
+                                Sube la plantilla de Excel para registrar varias unidades a la vez.
+                            </CardDescription>
+                        </Header>
+                        <CardContent>
+                            <BulkUploadUnits onUploadComplete={handleDataChange} instituteId={instituteId} />
+                        </CardContent>
+                    </Card>
+                </AccordionContent>
+              </AccordionItem>
+          </Accordion>
+
+          <Card className="flex-shrink-0">
+              <CardHeader>
+              <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+              <AddUnitForm onUnitAdded={handleDataChange} instituteId={instituteId} />
+              </CardContent>
+          </Card>
+      </div>
+    );
   }
-
-  return (
-    <div className="flex flex-col gap-4">
-        <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
-                  Carga Masiva desde Excel
-              </AccordionTrigger>
-              <AccordionContent>
-                  <Card className="rounded-t-none border-t-0">
-                      <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">Subir Múltiples Unidades</CardTitle>
-                          <CardDescription>
-                              Sube la plantilla de Excel para registrar varias unidades a la vez.
-                          </CardDescription>
-                      </Header>
-                      <CardContent>
-                          <BulkUploadUnits onUploadComplete={handleDataChange} instituteId={instituteId} />
-                      </CardContent>
-                  </Card>
-              </AccordionContent>
-            </AccordionItem>
-        </Accordion>
-
-        <Card className="flex-shrink-0">
-            <CardHeader>
-            <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-            <AddUnitForm onUnitAdded={handleDataChange} instituteId={instituteId} />
-            </CardContent>
-        </Card>
-    </div>
-  );
 }

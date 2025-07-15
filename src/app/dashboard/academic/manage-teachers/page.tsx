@@ -32,63 +32,63 @@ export default function ManageTeachersPage() {
         <p>Cargando o no autorizado...</p>
       </div>
     );
-  }
-
-  return (
-    <Tabs defaultValue="list" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
-        <TabsTrigger value="list">Listado de Docentes</TabsTrigger>
-        <TabsTrigger value="register">Registrar Docentes</TabsTrigger>
-      </TabsList>
-      <TabsContent value="list">
-        <Card>
-          <CardHeader>
-            <CardTitle>Docentes Registrados</CardTitle>
-            <CardDescription>
-              Ver, editar y eliminar los docentes existentes en el sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <TeachersList key={refreshKey} onDataChange={handleDataChange} />
-          </CardContent>
-        </Card>
-      </TabsContent>
-      <TabsContent value="register">
-        <div className="space-y-6 pt-4">
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
-                    Carga Masiva de Docentes desde Excel
-                </AccordionTrigger>
-                <AccordionContent>
-                    <Card className="rounded-t-none border-t-0">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="text-lg">Subir Múltiples Docentes</CardTitle>
-                            <CardDescription>
-                                Sube la plantilla de Excel para registrar varios docentes a la vez.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <BulkUploadTeachers onUploadComplete={handleDataChange} />
-                        </CardContent>
-                    </Card>
-                </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-        
-            <Card>
+  } else {
+    return (
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="list">Listado de Docentes</TabsTrigger>
+          <TabsTrigger value="register">Registrar Docentes</TabsTrigger>
+        </TabsList>
+        <TabsContent value="list">
+          <Card>
             <CardHeader>
-                <CardTitle>Registrar Nuevo Docente</CardTitle>
-                <CardDescription>
-                Complete el formulario para añadir un nuevo docente al sistema.
-                </CardDescription>
+              <CardTitle>Docentes Registrados</CardTitle>
+              <CardDescription>
+                Ver, editar y eliminar los docentes existentes en el sistema.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-                <AddTeacherForm onTeacherAdded={handleDataChange} />
+              <TeachersList key={refreshKey} onDataChange={handleDataChange} />
             </CardContent>
-            </Card>
-        </div>
-      </TabsContent>
-    </Tabs>
-  );
+          </Card>
+        </TabsContent>
+        <TabsContent value="register">
+          <div className="space-y-6 pt-4">
+              <Accordion type="single" collapsible className="w-full">
+                  <AccordionItem value="item-1">
+                  <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
+                      Carga Masiva de Docentes desde Excel
+                  </AccordionTrigger>
+                  <AccordionContent>
+                      <Card className="rounded-t-none border-t-0">
+                          <CardHeader className="pb-4">
+                              <CardTitle className="text-lg">Subir Múltiples Docentes</CardTitle>
+                              <CardDescription>
+                                  Sube la plantilla de Excel para registrar varios docentes a la vez.
+                              </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                              <BulkUploadTeachers onUploadComplete={handleDataChange} />
+                          </CardContent>
+                      </Card>
+                  </AccordionContent>
+                  </AccordionItem>
+              </Accordion>
+          
+              <Card>
+              <CardHeader>
+                  <CardTitle>Registrar Nuevo Docente</CardTitle>
+                  <CardDescription>
+                  Complete el formulario para añadir un nuevo docente al sistema.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <AddTeacherForm onTeacherAdded={handleDataChange} />
+              </CardContent>
+              </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    );
+  }
 }
