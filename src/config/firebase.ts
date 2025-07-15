@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import type { AppUser, UserRole, DidacticUnit, StudyProgram, Teacher, UnitAssignment, LoginImage, Institute } from '@/types';
 
@@ -27,18 +27,17 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider };
 
-// This function needs to be aware of the instituteId in a multi-tenant setup
-export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole) => {
-  console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}`);
+export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
+  console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
   try {
-    // For now, users are stored globally. In a multi-tenant app, this might change.
     const userDocRef = doc(db, 'users', user.uid);
     await setDoc(userDocRef, { 
       uid: user.uid,
       role, 
       email: user.email, 
       displayName: user.displayName, 
-      photoURL: user.photoURL 
+      photoURL: user.photoURL,
+      instituteId: instituteId || null,
     }, { merge: true });
     console.log("User data saved to Firestore.");
   } catch (error) {
@@ -81,7 +80,7 @@ const getInstituteDocRef = (instituteId: string) => {
 
 
 // --- Institute Management (for SuperAdmins) ---
-export const addInstitute = async (instituteId: string, data: { name: string }): Promise<void> => {
+export const addInstitute = async (instituteId: string, data: Omit<Institute, 'id'>): Promise<void> => {
     const instituteRef = doc(db, 'institutes', instituteId);
     const docSnap = await getDoc(instituteRef);
     if (docSnap.exists()) {
@@ -100,6 +99,23 @@ export const getInstitutes = async (): Promise<Institute[]> => {
     } as Institute));
 };
 
+export const getInstitute = async (instituteId: string): Promise<Institute | null> => {
+    const docRef = doc(db, 'institutes', instituteId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Institute;
+    }
+    return null;
+}
+
+export const updateInstitute = async (instituteId: string, data: Partial<Omit<Institute, 'id'>>): Promise<void> => {
+    await updateDoc(doc(db, 'institutes', instituteId), data);
+};
+
+export const deleteInstitute = async (instituteId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'institutes', instituteId));
+};
+
 
 // --- Login Image Management (Per Institute) ---
 export const getLoginPageImageURL = async (instituteId: string): Promise<string | null> => {
@@ -107,7 +123,13 @@ export const getLoginPageImageURL = async (instituteId: string): Promise<string 
     const imagesRef = collection(getInstituteDocRef(instituteId), 'loginImages');
     const q = query(imagesRef, where("isActive", "==", true), limit(1));
     const querySnapshot = await getDocs(q);
-    return querySnapshot.empty ? null : querySnapshot.docs[0].data().url;
+    if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].data().url;
+    }
+    // Fallback to institute logo if no active login image
+    const institute = await getInstitute(instituteId);
+    return institute?.logoUrl || null;
+
   } catch (error) {
     console.error("Error fetching active login page image URL:", error);
     return null;
@@ -150,16 +172,36 @@ export const deleteLoginImage = async (instituteId: string, imageId: string): Pr
 };
 
 
-// --- User Management (Global for now) ---
-export const getAllUsers = async (): Promise<AppUser[]> => {
+// --- User Management ---
+export const getUsersInInstitute = async (instituteId: string): Promise<AppUser[]> => {
   const usersCol = collection(db, 'users');
-  const q = query(usersCol, orderBy("displayName"));
+  const q = query(usersCol, where("instituteId", "==", instituteId), orderBy("displayName"));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
 };
 
-export const updateUserByAdmin = async (uid: string, data: { displayName?: string; role?: UserRole }) => {
-  await updateDoc(doc(db, 'users', uid), data);
+export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
+    const usersCol = collection(db, 'users');
+    const q = query(usersCol, orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
+};
+
+
+export const updateUserByAdmin = async (instituteId: string, uid: string, data: { displayName?: string; role?: UserRole }) => {
+  // Admin can only update users within their own institute.
+  const userRef = doc(db, 'users', uid);
+  const userSnap = await getDoc(userRef);
+  if (userSnap.exists() && userSnap.data().instituteId === instituteId) {
+    await updateDoc(userRef, data);
+  } else {
+    throw new Error("Permission denied or user does not belong to this institute.");
+  }
+};
+
+export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>) => {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, data);
 };
 
 // --- Didactic Units (Per Institute) ---

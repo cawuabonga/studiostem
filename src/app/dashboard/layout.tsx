@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import DashboardMainLayout from "@/components/layout/DashboardMainLayout";
@@ -8,7 +9,7 @@ import { useEffect } from "react";
 
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { instituteId, loading } = useAuth();
+  const { instituteId, loading, institute } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -17,6 +18,16 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       router.push('/dashboard/institute');
     }
   }, [instituteId, loading, router]);
+
+  useEffect(() => {
+    // Apply theme colors dynamically
+    if (institute?.primaryColor) {
+      const root = document.documentElement;
+      root.style.setProperty('--primary', institute.primaryColor);
+      // You can derive other colors from the primary or have them as separate fields
+      // For simplicity, we'll just set the primary color for now.
+    }
+  }, [institute]);
 
 
   return <DashboardMainLayout>{children}</DashboardMainLayout>;

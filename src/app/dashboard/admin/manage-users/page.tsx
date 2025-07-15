@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function ManageUsersPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, instituteId } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -18,7 +18,7 @@ export default function ManageUsersPage() {
     }
   }, [user, loading, router]);
 
-  if (loading || !user || user.role !== 'Admin') {
+  if (loading || !user || !instituteId || user.role !== 'Admin') {
     return (
       <div className="flex justify-center items-center h-screen">
         <p>Cargando o no autorizado...</p>
@@ -30,13 +30,13 @@ export default function ManageUsersPage() {
     <div className="container mx-auto py-10">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Gestionar Usuarios</CardTitle>
+          <CardTitle>Gestionar Usuarios del Instituto</CardTitle>
           <CardDescription>
-            Ver y editar la información de los usuarios registrados.
+            Ver y editar la información de los usuarios registrados en tu instituto.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserManagementTable />
+          <UserManagementTable instituteId={instituteId} />
         </CardContent>
       </Card>
     </div>

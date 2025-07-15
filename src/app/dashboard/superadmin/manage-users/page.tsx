@@ -1,15 +1,13 @@
 
 "use client";
 
-import { AddInstituteForm } from "@/components/superadmin/AddInstituteForm";
-import { InstitutesList } from "@/components/superadmin/InstitutesList";
+import { AllUsersTable } from "@/components/superadmin/AllUsersTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-export default function ManageInstitutesPage() {
+export default function SuperAdminManageUsersPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -23,7 +21,7 @@ export default function ManageInstitutesPage() {
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
-
+  
   if (loading || !user || user.role !== 'SuperAdmin') {
     return (
       <div className="flex justify-center items-center h-full">
@@ -33,30 +31,16 @@ export default function ManageInstitutesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-10">
       <Card>
         <CardHeader>
-          <CardTitle>Registrar Nuevo Instituto</CardTitle>
+          <CardTitle>Gestionar Todos los Usuarios</CardTitle>
           <CardDescription>
-            Complete el formulario para añadir un nuevo instituto a la plataforma.
+            Ver, editar y asignar roles e institutos a todos los usuarios de la plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddInstituteForm onInstituteAdded={handleDataChange} />
-        </CardContent>
-      </Card>
-      
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Institutos Registrados</CardTitle>
-          <CardDescription>
-            Ver, editar y eliminar los institutos existentes en el sistema.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <InstitutesList key={refreshKey} onDataChange={handleDataChange} />
+          <AllUsersTable key={refreshKey} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>

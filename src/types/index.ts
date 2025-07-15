@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
@@ -9,7 +8,7 @@ export interface AppUser {
   photoURL: string | null;
   role: UserRole;
   dni?: string;
-  instituteId?: string; // Users might belong to one institute
+  instituteId: string | null;
 }
 
 export type UnitPeriod = 'MAR-JUL' | 'AGOS-DIC';
@@ -79,4 +78,6 @@ export interface LoginImage {
 export interface Institute {
   id: string;
   name: string;
+  logoUrl?: string;
+  primaryColor?: string; // HSL format e.g., "225 65% 32%"
 }

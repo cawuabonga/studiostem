@@ -14,6 +14,8 @@ import { addInstitute } from '@/config/firebase';
 const addInstituteSchema = z.object({
   id: z.string().min(3, { message: 'El ID debe tener al menos 3 caracteres.' }).regex(/^[a-z0-9-]+$/, 'El ID solo puede contener letras minúsculas, números y guiones.'),
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  logoUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
+  primaryColor: z.string().regex(/^\d{1,3}\s\d{1,3}%\s\d{1,3}%$/, { message: 'Debe ser un HSL válido, ej: 225 65% 32%' }).optional().or(z.literal('')),
 });
 
 type AddInstituteFormValues = z.infer<typeof addInstituteSchema>;
@@ -31,13 +33,20 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
     defaultValues: {
       id: '',
       name: '',
+      logoUrl: '',
+      primaryColor: '',
     },
   });
 
   const onSubmit = async (data: AddInstituteFormValues) => {
     setLoading(true);
     try {
-      await addInstitute(data.id, { name: data.name });
+      const instituteData = {
+        name: data.name,
+        ...(data.logoUrl && { logoUrl: data.logoUrl }),
+        ...(data.primaryColor && { primaryColor: data.primaryColor }),
+      };
+      await addInstitute(data.id, instituteData);
       toast({
         title: '¡Éxito!',
         description: 'El instituto ha sido registrado correctamente.',
@@ -95,6 +104,37 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
               </FormItem>
             )}
           />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="logoUrl"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>URL del Logo</FormLabel>
+                    <FormControl>
+                    <Input placeholder="https://ejemplo.com/logo.png" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="primaryColor"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Color Primario (HSL)</FormLabel>
+                    <FormControl>
+                    <Input placeholder="225 65% 32%" {...field} />
+                    </FormControl>
+                     <FormDescription>
+                        Formato: H S% L%
+                    </FormDescription>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
         </div>
         <Button type="submit" className="w-full md:w-auto" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Instituto'}

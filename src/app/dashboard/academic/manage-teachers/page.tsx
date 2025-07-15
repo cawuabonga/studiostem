@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { AddTeacherForm } from "@/components/teachers/AddTeacherForm";
@@ -54,39 +53,41 @@ export default function ManageTeachersPage() {
           </CardContent>
         </Card>
       </TabsContent>
-      <TabsContent value="register" className="space-y-6 pt-4">
-        <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-              <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
-                  Carga Masiva de Docentes desde Excel
-              </AccordionTrigger>
-              <AccordionContent>
-                  <Card className="rounded-t-none border-t-0">
-                      <CardHeader className="pb-4">
-                          <CardTitle className="text-lg">Subir Múltiples Docentes</CardTitle>
-                          <CardDescription>
-                              Sube la plantilla de Excel para registrar varios docentes a la vez.
-                          </CardDescription>
-                      </Header>
-                      <CardContent>
-                          <BulkUploadTeachers onUploadComplete={handleDataChange} />
-                      </CardContent>
-                  </Card>
-              </AccordionContent>
-            </AccordionItem>
-        </Accordion>
-      
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar Nuevo Docente</CardTitle>
-            <CardDescription>
-              Complete el formulario para añadir un nuevo docente al sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AddTeacherForm onTeacherAdded={handleDataChange} />
-          </CardContent>
-        </Card>
+      <TabsContent value="register">
+        <div className="space-y-6 pt-4">
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                <AccordionTrigger className="text-base font-semibold py-3 px-4 rounded-md border bg-card text-card-foreground shadow-sm data-[state=closed]:rounded-md data-[state=open]:rounded-b-none">
+                    Carga Masiva de Docentes desde Excel
+                </AccordionTrigger>
+                <AccordionContent>
+                    <Card className="rounded-t-none border-t-0">
+                        <CardHeader className="pb-4">
+                            <CardTitle className="text-lg">Subir Múltiples Docentes</CardTitle>
+                            <CardDescription>
+                                Sube la plantilla de Excel para registrar varios docentes a la vez.
+                            </CardDescription>
+                        </Header>
+                        <CardContent>
+                            <BulkUploadTeachers onUploadComplete={handleDataChange} />
+                        </CardContent>
+                    </Card>
+                </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+        
+            <Card>
+            <CardHeader>
+                <CardTitle>Registrar Nuevo Docente</CardTitle>
+                <CardDescription>
+                Complete el formulario para añadir un nuevo docente al sistema.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <AddTeacherForm onTeacherAdded={handleDataChange} />
+            </CardContent>
+            </Card>
+        </div>
       </TabsContent>
     </Tabs>
   );

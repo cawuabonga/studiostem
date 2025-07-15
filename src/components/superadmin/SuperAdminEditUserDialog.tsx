@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,34 +19,54 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { AppUser, UserRole } from '@/types';
-import { updateUserByAdmin } from '@/config/firebase';
+import type { AppUser, UserRole, Institute } from '@/types';
+import { updateUserBySuperAdmin, getInstitutes } from '@/config/firebase';
 
-const roles: UserRole[] = ['Student', 'Teacher', 'Coordinator', 'Admin'];
+const allRoles: UserRole[] = ['SuperAdmin', 'Student', 'Teacher', 'Coordinator', 'Admin'];
 
 const editUserSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
-  role: z.enum(roles, { errorMap: () => ({ message: "Por favor selecciona un rol válido."}) }),
+  role: z.enum(allRoles, { errorMap: () => ({ message: "Por favor selecciona un rol válido."}) }),
+  instituteId: z.string({ required_error: "Debe seleccionar un instituto." }),
 });
 
 type EditUserFormValues = z.infer<typeof editUserSchema>;
 
-interface EditUserDialogProps {
+interface SuperAdminEditUserDialogProps {
   user: AppUser;
   isOpen: boolean;
   onClose: (updated?: boolean) => void;
-  instituteId: string;
 }
 
-export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserDialogProps) {
+export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEditUserDialogProps) {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
+  const [loadingInstitutes, setLoadingInstitutes] = useState(true);
+
+  useEffect(() => {
+    if (isOpen) {
+        const fetchInstitutes = async () => {
+            setLoadingInstitutes(true);
+            try {
+                const fetchedInstitutes = await getInstitutes();
+                setInstitutes(fetchedInstitutes);
+            } catch (error) {
+                toast({ title: "Error", description: "No se pudieron cargar los institutos.", variant: "destructive" });
+            } finally {
+                setLoadingInstitutes(false);
+            }
+        };
+        fetchInstitutes();
+    }
+  }, [isOpen, toast]);
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       displayName: user.displayName || '',
       role: user.role,
+      instituteId: user.instituteId || '',
     },
   });
 
@@ -55,6 +75,7 @@ export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserD
       form.reset({
         displayName: user.displayName || '',
         role: user.role,
+        instituteId: user.instituteId || '',
       });
     }
   }, [user, form, isOpen]);
@@ -63,9 +84,10 @@ export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserD
   const onSubmit = async (data: EditUserFormValues) => {
     setIsSubmitting(true);
     try {
-      await updateUserByAdmin(instituteId, user.uid, {
+      await updateUserBySuperAdmin(user.uid, {
         displayName: data.displayName,
         role: data.role,
+        instituteId: data.instituteId,
       });
       toast({
         title: '¡Éxito!',
@@ -86,11 +108,11 @@ export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserD
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar Usuario</DialogTitle>
+          <DialogTitle>Editar Usuario (SuperAdmin)</DialogTitle>
           <DialogDescription>
-            Modifica el nombre y el rol para {user.email}. El usuario pertenece a este instituto.
+            Modifica los detalles para {user.email}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -108,7 +130,7 @@ export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserD
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="role"
               render={({ field }) => (
@@ -121,9 +143,33 @@ export function EditUserDialog({ user, isOpen, onClose, instituteId }: EditUserD
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {roles.map((roleValue) => (
+                      {allRoles.map((roleValue) => (
                         <SelectItem key={roleValue} value={roleValue}>
                           {roleValue}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="instituteId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Instituto</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingInstitutes}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={loadingInstitutes ? "Cargando..." : "Selecciona un instituto"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {institutes.map((institute) => (
+                        <SelectItem key={institute.id} value={institute.id}>
+                          {institute.name}
                         </SelectItem>
                       ))}
                     </SelectContent>

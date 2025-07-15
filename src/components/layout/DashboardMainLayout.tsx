@@ -1,10 +1,13 @@
 
 "use client";
 import React from 'react';
+import Image from 'next/image';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarRail } from '@/components/ui/sidebar';
 import { AppSidebarContents } from './AppSidebarContents';
 import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { Skeleton } from '../ui/skeleton';
+import { useAuth } from '@/contexts/AuthContext';
+import { Building2 } from 'lucide-react';
 
 export default function DashboardMainLayout({
   children,
@@ -12,6 +15,7 @@ export default function DashboardMainLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuthRedirect({ protect: true, redirectTo: '/' });
+  const { institute } = useAuth();
 
   if (loading || !user) {
     return (
@@ -34,7 +38,16 @@ export default function DashboardMainLayout({
       <SidebarInset className="main-content">
         <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4">
             <SidebarTrigger className="md:hidden" />
-            <h1 className="text-xl font-semibold font-headline ml-auto md:ml-0">Módulo de Asignación Docente Integrado</h1>
+            <div className="ml-auto flex items-center gap-2 md:ml-0">
+               {institute?.logoUrl ? (
+                <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={24} height={24} className="rounded-sm object-contain"/>
+              ) : (
+                <Building2 className="h-6 w-6" />
+              )}
+              <h1 className="text-xl font-semibold font-headline">
+                {institute?.name || "Módulo de Asignación Docente"}
+              </h1>
+            </div>
         </header>
         <main className="flex-1 p-4 md:p-6">
             {children}

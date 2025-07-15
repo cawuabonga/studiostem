@@ -1,8 +1,8 @@
 
-
 "use client";
 
 import React from 'react';
+import Image from 'next/image';
 import {
   SidebarHeader,
   SidebarContent,
@@ -16,12 +16,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { Home, Settings, User, ShieldQuestion, Image as ImageIcon, Users, BookCopy, Library, List, Contact, ClipboardCheck, BarChart, BookOpenCheck, Building2 } from 'lucide-react';
-import AppLogo from '../common/AppLogo';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 export function AppSidebarContents() {
-  const { user } = useAuth();
+  const { user, institute } = useAuth();
   const pathname = usePathname();
 
   const navItems = [
@@ -30,10 +29,11 @@ export function AppSidebarContents() {
   
   const superAdminItems = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, roles: ['SuperAdmin'] },
+    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['SuperAdmin'] },
   ];
   
   const adminItems = [
-    { href: '/dashboard/admin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin'] },
+    { href: '/dashboard/admin/manage-users', label: 'Usuarios del Instituto', icon: Users, roles: ['Admin'] },
     { href: '/dashboard/admin/manage-programs', label: 'Programas de Estudio', icon: Library, roles: ['Admin'] },
     { href: '/dashboard/admin/manage-login-image', label: 'Imagen de Inicio', icon: ImageIcon, roles: ['Admin'] }
   ];
@@ -56,8 +56,15 @@ export function AppSidebarContents() {
   return (
     <>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <Link href="/dashboard" aria-label="Ir al dashboard">
-           <AppLogo className="text-sm text-sidebar-foreground" useAcronym={true} />
+        <Link href="/dashboard" aria-label="Ir al dashboard" className="flex items-center gap-2">
+           {institute?.logoUrl ? (
+             <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={28} height={28} className="rounded-sm object-contain"/>
+           ) : (
+             <Building2 className="w-7 h-7 text-sidebar-foreground"/>
+           )}
+           <span className="font-headline text-sm font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
+             {institute?.name || "MADI"}
+           </span>
         </Link>
       </SidebarHeader>
 
