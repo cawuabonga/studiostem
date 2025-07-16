@@ -193,4 +193,3 @@ export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialo
     </Dialog>
   );
 }
-
