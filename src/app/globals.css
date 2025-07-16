@@ -38,15 +38,15 @@ body {
 
     --radius: 0.5rem;
 
-    /* Custom Sidebar variables for the provided sidebar component */
-    --sidebar-background: 225 65% 28%; 
-    --sidebar-foreground: 0 0% 95%; 
-    --sidebar-primary: 45 100% 60%; 
-    --sidebar-primary-foreground: 24 95% 15%;
-    --sidebar-accent: 225 65% 35%; 
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 225 65% 20%;
-    --sidebar-ring: 45 100% 50%;
+    /* Custom Sidebar variables derived from primary */
+    --sidebar-background: var(--primary); 
+    --sidebar-foreground: var(--primary-foreground); 
+    --sidebar-primary: var(--accent); /* Accent color for highlights inside sidebar */
+    --sidebar-primary-foreground: var(--accent-foreground);
+    --sidebar-accent: hsl(var(--primary) / 0.8); /* Slightly transparent primary for hover */
+    --sidebar-accent-foreground: var(--primary-foreground);
+    --sidebar-border: hsl(var(--primary) / 0.9);
+    --sidebar-ring: var(--ring);
 
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -82,14 +82,14 @@ body {
     --input: 225 20% 25%;
     --ring: 225 65% 60%;
     
-    --sidebar-background: 225 15% 12%; 
-    --sidebar-foreground: 0 0% 90%; 
-    --sidebar-primary: 45 100% 55%; 
-    --sidebar-primary-foreground: 24 95% 10%;
-    --sidebar-accent: 225 15% 20%; 
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 225 15% 10%;
-    --sidebar-ring: 45 100% 50%;
+    --sidebar-background: var(--primary); 
+    --sidebar-foreground: var(--primary-foreground); 
+    --sidebar-primary: var(--accent); 
+    --sidebar-primary-foreground: var(--accent-foreground);
+    --sidebar-accent: hsl(var(--primary) / 0.8); 
+    --sidebar-accent-foreground: var(--primary-foreground);
+    --sidebar-border: hsl(var(--primary) / 0.9);
+    --sidebar-ring: var(--ring);
   }
 }
 
