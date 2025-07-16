@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2 } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -28,7 +28,13 @@ export function AppSidebarContents() {
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['SuperAdmin'] },
   ];
 
-  const allNavItems = [...superAdminItems].filter(item => user?.role && item.roles.includes(user.role));
+  const instituteAdminItems = [
+    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, roles: ['Admin', 'Coordinator'] },
+    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, roles: ['Admin', 'Coordinator'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: Briefcase, roles: ['Admin', 'Coordinator'] },
+  ];
+
+  const allNavItems = [...superAdminItems, ...instituteAdminItems].filter(item => user?.role && item.roles.includes(user.role));
 
 
   return (
@@ -67,7 +73,7 @@ export function AppSidebarContents() {
               <Link href="/dashboard" legacyBehavior passHref>
                 <SidebarMenuButton 
                   asChild 
-                  isActive={pathname === '/dashboard'}
+                  isActive={pathname === '/dashboard/academic' || pathname === '/dashboard'}
                   tooltip={{children: "Dashboard", side: 'right', align: 'center'}}
                 >
                   <a>
