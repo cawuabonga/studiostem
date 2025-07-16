@@ -5,7 +5,6 @@ import { AddTeacherForm } from "@/components/teachers/AddTeacherForm";
 import { TeachersList } from "@/components/teachers/TeachersList";
 import { BulkUploadTeachers } from "@/components/teachers/BulkUploadTeachers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
