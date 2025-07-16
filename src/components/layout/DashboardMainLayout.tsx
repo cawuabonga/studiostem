@@ -28,6 +28,14 @@ export default function DashboardMainLayout({
       </div>
     );
   }
+  
+  const getHeaderTitle = () => {
+    if (user?.role === 'SuperAdmin' && !institute) {
+        return "SISTEMA TECNOLOGICO DE EDUCACION MODULAR";
+    }
+    return institute?.name || "Dashboard";
+  }
+
 
   return (
     <SidebarProvider defaultOpen={true} >
@@ -45,7 +53,7 @@ export default function DashboardMainLayout({
                 <Building2 className="h-6 w-6" />
               )}
               <h1 className="text-xl font-semibold font-headline">
-                {institute?.name || "Módulo de Asignación Docente"}
+                {getHeaderTitle()}
               </h1>
             </div>
         </header>

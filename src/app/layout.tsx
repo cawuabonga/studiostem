@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'Módulo de Asignación Docente Integrado (MADI)',
-  description: 'Conectando Estudiantes, Docentes y Coordinadores.',
+  title: 'STEM - Sistema Tecnológico de Educación Modular',
+  description: 'Plataforma para la gestión educativa modular.',
 };
 
 export default function RootLayout({

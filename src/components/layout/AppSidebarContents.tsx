@@ -36,6 +36,13 @@ export function AppSidebarContents() {
 
   const allNavItems = [...superAdminItems, ...instituteAdminItems].filter(item => user?.role && item.roles.includes(user.role));
 
+  const getSidebarTitle = () => {
+    if (user?.role === 'SuperAdmin' && !institute) {
+        return "STEM";
+    }
+    return institute?.name || "STEM";
+  }
+
 
   return (
     <>
@@ -47,7 +54,7 @@ export function AppSidebarContents() {
              <Building2 className="w-7 h-7 text-sidebar-foreground"/>
            )}
            <span className="font-headline text-sm font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-             {institute?.name || "MADI"}
+             {getSidebarTitle()}
            </span>
         </Link>
       </SidebarHeader>
