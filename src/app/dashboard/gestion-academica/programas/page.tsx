@@ -1,0 +1,63 @@
+
+"use client";
+
+import { AddProgramForm } from "@/components/programs/AddProgramForm";
+import { ProgramsList } from "@/components/programs/ProgramsList";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
+export default function ManageProgramsPage() {
+  const { user, instituteId, loading } = useAuth();
+  const router = useRouter();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
+      router.push('/dashboard');
+    }
+    if (!loading && !instituteId) {
+        router.push('/dashboard/institute');
+    }
+  }, [user, instituteId, loading, router]);
+
+  const handleDataChange = () => {
+    setRefreshKey(prevKey => prevKey + 1);
+  };
+
+  if (loading || !instituteId || !user) {
+    return <p>Cargando...</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Registrar Nuevo Programa de Estudio</CardTitle>
+          <CardDescription>
+            Añada un nuevo programa de estudio para este instituto.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AddProgramForm onProgramAdded={handleDataChange} />
+        </CardContent>
+      </Card>
+      
+      <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Programas de Estudio Existentes</CardTitle>
+          <CardDescription>
+            Ver, editar y eliminar los programas de estudio registrados.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProgramsList key={refreshKey} onDataChange={handleDataChange} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

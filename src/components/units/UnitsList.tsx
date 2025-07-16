@@ -1,1 +1,204 @@
-// This file has been removed as part of the refactoring.
+
+"use client";
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { getUnits, getPrograms } from '@/config/firebase';
+import type { Unit, Program } from '@/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { EditUnitDialog } from './EditUnitDialog';
+import { DeleteUnitDialog } from './DeleteUnitDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from '../ui/input';
+
+interface UnitsListProps {
+    onDataChange: () => void;
+}
+
+const PAGE_SIZE = 10;
+
+export function UnitsList({ onDataChange }: UnitsListProps) {
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [programs, setPrograms] = useState<Map<string, string>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [filter, setFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const { toast } = useToast();
+  const { instituteId } = useAuth();
+
+  const fetchUnitsAndPrograms = useCallback(async () => {
+    if (!instituteId) return;
+    setLoading(true);
+    try {
+      const [fetchedUnits, fetchedPrograms] = await Promise.all([
+          getUnits(instituteId),
+          getPrograms(instituteId)
+      ]);
+      const programMap = new Map(fetchedPrograms.map(p => [p.id, p.name]));
+      setUnits(fetchedUnits);
+      setPrograms(programMap);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [instituteId, toast]);
+
+  useEffect(() => {
+    fetchUnitsAndPrograms();
+  }, [fetchUnitsAndPrograms]);
+  
+  const handleDialogClose = (updated?: boolean) => {
+    setIsEditDialogOpen(false);
+    setIsDeleteDialogOpen(false);
+    setSelectedUnit(null);
+    if (updated) {
+      fetchUnitsAndPrograms();
+      onDataChange();
+    }
+  };
+
+  const filteredUnits = useMemo(() => 
+    units.filter(unit => 
+        unit.name.toLowerCase().includes(filter.toLowerCase()) ||
+        unit.code.toLowerCase().includes(filter.toLowerCase()) ||
+        (programs.get(unit.programId) || '').toLowerCase().includes(filter.toLowerCase())
+    ), [units, filter, programs]);
+  
+  const paginatedUnits = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    return filteredUnits.slice(start, end);
+  }, [filteredUnits, currentPage]);
+
+  const totalPages = Math.ceil(filteredUnits.length / PAGE_SIZE);
+
+  if (loading) {
+    return (
+      <div className="space-y-2">
+         <Skeleton className="h-10 w-1/3 mb-2" />
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    );
+  }
+  
+  if (!units.length) {
+    return <p className="text-center text-muted-foreground">No hay unidades didácticas registradas.</p>;
+  }
+
+  return (
+    <>
+      <div className="mb-4">
+        <Input 
+          placeholder="Buscar por nombre, código o programa..."
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="max-w-sm"
+        />
+      </div>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Código</TableHead>
+              <TableHead>Programa</TableHead>
+              <TableHead>Ciclo</TableHead>
+              <TableHead>Créditos</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedUnits.map((unit) => (
+              <TableRow key={unit.id}>
+                <TableCell className="font-medium">{unit.name}</TableCell>
+                <TableCell>{unit.code}</TableCell>
+                <TableCell>{programs.get(unit.programId) || 'N/A'}</TableCell>
+                <TableCell>{unit.semester}</TableCell>
+                <TableCell>{unit.credits}</TableCell>
+                <TableCell className="text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Abrir menú</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                        <Edit2 className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+       <div className="flex items-center justify-end space-x-2 py-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+          disabled={currentPage === 1}
+        >
+          Anterior
+        </Button>
+        <span className="text-sm">
+            Página {currentPage} de {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+          disabled={currentPage === totalPages}
+        >
+          Siguiente
+        </Button>
+      </div>
+
+      {selectedUnit && isEditDialogOpen && (
+        <EditUnitDialog 
+          unit={selectedUnit}
+          isOpen={isEditDialogOpen}
+          onClose={handleDialogClose}
+        />
+      )}
+       {selectedUnit && isDeleteDialogOpen && (
+        <DeleteUnitDialog 
+          unit={selectedUnit}
+          isOpen={isDeleteDialogOpen}
+          onClose={handleDialogClose}
+        />
+       )}
+    </>
+  );
+}

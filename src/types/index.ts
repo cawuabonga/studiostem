@@ -1,5 +1,5 @@
 
-// Keeping Student as a default role for new sign-ups.
+
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
 export interface AppUser {
@@ -17,4 +17,31 @@ export interface Institute {
   name: string;
   logoUrl?: string;
   primaryColor?: string; // HSL format e.g., "225 65% 32%"
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  code: string;
+  resolution: string;
+  duration: string;
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  code: string;
+  credits: number;
+  semester: number;
+  programId: string;
+}
+
+export interface Teacher {
+  id: string;
+  dni: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  specialty: string;
+  active: boolean;
 }

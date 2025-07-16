@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, Institute } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -132,3 +132,100 @@ export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, data);
 };
+
+
+// --- Institute-Specific Data Management ---
+
+const getSubCollectionRef = (instituteId: string, collectionName: string) => {
+    return collection(db, 'institutes', instituteId, collectionName);
+}
+
+// Programs
+export const addProgram = async (instituteId: string, data: Omit<Program, 'id'>) => {
+    const programsCol = getSubCollectionRef(instituteId, 'programs');
+    await addDoc(programsCol, data);
+}
+
+export const getPrograms = async (instituteId: string): Promise<Program[]> => {
+    const programsCol = getSubCollectionRef(instituteId, 'programs');
+    const q = query(programsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Program));
+}
+
+export const updateProgram = async (instituteId: string, programId: string, data: Partial<Program>) => {
+    const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
+    await updateDoc(programRef, data);
+}
+
+export const deleteProgram = async (instituteId: string, programId: string) => {
+    const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
+    await deleteDoc(programRef);
+}
+
+// Units
+export const addUnit = async (instituteId: string, data: Omit<Unit, 'id'>) => {
+    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    await addDoc(unitsCol, data);
+}
+
+export const getUnits = async (instituteId: string): Promise<Unit[]> => {
+    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    const q = query(unitsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
+}
+
+export const updateUnit = async (instituteId: string, unitId: string, data: Partial<Unit>) => {
+    const unitRef = doc(db, 'institutes', instituteId, 'units', unitId);
+    await updateDoc(unitRef, data);
+}
+
+export const deleteUnit = async (instituteId: string, unitId: string) => {
+    const unitRef = doc(db, 'institutes', instituteId, 'units', unitId);
+    await deleteDoc(unitRef);
+}
+
+export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id'>[]) => {
+    const batch = writeBatch(db);
+    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    units.forEach(unitData => {
+        const docRef = doc(unitsCol); 
+        batch.set(docRef, unitData);
+    });
+    await batch.commit();
+}
+
+
+// Teachers
+export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id'>) => {
+    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
+    await addDoc(teachersCol, data);
+}
+
+export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
+    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
+    const q = query(teachersCol, orderBy("fullName"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Teacher));
+}
+
+export const updateTeacher = async (instituteId: string, teacherId: string, data: Partial<Teacher>) => {
+    const teacherRef = doc(db, 'institutes', instituteId, 'teachers', teacherId);
+    await updateDoc(teacherRef, data);
+}
+
+export const deleteTeacher = async (instituteId: string, teacherId: string) => {
+    const teacherRef = doc(db, 'institutes', instituteId, 'teachers', teacherId);
+    await deleteDoc(teacherRef);
+}
+
+export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teacher, 'id'>[]) => {
+    const batch = writeBatch(db);
+    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
+    teachers.forEach(teacherData => {
+        const docRef = doc(teachersCol); 
+        batch.set(docRef, teacherData);
+    });
+    await batch.commit();
+}
