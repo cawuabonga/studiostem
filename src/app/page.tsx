@@ -5,31 +5,21 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Si la autenticación no está cargando y hay un usuario, redirigir al dashboard.
     if (!loading && user) {
       router.push('/dashboard');
     }
   }, [user, loading, router]);
 
-  if (loading || (!loading && user)) {
-    // Show a loading skeleton or a blank screen while checking auth / redirecting
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="w-full max-w-md space-y-4 p-8">
-          <Skeleton className="h-10 w-3/4 mx-auto" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-8 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      </div>
-    );
-  }
+  // Mientras se carga o si el usuario ya está logueado y esperando ser redirigido,
+  // es mejor mostrar el layout de login para evitar una pantalla en blanco.
+  // El useEffect se encargará de la redirección de todas formas.
   
   return (
     <AuthPageLayout title="">
