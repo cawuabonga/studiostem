@@ -37,16 +37,19 @@ export default function ManageUnitsPage() {
 
   return (
     <div className="space-y-6">
-        <Accordion type="single" collapsible className="w-full">
+        <Accordion type="single" collapsible className="w-full"
+          // Open by default
+            defaultValue="item-1"
+        >
             <AccordionItem value="item-1">
                 <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Upload className="h-5 w-5"/> Carga Masiva de Unidades
+                    <Upload className="h-5 w-5"/> Carga Masiva de Unidades Didácticas
                 </AccordionTrigger>
                 <AccordionContent>
                     <Card>
                         <CardHeader>
-                            <CardTitle>Registro por Lotes</CardTitle>
-                            <CardDescription>Descargue la plantilla, complete los datos de las unidades y súbala para un registro rápido.</CardDescription>
+                            <CardTitle>Registro por Lotes de Unidades Didácticas</CardTitle>
+                            <CardDescription>Este proceso le permite agregar múltiples unidades didácticas a un programa y módulo específicos de una sola vez.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <BulkUploadUnits onUploadSuccess={handleDataChange} />
@@ -58,9 +61,9 @@ export default function ManageUnitsPage() {
         
       <Card>
         <CardHeader>
-          <CardTitle>Registrar Nueva Unidad Didáctica</CardTitle>
+          <CardTitle>Registrar Nueva Unidad Didáctica (Individual)</CardTitle>
           <CardDescription>
-            Añada una nueva unidad didáctica individualmente.
+            Añada una nueva unidad didáctica de forma individual.
           </CardDescription>
         </CardHeader>
         <CardContent>
