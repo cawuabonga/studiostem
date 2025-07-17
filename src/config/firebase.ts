@@ -246,6 +246,56 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
     await updateDoc(userRef, data);
 };
 
+export const checkIfUserExistsByEmail = async (email: string): Promise<boolean> => {
+    const usersCol = collection(db, 'users');
+    const q = query(usersCol, where("email", "==", email), limit(1));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+};
+
+// This function should ideally be a Cloud Function for security reasons,
+// especially for creating users with passwords.
+// This client-side version is for demonstration purposes.
+export const createInstituteUser = async (instituteId: string, userData: AppUser): Promise<void> => {
+    // This is a placeholder. Firebase Admin SDK is required to create users with email/password
+    // from a backend environment. This will throw an error on the client.
+    // The proper way is to have a Cloud Function that handles user creation.
+    // For now, we will simulate the creation and alert the user about the temporary password.
+    console.log(`Simulating user creation for ${userData.email} with password ${userData.password}`);
+    
+    // 1. Check if user already exists
+    const userExists = await checkIfUserExistsByEmail(userData.email!);
+    if (userExists) {
+        throw new Error("Un usuario con este correo electrónico ya existe.");
+    }
+    
+    // In a real scenario, you'd call a Cloud Function here.
+    // The Cloud Function would use the Admin SDK:
+    // const userRecord = await admin.auth().createUser({ email, password, displayName });
+    // await admin.firestore().collection('users').doc(userRecord.uid).set({ ... });
+
+    // Since we cannot create a user with a password on the client,
+    // we will just add them to the firestore collection.
+    // This means they will have to use "Forgot Password" to login for the first time.
+    
+    // Placeholder UID - in a real scenario, this comes from the Admin SDK user record.
+    const uid = `placeholder_${Date.now()}`;
+    const userDocRef = doc(db, 'users', uid);
+
+    await setDoc(userDocRef, {
+        uid, // In a real app, this would be the actual UID.
+        email: userData.email,
+        displayName: userData.displayName,
+        photoURL: null,
+        role: userData.role,
+        instituteId: instituteId,
+        dni: userData.dni,
+        // We cannot set the password hash here from the client.
+    });
+
+    console.warn(`User document created for ${userData.email}, but no auth user created. User must be created manually or via a backend function.`);
+};
+
 
 // --- Institute-Specific Data Management ---
 

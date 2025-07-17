@@ -8,6 +8,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import { StudentsTable } from "@/components/users/StudentsTable";
 import { StaffTable } from "@/components/users/StaffTable";
+import { AddStudentForm } from "@/components/users/AddStudentForm";
+import { Separator } from "@/components/ui/separator";
+import { AddStaffForm } from "@/components/users/AddStaffForm";
 
 export default function ManageUsersPage() {
   const { user, instituteId, loading } = useAuth();
@@ -41,36 +44,69 @@ export default function ManageUsersPage() {
           </CardDescription>
         </CardHeader>
       </Card>
-      <Tabs defaultValue="students" className="w-full">
+      <Tabs defaultValue="list" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="students">Estudiantes</TabsTrigger>
-          <TabsTrigger value="staff">Personal del Instituto</TabsTrigger>
+          <TabsTrigger value="list">Listado de Usuarios</TabsTrigger>
+          <TabsTrigger value="register">Registrar Nuevos Usuarios</TabsTrigger>
         </TabsList>
-        <TabsContent value="students" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Estudiantes</CardTitle>
-              <CardDescription>
-                Ver y gestionar los usuarios con el rol de estudiante.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StudentsTable key={refreshKey} onDataChange={handleDataChange} />
-            </CardContent>
-          </Card>
+        <TabsContent value="list" className="mt-6">
+            <Tabs defaultValue="students" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="students">Estudiantes</TabsTrigger>
+                <TabsTrigger value="staff">Personal del Instituto</TabsTrigger>
+                </TabsList>
+                <TabsContent value="students" className="mt-6">
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Lista de Estudiantes</CardTitle>
+                    <CardDescription>
+                        Ver y gestionar los usuarios con el rol de estudiante.
+                    </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <StudentsTable key={refreshKey} onDataChange={handleDataChange} />
+                    </CardContent>
+                </Card>
+                </TabsContent>
+                <TabsContent value="staff" className="mt-6">
+                <Card>
+                    <CardHeader>
+                    <CardTitle>Lista de Personal</CardTitle>
+                    <CardDescription>
+                        Ver y gestionar los usuarios con roles de Docente, Coordinador y Administrador.
+                    </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                    <StaffTable key={refreshKey} onDataChange={handleDataChange} />
+                    </CardContent>
+                </Card>
+                </TabsContent>
+            </Tabs>
         </TabsContent>
-        <TabsContent value="staff" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista de Personal</CardTitle>
-              <CardDescription>
-                Ver y gestionar los usuarios con roles de Docente, Coordinador y Administrador.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StaffTable key={refreshKey} onDataChange={handleDataChange} />
-            </CardContent>
-          </Card>
+        <TabsContent value="register" className="mt-6 space-y-6">
+             <Card>
+                <CardHeader>
+                    <CardTitle>Registrar Nuevo Estudiante</CardTitle>
+                    <CardDescription>
+                        Crea una cuenta para un nuevo estudiante.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AddStudentForm onUserAdded={handleDataChange} />
+                </CardContent>
+            </Card>
+            <Separator />
+            <Card>
+                <CardHeader>
+                    <CardTitle>Registrar Nuevo Personal</CardTitle>
+                    <CardDescription>
+                        Crea una cuenta para un nuevo docente o administrativo y asígnale un rol.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <AddStaffForm onUserAdded={handleDataChange} />
+                </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>
