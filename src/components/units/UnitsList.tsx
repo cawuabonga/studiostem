@@ -138,7 +138,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name}</TableCell>
                     <TableCell>{program?.name || 'N/A'}</TableCell>
-                    <TableCell>{module?.name || 'N/A'}</TableCell>
+                    <TableCell>{module?.code || 'N/A'}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
                     <TableCell className="text-right">
