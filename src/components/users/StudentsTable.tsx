@@ -46,7 +46,7 @@ export function StudentsTable({ onDataChange }: StudentsTableProps) {
 
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers, onDataChange]);
+  }, [fetchUsers]);
 
   const handleEditUser = (user: AppUser) => {
     setSelectedUser(user);
@@ -58,6 +58,7 @@ export function StudentsTable({ onDataChange }: StudentsTableProps) {
     setSelectedUser(null);
     if (updated) {
         onDataChange();
+        fetchUsers();
     }
   };
 

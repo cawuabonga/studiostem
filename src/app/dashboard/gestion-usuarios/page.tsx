@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { StudentsTable } from "@/components/users/StudentsTable";
 import { StaffTable } from "@/components/users/StaffTable";
 
@@ -23,9 +23,9 @@ export default function ManageUsersPage() {
     }
   }, [user, instituteId, loading, router]);
 
-  const handleDataChange = () => {
+  const handleDataChange = useCallback(() => {
     setRefreshKey(prevKey => prevKey + 1);
-  };
+  }, []);
 
   if (loading || !instituteId || !user) {
     return <p>Cargando...</p>;
