@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserPlus } from "lucide-react";
+import { Users, UserPlus, List, UserCheck } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -10,20 +10,33 @@ import { useEffect } from "react";
 
 const userModules = [
   {
-    title: "Administrar Usuarios",
-    description: "Gestionar los perfiles de estudiantes y personal del instituto.",
-    href: "/dashboard/gestion-usuarios/administrar",
+    title: "Registrar Estudiantes",
+    description: "Crear cuentas individuales para nuevos estudiantes.",
+    href: "/dashboard/gestion-usuarios/registrar-estudiante",
+    icon: UserPlus,
+    roles: ["Admin", "Coordinator"],
+  },
+  {
+    title: "Listado de Estudiantes",
+    description: "Ver, editar y gestionar los usuarios con rol de estudiante.",
+    href: "/dashboard/gestion-usuarios/listado-estudiantes",
+    icon: List,
+    roles: ["Admin", "Coordinator"],
+  },
+   {
+    title: "Registrar Personal",
+    description: "Crear cuentas para docentes, coordinadores y administradores.",
+    href: "/dashboard/gestion-usuarios/registrar-personal",
+    icon: UserCheck,
+    roles: ["Admin", "Coordinator"],
+  },
+  {
+    title: "Listado de Personal",
+    description: "Ver y gestionar los perfiles del personal del instituto.",
+    href: "/dashboard/gestion-usuarios/listado-personal",
     icon: Users,
     roles: ["Admin", "Coordinator"],
   },
-  // Se pueden agregar más módulos aquí en el futuro.
-  // {
-  //   title: "Carga Masiva de Usuarios",
-  //   description: "Registrar múltiples usuarios a la vez usando una plantilla.",
-  //   href: "/dashboard/gestion-usuarios/carga-masiva",
-  //   icon: UserPlus,
-  //   roles: ["Admin", "Coordinator"],
-  // },
 ];
 
 export default function GestionUsuariosPage() {
