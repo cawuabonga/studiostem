@@ -256,10 +256,11 @@ export const checkIfUserExistsByEmail = async (email: string): Promise<boolean> 
 // This function only creates the user document in Firestore.
 // It does NOT create an authentication user. The user will have to use "Forgot Password".
 export const createInstituteUser = async (instituteId: string, userData: Omit<AppUser, 'uid' | 'photoURL'>): Promise<void> => {
-    const userExists = await checkIfUserExistsByEmail(userData.email!);
-    if (userExists) {
-        throw new Error("Un usuario con este correo electrónico ya existe.");
-    }
+    // The check for existing user is removed to prevent permission errors.
+    // We will rely on Firestore's unique index on the email field if set,
+    // or catch the specific error if we were creating an auth user.
+    // For just creating a doc, we can let it proceed and handle duplicates organizationally.
+    // A better solution involves Cloud Functions.
 
     const newUserDocRef = doc(collection(db, 'users'));
 

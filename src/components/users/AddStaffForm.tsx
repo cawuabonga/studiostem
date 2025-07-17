@@ -83,9 +83,18 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
       form.reset();
       onUserAdded();
     } catch (error: any) {
+      // Firebase often returns 'permission-denied' for various reasons, including duplicate data if rules are strict.
+      // A more specific error handling is better.
+      let errorMessage = 'No se pudo registrar al usuario. Intente de nuevo.';
+      if (error.message.includes('already exists')) {
+          errorMessage = 'Un usuario con este correo electrónico ya existe.';
+      } else if (error.message.includes('permission-denied')) {
+          errorMessage = 'No tienes permiso para realizar esta acción. Contacta a un SuperAdmin.';
+      }
+
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo registrar al usuario.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
