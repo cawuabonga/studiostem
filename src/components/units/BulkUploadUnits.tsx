@@ -11,7 +11,7 @@ import { bulkAddUnits, getPrograms } from '@/config/firebase';
 import type { Unit, Program, ProgramModule } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
 interface BulkUploadUnitsProps {
     onUploadSuccess: () => void;
