@@ -86,7 +86,7 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
 
                 const programMap = new Map(programs.map(p => [p.abbreviation, p.id]));
 
-                const staffToUpload: Omit<AppUser, 'uid'>[] = json.map(row => {
+                const staffToUpload: Omit<AppUser, 'uid' | 'photoURL'>[] = json.map(row => {
                     const roleStr = String(row.role || '').toLowerCase().trim();
                     const role = roleDisplayMap[roleStr] as UserRole;
                     
@@ -117,7 +117,8 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
 
                 toast({
                     title: '¡Éxito!',
-                    description: `${staffToUpload.length} miembros del personal han sido agregados.`,
+                    description: `${staffToUpload.length} perfiles de personal han sido creados. Cada uno deberá usar "Olvidé mi contraseña" para iniciar sesión.`,
+                    duration: 8000
                 });
                 onUploadSuccess();
             } catch (error: any) {

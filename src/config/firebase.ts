@@ -253,37 +253,18 @@ export const checkIfUserExistsByEmail = async (email: string): Promise<boolean> 
     return !querySnapshot.empty;
 };
 
-// This function should ideally be a Cloud Function for security reasons,
-// especially for creating users with passwords.
-// This client-side version is for demonstration purposes.
-export const createInstituteUser = async (instituteId: string, userData: Omit<AppUser, 'uid'>): Promise<void> => {
-    // This is a placeholder. Firebase Admin SDK is required to create users with email/password
-    // from a backend environment. This will throw an error on the client.
-    // The proper way is to have a Cloud Function that handles user creation.
-    // For now, we will simulate the creation and alert the user about the temporary password.
-    console.log(`Simulating user creation for ${userData.email} with password ${userData.password}`);
-    
-    // 1. Check if user already exists
+// This function only creates the user document in Firestore.
+// It does NOT create an authentication user. The user will have to use "Forgot Password".
+export const createInstituteUser = async (instituteId: string, userData: Omit<AppUser, 'uid' | 'photoURL'>): Promise<void> => {
     const userExists = await checkIfUserExistsByEmail(userData.email!);
     if (userExists) {
         throw new Error("Un usuario con este correo electrónico ya existe.");
     }
-    
-    // In a real scenario, you'd call a Cloud Function here.
-    // The Cloud Function would use the Admin SDK:
-    // const userRecord = await admin.auth().createUser({ email, password, displayName });
-    // await admin.firestore().collection('users').doc(userRecord.uid).set({ ... });
 
-    // Since we cannot create a user with a password on the client,
-    // we will just add them to the firestore collection.
-    // This means they will have to use "Forgot Password" to login for the first time.
-    
-    // Placeholder UID - in a real scenario, this comes from the Admin SDK user record.
-    const uid = `placeholder_${Date.now()}`;
-    const userDocRef = doc(db, 'users', uid);
+    const newUserDocRef = doc(collection(db, 'users'));
 
-    await setDoc(userDocRef, {
-        uid, // In a real app, this would be the actual UID.
+    await setDoc(newUserDocRef, {
+        uid: newUserDocRef.id,
         email: userData.email,
         displayName: userData.displayName,
         photoURL: null,
@@ -293,37 +274,34 @@ export const createInstituteUser = async (instituteId: string, userData: Omit<Ap
         phone: userData.phone || null,
         condition: userData.condition || null,
         programId: userData.programId || null,
-        // We cannot set the password hash here from the client.
     });
 
-    console.warn(`User document created for ${userData.email}, but no auth user created. User must be created manually or via a backend function.`);
+    console.warn(`User document created for ${userData.email}, but no auth user created. User must use 'Forgot Password' to log in.`);
 };
 
-export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid'>[]) => {
+export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid' | 'photoURL'>[]) => {
     const batch = writeBatch(db);
     const usersCol = collection(db, 'users');
 
     for (const staffData of staffList) {
-        // We should still check for existing emails in the batch itself to avoid duplicates
-        // For simplicity here, we assume the list is clean or rely on subsequent checks.
-        // A more robust solution would query all emails first.
-        const uid = `placeholder_${Date.now()}_${Math.random()}`; // Create a unique placeholder
-        const userDocRef = doc(usersCol, uid);
+        // Here we're assuming the list is clean of duplicates within itself.
+        // A more robust solution might pre-check all emails in the list against the database.
+        const newUserDocRef = doc(usersCol);
         
         const dataToSave = {
             ...staffData,
-            uid,
+            uid: newUserDocRef.id,
             photoURL: null,
             instituteId,
         };
-        delete (dataToSave as any).password; // Ensure password is not saved
 
-        batch.set(userDocRef, dataToSave);
+        batch.set(newUserDocRef, dataToSave);
     }
 
     await batch.commit();
-    console.warn(`${staffList.length} user documents created, but no auth users created. Users must be created manually or via a backend function.`);
+    console.warn(`${staffList.length} user documents created, but no auth users created. Users must use 'Forgot Password' to log in.`);
 };
+
 
 
 // --- Institute-Specific Data Management ---

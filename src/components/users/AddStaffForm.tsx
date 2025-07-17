@@ -73,15 +73,11 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
     try {
       await createInstituteUser(instituteId, {
         ...data,
-        uid: '', // Placeholder
-        instituteId: instituteId,
-        photoURL: null,
-        password: 'password123', // Temporary password
       });
 
       toast({
         title: '¡Éxito!',
-        description: `Se ha creado el usuario para ${data.displayName}. Deberá usar "Olvidé mi contraseña" para establecer una contraseña.`,
+        description: `Se ha creado el perfil para ${data.displayName}. El usuario deberá usar "Olvidé mi contraseña" para establecer una clave e iniciar sesión.`,
         duration: 8000
       });
       form.reset();
@@ -231,7 +227,7 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
             />
         </div>
          <FormDescription>
-            La contraseña temporal será 'password123'. El nuevo usuario deberá usar la opción de "Olvidé mi contraseña" en el login para establecer su propia contraseña.
+            El nuevo usuario deberá usar la opción de "Olvidé mi contraseña" en el login para establecer su propia clave.
         </FormDescription>
         <Button type="submit" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Personal'}

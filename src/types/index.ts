@@ -11,7 +11,6 @@ export interface AppUser {
   role: UserRole;
   dni?: string;
   instituteId: string | null;
-  password?: string; // Only used for creation, not stored
   phone?: string;
   condition?: 'NOMBRADO' | 'CONTRATADO';
   programId?: string;
