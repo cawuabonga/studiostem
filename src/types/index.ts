@@ -43,8 +43,10 @@ export interface Program {
   id: string;
   name: string;
   code: string;
-  resolution: string;
+  abbreviation: string;
   duration: string;
+  moduleCount: number;
+  moduleNames: string[];
 }
 
 export interface Unit {

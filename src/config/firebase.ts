@@ -319,7 +319,7 @@ export const getPrograms = async (instituteId: string): Promise<Program[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Program));
 }
 
-export const updateProgram = async (instituteId: string, programId: string, data: Partial<Program>) => {
+export const updateProgram = async (instituteId: string, programId: string, data: Partial<Omit<Program, 'id'>>) => {
     const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
     await updateDoc(programRef, data);
 }

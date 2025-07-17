@@ -117,8 +117,9 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Código</TableHead>
-              <TableHead>Resolución</TableHead>
+              <TableHead>Abrev.</TableHead>
               <TableHead>Duración</TableHead>
+              <TableHead>Módulos</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -127,8 +128,9 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
               <TableRow key={program.id}>
                 <TableCell className="font-medium">{program.name}</TableCell>
                 <TableCell>{program.code}</TableCell>
-                <TableCell>{program.resolution}</TableCell>
+                <TableCell>{program.abbreviation}</TableCell>
                 <TableCell>{program.duration}</TableCell>
+                <TableCell className="text-center">{program.moduleCount}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
