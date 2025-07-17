@@ -1,40 +1,51 @@
-
-rules_version = '2';
-
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // --- User Profiles ---
-    // Users can read their own data.
-    // SuperAdmins can read/write any user's data.
-    match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin');
-      allow write: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin');
-    }
-    
-    // --- Configuration ---
-    // Anyone can read the login design.
-    // Only SuperAdmins can write to the configuration.
-    match /config/{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-    
-    // --- Institute Data ---
-    match /institutes/{instituteId} {
-      // Any authenticated user can read institute details (like name, logo)
-      allow read: if request.auth != null;
-      // Only SuperAdmins can create, update, or delete institutes.
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      
-      // --- Subcollections within an Institute ---
-      // Admins and Coordinators can manage data for THEIR OWN institute.
-      match /{collection}/{documentId} {
-        allow read, write, delete: if request.auth != null 
-                                     && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId
-                                     && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
-        allow create: if request.auth != null 
-                       && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId
-                       && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
+{
+  "rules": {
+    "institutes": {
+      "$instituteId": {
+        // Allow read access for any authenticated user to their own institute's details
+        "allow read": "if request.auth != null && request.auth.token.instituteId == $instituteId;",
+        // Allow write access only for SuperAdmins
+        "allow write": "if request.auth != null && request.auth.token.role == 'SuperAdmin';",
+        
+        // Rules for subcollections within an institute
+        "programs": {
+          "$programId": {
+            "allow read, write": "if request.auth != null && request.auth.token.instituteId == $instituteId && (request.auth.token.role == 'Admin' || request.auth.token.role == 'Coordinator');"
+          }
+        },
+        "units": {
+          "$unitId": {
+            "allow read, write": "if request.auth != null && request.auth.token.instituteId == $instituteId && (request.auth.token.role == 'Admin' || request.auth.token.role == 'Coordinator');"
+          }
+        },
+        "teachers": {
+          "$teacherId": {
+            "allow read, write": "if request.auth != null && request.auth.token.instituteId == $instituteId && (request.auth.token.role == 'Admin' || request.auth.token.role == 'Coordinator');"
+          }
+        }
+      },
+      "allow read": "if request.auth != null && request.auth.token.role == 'SuperAdmin';"
+    },
+    "users": {
+      "$uid": {
+        // Users can read their own data, SuperAdmins can read anyone's data
+        "allow read": "if request.auth.uid == $uid || (request.auth != null && request.auth.token.role == 'SuperAdmin');",
+        // Users can update their own data, SuperAdmins can update anyone's data
+        "allow write": "if request.auth.uid == $uid || (request.auth != null && request.auth.token.role == 'SuperAdmin');"
+      }
+    },
+    "config": {
+      "loginDesign": {
+      	"allow read": "if true;",
+        "allow write": "if request.auth != null && request.auth.token.role == 'SuperAdmin';",
+        "images": {
+            "$imageId": {
+                // Allow read for anyone to display images
+                "allow read": "if true;",
+                 // Allow write only for SuperAdmins to manage images
+                "allow write": "if request.auth != null && request.auth.token.role == 'SuperAdmin';"
+            }
+        }
       }
     }
   }
