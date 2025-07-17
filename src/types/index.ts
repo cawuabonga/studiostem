@@ -1,4 +1,5 @@
 
+import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
@@ -19,13 +20,20 @@ export interface LoginDesign {
   layout: 'side' | 'center';
 }
 
+export interface LoginImage {
+  id: string;
+  name: string;
+  url: string;
+  path: string;
+  createdAt: Timestamp;
+}
+
 
 export interface Institute {
   id: string;
   name: string;
   logoUrl?: string;
   primaryColor?: string; // HSL format e.g., "225 65% 32%"
-  loginDesign?: LoginDesign;
 }
 
 export interface Program {

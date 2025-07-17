@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign } from '@/types';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -113,13 +113,13 @@ export const updateInstitute = async (instituteId: string, data: Partial<Omit<In
 };
 
 export const deleteInstitute = async (instituteId: string): Promise<void> => {
-    await deleteDoc(doc(db, 'institutes', instituteId));
+    await deleteDoc(doc(db, 'institutes', instituteId), data);
 };
 
 // --- Login Design Management ---
-export const saveLoginDesignSettings = async (settings: LoginDesign): Promise<void> => {
+export const saveLoginDesignSettings = async (settings: Partial<LoginDesign>): Promise<void> => {
     const designRef = doc(db, 'config', 'loginDesign');
-    await setDoc(designRef, settings);
+    await setDoc(designRef, settings, { merge: true });
 };
 
 export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
@@ -129,6 +129,41 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
         return docSnap.data() as LoginDesign;
     }
     return null;
+};
+
+// --- Login Image Management ---
+export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
+    const filePath = `login-images/${Date.now()}-${file.name}`;
+    const storageRef = ref(firebaseStorage, filePath);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+
+    const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
+    await setDoc(imageDocRef, {
+        name,
+        url,
+        path: filePath,
+        createdAt: serverTimestamp(),
+    });
+};
+
+export const getLoginImages = async (): Promise<LoginImage[]> => {
+    const imagesCol = collection(db, 'config', 'loginDesign', 'images');
+    const q = query(imagesCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LoginImage));
+};
+
+export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
+    await saveLoginDesignSettings({ imageUrl });
+};
+
+export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
+    const storageRef = ref(firebaseStorage, image.path);
+    await deleteObject(storageRef);
+
+    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
+    await deleteDoc(imageDocRef);
 };
 
 
