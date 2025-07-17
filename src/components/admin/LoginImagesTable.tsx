@@ -16,6 +16,7 @@ import {
 import type { LoginImage } from '@/types';
 import { Trash2, CheckCircle, Image as ImageIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 interface LoginImagesTableProps {
   onDataChange: () => void;
