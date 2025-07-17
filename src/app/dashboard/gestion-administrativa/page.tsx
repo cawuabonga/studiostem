@@ -1,7 +1,26 @@
 
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function GestionAdministrativaPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
+            router.push("/dashboard");
+        }
+    }, [user, loading, router]);
+    
+    if (loading || !user || !["Admin", "Coordinator"].includes(user.role)) {
+        return <p>Cargando...</p>;
+    }
+
+
   return (
     <div className="space-y-6">
       <Card>

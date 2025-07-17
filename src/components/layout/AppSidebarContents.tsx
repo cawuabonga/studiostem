@@ -33,6 +33,7 @@ export function AppSidebarContents() {
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, roles: ['Admin', 'Coordinator'] },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, roles: ['Admin', 'Coordinator'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: Briefcase, roles: ['Admin', 'Coordinator'] },
+    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin', 'Coordinator'] },
   ];
 
   const allNavItems = [...superAdminItems, ...instituteAdminItems].filter(item => user?.role && item.roles.includes(user.role));

@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage } from '@/types';
 
@@ -223,6 +223,25 @@ export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
 };
 
 export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>) => {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, data);
+};
+
+export const getUsersByInstitute = async (instituteId: string, roles: UserRole[]): Promise<AppUser[]> => {
+    const usersCol = collection(db, 'users');
+    const q = query(
+        usersCol, 
+        where("instituteId", "==", instituteId),
+        where("role", "in", roles),
+        orderBy("displayName")
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
+};
+
+export const updateUserByInstituteAdmin = async (instituteId: string, uid: string, data: { role: UserRole }) => {
+    // A future improvement would be to verify the admin's permissions here via a cloud function.
+    // For now, we trust the client-side role check.
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, data);
 };
