@@ -256,7 +256,7 @@ export const checkIfUserExistsByEmail = async (email: string): Promise<boolean> 
 // This function should ideally be a Cloud Function for security reasons,
 // especially for creating users with passwords.
 // This client-side version is for demonstration purposes.
-export const createInstituteUser = async (instituteId: string, userData: AppUser): Promise<void> => {
+export const createInstituteUser = async (instituteId: string, userData: Omit<AppUser, 'uid'>): Promise<void> => {
     // This is a placeholder. Firebase Admin SDK is required to create users with email/password
     // from a backend environment. This will throw an error on the client.
     // The proper way is to have a Cloud Function that handles user creation.
@@ -297,6 +297,32 @@ export const createInstituteUser = async (instituteId: string, userData: AppUser
     });
 
     console.warn(`User document created for ${userData.email}, but no auth user created. User must be created manually or via a backend function.`);
+};
+
+export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid'>[]) => {
+    const batch = writeBatch(db);
+    const usersCol = collection(db, 'users');
+
+    for (const staffData of staffList) {
+        // We should still check for existing emails in the batch itself to avoid duplicates
+        // For simplicity here, we assume the list is clean or rely on subsequent checks.
+        // A more robust solution would query all emails first.
+        const uid = `placeholder_${Date.now()}_${Math.random()}`; // Create a unique placeholder
+        const userDocRef = doc(usersCol, uid);
+        
+        const dataToSave = {
+            ...staffData,
+            uid,
+            photoURL: null,
+            instituteId,
+        };
+        delete (dataToSave as any).password; // Ensure password is not saved
+
+        batch.set(userDocRef, dataToSave);
+    }
+
+    await batch.commit();
+    console.warn(`${staffList.length} user documents created, but no auth users created. Users must be created manually or via a backend function.`);
 };
 
 

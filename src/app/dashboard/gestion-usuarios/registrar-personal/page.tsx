@@ -6,6 +6,9 @@ import { AddStaffForm } from "@/components/users/AddStaffForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Upload } from "lucide-react";
+import { BulkUploadStaff } from "@/components/users/BulkUploadStaff";
 
 export default function RegistrarPersonalPage() {
     const { user, instituteId, loading } = useAuth();
@@ -21,7 +24,7 @@ export default function RegistrarPersonalPage() {
     }, [user, instituteId, loading, router]);
 
     const handleDataChange = useCallback(() => {
-        console.log("Staff member added");
+        console.log("Staff member added/updated");
     }, []);
 
     if (loading || !instituteId || !user) {
@@ -30,9 +33,28 @@ export default function RegistrarPersonalPage() {
 
     return (
         <div className="space-y-6">
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                        <Upload className="h-5 w-5"/> Carga Masiva de Personal
+                    </AccordionTrigger>
+                    <AccordionContent>
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Registro por Lotes</CardTitle>
+                                <CardDescription>Descargue la plantilla, complete los datos del personal y súbala para un registro rápido.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <BulkUploadStaff onUploadSuccess={handleDataChange} />
+                            </CardContent>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
+
             <Card>
                 <CardHeader>
-                    <CardTitle>Registrar Nuevo Personal</CardTitle>
+                    <CardTitle>Registrar Nuevo Personal (Individual)</CardTitle>
                     <CardDescription>
                         Crea una cuenta para un nuevo docente, coordinador o administrador.
                     </CardDescription>

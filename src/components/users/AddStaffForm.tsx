@@ -15,12 +15,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { UserRole, Program } from '@/types';
 
 const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
+const roleDisplayMap: Record<UserRole, string> = {
+    Teacher: 'Docente',
+    Coordinator: 'Coordinador',
+    Admin: 'Administrador',
+    Student: 'Estudiante',
+    SuperAdmin: 'SuperAdmin',
+}
+
 const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addStaffSchema = z.object({
+  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
   displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).optional().or(z.literal('')),
   phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
   condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
@@ -93,7 +101,20 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField
+           <FormField
+            control={form.control}
+            name="dni"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>DNI</FormLabel>
+                <FormControl>
+                  <Input placeholder="12345678" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
             control={form.control}
             name="displayName"
             render={({ field }) => (
@@ -106,6 +127,8 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
                 </FormItem>
             )}
             />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <FormField
                 control={form.control}
                 name="email"
@@ -119,21 +142,6 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
                 </FormItem>
                 )}
             />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="dni"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>DNI</FormLabel>
-                <FormControl>
-                  <Input placeholder="12345678" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
            <FormField
             control={form.control}
             name="phone"
@@ -164,7 +172,7 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
                     <SelectContent>
                       {assignableRoles.map((roleValue) => (
                         <SelectItem key={roleValue} value={roleValue}>
-                          {roleValue}
+                          {roleDisplayMap[roleValue]}
                         </SelectItem>
                       ))}
                     </SelectContent>
