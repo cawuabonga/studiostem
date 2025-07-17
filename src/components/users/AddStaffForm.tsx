@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,17 +10,21 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { createInstituteUser } from '@/config/firebase';
+import { createInstituteUser, getPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { UserRole } from '@/types';
+import { UserRole, Program } from '@/types';
 
 const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
+const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addStaffSchema = z.object({
   displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).optional().or(z.literal('')),
   email: z.string().email({ message: 'Email inválido.' }),
+  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).optional().or(z.literal('')),
+  phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
+  condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
+  programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
 });
 
 type AddStaffFormValues = z.infer<typeof addStaffSchema>;
@@ -33,13 +37,21 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
   const { toast } = useToast();
   const { instituteId } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [programs, setPrograms] = useState<Program[]>([]);
+
+  useEffect(() => {
+    if (instituteId) {
+      getPrograms(instituteId).then(setPrograms).catch(console.error);
+    }
+  }, [instituteId]);
 
   const form = useForm<AddStaffFormValues>({
     resolver: zodResolver(addStaffSchema),
     defaultValues: {
       displayName: '',
-      dni: '',
       email: '',
+      dni: '',
+      phone: '',
       role: 'Teacher',
     },
   });
@@ -114,7 +126,7 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
             name="dni"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>DNI (Opcional)</FormLabel>
+                <FormLabel>DNI</FormLabel>
                 <FormControl>
                   <Input placeholder="12345678" {...field} />
                 </FormControl>
@@ -123,6 +135,21 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
             )}
           />
            <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Celular</FormLabel>
+                <FormControl>
+                  <Input placeholder="987654321" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField
               control={form.control}
               name="role"
               render={({ field }) => (
@@ -145,6 +172,54 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
                   <FormMessage />
                 </FormItem>
               )}
+            />
+             <FormField
+              control={form.control}
+              name="condition"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Condición</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una condición" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {conditions.map((cond) => (
+                        <SelectItem key={cond} value={cond}>
+                          {cond.charAt(0).toUpperCase() + cond.slice(1).toLowerCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+                control={form.control}
+                name="programId"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Programa de Estudios</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!programs.length}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder={programs.length ? "Seleccione un programa" : "No hay programas"} />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                            {program.name}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
             />
         </div>
          <FormDescription>

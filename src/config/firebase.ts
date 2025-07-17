@@ -289,7 +289,10 @@ export const createInstituteUser = async (instituteId: string, userData: AppUser
         photoURL: null,
         role: userData.role,
         instituteId: instituteId,
-        dni: userData.dni,
+        dni: userData.dni || null,
+        phone: userData.phone || null,
+        condition: userData.condition || null,
+        programId: userData.programId || null,
         // We cannot set the password hash here from the client.
     });
 
