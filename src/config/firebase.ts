@@ -113,7 +113,8 @@ export const updateInstitute = async (instituteId: string, data: Partial<Omit<In
 };
 
 export const deleteInstitute = async (instituteId: string): Promise<void> => {
-    await deleteDoc(doc(db, 'institutes', instituteId), data);
+    const instituteRef = doc(db, 'institutes', instituteId);
+    await deleteDoc(instituteRef);
 };
 
 // --- Login Design Management ---
@@ -132,17 +133,21 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 };
 
 // --- Login Image Management ---
+const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+});
+
+
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    const filePath = `login-images/${Date.now()}-${file.name}`;
-    const storageRef = ref(firebaseStorage, filePath);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
+    const dataUrl = await fileToDataUri(file);
 
     const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
     await setDoc(imageDocRef, {
         name,
-        url,
-        path: filePath,
+        url: dataUrl, // Store the Base64 Data URI
         createdAt: serverTimestamp(),
     });
 };
@@ -159,9 +164,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const storageRef = ref(firebaseStorage, image.path);
-    await deleteObject(storageRef);
-
+    // No need to delete from storage, just from Firestore
     const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
 };
