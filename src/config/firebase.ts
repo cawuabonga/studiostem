@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -104,12 +104,8 @@ export const getInstitute = async (instituteId: string): Promise<Institute | nul
 }
 
 export const getInstituteLoginPageImage = async (): Promise<string | null> => {
-    // This is a simplified function that fetches the logo for a "main" institute
-    // to display on the login page. In a real multi-tenant app, you might have
-    // a more complex way of determining this (e.g., based on domain).
-    const mainInstituteId = 'istp-principal'; 
-    const institute = await getInstitute(mainInstituteId);
-    return institute?.logoUrl || null;
+    const loginDesign = await getLoginDesignSettings();
+    return loginDesign?.imageUrl || null;
 }
 
 export const updateInstitute = async (instituteId: string, data: Partial<Omit<Institute, 'id'>>): Promise<void> => {
@@ -119,6 +115,22 @@ export const updateInstitute = async (instituteId: string, data: Partial<Omit<In
 export const deleteInstitute = async (instituteId: string): Promise<void> => {
     await deleteDoc(doc(db, 'institutes', instituteId));
 };
+
+// --- Login Design Management ---
+export const saveLoginDesignSettings = async (settings: LoginDesign): Promise<void> => {
+    const designRef = doc(db, 'config', 'loginDesign');
+    await setDoc(designRef, settings);
+};
+
+export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
+    const designRef = doc(db, 'config', 'loginDesign');
+    const docSnap = await getDoc(designRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as LoginDesign;
+    }
+    return null;
+};
+
 
 // --- User Management ---
 export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {

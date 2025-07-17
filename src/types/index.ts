@@ -12,11 +12,20 @@ export interface AppUser {
   instituteId: string | null;
 }
 
+export interface LoginDesign {
+  imageUrl: string;
+  backgroundColor: string;
+  textColor: string;
+  layout: 'side' | 'center';
+}
+
+
 export interface Institute {
   id: string;
   name: string;
   logoUrl?: string;
   primaryColor?: string; // HSL format e.g., "225 65% 32%"
+  loginDesign?: LoginDesign;
 }
 
 export interface Program {
