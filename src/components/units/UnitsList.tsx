@@ -2,23 +2,16 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms } from '@/config/firebase';
-import type { Unit, Program, ProgramModule } from '@/types';
+import { getUnits, getPrograms, addUnit } from '@/config/firebase';
+import type { Unit, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit2, Trash2, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EditUnitDialog } from './EditUnitDialog';
 import { DeleteUnitDialog } from './DeleteUnitDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
 
 interface UnitsListProps {
@@ -72,6 +65,34 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     if (updated) {
       fetchUnitsAndPrograms();
       onDataChange();
+    }
+  };
+
+  const handleDuplicate = async (unitToDuplicate: Unit) => {
+    if (!instituteId) {
+        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
+        return;
+    }
+    try {
+        const { id, ...unitData } = unitToDuplicate;
+        const newUnitData = {
+            ...unitData,
+            name: `${unitData.name} (Copia)`,
+            code: `${unitData.code}-copia`
+        };
+        await addUnit(instituteId, newUnitData);
+        toast({
+            title: '¡Unidad Duplicada!',
+            description: `Se creó una copia de "${unitToDuplicate.name}".`,
+        });
+        fetchUnitsAndPrograms();
+        onDataChange();
+    } catch (error) {
+        toast({
+            title: 'Error',
+            description: 'No se pudo duplicar la unidad.',
+            variant: 'destructive',
+        });
     }
   };
 
@@ -141,24 +162,19 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                     <TableCell>{module?.code || 'N/A'}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Abrir menú</span>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                            <Edit2 className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-right space-x-2">
+                       <Button variant="outline" size="icon" onClick={() => handleDuplicate(unit)}>
+                        <Copy className="h-4 w-4" />
+                        <span className="sr-only">Duplicar</span>
+                      </Button>
+                      <Button variant="outline" size="icon" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                      </Button>
+                      <Button variant="destructive" size="icon" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Eliminar</span>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 )

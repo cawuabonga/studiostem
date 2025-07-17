@@ -37,10 +37,7 @@ export default function ManageUnitsPage() {
 
   return (
     <div className="space-y-6">
-        <Accordion type="single" collapsible className="w-full"
-          // Open by default
-            defaultValue="item-1"
-        >
+        <Accordion type="single" collapsible className="w-full">
             <AccordionItem value="item-1">
                 <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
                     <Upload className="h-5 w-5"/> Carga Masiva de Unidades Didácticas
