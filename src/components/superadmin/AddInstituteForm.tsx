@@ -10,12 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { addInstitute } from '@/config/firebase';
+import { hexToHsl } from '@/lib/utils';
 
 const addInstituteSchema = z.object({
   id: z.string().min(3, { message: 'El ID debe tener al menos 3 caracteres.' }).regex(/^[a-z0-9-]+$/, 'El ID solo puede contener letras minúsculas, números y guiones.'),
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   logoUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
-  primaryColor: z.string().regex(/^\d{1,3}\s\d{1,3}%\s\d{1,3}%$/, { message: 'Debe ser un HSL válido, ej: 225 65% 32%' }).optional().or(z.literal('')),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Debe ser un color hexadecimal válido.' }).optional().or(z.literal('')),
 });
 
 type AddInstituteFormValues = z.infer<typeof addInstituteSchema>;
@@ -34,7 +35,7 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
       id: '',
       name: '',
       logoUrl: '',
-      primaryColor: '',
+      primaryColor: '#1E3A8A', // Default color in HEX
     },
   });
 
@@ -44,7 +45,7 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
       const instituteData = {
         name: data.name,
         ...(data.logoUrl && { logoUrl: data.logoUrl }),
-        ...(data.primaryColor && { primaryColor: data.primaryColor }),
+        ...(data.primaryColor && { primaryColor: hexToHsl(data.primaryColor) }),
       };
       await addInstitute(data.id, instituteData);
       toast({
@@ -124,13 +125,13 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
                 name="primaryColor"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Color Primario (HSL)</FormLabel>
+                    <FormLabel>Color Primario</FormLabel>
                     <FormControl>
-                    <Input placeholder="225 65% 32%" {...field} />
+                      <div className="flex items-center gap-2">
+                        <Input type="color" className="p-1 h-10 w-14" {...field} />
+                        <Input type="text" className="h-10 flex-1" value={field.value} onChange={field.onChange} />
+                      </div>
                     </FormControl>
-                     <FormDescription>
-                        Formato: H S% L%
-                    </FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}

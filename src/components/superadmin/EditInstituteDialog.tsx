@@ -20,11 +20,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import type { Institute } from '@/types';
 import { updateInstitute } from '@/config/firebase';
+import { hexToHsl, hslToHex } from '@/lib/utils';
 
 const editInstituteSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   logoUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
-  primaryColor: z.string().regex(/^\d{1,3}\s\d{1,3}%\s\d{1,3}%$/, { message: 'Debe ser un HSL válido, ej: 225 65% 32%' }).optional().or(z.literal('')),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Debe ser un color hexadecimal válido.' }).optional().or(z.literal('')),
 });
 
 type EditInstituteFormValues = z.infer<typeof editInstituteSchema>;
@@ -44,16 +45,16 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
     defaultValues: {
       name: institute?.name || '',
       logoUrl: institute?.logoUrl || '',
-      primaryColor: institute?.primaryColor || '',
+      primaryColor: institute?.primaryColor ? hslToHex(institute.primaryColor) : '#000000',
     },
   });
 
   useEffect(() => {
-    if (institute) {
+    if (institute && isOpen) {
       form.reset({
         name: institute.name,
         logoUrl: institute.logoUrl || '',
-        primaryColor: institute.primaryColor || '',
+        primaryColor: institute.primaryColor ? hslToHex(institute.primaryColor) : '#000000',
       });
     }
   }, [institute, form, isOpen]);
@@ -61,7 +62,14 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
   const onSubmit = async (data: EditInstituteFormValues) => {
     setIsSubmitting(true);
     try {
-      await updateInstitute(institute.id, data);
+      const updateData: Partial<Institute> = {
+          name: data.name,
+          logoUrl: data.logoUrl,
+          primaryColor: data.primaryColor ? hexToHsl(data.primaryColor) : undefined
+      };
+      
+      await updateInstitute(institute.id, updateData);
+
       toast({
         title: '¡Éxito!',
         description: 'La información del instituto ha sido actualizada.',
@@ -121,9 +129,12 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
                 name="primaryColor"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>Color Primario (HSL)</FormLabel>
-                    <FormControl>
-                    <Input placeholder="225 65% 32%" {...field} />
+                    <FormLabel>Color Primario</FormLabel>
+                     <FormControl>
+                      <div className="flex items-center gap-2">
+                        <Input type="color" className="p-1 h-10 w-14" {...field} />
+                        <Input type="text" className="h-10 flex-1" value={field.value} onChange={field.onChange} />
+                      </div>
                     </FormControl>
                     <FormMessage />
                 </FormItem>
