@@ -29,7 +29,10 @@ const editProgramSchema = z.object({
   abbreviation: z.string().min(1, { message: 'La abreviación es requerida.' }),
   duration: z.string().min(1, { message: 'La duración es requerida (ej: 6 Semestres).' }),
   moduleCount: z.coerce.number().min(1, 'Debe haber al menos 1 módulo.').max(10, 'No puede haber más de 10 módulos.'),
-  moduleNames: z.array(z.object({ value: z.string().min(1, 'El nombre del módulo es requerido.') })),
+  modules: z.array(z.object({
+    name: z.string().min(1, 'El nombre del módulo es requerido.'),
+    code: z.string(),
+  })),
 });
 
 type EditProgramFormValues = z.infer<typeof editProgramSchema>;
@@ -53,41 +56,53 @@ export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialo
       abbreviation: program?.abbreviation || '',
       duration: program?.duration || '',
       moduleCount: program?.moduleCount || 1,
-      moduleNames: program?.moduleNames?.map(name => ({ value: name })) || [{ value: '' }],
+      modules: program?.modules || [{ name: '', code: '' }],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "moduleNames"
+    name: "modules"
   });
 
   const moduleCount = form.watch('moduleCount');
+  const programAbbreviation = form.watch('abbreviation');
 
   useEffect(() => {
     if (program && isOpen) {
       form.reset({
         ...program,
-        moduleNames: program.moduleNames.map(name => ({ value: name }))
+        modules: program.modules.map(mod => ({ ...mod }))
       });
     }
   }, [program, form, isOpen]);
 
   useEffect(() => {
     const currentCount = fields.length;
-    const newCount = Number(moduleCount); // Ensure it's a number
+    const newCount = Number(moduleCount);
     if (isNaN(newCount) || newCount < 1) return;
 
     if (newCount > currentCount) {
       for (let i = currentCount; i < newCount; i++) {
-        append({ value: '' });
+        const newCode = `MODULO ${i + 1} - ${programAbbreviation || ''}`.trim();
+        append({ name: '', code: newCode });
       }
     } else if (newCount < currentCount) {
       for (let i = currentCount; i > newCount; i--) {
         remove(i - 1);
       }
     }
-  }, [moduleCount, fields.length, append, remove]);
+  }, [moduleCount, fields.length, append, remove, programAbbreviation]);
+  
+  React.useEffect(() => {
+    fields.forEach((_, index) => {
+        const newCode = `MODULO ${index + 1} - ${programAbbreviation || ''}`.trim();
+        const currentCode = form.getValues(`modules.${index}.code`);
+        if (newCode !== currentCode) {
+            form.setValue(`modules.${index}.code`, newCode);
+        }
+    });
+  }, [programAbbreviation, fields, form]);
 
 
   const onSubmit = async (data: EditProgramFormValues) => {
@@ -97,11 +112,7 @@ export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialo
     }
     setIsSubmitting(true);
     try {
-      const updateData = {
-          ...data,
-          moduleNames: data.moduleNames.map(m => m.value)
-      };
-      await updateProgram(instituteId, program.id, updateData);
+      await updateProgram(instituteId, program.id, data);
       toast({
         title: '¡Éxito!',
         description: 'La información del programa ha sido actualizada.',
@@ -206,20 +217,34 @@ export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialo
 
             <div className="space-y-4">
               {fields.map((item, index) => (
-                <FormField
-                  key={item.id}
-                  control={form.control}
-                  name={`moduleNames.${index}.value`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <div key={item.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                    <FormField
+                    control={form.control}
+                    name={`modules.${index}.name`}
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
+                        <FormControl>
+                            <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    <FormField
+                    control={form.control}
+                    name={`modules.${index}.code`}
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Código del Módulo</FormLabel>
+                        <FormControl>
+                            <Input {...field} disabled />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                </div>
               ))}
             </div>
 

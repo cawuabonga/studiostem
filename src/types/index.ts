@@ -39,6 +39,11 @@ export interface Institute {
   primaryColor?: string; // HSL format e.g., "225 65% 32%"
 }
 
+export interface ProgramModule {
+  name: string;
+  code: string;
+}
+
 export interface Program {
   id: string;
   name: string;
@@ -46,7 +51,7 @@ export interface Program {
   abbreviation: string;
   duration: string;
   moduleCount: number;
-  moduleNames: string[];
+  modules: ProgramModule[];
 }
 
 export interface Unit {

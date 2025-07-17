@@ -309,7 +309,11 @@ const getSubCollectionRef = (instituteId: string, collectionName: string) => {
 // Programs
 export const addProgram = async (instituteId: string, data: Omit<Program, 'id'>) => {
     const programsCol = getSubCollectionRef(instituteId, 'programs');
-    await addDoc(programsCol, data);
+    const programData = {
+        ...data,
+        modules: data.modules.map(module => ({ ...module })) // Ensure it's a plain object
+    };
+    await addDoc(programsCol, programData);
 }
 
 export const getPrograms = async (instituteId: string): Promise<Program[]> => {
@@ -321,7 +325,11 @@ export const getPrograms = async (instituteId: string): Promise<Program[]> => {
 
 export const updateProgram = async (instituteId: string, programId: string, data: Partial<Omit<Program, 'id'>>) => {
     const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
-    await updateDoc(programRef, data);
+    const updateData = {
+        ...data,
+        ...(data.modules && { modules: data.modules.map(module => ({...module})) }),
+    };
+    await updateDoc(programRef, updateData);
 }
 
 export const deleteProgram = async (instituteId: string, programId: string) => {

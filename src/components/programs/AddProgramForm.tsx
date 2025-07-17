@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { addProgram } from '@/config/firebase';
 import { Separator } from '../ui/separator';
+import { cn } from '@/lib/utils';
 
 const addProgramSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -19,7 +20,10 @@ const addProgramSchema = z.object({
   abbreviation: z.string().min(1, { message: 'La abreviación es requerida.' }),
   duration: z.string().min(1, { message: 'La duración es requerida (ej: 6 Semestres).' }),
   moduleCount: z.coerce.number().min(1, 'Debe haber al menos 1 módulo.').max(10, 'No puede haber más de 10 módulos.'),
-  moduleNames: z.array(z.object({ value: z.string().min(1, 'El nombre del módulo es requerido.') })),
+  modules: z.array(z.object({ 
+    name: z.string().min(1, 'El nombre del módulo es requerido.'),
+    code: z.string(), // El código se genera automáticamente
+  })),
 });
 
 type AddProgramFormValues = z.infer<typeof addProgramSchema>;
@@ -41,29 +45,41 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
       abbreviation: '',
       duration: '',
       moduleCount: 1,
-      moduleNames: [{ value: '' }],
+      modules: [{ name: '', code: '' }],
     },
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "moduleNames"
+    name: "modules"
   });
 
   const moduleCount = form.watch('moduleCount');
+  const programAbbreviation = form.watch('abbreviation');
 
   React.useEffect(() => {
     const currentCount = fields.length;
     if (moduleCount > currentCount) {
       for (let i = currentCount; i < moduleCount; i++) {
-        append({ value: '' });
+        const newCode = `MODULO ${i + 1} - ${programAbbreviation || ''}`.trim();
+        append({ name: '', code: newCode });
       }
     } else if (moduleCount < currentCount) {
       for (let i = currentCount; i > moduleCount; i--) {
         remove(i - 1);
       }
     }
-  }, [moduleCount, fields, append, remove]);
+  }, [moduleCount, fields, append, remove, programAbbreviation]);
+
+  React.useEffect(() => {
+    fields.forEach((_, index) => {
+        const newCode = `MODULO ${index + 1} - ${programAbbreviation || ''}`.trim();
+        const currentCode = form.getValues(`modules.${index}.code`);
+        if (newCode !== currentCode) {
+            form.setValue(`modules.${index}.code`, newCode);
+        }
+    });
+  }, [programAbbreviation, fields, form]);
 
 
   const onSubmit = async (data: AddProgramFormValues) => {
@@ -73,11 +89,7 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
     }
     setLoading(true);
     try {
-      const programData = {
-          ...data,
-          moduleNames: data.moduleNames.map(m => m.value)
-      };
-      await addProgram(instituteId, programData);
+      await addProgram(instituteId, data);
       toast({
         title: '¡Éxito!',
         description: 'El programa de estudio ha sido registrado.',
@@ -175,20 +187,34 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
 
         <div className="space-y-4">
           {fields.map((field, index) => (
-            <FormField
-              key={field.id}
-              control={form.control}
-              name={`moduleNames.${index}.value`}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
-                  <FormControl>
-                    <Input placeholder={`Ej: Módulo de Atención Primaria`} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div key={field.id} className="grid grid-cols-1 md:grid-cols-2 gap-4 border p-4 rounded-md">
+                 <FormField
+                    control={form.control}
+                    name={`modules.${index}.name`}
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
+                        <FormControl>
+                            <Input placeholder={`Ej: Módulo de Atención Primaria`} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                 <FormField
+                    control={form.control}
+                    name={`modules.${index}.code`}
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Código del Módulo</FormLabel>
+                        <FormControl>
+                            <Input {...field} disabled />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+            </div>
           ))}
         </div>
 
