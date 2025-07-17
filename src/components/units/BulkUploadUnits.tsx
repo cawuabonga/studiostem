@@ -29,15 +29,24 @@ export function BulkUploadUnits({ onUploadSuccess }: BulkUploadUnitsProps) {
 
     const handleDownloadTemplate = () => {
         const worksheet = XLSX.utils.json_to_sheet([
-            { name: "Matemática Aplicada", code: "MA-101", credits: 4, semester: 1, programId: "id-del-programa-de-estudio" },
+            { 
+                programId: "id-del-programa", 
+                moduleId: "codigo-del-modulo",
+                name: "Matemática Aplicada", 
+                code: "MA-101", 
+                credits: 4, 
+                theoreticalHours: 2,
+                practicalHours: 2,
+                period: "MAR-JUL",
+                unitType: "Especifica",
+            },
         ]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Unidades");
-        XLSX.utils.book_set_sheet_visibility(workbook, "Unidades", 1); // Hide the sheet with instructions/examples if any
         XLSX.writeFile(workbook, "plantilla_unidades.xlsx");
         toast({
             title: "Nota Importante",
-            description: "Asegúrese de reemplazar 'id-del-programa-de-estudio' con el ID real del programa de estudios correspondiente.",
+            description: "Asegúrese de reemplazar 'id-del-programa' y 'codigo-del-modulo' con los IDs reales correspondientes.",
             duration: 8000
         })
     };
@@ -62,12 +71,16 @@ export function BulkUploadUnits({ onUploadSuccess }: BulkUploadUnitsProps) {
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-                const unitsToUpload: Omit<Unit, 'id'>[] = json.map(row => ({
+                const unitsToUpload: Omit<Unit, 'id' | 'totalHours'>[] = json.map(row => ({
+                    programId: String(row.programId),
+                    moduleId: String(row.moduleId),
                     name: String(row.name),
                     code: String(row.code),
                     credits: Number(row.credits),
-                    semester: Number(row.semester),
-                    programId: String(row.programId),
+                    theoreticalHours: Number(row.theoreticalHours),
+                    practicalHours: Number(row.practicalHours),
+                    period: String(row.period) as any,
+                    unitType: String(row.unitType) as any,
                 }));
 
                 await bulkAddUnits(instituteId, unitsToUpload);
@@ -81,7 +94,7 @@ export function BulkUploadUnits({ onUploadSuccess }: BulkUploadUnitsProps) {
                  console.error("Error en carga masiva:", error);
                 toast({
                     title: 'Error en la Carga',
-                    description: 'Hubo un problema al procesar el archivo. Revisa el formato y los datos, especialmente los IDs de programa.',
+                    description: 'Hubo un problema al procesar el archivo. Revisa el formato y los datos, especialmente los IDs de programa y módulo.',
                     variant: 'destructive',
                 });
             } finally {

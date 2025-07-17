@@ -365,7 +365,11 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id'>[
     const unitsCol = getSubCollectionRef(instituteId, 'units');
     units.forEach(unitData => {
         const docRef = doc(unitsCol); 
-        batch.set(docRef, unitData);
+        const dataWithHours = {
+            ...unitData,
+            totalHours: (unitData.theoreticalHours || 0) + (unitData.practicalHours || 0)
+        }
+        batch.set(docRef, dataWithHours);
     });
     await batch.commit();
 }

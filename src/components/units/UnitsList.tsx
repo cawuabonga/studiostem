@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getUnits, getPrograms } from '@/config/firebase';
-import type { Unit, Program } from '@/types';
+import type { Unit, Program, ProgramModule } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
@@ -29,7 +29,7 @@ const PAGE_SIZE = 10;
 
 export function UnitsList({ onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
-  const [programs, setPrograms] = useState<Map<string, string>>(new Map());
+  const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -47,7 +47,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           getUnits(instituteId),
           getPrograms(instituteId)
       ]);
-      const programMap = new Map(fetchedPrograms.map(p => [p.id, p.name]));
+      const programMap = new Map(fetchedPrograms.map(p => [p.id, p]));
       setUnits(fetchedUnits);
       setPrograms(programMap);
     } catch (error) {
@@ -79,7 +79,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     units.filter(unit => 
         unit.name.toLowerCase().includes(filter.toLowerCase()) ||
         unit.code.toLowerCase().includes(filter.toLowerCase()) ||
-        (programs.get(unit.programId) || '').toLowerCase().includes(filter.toLowerCase())
+        (programs.get(unit.programId)?.name || '').toLowerCase().includes(filter.toLowerCase())
     ), [units, filter, programs]);
   
   const paginatedUnits = useMemo(() => {
@@ -123,42 +123,46 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Código</TableHead>
               <TableHead>Programa</TableHead>
-              <TableHead>Ciclo</TableHead>
-              <TableHead>Créditos</TableHead>
+              <TableHead>Módulo</TableHead>
+              <TableHead>Período</TableHead>
+              <TableHead>Total Horas</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedUnits.map((unit) => (
-              <TableRow key={unit.id}>
-                <TableCell className="font-medium">{unit.name}</TableCell>
-                <TableCell>{unit.code}</TableCell>
-                <TableCell>{programs.get(unit.programId) || 'N/A'}</TableCell>
-                <TableCell>{unit.semester}</TableCell>
-                <TableCell>{unit.credits}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menú</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+            {paginatedUnits.map((unit) => {
+                const program = programs.get(unit.programId);
+                const module = program?.modules.find(m => m.code === unit.moduleId);
+                return (
+                  <TableRow key={unit.id}>
+                    <TableCell className="font-medium">{unit.name}</TableCell>
+                    <TableCell>{program?.name || 'N/A'}</TableCell>
+                    <TableCell>{module?.name || 'N/A'}</TableCell>
+                    <TableCell>{unit.period}</TableCell>
+                    <TableCell>{unit.totalHours}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menú</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+            })}
           </TableBody>
         </Table>
       </div>

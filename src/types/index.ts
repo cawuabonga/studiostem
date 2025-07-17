@@ -54,13 +54,21 @@ export interface Program {
   modules: ProgramModule[];
 }
 
+export type UnitPeriod = 'MAR-JUL' | 'AGO-DIC';
+export type UnitType = 'Empleabilidad' | 'Especifica';
+
 export interface Unit {
   id: string;
   name: string;
   code: string;
   credits: number;
-  semester: number;
+  theoreticalHours: number;
+  practicalHours: number;
+  totalHours: number;
+  period: UnitPeriod;
+  unitType: UnitType;
   programId: string;
+  moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
 }
 
 export interface Teacher {
