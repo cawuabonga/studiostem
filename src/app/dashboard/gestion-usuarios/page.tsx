@@ -2,113 +2,75 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
-import { StudentsTable } from "@/components/users/StudentsTable";
-import { StaffTable } from "@/components/users/StaffTable";
-import { AddStudentForm } from "@/components/users/AddStudentForm";
-import { Separator } from "@/components/ui/separator";
-import { AddStaffForm } from "@/components/users/AddStaffForm";
+import { useEffect } from "react";
 
-export default function ManageUsersPage() {
-  const { user, instituteId, loading } = useAuth();
+const userModules = [
+  {
+    title: "Administrar Usuarios",
+    description: "Gestionar los perfiles de estudiantes y personal del instituto.",
+    href: "/dashboard/gestion-usuarios/administrar",
+    icon: Users,
+    roles: ["Admin", "Coordinator"],
+  },
+  // Se pueden agregar más módulos aquí en el futuro.
+  // {
+  //   title: "Carga Masiva de Usuarios",
+  //   description: "Registrar múltiples usuarios a la vez usando una plantilla.",
+  //   href: "/dashboard/gestion-usuarios/carga-masiva",
+  //   icon: UserPlus,
+  //   roles: ["Admin", "Coordinator"],
+  // },
+];
+
+export default function GestionUsuariosPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
-      router.push('/dashboard');
+      router.push("/dashboard");
     }
-    if (!loading && !instituteId) {
-        router.push('/dashboard/institute');
-    }
-  }, [user, instituteId, loading, router]);
+  }, [user, loading, router]);
+  
+  const accessibleModules = userModules.filter(module => user?.role && module.roles.includes(user.role));
 
-  const handleDataChange = useCallback(() => {
-    setRefreshKey(prevKey => prevKey + 1);
-  }, []);
-
-  if (loading || !instituteId || !user) {
+  if (loading || !user || !["Admin", "Coordinator"].includes(user.role)) {
     return <p>Cargando...</p>;
   }
 
   return (
     <div className="space-y-6">
-      <Card>
+       <Card>
         <CardHeader>
-          <CardTitle>Gestión de Usuarios del Instituto</CardTitle>
+          <CardTitle>Módulo de Gestión de Usuarios</CardTitle>
           <CardDescription>
-            Administra los perfiles y roles de los estudiantes y el personal de tu instituto.
+            Administra los usuarios, perfiles y roles de tu instituto. Selecciona una opción para comenzar.
           </CardDescription>
         </CardHeader>
       </Card>
-      <Tabs defaultValue="list" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="list">Listado de Usuarios</TabsTrigger>
-          <TabsTrigger value="register">Registrar Nuevos Usuarios</TabsTrigger>
-        </TabsList>
-        <TabsContent value="list" className="mt-6">
-            <Tabs defaultValue="students" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="students">Estudiantes</TabsTrigger>
-                <TabsTrigger value="staff">Personal del Instituto</TabsTrigger>
-                </TabsList>
-                <TabsContent value="students" className="mt-6">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Lista de Estudiantes</CardTitle>
-                    <CardDescription>
-                        Ver y gestionar los usuarios con el rol de estudiante.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <StudentsTable key={refreshKey} onDataChange={handleDataChange} />
-                    </CardContent>
-                </Card>
-                </TabsContent>
-                <TabsContent value="staff" className="mt-6">
-                <Card>
-                    <CardHeader>
-                    <CardTitle>Lista de Personal</CardTitle>
-                    <CardDescription>
-                        Ver y gestionar los usuarios con roles de Docente, Coordinador y Administrador.
-                    </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                    <StaffTable key={refreshKey} onDataChange={handleDataChange} />
-                    </CardContent>
-                </Card>
-                </TabsContent>
-            </Tabs>
-        </TabsContent>
-        <TabsContent value="register" className="mt-6 space-y-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Registrar Nuevo Estudiante</CardTitle>
-                    <CardDescription>
-                        Crea una cuenta para un nuevo estudiante.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AddStudentForm onUserAdded={handleDataChange} />
-                </CardContent>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+        {accessibleModules.map((module) => (
+          <Link href={module.href} key={module.title} className="flex">
+            <Card className="flex flex-col w-full hover:bg-muted/50 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-medium">
+                  {module.title}
+                </CardTitle>
+                <module.icon className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground">
+                  {module.description}
+                </p>
+              </CardContent>
             </Card>
-            <Separator />
-            <Card>
-                <CardHeader>
-                    <CardTitle>Registrar Nuevo Personal</CardTitle>
-                    <CardDescription>
-                        Crea una cuenta para un nuevo docente o administrativo y asígnale un rol.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <AddStaffForm onUserAdded={handleDataChange} />
-                </CardContent>
-            </Card>
-        </TabsContent>
-      </Tabs>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
