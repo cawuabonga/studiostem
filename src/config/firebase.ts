@@ -133,21 +133,18 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 };
 
 // --- Login Image Management ---
-const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-});
-
-
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    const dataUrl = await fileToDataUri(file);
+    const filePath = `login-images/${new Date().getTime()}-${file.name}`;
+    const storageRef = ref(firebaseStorage, filePath);
+
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
 
     const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
     await setDoc(imageDocRef, {
         name,
-        url: dataUrl, // Store the Base64 Data URI
+        url: downloadURL,
+        path: filePath,
         createdAt: serverTimestamp(),
     });
 };
@@ -164,7 +161,13 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    // No need to delete from storage, just from Firestore
+    // Delete from Firebase Storage
+    if (image.path) {
+        const storageRef = ref(firebaseStorage, image.path);
+        await deleteObject(storageRef);
+    }
+    
+    // Delete from Firestore
     const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
 };
