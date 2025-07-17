@@ -3,27 +3,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Users can read and update their own profile.
-    // SuperAdmins can read and write to any user profile.
-    match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+
+    // Helper functions to check user roles and ownership
+    function isSuperAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    // Authenticated users can read the list of institutes (for login, selection, etc.).
-    // Only SuperAdmins can create, update, or delete institutes.
-    match /institutes/{instituteId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    function isRoleIn(roles) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
     }
     
-    // Admins and Coordinators can manage documents (programs, units, teachers, etc.) 
-    // ONLY within their own institute.
-    match /institutes/{instituteId}/{subcollection}/{docId} {
-        allow read, write: if request.auth != null &&
-                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+    function isAssignedToInstitute(instituteId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    }
+
+    // Rules for the institutes collection
+    match /institutes/{instituteId} {
+      allow read: if request.auth != null;
+      allow write: if isSuperAdmin();
+      
+      // Rules for institute subcollections (programs, units, teachers, etc.)
+      match /{collection}/{document} {
+        allow read, write: if isAssignedToInstitute(instituteId) && isRoleIn(['Admin', 'Coordinator']);
+      }
+    }
+
+    // Rules for the users collection
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      // Users can update their own profile, SuperAdmins can update any profile
+      allow update: if isOwner(userId) || isSuperAdmin();
+      // Only SuperAdmins can create or delete user documents directly
+      allow create, delete: if isSuperAdmin();
+    }
+
+    // Rules for the global configuration collection
+    match /config/{docId} {
+        // Any authenticated user can read the design settings for the login page
+        allow read: if request.auth != null;
+        // Only SuperAdmins can change the design settings
+        allow write: if isSuperAdmin();
     }
   }
 }
