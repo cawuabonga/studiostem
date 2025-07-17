@@ -23,8 +23,7 @@ export interface LoginDesign {
 export interface LoginImage {
   id: string;
   name: string;
-  url: string;
-  path: string; // Firebase Storage path
+  url: string; // This will now be a long Base64 Data URI string
   createdAt: Timestamp;
 }
 

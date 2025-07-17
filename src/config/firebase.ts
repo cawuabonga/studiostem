@@ -132,21 +132,69 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
     return null;
 };
 
+
+// --- Helper function for image compression ---
+const compressAndConvertToDataURI = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        if (!ctx) {
+          return reject(new Error('Failed to get canvas context'));
+        }
+
+        // --- RESIZING ---
+        const MAX_WIDTH = 1024; // Max width for the image
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // --- COMPRESSION ---
+        // Convert to JPEG with quality 0.75
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        resolve(dataUrl);
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    const filePath = `login-images/${new Date().getTime()}-${file.name}`;
-    const storageRef = ref(firebaseStorage, filePath);
+    try {
+        const dataUrl = await compressAndConvertToDataURI(file);
 
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
+        if (dataUrl.length > 1048576) { // Firestore document limit is 1 MiB (1,048,576 bytes)
+            throw new Error('La imagen es demasiado grande incluso después de la compresión. Por favor, elige una imagen más pequeña.');
+        }
 
-    const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
-    await setDoc(imageDocRef, {
-        name,
-        url: downloadURL,
-        path: filePath,
-        createdAt: serverTimestamp(),
-    });
+        const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
+        await setDoc(imageDocRef, {
+            name,
+            url: dataUrl, // Save Data URI directly
+            createdAt: serverTimestamp(),
+        });
+    } catch (error) {
+        console.error('Error processing or uploading image:', error);
+        throw error; // Re-throw to be caught by the form handler
+    }
 };
 
 export const getLoginImages = async (): Promise<LoginImage[]> => {
@@ -161,13 +209,6 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    // Delete from Firebase Storage
-    if (image.path) {
-        const storageRef = ref(firebaseStorage, image.path);
-        await deleteObject(storageRef);
-    }
-    
-    // Delete from Firestore
     const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
 };
