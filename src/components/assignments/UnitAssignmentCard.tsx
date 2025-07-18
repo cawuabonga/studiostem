@@ -14,6 +14,12 @@ interface UnitAssignmentCardProps {
 }
 
 export function UnitAssignmentCard({ unit, teachers, selectedTeacherId, onAssignmentChange }: UnitAssignmentCardProps) {
+  
+  const handleValueChange = (value: string) => {
+    // Treat "unassigned" as an empty string for the parent component's logic.
+    onAssignmentChange(value === 'unassigned' ? '' : value);
+  };
+  
   return (
     <Card className="bg-muted/30">
       <CardHeader className="pb-2">
@@ -22,12 +28,12 @@ export function UnitAssignmentCard({ unit, teachers, selectedTeacherId, onAssign
       <CardContent className="pb-4">
          <div className="space-y-2">
             <Label htmlFor={`teacher-select-${unit.id}`}>Docente Asignado</Label>
-            <Select value={selectedTeacherId} onValueChange={onAssignmentChange}>
+            <Select value={selectedTeacherId || 'unassigned'} onValueChange={handleValueChange}>
                 <SelectTrigger id={`teacher-select-${unit.id}`}>
                     <SelectValue placeholder="Sin asignar" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="">Sin asignar</SelectItem>
+                    <SelectItem value="unassigned">Sin asignar</SelectItem>
                     {teachers.map(teacher => (
                         <SelectItem key={teacher.id} value={teacher.id}>
                             {teacher.fullName}
