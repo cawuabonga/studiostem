@@ -9,13 +9,13 @@ interface ModuleAssignmentGroupProps {
     module: ProgramModule;
     units: Unit[];
     teachers: Teacher[];
-    assignments: { 'MAR-JUL': Assignment; 'AGO-DIC': Assignment };
+    assignments: Assignment;
     onAssignmentChange: (period: UnitPeriod, unitId: string, teacherId: string) => void;
 }
 
 export function ModuleAssignmentGroup({ module, units, teachers, assignments, onAssignmentChange }: ModuleAssignmentGroupProps) {
     if (units.length === 0) {
-        return null; // Don't render anything if there are no units for this module
+        return null; // Don't render anything if there are no units for this module in this period
     }
 
     return (
@@ -31,7 +31,7 @@ export function ModuleAssignmentGroup({ module, units, teachers, assignments, on
                         unit={unit}
                         teachers={teachers}
                         period={unit.period}
-                        selectedTeacherId={assignments[unit.period]?.[unit.id] || ''}
+                        selectedTeacherId={assignments[unit.id] || ''}
                         onAssignmentChange={(teacherId) => onAssignmentChange(unit.period, unit.id, teacherId)}
                     />
                 ))}

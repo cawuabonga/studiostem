@@ -6,18 +6,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getTeachers, getAssignments, saveAssignments, getPrograms } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, Program, ProgramModule } from '@/types';
+import { getUnits, getTeachers, getAssignments, getPrograms } from '@/config/firebase';
+import type { Unit, Teacher, Assignment, Program, ProgramModule, UnitPeriod } from '@/types';
 import { Save } from 'lucide-react';
-import { ModuleAssignmentGroup } from './ModuleAssignmentGroup';
+import { AssignmentPeriodColumn } from './AssignmentPeriodColumn';
 
 interface AssignmentBoardProps {
   instituteId: string;
   programId: string;
   year: string;
 }
-
-type UnitsByModule = { [moduleId: string]: Unit[] };
 
 export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoardProps) {
   const [units, setUnits] = useState<Unit[]>([]);
@@ -61,7 +59,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
     fetchData();
   }, [fetchData]);
 
-  const handleAssignmentChange = (period: 'MAR-JUL' | 'AGO-DIC', unitId: string, teacherId: string) => {
+  const handleAssignmentChange = (period: UnitPeriod, unitId: string, teacherId: string) => {
     setAssignments(prev => ({
       ...prev,
       [period]: {
@@ -90,15 +88,11 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
     }
   };
   
-  const unitsByModule = useMemo(() => {
-    return units.reduce((acc, unit) => {
-      const moduleId = unit.moduleId;
-      if (!acc[moduleId]) {
-        acc[moduleId] = [];
-      }
-      acc[moduleId].push(unit);
-      return acc;
-    }, {} as UnitsByModule);
+  const unitsByPeriod = useMemo(() => {
+    return {
+      'MAR-JUL': units.filter(u => u.period === 'MAR-JUL'),
+      'AGO-DIC': units.filter(u => u.period === 'AGO-DIC'),
+    }
   }, [units]);
 
   if (loading) {
@@ -129,7 +123,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
             <div>
                 <CardTitle>Tablero de Asignaciones del Año {year}</CardTitle>
                 <CardDescription>
-                    {`Asigne un docente a cada unidad didáctica para el programa de ${program?.name || '...'}.`}
+                    {`Asigne un docente a cada unidad didáctica del programa ${program?.name || '...'} para ambos períodos.`}
                 </CardDescription>
             </div>
             <Button onClick={handleSaveAssignments} disabled={isSaving}>
@@ -138,20 +132,23 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {program?.modules.map(module => (
-          <ModuleAssignmentGroup
-            key={module.code}
-            module={module}
-            units={unitsByModule[module.code] || []}
+      <CardContent className="grid md:grid-cols-2 gap-6 items-start">
+          <AssignmentPeriodColumn
+            period="MAR-JUL"
+            units={unitsByPeriod['MAR-JUL']}
+            program={program}
             teachers={teachers}
-            assignments={assignments}
+            assignments={assignments['MAR-JUL']}
             onAssignmentChange={handleAssignmentChange}
           />
-        ))}
-        {Object.keys(unitsByModule).length === 0 && !loading && (
-            <p className="text-muted-foreground text-center">No hay unidades didácticas registradas para este programa.</p>
-        )}
+          <AssignmentPeriodColumn
+            period="AGO-DIC"
+            units={unitsByPeriod['AGO-DIC']}
+            program={program}
+            teachers={teachers}
+            assignments={assignments['AGO-DIC']}
+            onAssignmentChange={handleAssignmentChange}
+          />
       </CardContent>
     </Card>
   );
