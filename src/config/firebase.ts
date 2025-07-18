@@ -343,7 +343,15 @@ export const addStaffProfile = async (instituteId: string, data: Omit<StaffProfi
     await setDoc(profileRef, data);
 };
 
-export const bulkAddStaff = async (instituteId: string, staffList: StaffProfile[]) => {
+export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    const q = query(staffCol, orderBy("displayName"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ ...doc.data() } as StaffProfile));
+};
+
+
+export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffProfile, 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     staffList.forEach(staffData => {
@@ -357,4 +365,9 @@ export const bulkAddStaff = async (instituteId: string, staffList: StaffProfile[
 export const updateStaffProfile = async (instituteId: string, dni: string, data: Partial<StaffProfile>) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
     await updateDoc(staffRef, data);
+}
+
+export const deleteStaffProfile = async (instituteId: string, dni: string) => {
+    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
+    await deleteDoc(staffRef);
 }
