@@ -1,10 +1,10 @@
 
 "use client";
 
+import React, { useEffect, cloneElement, isValidElement } from "react";
 import DashboardMainLayout from "@/components/layout/DashboardMainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, cloneElement, isValidElement } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
