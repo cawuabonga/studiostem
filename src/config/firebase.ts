@@ -347,43 +347,37 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
         throw new Error("El usuario no existe o ya ha sido verificado.");
     }
 
-    // Search in staff profiles first
-    const staffProfilesQuery = query(
-        collectionGroup(db, 'staffProfiles'), 
-        where('dni', '==', dni),
-        where('claimed', '==', false)
-    );
-    let querySnapshot = await getDocs(staffProfilesQuery);
-    
-    let profileDoc: any;
+    let profileDoc;
     let profileData: StaffProfile | StudentProfile | null = null;
-    let profileType: 'staff' | 'student' | null = null;
+
+    // Search in staff profiles first
+    const staffProfilesQuery = query(collectionGroup(db, 'staffProfiles'), where('dni', '==', dni));
+    let querySnapshot = await getDocs(staffProfilesQuery);
 
     if (!querySnapshot.empty) {
         profileDoc = querySnapshot.docs[0];
         profileData = profileDoc.data() as StaffProfile;
-        profileType = 'staff';
+        if (profileData.claimed) {
+            throw new Error("Este perfil ya ha sido reclamado por otro usuario.");
+        }
     } else {
         // If not found in staff, search in student profiles
-        const studentProfilesQuery = query(
-            collectionGroup(db, 'studentProfiles'),
-            where('dni', '==', dni),
-            where('claimed', '==', false)
-        );
+        const studentProfilesQuery = query(collectionGroup(db, 'studentProfiles'), where('dni', '==', dni));
         querySnapshot = await getDocs(studentProfilesQuery);
 
         if (!querySnapshot.empty) {
             profileDoc = querySnapshot.docs[0];
             profileData = profileDoc.data() as StudentProfile;
-            profileType = 'student';
+            if (profileData.claimed) {
+                throw new Error("Este perfil ya ha sido reclamado por otro usuario.");
+            }
         }
     }
 
-
-    if (!profileDoc || !profileData || !profileType) {
-        throw new Error("No se encontró ningún perfil sin reclamar con ese DNI.");
+    if (!profileDoc || !profileData) {
+        throw new Error("No se encontró ningún perfil con ese DNI.");
     }
-    
+
     if (querySnapshot.size > 1) {
         console.warn(`Se encontraron múltiples perfiles para el DNI ${dni}. Se usará el primero.`);
     }
