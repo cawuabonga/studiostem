@@ -23,7 +23,7 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, o
     <div className="flex items-center justify-between rounded-md border bg-card p-3 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 flex-1 pr-4">
         <span className="text-sm font-medium flex-1">{unit.name}</span>
-        <Badge variant="outline" className="w-fit mt-1 sm:mt-0">{period}</Badge>
+        
       </div>
       <div className="w-56">
         <Select value={selectedTeacherId || 'unassigned'} onValueChange={handleValueChange}>
