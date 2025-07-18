@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -328,3 +328,21 @@ export const saveAssignments = async (
   const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
   await setDoc(assignmentDocRef, assignments);
 };
+
+
+// STAFF PROFILES - NO LONGER RECOMMENDED, BUT KEPT FOR REFERENCE
+export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffProfile, 'dni'>[]) => {
+    const batch = writeBatch(db);
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    staffList.forEach(staffData => {
+        // In Firestore, the document ID will be the DNI
+        const docRef = doc(staffCol, staffData.dni);
+        batch.set(docRef, staffData);
+    });
+    await batch.commit();
+};
+
+export const updateStaffProfile = async (instituteId: string, dni: string, data: Partial<StaffProfile>) => {
+    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
+    await updateDoc(staffRef, data);
+}

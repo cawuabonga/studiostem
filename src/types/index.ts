@@ -13,6 +13,21 @@ export interface AppUser {
   instituteId: string | null;
 }
 
+// Represents a pre-created profile for a staff member, identified by DNI.
+// This is created by an admin and can be "claimed" by a user.
+export interface StaffProfile {
+  dni: string;
+  displayName: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  condition: 'NOMBRADO' | 'CONTRATADO';
+  programId: string;
+  // This will be null until a user account is linked
+  linkedUserUid?: string | null;
+}
+
+
 export interface LoginDesign {
   imageUrl: string;
   backgroundColor: string;
