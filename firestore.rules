@@ -1,42 +1,38 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+    
     // Regla para la colección de usuarios
+    // 1. Permite a los usuarios crear su propio documento.
+    // 2. Permite a los usuarios leer/actualizar su propio documento.
+    // 3. Permite a los SuperAdmins leer toda la colección de usuarios.
     match /users/{userId} {
-      // Un usuario puede crear su propio perfil al registrarse.
-      allow create;
-
-      // Un usuario autenticado puede leer y actualizar su propio perfil.
+      allow create: if request.auth != null;
       allow read, update: if request.auth.uid == userId;
-
-      // El SuperAdmin puede leer y escribir en cualquier documento de usuario.
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    // Reglas para la configuración de la aplicación
-    match /config/{docId=**} {
-      // Cualquiera puede leer la configuración de diseño del login.
-      allow read;
-      // Solo el SuperAdmin puede escribir en la configuración.
+    // Regla para la configuración del login (pública)
+    // Cualquiera (incluso sin autenticar) puede leer el diseño del login.
+    // Solo los SuperAdmins pueden escribir en la configuración.
+    match /config/{document=**} {
+      allow read: if true;
       allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    // Reglas para los datos específicos de cada instituto
+    // Regla para la gestión de institutos
+    // Solo los SuperAdmins pueden leer y escribir en la colección de institutos.
+    match /institutes/{instituteId} {
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // Regla para el contenido DENTRO de un instituto (programas, unidades, etc.)
+    // Permite a los Admins y Coordinadores gestionar los datos de SU instituto.
     match /institutes/{instituteId}/{document=**} {
-      // Solo permite leer si el usuario pertenece a ese instituto o es un SuperAdmin.
-      allow read: if request.auth.uid != null && 
-                   (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId ||
-                    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin');
-      
-      // Solo permite escribir si el usuario es Admin o Coordinador de ese instituto, o es un SuperAdmin.
-      allow write: if request.auth.uid != null &&
-                    (
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator']) ||
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin'
-                    );
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId
+                          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
     }
   }
 }
