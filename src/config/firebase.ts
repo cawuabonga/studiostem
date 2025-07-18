@@ -2,8 +2,8 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage } from '@/types';
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -216,9 +216,13 @@ export const deleteProgram = async (instituteId: string, programId: string) => {
 }
 
 // Units
-export const addUnit = async (instituteId: string, data: Omit<Unit, 'id'>) => {
+export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'totalHours'> & { totalHours?: number }) => {
     const unitsCol = getSubCollectionRef(instituteId, 'units');
-    await addDoc(unitsCol, data);
+     const unitData = {
+        ...data,
+        totalHours: (data.theoreticalHours || 0) + (data.practicalHours || 0)
+    };
+    await addDoc(unitsCol, unitData);
 }
 
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
@@ -238,7 +242,7 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
     await deleteDoc(unitRef);
 }
 
-export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id'>[]) => {
+export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours'>[]) => {
     const batch = writeBatch(db);
     const unitsCol = getSubCollectionRef(instituteId, 'units');
     units.forEach(unitData => {

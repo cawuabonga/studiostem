@@ -11,9 +11,6 @@ export interface AppUser {
   role: UserRole;
   dni?: string;
   instituteId: string | null;
-  phone?: string;
-  condition?: 'NOMBRADO' | 'CONTRATADO';
-  programId?: string;
 }
 
 export interface LoginDesign {
