@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher } from '@/types';
-import { deleteTeacher } from '@/config/firebase';
+import { deleteStaffProfile } from '@/config/firebase';
 
 interface DeleteTeacherDialogProps {
   teacher: Teacher;
@@ -31,16 +31,17 @@ export function DeleteTeacherDialog({ teacher, instituteId, isOpen, onClose }: D
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteTeacher(instituteId, teacher.id);
+      // The teacher's ID is their DNI, which is the ID for the staff profile
+      await deleteStaffProfile(instituteId, teacher.id);
       toast({
         title: '¡Eliminado!',
-        description: 'El docente ha sido eliminado.',
+        description: 'El perfil del docente ha sido eliminado.',
       });
       onClose(true);
     } catch (error) {
       toast({
         title: 'Error',
-        description: 'No se pudo eliminar el docente. Intenta de nuevo.',
+        description: 'No se pudo eliminar el perfil del docente. Intenta de nuevo.',
         variant: 'destructive',
       });
       onClose(false);

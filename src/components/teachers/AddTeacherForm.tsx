@@ -8,17 +8,20 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { addTeacher } from '@/config/firebase';
+import { addStaffProfile, getPrograms } from '@/config/firebase';
+import type { Program } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+
+const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addTeacherSchema = z.object({
-  fullName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }),
-  specialty: z.string().min(2, { message: 'La especialidad es requerida.' }),
-  active: z.boolean().default(true),
+  condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
+  programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
 });
 
 type AddTeacherFormValues = z.infer<typeof addTeacherSchema>;
@@ -31,26 +34,32 @@ interface AddTeacherFormProps {
 export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
+  const [programs, setPrograms] = React.useState<Program[]>([]);
+
+  React.useEffect(() => {
+    if (instituteId) {
+      getPrograms(instituteId).then(setPrograms).catch(console.error);
+    }
+  }, [instituteId]);
 
   const form = useForm<AddTeacherFormValues>({
     resolver: zodResolver(addTeacherSchema),
     defaultValues: {
-      fullName: '',
+      displayName: '',
       dni: '',
       email: '',
       phone: '',
-      specialty: '',
-      active: true,
     },
   });
 
   const onSubmit = async (data: AddTeacherFormValues) => {
     setLoading(true);
     try {
-      await addTeacher(instituteId, data);
+      // Create a StaffProfile with the role of 'Teacher'
+      await addStaffProfile(instituteId, { ...data, role: 'Teacher' });
       toast({
         title: '¡Éxito!',
-        description: 'El docente ha sido registrado.',
+        description: 'El perfil del docente ha sido registrado.',
       });
       form.reset();
       onTeacherAdded();
@@ -70,7 +79,7 @@ export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormPr
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="fullName"
+          name="displayName"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Nombre Completo</FormLabel>
@@ -123,39 +132,54 @@ export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormPr
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="specialty"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Especialidad</FormLabel>
-                <FormControl>
-                  <Input placeholder="Ej: Computación e Informática" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="active"
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-              <div className="space-y-0.5">
-                <FormLabel>Estado</FormLabel>
-                <p className="text-[0.8rem] text-muted-foreground">
-                    Marcar si el docente está activo.
-                </p>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
+           <FormField
+                control={form.control}
+                name="condition"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Condición</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una condición" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {conditions.map((cond) => (
+                            <SelectItem key={cond} value={cond}>
+                            {cond.charAt(0).toUpperCase() + cond.slice(1).toLowerCase()}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
                 />
-              </FormControl>
+        </div>
+         <FormField
+            control={form.control}
+            name="programId"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Programa de Estudios Principal</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!programs.length}>
+                <FormControl>
+                    <SelectTrigger>
+                    <SelectValue placeholder={programs.length ? "Seleccione un programa" : "No hay programas"} />
+                    </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>
+                        {program.name}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+                <FormMessage />
             </FormItem>
-          )}
+            )}
         />
         <Button type="submit" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Docente'}

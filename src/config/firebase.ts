@@ -270,38 +270,71 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
 }
 
 
-// Teachers
-export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id'>) => {
-    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
-    await addDoc(teachersCol, data);
-}
+// Teachers (derived from StaffProfiles)
+export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id' | 'role' | 'linkedUserUid'>) => {
+    const staffData: StaffProfile = {
+        ...data,
+        role: 'Teacher',
+        linkedUserUid: null
+    };
+    await addStaffProfile(instituteId, staffData);
+};
 
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
-    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
-    const q = query(teachersCol, orderBy("fullName"));
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    const q = query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Teacher));
-}
+    return snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as StaffProfile;
+        return { 
+            id: data.dni, // Use DNI as the unique ID for the list key
+            fullName: data.displayName,
+            dni: data.dni,
+            email: data.email,
+            phone: data.phone || '',
+            specialty: (data as any).specialty || 'N/A', // Assuming specialty might exist
+            active: true // Assuming all fetched teachers are active, or add logic
+        } as Teacher;
+    });
+};
 
 export const updateTeacher = async (instituteId: string, teacherId: string, data: Partial<Teacher>) => {
-    const teacherRef = doc(db, 'institutes', instituteId, 'teachers', teacherId);
-    await updateDoc(teacherRef, data);
+    // teacherId is the DNI in this context
+    const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
+    const updateData: Partial<StaffProfile> = {
+        displayName: data.fullName,
+        email: data.email,
+        phone: data.phone,
+        // any other mappable fields
+    };
+    await updateDoc(teacherRef, updateData);
 }
 
 export const deleteTeacher = async (instituteId: string, teacherId: string) => {
-    const teacherRef = doc(db, 'institutes', instituteId, 'teachers', teacherId);
+    // teacherId is the DNI
+    const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
     await deleteDoc(teacherRef);
 }
 
 export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teacher, 'id'>[]) => {
     const batch = writeBatch(db);
-    const teachersCol = getSubCollectionRef(instituteId, 'teachers');
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     teachers.forEach(teacherData => {
-        const docRef = doc(teachersCol); 
-        batch.set(docRef, teacherData);
+        const docRef = doc(staffCol, teacherData.dni); 
+        const staffData: Omit<StaffProfile, 'linkedUserUid'> = {
+            dni: teacherData.dni,
+            displayName: teacherData.fullName,
+            email: teacherData.email,
+            phone: teacherData.phone,
+            condition: 'CONTRATADO', // Default or decide how to handle
+            programId: 'general', // Default or decide
+            role: 'Teacher'
+        };
+        batch.set(docRef, staffData);
     });
     await batch.commit();
 }
+
 
 // Assignments
 export const getAssignments = async (
@@ -340,7 +373,7 @@ export const addStaffProfile = async (instituteId: string, data: Omit<StaffProfi
         throw new Error(`Un perfil con el DNI ${data.dni} ya existe.`);
     }
 
-    await setDoc(profileRef, data);
+    await setDoc(profileRef, { ...data, linkedUserUid: null });
 };
 
 export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {

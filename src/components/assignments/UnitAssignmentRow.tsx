@@ -3,7 +3,6 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Unit, Teacher, UnitPeriod } from "@/types";
-import { Badge } from "../ui/badge";
 
 interface UnitAssignmentRowProps {
   unit: Unit;

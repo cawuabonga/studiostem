@@ -81,16 +81,18 @@ export interface Unit {
   moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
 }
 
+// This type is now based on StaffProfile for consistency.
+// The `id` is derived from `dni` for list keys.
 export interface Teacher {
-  id: string;
+  id: string; // DNI
   dni: string;
   fullName: string;
   email: string;
   phone: string;
   specialty: string;
-  active: boolean;
+  active: boolean; // Could be derived from linked status or a specific field
 }
 
 export interface Assignment {
-  [unitId: string]: string; // unitId -> teacherId
+  [unitId: string]: string; // unitId -> teacherId (DNI)
 }
