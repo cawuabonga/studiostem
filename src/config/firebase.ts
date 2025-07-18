@@ -282,8 +282,6 @@ export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id' |
 
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    // The query that requires an index: query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"))
-    // To avoid the index, we fetch all and filter in the client.
     const q = query(staffCol, orderBy("displayName"));
     const snapshot = await getDocs(q);
     
