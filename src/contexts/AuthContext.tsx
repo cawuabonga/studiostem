@@ -28,7 +28,7 @@ interface AuthContextType {
   loading: boolean;
   instituteId: string | null;
   institute: Institute | null;
-  setInstitute: (instituteId: string) => Promise<void>;
+  setInstitute: (instituteId: string | null) => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (name: string, email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -38,28 +38,56 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-let memoryInstituteId: string | null = null;
+const getInitialInstituteId = (): string | null => {
+    if (typeof window !== 'undefined') {
+        return localStorage.getItem('instituteId');
+    }
+    return null;
+};
+
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [instituteId, setInstituteId] = useState<string | null>(memoryInstituteId);
+  const [instituteId, setInstituteIdState] = useState<string | null>(getInitialInstituteId);
   const [institute, setInstituteObject] = useState<Institute | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
   const setInstitute = useCallback(async (id: string | null) => {
+    setInstituteIdState(id);
     if (id) {
-        memoryInstituteId = id;
-        setInstituteId(id);
-        const instituteData = await getInstitute(id);
-        setInstituteObject(instituteData);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('instituteId', id);
+        }
+        try {
+            const instituteData = await getInstitute(id);
+            setInstituteObject(instituteData);
+        } catch (error) {
+            console.error("Error fetching institute:", error);
+            setInstituteObject(null);
+        }
     } else {
-        memoryInstituteId = null;
-        setInstituteId(null);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('instituteId');
+        }
         setInstituteObject(null);
     }
   }, []);
+
+  useEffect(() => {
+    // On initial load, if there's an instituteId from localStorage, load its data.
+    if (instituteId && !institute) {
+        getInstitute(instituteId).then(data => {
+            setInstituteObject(data);
+        }).catch(err => {
+            console.error("Failed to load initial institute data:", err);
+            // Maybe the ID is stale, clear it
+            setInstitute(null);
+        });
+    }
+  }, [instituteId, institute, setInstitute]);
+
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser) => {
       try {
@@ -70,18 +98,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (userDocSnap.exists()) {
             appUser = userDocSnap.data() as AppUser;
-            // Ensure displayName and photoURL from Auth are synced if not in Firestore
             appUser.displayName = appUser.displayName || firebaseUser.displayName;
             appUser.photoURL = appUser.photoURL || firebaseUser.photoURL;
           } else {
-             // This is a new user, save their data with a default role and no institute
              appUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
                 photoURL: firebaseUser.photoURL,
-                role: 'Student', // Default role
-                instituteId: null, // No institute assigned on signup
+                role: 'Student',
+                instituteId: null, 
              };
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
@@ -91,9 +117,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           
           setUser(appUser);
-          // If user has an institute, set it
-          if (appUser.instituteId) {
+          
+          // If the user's instituteId is different from what's in state, update it.
+          if (appUser.instituteId && appUser.instituteId !== instituteId) {
             await setInstitute(appUser.instituteId);
+          } else if (!appUser.instituteId && instituteId) {
+            // User has no institute but state has one, clear it.
+            await setInstitute(null);
           }
 
         } catch (error) {
@@ -118,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [setInstitute, toast]);
+  }, [setInstitute, toast]); // Removed `instituteId` from deps to prevent loops
   
   const reloadUser = async () => {
     const firebaseUser = auth.currentUser;
@@ -136,7 +166,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión', description: 'Por favor, verifica tus credenciales.', variant: 'destructive' });
@@ -149,10 +178,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Update the new user's profile with the provided name
       await updateProfile(userCredential.user, { displayName: name });
-      // onAuthStateChanged will now pick up the user and create their Firestore document
-      // with the correct displayName.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
@@ -166,7 +192,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -179,13 +204,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       await firebaseSignOut(auth);
-      // onAuthStateChanged will handle setting user and institute to null
       router.push('/');
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
     } finally {
-      setLoading(false);
+        // onAuthStateChanged will handle setting state to null.
+        setLoading(false);
     }
   };
 
