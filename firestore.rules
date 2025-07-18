@@ -1,68 +1,68 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // --- User Profiles ---
-    // Users can:
-    // 1. Read their own document.
-    // 2. Update their own document, but cannot change their role or instituteId once set (unless validating).
-    // 3. Create their own document on signup.
-    match /users/{userId} {
-      allow read, create: if request.auth != null && request.auth.uid == userId;
-      // Allow updates for profile editing (displayName, photoURL, etc.)
-      // Allow specific fields to be set ONCE during DNI validation.
-      allow update: if request.auth != null && request.auth.uid == userId &&
-                      (
-                        // Standard profile edit (cannot change role or instituteId)
-                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'dni', 'phone'])) ||
-                        // Validation logic: Can set these fields only if not previously verified.
-                        (resource.data.isVerified == false && request.resource.data.isVerified == true && 
-                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isVerified', 'role', 'instituteId', 'dni', 'displayName', 'email', 'phone', 'condition', 'programId']))
-                      );
+    // Helper functions
+    function isSuperAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+    
+    function isInstituteAdmin(instituteId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return userDoc.instituteId == instituteId && userDoc.role in ['Admin'];
     }
 
-    // --- Config Collection (e.g., for Login Design) ---
-    // SuperAdmins can write, any user can read.
+    function isInstituteMemberWithRole(instituteId, roles) {
+       let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+       return userDoc.instituteId == instituteId && userDoc.role in roles;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Config collection (for login design) is read-only for all, writeable by SuperAdmin
     match /config/{docId=**} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow write: if isSuperAdmin();
     }
 
-    // --- Institutes Collection ---
-    // SuperAdmins can manage institutes.
-    // Authenticated users can read institute data (e.g., for themes, names).
+    // Institutes collection is readable by any authenticated user, writeable by SuperAdmin
     match /institutes/{instituteId} {
       allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-
-      // --- Staff Profiles (for DNI validation) ---
-      // Admins/Coordinators can create/update profiles within their own institute.
-      match /staffProfiles/{dni} {
-        allow read, create, update: if request.auth != null &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
-        
-        // A user can update a profile to claim it (part of the transaction)
-        allow update: if request.auth != null &&
-                      request.resource.data.claimed == true &&
-                      resource.data.claimed == false;
-      }
+      allow write: if isSuperAdmin();
       
-      // All other institute subcollections (programs, units, etc.)
-      // Can be managed by users who belong to that institute and have roles Admin or Coordinator.
-      match /{subcollection}/{docId} {
-        allow read, write: if request.auth != null &&
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+      // Allow Admins and Coordinators to manage academic and staff data within their institute
+      match /{collection}/{docId} {
+        allow read, write: if isInstituteMemberWithRole(instituteId, ['Admin', 'Coordinator']);
       }
     }
-
-    // --- Collection Group for Staff Profile Validation ---
-    // Any authenticated user can query this group to find their DNI.
-    // This is secure because they are only querying by DNI, not listing all staff.
+    
+    // Users can read/update their own data. SuperAdmins can manage any user.
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSuperAdmin();
+      
+      // Complex update logic for user self-validation
+      allow update: if isSuperAdmin() || 
+                      (isOwner(userId) && 
+                        // Allow normal profile updates
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'dni'])) ||
+                        // Allow one-time validation update
+                        (!resource.data.isVerified && request.resource.data.isVerified == true && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isVerified', 'role', 'instituteId', 'displayName', 'email', 'dni', 'phone', 'condition', 'programId']))
+                      );
+                      
+      allow create: if request.auth != null; // Any authenticated user can create their own user document
+    }
+    
+    // Allow any authenticated user to search for profiles to validate their account
     match /{path=**}/staffProfiles/{dni} {
-      allow read: if request.auth != null;
+        allow read: if request.auth != null;
+    }
+    
+     match /{path=**}/studentProfiles/{dni} {
+        allow read: if request.auth != null;
     }
   }
 }
