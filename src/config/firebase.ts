@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile } from '@/types';
@@ -247,6 +247,32 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
     await updateDoc(userRef, data);
 };
 
+
+export const createInstituteUser = async (instituteId: string, data: Omit<AppUser, 'uid' | 'photoURL' | 'role' | 'instituteId'>) => {
+    const { email, displayName, ...rest } = data;
+    if (!email) {
+        throw new Error("Email is required to create a user profile.");
+    }
+    
+    // We don't create an Auth user here. We just create their profile.
+    // The user will have to use "Forgot Password" to set their password.
+    const userProfileRef = doc(db, 'institutes', instituteId, 'studentProfiles', email);
+    
+    await setDoc(userProfileRef, {
+        email,
+        displayName,
+        role: 'Student',
+        ...rest
+    });
+    
+    // Attempt to send a password reset email to invite the user.
+    try {
+        await sendPasswordResetEmail(auth, email);
+    } catch (error) {
+        console.warn(`Could not send password reset email to ${email}. This is okay if the user doesn't have an auth account yet.`, error);
+    }
+};
+
 // New flow: Admins create a "staff profile" which users can later claim.
 export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId'>) => {
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
@@ -258,6 +284,19 @@ export const addStaffProfile = async (instituteId: string, profileData: Omit<Sta
         claimed: false, // Mark as not claimed initially
     });
 };
+
+export const updateStaffProfile = async (instituteId: string, dni: string, data: Partial<StaffProfile>) => {
+    const profileRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
+    await updateDoc(profileRef, data);
+}
+
+export const getStaffProfilesByInstitute = async (instituteId: string): Promise<StaffProfile[]> => {
+    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
+    const q = query(staffProfilesCol, orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
+}
+
 
 export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid' | 'photoURL'>[]) => {
     const batch = writeBatch(db);
