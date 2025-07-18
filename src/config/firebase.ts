@@ -404,3 +404,5 @@ export const deleteStaffProfile = async (instituteId: string, dni: string) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
     await deleteDoc(staffRef);
 }
+
+    
