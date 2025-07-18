@@ -1,49 +1,55 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reglas para la colección 'users'
+  
+    // Rules for accessing institute data
+    match /institutes/{instituteId}/{document=**} {
+      // Allow read access if the user is a SuperAdmin or belongs to the institute.
+      allow read: if request.auth != null && 
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin' || 
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId);
+      
+      // Allow write access if the user is a SuperAdmin or an Admin/Coordinator of the institute.
+      allow write: if request.auth != null &&
+                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin' ||
+                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
+                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator']));
+    }
+
+    // Rules for the `users` collection itself
     match /users/{userId} {
-      // Cualquier usuario puede crear su propio documento de usuario al registrarse
-      allow create: if request.auth != null;
-      // Los usuarios solo pueden leer y actualizar su propio documento
-      allow read, update: if request.auth != null && request.auth.uid == userId;
-      // SuperAdmin puede leer y escribir cualquier documento de usuario
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+        // SuperAdmins can read/write any user document.
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+
+        // An institute admin/coordinator can read users of their own institute.
+        allow read: if request.auth != null && 
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == resource.data.instituteId &&
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+        
+        // A user can update their own profile information, but cannot change their role or institute.
+        allow update: if request.auth != null && request.auth.uid == userId &&
+                       !('role' in request.resource.data) &&
+                       !('instituteId' in request.resource.data);
     }
 
-    // Reglas para la colección 'institutes'
-    match /institutes/{instituteId} {
-      // SuperAdmin puede gestionar todos los institutos
-      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      
-      // Los usuarios asignados a un instituto pueden leer su información
-      allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-      
-      // Reglas para las subcolecciones de cada instituto
-      match /{subcollection}/{docId=**} {
-        // Los admins y coordinadores pueden gestionar los datos de su instituto
-        allow read, write: if request.auth != null && 
-                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-                              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
-      }
-    }
-
-    // Regla global para la colección de configuración 'config'
-    match /config/{docId=**} {
-      // PERMITIR LECTURA PÚBLICA: Cualquier persona puede leer la configuración de diseño.
+    // Unauthenticated users can read login design settings for the login page
+    match /config/{docId} {
       allow read: if true;
-      // Solo el SuperAdmin puede escribir en la configuración.
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
-    
-    // Reglas para la validación de perfiles
-    match /{path=**}/staffProfiles/{dni} {
-        allow read, update: if request.auth != null;
+    match /config/loginDesign/images/{imageId} {
+      allow read: if true;
+      allow write, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    match /{path=**}/studentProfiles/{dni} {
-        allow read, update: if request.auth != null;
+    // This rule allows a user to validate their profile by checking against all Staff/Student profiles
+    match /{path=**}/staffProfiles/{profileId} {
+      allow get: if request.auth != null;
+    }
+
+    match /{path=**}/studentProfiles/{profileId} {
+      allow get: if request.auth != null;
     }
   }
 }
