@@ -32,16 +32,12 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
-  const fetchUnitsAndPrograms = useCallback(async () => {
-    if (!instituteId) {
-        setLoading(false);
-        return;
-    }
+  const fetchUnitsAndPrograms = useCallback(async (id: string) => {
     setLoading(true);
     try {
       const [fetchedUnits, fetchedPrograms] = await Promise.all([
-          getUnits(instituteId),
-          getPrograms(instituteId)
+          getUnits(id),
+          getPrograms(id)
       ]);
       const programMap = new Map(fetchedPrograms.map(p => [p.id, p]));
       setUnits(fetchedUnits);
@@ -55,18 +51,22 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    fetchUnitsAndPrograms();
-  }, [fetchUnitsAndPrograms]);
+    if (instituteId) {
+      fetchUnitsAndPrograms(instituteId);
+    } else {
+      setLoading(false);
+    }
+  }, [instituteId, fetchUnitsAndPrograms]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedUnit(null);
-    if (updated) {
-      fetchUnitsAndPrograms();
+    if (updated && instituteId) {
+      fetchUnitsAndPrograms(instituteId);
       onDataChange();
     }
   };
@@ -88,7 +88,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
             title: '¡Unidad Duplicada!',
             description: `Se creó una copia de "${unitToDuplicate.name}".`,
         });
-        fetchUnitsAndPrograms();
+        fetchUnitsAndPrograms(instituteId);
         onDataChange();
     } catch (error) {
         toast({
@@ -123,6 +123,10 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         ))}
       </div>
     );
+  }
+  
+  if (!instituteId) {
+      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
   }
   
   if (!units.length) {

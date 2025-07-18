@@ -38,14 +38,10 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
-  const fetchPrograms = useCallback(async () => {
-    if (!instituteId) {
-        setLoading(false);
-        return;
-    };
+  const fetchPrograms = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const fetchedPrograms = await getPrograms(instituteId);
+      const fetchedPrograms = await getPrograms(id);
       setPrograms(fetchedPrograms);
     } catch (error) {
       toast({
@@ -56,18 +52,22 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    fetchPrograms();
-  }, [fetchPrograms]);
+    if (instituteId) {
+      fetchPrograms(instituteId);
+    } else {
+      setLoading(false); // No institute ID yet, so not loading
+    }
+  }, [instituteId, fetchPrograms]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedProgram(null);
-    if (updated) {
-      fetchPrograms();
+    if (updated && instituteId) {
+      fetchPrograms(instituteId);
       onDataChange();
     }
   };
@@ -97,6 +97,10 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
     );
   }
   
+  if (!instituteId) {
+      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
+  }
+
   if (!programs.length) {
     return <p className="text-center text-muted-foreground">No hay programas registrados en este instituto.</p>;
   }

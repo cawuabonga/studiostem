@@ -39,14 +39,10 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
-  const fetchTeachers = useCallback(async () => {
-    if (!instituteId) {
-        setLoading(false);
-        return;
-    };
+  const fetchTeachers = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const fetchedTeachers = await getTeachers(instituteId);
+      const fetchedTeachers = await getTeachers(id);
       setTeachers(fetchedTeachers);
     } catch (error) {
       toast({
@@ -57,18 +53,22 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    fetchTeachers();
-  }, [fetchTeachers]);
+    if (instituteId) {
+      fetchTeachers(instituteId);
+    } else {
+      setLoading(false);
+    }
+  }, [instituteId, fetchTeachers]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedTeacher(null);
-    if (updated) {
-      fetchTeachers();
+    if (updated && instituteId) {
+      fetchTeachers(instituteId);
       onDataChange();
     }
   };
@@ -99,6 +99,10 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
     );
   }
   
+  if (!instituteId) {
+      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
+  }
+
   if (!teachers.length) {
     return <p className="text-center text-muted-foreground">No hay docentes registrados.</p>;
   }
