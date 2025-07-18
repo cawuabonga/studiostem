@@ -230,7 +230,7 @@ export const deleteProgram = async (instituteId: string, programId: string) => {
 
 // Units
 export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'totalHours'> & { totalHours?: number }) => {
-    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
      const unitData = {
         ...data,
         totalHours: (data.theoreticalHours || 0) + (data.practicalHours || 0)
@@ -239,25 +239,25 @@ export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'tota
 }
 
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
-    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     const q = query(unitsCol, orderBy("name"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
 }
 
 export const updateUnit = async (instituteId: string, unitId: string, data: Partial<Unit>) => {
-    const unitRef = doc(db, 'institutes', instituteId, 'units', unitId);
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await updateDoc(unitRef, data);
 }
 
 export const deleteUnit = async (instituteId: string, unitId: string) => {
-    const unitRef = doc(db, 'institutes', instituteId, 'units', unitId);
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await deleteDoc(unitRef);
 }
 
 export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours'>[]) => {
     const batch = writeBatch(db);
-    const unitsCol = getSubCollectionRef(instituteId, 'units');
+    const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     units.forEach(unitData => {
         const docRef = doc(unitsCol); 
         const dataWithHours = {
@@ -404,5 +404,7 @@ export const deleteStaffProfile = async (instituteId: string, dni: string) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
     await deleteDoc(staffRef);
 }
+
+    
 
     
