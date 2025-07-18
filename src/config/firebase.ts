@@ -319,8 +319,7 @@ export const updateStaffProfile = async (instituteId: string, dni: string, data:
 
 export const getStaffProfilesByInstitute = async (instituteId: string): Promise<StaffProfile[]> => {
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
-    const q = query(staffProfilesCol, orderBy("displayName"));
-    const querySnapshot = await getDocs(q);
+    const querySnapshot = await getDocs(staffProfilesCol);
     return querySnapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
 }
 

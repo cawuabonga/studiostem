@@ -19,10 +19,10 @@ interface BulkUploadStaffProps {
 const validRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
 const validConditions = ['NOMBRADO', 'CONTRATADO'];
 
-const roleDisplayMap: Record<string, string> = {
-    docente: 'Teacher',
-    coordinador: 'Coordinator',
-    administrador: 'Admin',
+const roleDisplayMap: Record<string, UserRole> = {
+    'docente': 'Teacher',
+    'coordinador': 'Coordinator',
+    'administrador': 'Admin',
 };
 
 export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
