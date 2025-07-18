@@ -5,7 +5,7 @@ import { AllUsersTable } from "@/components/superadmin/AllUsersTable";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export default function SuperAdminManageUsersPage() {
   const { user, loading } = useAuth();
@@ -18,9 +18,9 @@ export default function SuperAdminManageUsersPage() {
     }
   }, [user, loading, router]);
 
-  const handleDataChange = () => {
+  const handleDataChange = useCallback(() => {
     setDataVersion(prev => prev + 1);
-  };
+  }, []);
   
   if (loading || !user || user.role !== 'SuperAdmin') {
     return (

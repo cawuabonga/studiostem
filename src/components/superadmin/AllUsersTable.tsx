@@ -25,26 +25,26 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
   const [filter, setFilter] = useState('');
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-          const fetchedUsers = await getAllUsersFromAllInstitutes();
-          setUsers(fetchedUsers);
-        } catch (error) {
-          console.error("Error fetching all users:", error);
-          toast({
-            title: "Error",
-            description: "No se pudieron cargar los usuarios de la plataforma.",
-            variant: "destructive",
-          });
-        } finally {
-          setLoading(false);
-        }
-    };
-
-    fetchUsers();
+  const fetchUsers = useCallback(async () => {
+      setLoading(true);
+      try {
+        const fetchedUsers = await getAllUsersFromAllInstitutes();
+        setUsers(fetchedUsers);
+      } catch (error) {
+        console.error("Error fetching all users:", error);
+        toast({
+          title: "Error",
+          description: "No se pudieron cargar los usuarios de la plataforma.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
   }, [toast]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleEditUser = (user: AppUser) => {
     setSelectedUser(user);
@@ -56,6 +56,7 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
     setSelectedUser(null);
     if (updated) {
         onDataChange();
+        fetchUsers();
     }
   };
 

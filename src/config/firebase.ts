@@ -233,10 +233,11 @@ export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
     return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
 };
 
-export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>) => {
+export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>): Promise<void> => {
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, data);
 };
+
 
 export const getUsersByInstitute = async (instituteId: string, roles: UserRole[]): Promise<AppUser[]> => {
     const usersCol = collection(db, 'users');
