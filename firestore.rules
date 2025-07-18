@@ -1,55 +1,63 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // SuperAdmins can read/write any user document.
-    // Authenticated users can only read/update their own document.
-    match /users/{userId} {
-      allow read, update: if request.auth.uid == userId;
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+
+    // Helper functions
+    function isUserAuthenticated() {
+      return request.auth != null;
     }
 
-    match /institutes/{instituteId} {
-      // SuperAdmins have full access to institute data
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      
-      // Institute members can read the main document
-      allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                   get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-
-      match /{subcollection}/{docId} {
-        // SuperAdmins have full access
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-        
-        // Institute Admins and Coordinators can manage their own institute's data
-        allow read, write: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
-      }
-    }
-
-    // Rules for login page design and images
-    match /config/loginDesign {
-      allow read: if true; // Anyone can read design settings
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-
-      match /images/{imageId} {
-        allow read: if true; // Anyone can read image data
-        allow write, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      }
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
     
-    // Let any authenticated user try to find and claim a profile using DNI and activation code
-    match collectionGroup /staffProfiles/{profile} {
-        allow read: if request.auth != null &&
-                      request.query.keys.hasAll(['dni', 'activationCode']);
-    }
-    match collectionGroup /studentProfiles/{profile} {
-       allow read: if request.auth != null &&
-                      request.query.keys.hasAll(['dni', 'activationCode']);
+    function isSuperAdmin() {
+      return isUserAuthenticated() && getUserRole() == 'SuperAdmin';
     }
 
+    function isInstituteAdminOrCoordinator(instituteId) {
+        return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId
+            && (getUserRole() == 'Admin' || getUserRole() == 'Coordinator');
+    }
+
+    // --- Global Config ---
+    match /config/{document=**} {
+      // SuperAdmins can write, any authenticated user can read
+      allow read: if isUserAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // --- User Profiles ---
+    // Users can read/update their own profile.
+    // SuperAdmins can read/write any user profile.
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId;
+      allow list, write: if isSuperAdmin();
+    }
+    
+    // --- Institutes ---
+    match /institutes/{instituteId}/{document=**} {
+      // SuperAdmins can manage all institutes.
+      // Admins/Coordinators can manage their own institute's data.
+      allow read, write: if isSuperAdmin() || isInstituteAdminOrCoordinator(instituteId);
+    }
+    
+    // --- Collection Group for Profile Validation ---
+    // A user can query these groups if they are trying to validate their own profile
+    // by providing their DNI and activation code. This is secure because they must know both.
+    match /{path=**}/staffProfiles/{dni} {
+        allow get: if isUserAuthenticated() 
+                    && request.resource.data.dni == request.query.dni 
+                    && request.resource.data.activationCode == request.query.activationCode;
+        allow list: if false; // Disallow listing all profiles
+    }
+    
+     match /{path=**}/studentProfiles/{dni} {
+        allow get: if isUserAuthenticated() 
+                    && request.resource.data.dni == request.query.dni 
+                    && request.resource.data.activationCode == request.query.activationCode;
+        allow list: if false; // Disallow listing all profiles
+    }
   }
 }
