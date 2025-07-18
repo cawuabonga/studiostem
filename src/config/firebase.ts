@@ -319,7 +319,8 @@ export const updateStaffProfile = async (instituteId: string, dni: string, data:
 
 export const getStaffProfilesByInstitute = async (instituteId: string): Promise<StaffProfile[]> => {
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
-    const querySnapshot = await getDocs(staffProfilesCol);
+    const q = query(staffProfilesCol, orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
 }
 
@@ -328,16 +329,25 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser,
     const batch = writeBatch(db);
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
 
+    const roleDisplayMap: Record<string, UserRole> = {
+        'docente': 'Teacher',
+        'coordinador': 'Coordinator',
+        'administrador': 'Admin',
+    };
+
     for (const staffData of staffList) {
         if(!staffData.dni) continue; // Skip if no DNI
         const profileRef = doc(staffProfilesCol, staffData.dni);
         
+        const roleStr = String(staffData.role || '').toLowerCase().trim();
+        const role = roleDisplayMap[roleStr] || staffData.role; // Fallback to original if not in map
+
         const dataToSave: StaffProfile = {
             dni: staffData.dni,
             displayName: staffData.displayName || '',
             email: staffData.email || '',
             phone: staffData.phone,
-            role: staffData.role || 'Teacher',
+            role: role || 'Teacher',
             condition: staffData.condition,
             programId: staffData.programId,
             claimed: false,
@@ -349,7 +359,6 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser,
 
     await batch.commit();
 };
-
 
 export const validateUserWithActivationCode = async (uid: string, dni: string, activationCode: string) => {
     const userRef = doc(db, 'users', uid);
@@ -363,8 +372,6 @@ export const validateUserWithActivationCode = async (uid: string, dni: string, a
         profileDocRef: any;
     } | null = null;
     
-    // Since we don't know the institute, we have to search across all of them.
-    // This uses a collectionGroup query.
     const staffQuery = query(
         collectionGroup(db, 'staffProfiles'), 
         where('dni', '==', dni),
@@ -380,7 +387,6 @@ export const validateUserWithActivationCode = async (uid: string, dni: string, a
         }
     }
 
-    // If not found in staff, search in student profiles
     if (!foundProfile) {
         const studentQuery = query(
             collectionGroup(db, 'studentProfiles'), 
@@ -401,12 +407,10 @@ export const validateUserWithActivationCode = async (uid: string, dni: string, a
         throw new Error("No se encontró ningún perfil con esa combinación de DNI y código, o ya fue reclamado.");
     }
 
-    // Use a transaction to ensure atomicity
     await runTransaction(db, async (transaction) => {
         const { profileData, profileDocRef } = foundProfile!;
-        const instituteId = profileDocRef.parent.parent.id; // Get institute ID from profile's path
+        const instituteId = profileDocRef.parent.parent.id;
 
-        // 1. Update the user's document with the profile data
         const updates: Partial<AppUser> = {
             dni: profileData.dni,
             displayName: profileData.displayName,
@@ -422,7 +426,6 @@ export const validateUserWithActivationCode = async (uid: string, dni: string, a
 
         transaction.update(userRef, updates);
 
-        // 2. Mark the profile as claimed and remove the activation code for security
         transaction.update(profileDocRef, { claimed: true, activationCode: null });
     });
 };
