@@ -27,6 +27,16 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider };
 
+const generateActivationCode = (prefix: string = 'ACTIV') => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `${prefix}-${result}`;
+}
+
+
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
   try {
@@ -265,6 +275,7 @@ export const createInstituteUser = async (instituteId: string, data: { displayNa
         email: data.email,
         claimed: false,
         role: 'Student', // Role is fixed here
+        activationCode: generateActivationCode('STD'),
     };
     
     await setDoc(profileRef, studentProfile);
@@ -286,7 +297,7 @@ export const getStudentProfilesByInstitute = async (instituteId: string): Promis
 
 
 // New flow: Admins create a "staff profile" which users can later claim.
-export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId'>) => {
+export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId' | 'activationCode'>) => {
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
     // Use DNI as the document ID to enforce uniqueness at the institute level.
     const profileRef = doc(staffProfilesCol, profileData.dni);
@@ -297,6 +308,7 @@ export const addStaffProfile = async (instituteId: string, profileData: Omit<Sta
     await setDoc(profileRef, {
         ...profileData,
         claimed: false, // Mark as not claimed initially
+        activationCode: generateActivationCode('STF'),
     });
 };
 
@@ -329,7 +341,8 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser,
             role: staffData.role || 'Teacher',
             condition: staffData.condition,
             programId: staffData.programId,
-            claimed: false
+            claimed: false,
+            activationCode: generateActivationCode('STF')
         };
 
         batch.set(profileRef, dataToSave);
@@ -339,8 +352,7 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser,
 };
 
 
-// New flow: User validates their profile using DNI
-export const validateUserWithDNI = async (uid: string, dni: string) => {
+export const validateUserWithActivationCode = async (uid: string, dni: string, activationCode: string) => {
     const userRef = doc(db, 'users', uid);
     const userDoc = await getDoc(userRef);
     if (!userDoc.exists() || userDoc.data()?.isVerified) {
@@ -351,34 +363,43 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
         profileData: StaffProfile | StudentProfile;
         profileDocRef: any;
     } | null = null;
-
-    // Search in staff profiles first
-    const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('dni', '==', dni));
+    
+    // Since we don't know the institute, we have to search across all of them.
+    // This uses a collectionGroup query.
+    const staffQuery = query(
+        collectionGroup(db, 'staffProfiles'), 
+        where('dni', '==', dni),
+        where('activationCode', '==', activationCode)
+    );
     const staffSnapshot = await getDocs(staffQuery);
 
-    for (const doc of staffSnapshot.docs) {
-        const profileData = doc.data() as StaffProfile;
+    if (!staffSnapshot.empty) {
+        const profileDoc = staffSnapshot.docs[0];
+        const profileData = profileDoc.data() as StaffProfile;
         if (!profileData.claimed) {
-            foundProfile = { profileData, profileDocRef: doc.ref };
-            break;
+            foundProfile = { profileData, profileDocRef: profileDoc.ref };
         }
     }
 
-    // If not found, search in student profiles
+    // If not found in staff, search in student profiles
     if (!foundProfile) {
-        const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('dni', '==', dni));
+        const studentQuery = query(
+            collectionGroup(db, 'studentProfiles'), 
+            where('dni', '==', dni),
+            where('activationCode', '==', activationCode)
+        );
         const studentSnapshot = await getDocs(studentQuery);
-        for (const doc of studentSnapshot.docs) {
-            const profileData = doc.data() as StudentProfile;
-            if (!profileData.claimed) {
-                foundProfile = { profileData, profileDocRef: doc.ref };
-                break;
+        if (!studentSnapshot.empty) {
+            const profileDoc = studentSnapshot.docs[0];
+            const profileData = profileDoc.data() as StudentProfile;
+             if (!profileData.claimed) {
+                foundProfile = { profileData, profileDocRef: profileDoc.ref };
             }
         }
     }
     
     if (!foundProfile) {
-        throw new Error("No se encontró ningún perfil con ese DNI o ya fue reclamado.");
+        throw new Error("No se encontró ningún perfil con esa combinación de DNI y código, o ya fue reclamado.");
     }
 
     // Use a transaction to ensure atomicity
@@ -402,8 +423,8 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
 
         transaction.update(userRef, updates);
 
-        // 2. Mark the profile as claimed
-        transaction.update(profileDocRef, { claimed: true });
+        // 2. Mark the profile as claimed and remove the activation code for security
+        transaction.update(profileDocRef, { claimed: true, activationCode: null });
     });
 };
 
@@ -516,4 +537,3 @@ export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teache
     });
     await batch.commit();
 }
-

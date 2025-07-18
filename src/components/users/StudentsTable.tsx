@@ -6,7 +6,7 @@ import { getStudentProfilesByInstitute } from '@/config/firebase';
 import type { StudentProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Copy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,9 +20,6 @@ interface StudentsTableProps {
 export function StudentsTable({ onDataChange }: StudentsTableProps) {
   const [profiles, setProfiles] = useState<StudentProfile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [filter, setFilter] = useState('');
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
@@ -47,6 +44,13 @@ export function StudentsTable({ onDataChange }: StudentsTableProps) {
     fetchStudentProfiles();
   }, [fetchStudentProfiles]);
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+        toast({ title: "Copiado", description: "Código de activación copiado al portapapeles." });
+    }, (err) => {
+        toast({ title: "Error", description: "No se pudo copiar el código.", variant: "destructive" });
+    });
+  }
 
   const filteredProfiles = useMemo(() => 
     profiles.filter(profile => 
@@ -85,6 +89,7 @@ export function StudentsTable({ onDataChange }: StudentsTableProps) {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Cód. Activación</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -94,6 +99,16 @@ export function StudentsTable({ onDataChange }: StudentsTableProps) {
               <TableRow key={profile.dni}>
                 <TableCell className="font-medium">{profile.displayName || 'N/A'}</TableCell>
                 <TableCell>{profile.email || 'N/A'}</TableCell>
+                <TableCell className="font-mono text-xs">
+                  {profile.activationCode ? (
+                      <div className="flex items-center gap-2">
+                          <span>{profile.activationCode}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copyToClipboard(profile.activationCode!)}>
+                              <Copy className="h-3 w-3" />
+                          </Button>
+                      </div>
+                  ) : "N/A"}
+                </TableCell>
                 <TableCell>
                   <Badge variant={profile.claimed ? 'default' : 'outline'}>
                     {profile.claimed ? 'Reclamado' : 'Pendiente'}

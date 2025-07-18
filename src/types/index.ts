@@ -27,6 +27,7 @@ export interface StaffProfile {
     condition?: 'NOMBRADO' | 'CONTRATADO';
     programId?: string;
     claimed: boolean; // To check if this profile has been claimed
+    activationCode?: string; // New field for the unique activation code
 }
 
 export interface StudentProfile {
@@ -35,6 +36,7 @@ export interface StudentProfile {
     email: string;
     role: 'Student'; // Role is fixed
     claimed: boolean;
+    activationCode?: string; // New field for the unique activation code
 }
 
 

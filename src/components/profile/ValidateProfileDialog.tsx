@@ -18,12 +18,13 @@ import {
 } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { validateUserWithDNI } from '@/config/firebase'; 
+import { validateUserWithActivationCode } from '@/config/firebase'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 const validateProfileSchema = z.object({
   dni: z.string().length(8, { message: 'El DNI debe tener exactamente 8 dígitos.' }),
+  activationCode: z.string().min(6, { message: 'El código de activación es requerido.' }),
 });
 
 type ValidateProfileFormValues = z.infer<typeof validateProfileSchema>;
@@ -43,6 +44,7 @@ export function ValidateProfileDialog({ isOpen, onClose, onSuccess }: ValidatePr
     resolver: zodResolver(validateProfileSchema),
     defaultValues: {
       dni: '',
+      activationCode: '',
     },
   });
 
@@ -53,7 +55,7 @@ export function ValidateProfileDialog({ isOpen, onClose, onSuccess }: ValidatePr
     }
     setIsSubmitting(true);
     try {
-      await validateUserWithDNI(user.uid, data.dni);
+      await validateUserWithActivationCode(user.uid, data.dni, data.activationCode);
 
       toast({
         title: '¡Éxito!',
@@ -66,7 +68,7 @@ export function ValidateProfileDialog({ isOpen, onClose, onSuccess }: ValidatePr
       console.error('Error validating profile:', error);
       toast({
         title: 'Error de Validación',
-        description: error.message || 'No se pudo validar el perfil. Verifica el DNI o contacta a un administrador.',
+        description: error.message || 'No se pudo validar el perfil. Verifica tus datos o contacta a un administrador.',
         variant: 'destructive',
       });
     } finally {
@@ -80,7 +82,7 @@ export function ValidateProfileDialog({ isOpen, onClose, onSuccess }: ValidatePr
         <DialogHeader>
           <DialogTitle>Validar Perfil de Usuario</DialogTitle>
           <DialogDescription>
-            Ingresa tu DNI para vincular tu cuenta con el perfil pre-registrado por tu instituto y activar tus roles correspondientes.
+            Ingresa tu DNI y el código de activación proporcionado por tu instituto para vincular tu cuenta y activar tus permisos.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -93,6 +95,19 @@ export function ValidateProfileDialog({ isOpen, onClose, onSuccess }: ValidatePr
                   <FormLabel>Número de DNI</FormLabel>
                   <FormControl>
                     <Input placeholder="Tu DNI de 8 dígitos" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="activationCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código de Activación</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ej: ACTIV-A1B2C3" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
