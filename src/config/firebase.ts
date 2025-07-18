@@ -282,10 +282,15 @@ export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id' |
 
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const q = query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"));
+    // The query that requires an index: query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"))
+    // To avoid the index, we fetch all and filter in the client.
+    const q = query(staffCol, orderBy("displayName"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as StaffProfile;
+    
+    const allStaff = snapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
+    const teachers = allStaff.filter(staff => staff.role === 'Teacher');
+
+    return teachers.map(data => {
         return { 
             id: data.dni, // Use DNI as the unique ID for the list key
             fullName: data.displayName,
@@ -404,6 +409,8 @@ export const deleteStaffProfile = async (instituteId: string, dni: string) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
     await deleteDoc(staffRef);
 }
+
+    
 
     
 
