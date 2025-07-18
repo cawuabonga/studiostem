@@ -28,7 +28,10 @@ export function StaffTable({ onDataChange }: StaffTableProps) {
   const { instituteId } = useAuth();
 
   const fetchStaffProfiles = useCallback(async () => {
-    if (!instituteId) return;
+    if (!instituteId) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     try {
       const fetchedProfiles = await getStaffProfilesByInstitute(instituteId);

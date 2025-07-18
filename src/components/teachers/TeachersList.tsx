@@ -40,7 +40,10 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   const { instituteId } = useAuth();
 
   const fetchTeachers = useCallback(async () => {
-    if (!instituteId) return;
+    if (!instituteId) {
+        setLoading(false);
+        return;
+    };
     setLoading(true);
     try {
       const fetchedTeachers = await getTeachers(instituteId);

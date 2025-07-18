@@ -39,7 +39,10 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
   const { instituteId } = useAuth();
 
   const fetchPrograms = useCallback(async () => {
-    if (!instituteId) return;
+    if (!instituteId) {
+        setLoading(false);
+        return;
+    };
     setLoading(true);
     try {
       const fetchedPrograms = await getPrograms(instituteId);

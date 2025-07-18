@@ -33,7 +33,10 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const { instituteId } = useAuth();
 
   const fetchUnitsAndPrograms = useCallback(async () => {
-    if (!instituteId) return;
+    if (!instituteId) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     try {
       const [fetchedUnits, fetchedPrograms] = await Promise.all([

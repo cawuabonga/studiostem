@@ -20,11 +20,15 @@ interface StudentsTableProps {
 export function StudentsTable({ onDataChange }: StudentsTableProps) {
   const [profiles, setProfiles] = useState<StudentProfile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('');
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
   const fetchStudentProfiles = useCallback(async () => {
-    if (!instituteId) return;
+    if (!instituteId) {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     try {
       const fetchedProfiles = await getStudentProfilesByInstitute(instituteId);
