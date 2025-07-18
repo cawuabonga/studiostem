@@ -31,13 +31,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Apply theme colors dynamically
     if (institute?.primaryColor) {
-      const root = document.documentElement;
-      // The value from DB is HSL, e.g., "225 65% 32%"
-      root.style.setProperty('--primary', institute.primaryColor);
+      document.documentElement.style.setProperty('--primary', institute.primaryColor);
     }
   }, [institute]);
 
-  // Determine the loading condition more accurately
+  // Show loading skeleton if auth is loading, or if the user is not a SuperAdmin and the institute data is not yet available.
   const showLoadingSkeleton = loading || (user && user.role !== 'SuperAdmin' && !institute);
 
 
@@ -56,11 +54,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
      )
   }
 
-  // Clone children to pass down institute prop if needed
+  // Clone children to pass down institute props if needed.
+  // This approach is generally safe for passing context-like props to immediate page components.
   const childrenWithProps = React.Children.map(children, child => {
     if (isValidElement(child)) {
       // Pass institute and instituteId to page components
-      return cloneElement(child, { institute, instituteId } as any);
+      return cloneElement(child, { institute, instituteId } as React.Attributes & { institute: any, instituteId: any });
     }
     return child;
   });
