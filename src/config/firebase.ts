@@ -347,49 +347,48 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
         throw new Error("El usuario no existe o ya ha sido verificado.");
     }
 
-    let profileDoc;
-    let profileData: StaffProfile | StudentProfile | null = null;
+    const institutes = await getInstitutes();
+    let foundProfile: {
+        profileData: StaffProfile | StudentProfile;
+        profileDocRef: any;
+        instituteId: string;
+    } | null = null;
 
-    // Search in staff profiles first
-    const staffProfilesQuery = query(collectionGroup(db, 'staffProfiles'), where('dni', '==', dni));
-    let querySnapshot = await getDocs(staffProfilesQuery);
+    // Iterate through all institutes to find the DNI
+    for (const institute of institutes) {
+        // Check staff profiles first
+        let profileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
+        let profileSnap = await getDoc(profileRef);
 
-    if (!querySnapshot.empty) {
-        profileDoc = querySnapshot.docs[0];
-        profileData = profileDoc.data() as StaffProfile;
-        if (profileData.claimed) {
-            throw new Error("Este perfil ya ha sido reclamado por otro usuario.");
+        if (profileSnap.exists()) {
+            const profileData = profileSnap.data() as StaffProfile;
+            if (!profileData.claimed) {
+                foundProfile = { profileData, profileDocRef: profileRef, instituteId: institute.id };
+                break; // Found an unclaimed staff profile, exit loop
+            }
         }
-    } else {
-        // If not found in staff, search in student profiles
-        const studentProfilesQuery = query(collectionGroup(db, 'studentProfiles'), where('dni', '==', dni));
-        querySnapshot = await getDocs(studentProfilesQuery);
 
-        if (!querySnapshot.empty) {
-            profileDoc = querySnapshot.docs[0];
-            profileData = profileDoc.data() as StudentProfile;
-            if (profileData.claimed) {
-                throw new Error("Este perfil ya ha sido reclamado por otro usuario.");
+        // If not found in staff, check student profiles
+        profileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
+        profileSnap = await getDoc(profileRef);
+
+        if (profileSnap.exists()) {
+            const profileData = profileSnap.data() as StudentProfile;
+            if (!profileData.claimed) {
+                foundProfile = { profileData, profileDocRef: profileRef, instituteId: institute.id };
+                break; // Found an unclaimed student profile, exit loop
             }
         }
     }
 
-    if (!profileDoc || !profileData) {
-        throw new Error("No se encontró ningún perfil con ese DNI.");
-    }
-
-    if (querySnapshot.size > 1) {
-        console.warn(`Se encontraron múltiples perfiles para el DNI ${dni}. Se usará el primero.`);
-    }
-
-    const instituteId = profileDoc.ref.parent.parent?.id; // Get instituteId from the path
-
-    if (!instituteId) {
-        throw new Error("No se pudo determinar el instituto del perfil encontrado.");
+    if (!foundProfile) {
+        throw new Error("No se encontró ningún perfil con ese DNI o ya fue reclamado.");
     }
 
     // Use a transaction to ensure atomicity
     await runTransaction(db, async (transaction) => {
+        const { profileData, profileDocRef, instituteId } = foundProfile!;
+
         // 1. Update the user's document with the profile data
         const updates: Partial<AppUser> = {
             dni: profileData.dni,
@@ -400,15 +399,14 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
             isVerified: true
         };
 
-        if ('phone' in profileData) updates.phone = profileData.phone;
-        if ('condition' in profileData) updates.condition = profileData.condition;
-        if ('programId' in profileData) updates.programId = profileData.programId;
-
+        if ('phone' in profileData && profileData.phone) updates.phone = profileData.phone;
+        if ('condition' in profileData && profileData.condition) updates.condition = profileData.condition;
+        if ('programId' in profileData && profileData.programId) updates.programId = profileData.programId;
 
         transaction.update(userRef, updates);
 
         // 2. Mark the profile as claimed
-        transaction.update(profileDoc.ref, { claimed: true });
+        transaction.update(profileDocRef, { claimed: true });
     });
 };
 
