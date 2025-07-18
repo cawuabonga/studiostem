@@ -117,7 +117,7 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
 
                 toast({
                     title: '¡Éxito!',
-                    description: `${staffToUpload.length} perfiles de personal han sido creados. Cada uno deberá usar "Olvidé mi contraseña" para iniciar sesión.`,
+                    description: `${staffToUpload.length} perfiles de personal han sido creados. Los usuarios podrán reclamarlos desde su dashboard.`,
                     duration: 8000
                 });
                 onUploadSuccess();
@@ -161,7 +161,7 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
                 ) : (
                     <>
                         <Upload className="mr-2 h-4 w-4" />
-                        Subir y Registrar Personal
+                        Subir y Registrar Perfiles
                     </>
                 )}
             </Button>

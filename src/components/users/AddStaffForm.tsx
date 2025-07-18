@@ -10,17 +10,15 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { createInstituteUser, getPrograms } from '@/config/firebase';
+import { addStaffProfile, getPrograms } from '@/config/firebase';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { UserRole, Program } from '@/types';
 
 const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
-const roleDisplayMap: Record<UserRole, string> = {
+const roleDisplayMap: Record<string, string> = {
     Teacher: 'Docente',
     Coordinator: 'Coordinador',
     Admin: 'Administrador',
-    Student: 'Estudiante',
-    SuperAdmin: 'SuperAdmin',
 }
 
 const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
@@ -71,27 +69,22 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
     }
     setLoading(true);
     try {
-      await createInstituteUser(instituteId, {
+      await addStaffProfile(instituteId, {
         ...data,
       });
 
       toast({
         title: '¡Éxito!',
-        description: `Se ha creado el perfil para ${data.displayName}. El usuario deberá usar "Olvidé mi contraseña" para establecer una clave e iniciar sesión.`,
+        description: `Se ha creado el perfil para ${data.displayName}. El usuario podrá reclamar este perfil desde su dashboard usando su DNI.`,
         duration: 8000
       });
       form.reset();
       onUserAdded();
     } catch (error: any) {
-      // Firebase often returns 'permission-denied' for various reasons, including duplicate data if rules are strict.
-      // A more specific error handling is better.
-      let errorMessage = 'No se pudo registrar al usuario. Intente de nuevo.';
-      if (error.message.includes('already exists')) {
-          errorMessage = 'Un usuario con este correo electrónico ya existe.';
-      } else if (error.message.includes('permission-denied')) {
-          errorMessage = 'No tienes permiso para realizar esta acción. Contacta a un SuperAdmin.';
+      let errorMessage = 'No se pudo registrar el perfil. Es posible que ya exista un perfil con ese DNI.';
+       if (error.message.includes('permission-denied')) {
+          errorMessage = 'No tienes permiso para realizar esta acción.';
       }
-
       toast({
         title: 'Error',
         description: errorMessage,
@@ -236,10 +229,10 @@ export function AddStaffForm({ onUserAdded }: AddStaffFormProps) {
             />
         </div>
          <FormDescription>
-            El nuevo usuario deberá usar la opción de "Olvidé mi contraseña" en el login para establecer su propia clave.
+            El usuario final deberá crear su cuenta y luego validarla con su DNI desde su perfil.
         </FormDescription>
         <Button type="submit" disabled={loading}>
-          {loading ? 'Registrando...' : 'Registrar Personal'}
+          {loading ? 'Registrando Perfil...' : 'Registrar Perfil de Personal'}
         </Button>
       </form>
     </Form>

@@ -42,7 +42,7 @@ export default function RegistrarPersonalPage() {
                          <Card>
                             <CardHeader>
                                 <CardTitle>Registro por Lotes</CardTitle>
-                                <CardDescription>Descargue la plantilla, complete los datos del personal y súbala para un registro rápido.</CardDescription>
+                                <CardDescription>Descargue la plantilla, complete los datos del personal y súbala para un registro rápido de perfiles.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <BulkUploadStaff onUploadSuccess={handleDataChange} />
@@ -54,9 +54,9 @@ export default function RegistrarPersonalPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Registrar Nuevo Personal (Individual)</CardTitle>
+                    <CardTitle>Registrar Perfil de Personal (Individual)</CardTitle>
                     <CardDescription>
-                        Crea una cuenta para un nuevo docente, coordinador o administrador.
+                        Crea un perfil para un nuevo docente, coordinador o administrador. El usuario podrá reclamar este perfil usando su DNI.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

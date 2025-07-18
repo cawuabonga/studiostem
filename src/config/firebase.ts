@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -38,6 +38,7 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
       displayName: user.displayName, 
       photoURL: user.photoURL,
       instituteId: instituteId || null,
+      isVerified: false, // Add verification flag
     }, { merge: true });
     console.log("User data saved to Firestore.");
   } catch (error) {
@@ -246,61 +247,93 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
     await updateDoc(userRef, data);
 };
 
-export const checkIfUserExistsByEmail = async (email: string): Promise<boolean> => {
-    const usersCol = collection(db, 'users');
-    const q = query(usersCol, where("email", "==", email), limit(1));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty;
-};
+// New flow: Admins create a "staff profile" which users can later claim.
+export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId'>) => {
+    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
+    // Use DNI as the document ID to enforce uniqueness at the institute level.
+    const profileRef = doc(staffProfilesCol, profileData.dni);
 
-// This function only creates the user document in Firestore.
-// It does NOT create an authentication user. The user will have to use "Forgot Password".
-export const createInstituteUser = async (instituteId: string, userData: Omit<AppUser, 'uid' | 'photoURL'>): Promise<void> => {
-    // The check for existing user is removed to prevent permission errors.
-    // We will rely on Firestore's unique index on the email field if set,
-    // or catch the specific error if we were creating an auth user.
-    // For just creating a doc, we can let it proceed and handle duplicates organizationally.
-    // A better solution involves Cloud Functions.
-
-    const newUserDocRef = doc(collection(db, 'users'));
-
-    await setDoc(newUserDocRef, {
-        uid: newUserDocRef.id,
-        email: userData.email,
-        displayName: userData.displayName,
-        photoURL: null,
-        role: userData.role,
-        instituteId: instituteId,
-        dni: userData.dni || null,
-        phone: userData.phone || null,
-        condition: userData.condition || null,
-        programId: userData.programId || null,
+    await setDoc(profileRef, {
+        ...profileData,
+        claimed: false, // Mark as not claimed initially
     });
-
-    console.warn(`User document created for ${userData.email}, but no auth user created. User must use 'Forgot Password' to log in.`);
 };
 
 export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid' | 'photoURL'>[]) => {
     const batch = writeBatch(db);
-    const usersCol = collection(db, 'users');
+    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
 
     for (const staffData of staffList) {
-        // Here we're assuming the list is clean of duplicates within itself.
-        // A more robust solution might pre-check all emails in the list against the database.
-        const newUserDocRef = doc(usersCol);
+        if(!staffData.dni) continue; // Skip if no DNI
+        const profileRef = doc(staffProfilesCol, staffData.dni);
         
-        const dataToSave = {
-            ...staffData,
-            uid: newUserDocRef.id,
-            photoURL: null,
-            instituteId,
+        const dataToSave: StaffProfile = {
+            dni: staffData.dni,
+            displayName: staffData.displayName || '',
+            email: staffData.email || '',
+            phone: staffData.phone,
+            role: staffData.role || 'Teacher',
+            condition: staffData.condition,
+            programId: staffData.programId,
+            claimed: false
         };
 
-        batch.set(newUserDocRef, dataToSave);
+        batch.set(profileRef, dataToSave);
     }
 
     await batch.commit();
-    console.warn(`${staffList.length} user documents created, but no auth users created. Users must use 'Forgot Password' to log in.`);
+};
+
+
+// New flow: User validates their profile using DNI
+export const validateUserWithDNI = async (uid: string, dni: string) => {
+    const userRef = doc(db, 'users', uid);
+    const userDoc = await getDoc(userRef);
+    if (!userDoc.exists() || userDoc.data()?.isVerified) {
+        throw new Error("El usuario no existe o ya ha sido verificado.");
+    }
+
+    const staffProfilesQuery = query(
+        collectionGroup(db, 'staffProfiles'), 
+        where('dni', '==', dni),
+        where('claimed', '==', false)
+    );
+
+    const querySnapshot = await getDocs(staffProfilesQuery);
+
+    if (querySnapshot.empty) {
+        throw new Error("No se encontró ningún perfil de personal sin reclamar con ese DNI.");
+    }
+    if (querySnapshot.size > 1) {
+        console.warn(`Se encontraron múltiples perfiles para el DNI ${dni}. Se usará el primero.`);
+    }
+
+    const profileDoc = querySnapshot.docs[0];
+    const profileData = profileDoc.data() as StaffProfile;
+    const instituteId = profileDoc.ref.parent.parent?.id; // Get instituteId from the path
+
+    if (!instituteId) {
+        throw new Error("No se pudo determinar el instituto del perfil encontrado.");
+    }
+
+    // Use a transaction to ensure atomicity
+    await runTransaction(db, async (transaction) => {
+        // 1. Update the user's document with the profile data
+        transaction.update(userRef, {
+            dni: profileData.dni,
+            displayName: profileData.displayName,
+            email: profileData.email,
+            phone: profileData.phone || null,
+            role: profileData.role,
+            condition: profileData.condition || null,
+            programId: profileData.programId || null,
+            instituteId: instituteId,
+            isVerified: true // Mark as verified
+        });
+
+        // 2. Mark the staff profile as claimed
+        transaction.update(profileDoc.ref, { claimed: true });
+    });
 };
 
 

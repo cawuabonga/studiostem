@@ -14,6 +14,19 @@ export interface AppUser {
   phone?: string;
   condition?: 'NOMBRADO' | 'CONTRATADO';
   programId?: string;
+  isVerified?: boolean; // Flag to check if user has claimed a profile
+}
+
+// Represents a profile created by an Admin, to be claimed by a user.
+export interface StaffProfile {
+    dni: string;
+    displayName: string;
+    email: string;
+    role: UserRole;
+    phone?: string;
+    condition?: 'NOMBRADO' | 'CONTRATADO';
+    programId?: string;
+    claimed: boolean; // To check if this profile has been claimed
 }
 
 export interface LoginDesign {

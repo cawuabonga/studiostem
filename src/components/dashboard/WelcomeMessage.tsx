@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,13 +7,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../ui/button';
 import { EditProfileDialog } from '../profile/EditProfileDialog';
 import { useState } from 'react';
+import { ValidateProfileDialog } from '../profile/ValidateProfileDialog';
 
 export default function WelcomeMessage() {
-  const { user } = useAuth();
+  const { user, reloadUser } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isValidateOpen, setIsValidateOpen] = useState(false);
 
   if (!user) {
     return null; 
+  }
+
+  const handleValidationSuccess = () => {
+    setIsValidateOpen(false);
+    reloadUser(); // Recarga los datos del usuario para reflejar el nuevo rol e instituto
   }
 
   return (
@@ -33,16 +41,28 @@ export default function WelcomeMessage() {
             Este es tu panel de control. Utiliza el menú lateral para navegar por las diferentes secciones de la aplicación.
           </p>
         </CardContent>
-        <CardFooter className="flex justify-center">
+        <CardFooter className="flex justify-center gap-4">
             <Button onClick={() => setIsEditOpen(true)}>Editar Perfil</Button>
+            {!user.isVerified && user.role === 'Student' && (
+              <Button variant="secondary" onClick={() => setIsValidateOpen(true)}>Validar Perfil</Button>
+            )}
         </CardFooter>
       </Card>
+
       {user && (
           <EditProfileDialog 
             user={user}
             isOpen={isEditOpen}
             onClose={() => setIsEditOpen(false)}
           />
+      )}
+
+      {user && !user.isVerified && (
+        <ValidateProfileDialog 
+            isOpen={isValidateOpen}
+            onClose={() => setIsValidateOpen(false)}
+            onSuccess={handleValidationSuccess}
+        />
       )}
     </>
   );
