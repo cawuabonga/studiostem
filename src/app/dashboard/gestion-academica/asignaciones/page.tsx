@@ -57,7 +57,7 @@ export default function AsignacionesPage() {
             </div>
             <div className="flex-1 space-y-2">
                  <Label htmlFor="program-select">Programa de Estudio</Label>
-                <Select value={selectedProgramId} onValueChange={setSelectedProgramId} disabled={!programs.length}>
+                <Select value={selectedProgramId} onValueChange={(value) => { setSelectedProgramId(value); setShowAssignments(false); }} disabled={!programs.length}>
                     <SelectTrigger id="program-select">
                         <SelectValue placeholder="Seleccione un programa" />
                     </SelectTrigger>

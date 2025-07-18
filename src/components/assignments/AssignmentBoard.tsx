@@ -1,15 +1,15 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getTeachers, getAssignments, saveAssignments } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, UnitPeriod } from '@/types';
+import { getUnits, getTeachers, getAssignments, saveAssignments, getPrograms } from '@/config/firebase';
+import type { Unit, Teacher, Assignment, Program, ProgramModule } from '@/types';
 import { Save } from 'lucide-react';
-import { AssignmentColumn } from './AssignmentColumn';
+import { ModuleAssignmentGroup } from './ModuleAssignmentGroup';
 
 interface AssignmentBoardProps {
   instituteId: string;
@@ -17,8 +17,11 @@ interface AssignmentBoardProps {
   year: string;
 }
 
+type UnitsByModule = { [moduleId: string]: Unit[] };
+
 export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoardProps) {
   const [units, setUnits] = useState<Unit[]>([]);
+  const [program, setProgram] = useState<Program | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }>({ 'MAR-JUL': {}, 'AGO-DIC': {} });
   const [loading, setLoading] = useState(true);
@@ -28,14 +31,21 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const allUnits = await getUnits(instituteId);
-      const programUnits = allUnits.filter(unit => unit.programId === programId);
-      const fetchedTeachers = await getTeachers(instituteId);
-      const existingAssignments = await getAssignments(instituteId, year, programId);
+      const [allUnits, fetchedTeachers, existingAssignments, allPrograms] = await Promise.all([
+        getUnits(instituteId),
+        getTeachers(instituteId),
+        getAssignments(instituteId, year, programId),
+        getPrograms(instituteId)
+      ]);
       
+      const programUnits = allUnits.filter(unit => unit.programId === programId);
+      const currentProgram = allPrograms.find(p => p.id === programId) || null;
+
       setUnits(programUnits);
       setTeachers(fetchedTeachers);
       setAssignments(existingAssignments);
+      setProgram(currentProgram);
+
     } catch (error) {
       toast({
         title: "Error",
@@ -51,7 +61,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
     fetchData();
   }, [fetchData]);
 
-  const handleAssignmentChange = (period: UnitPeriod, unitId: string, teacherId: string) => {
+  const handleAssignmentChange = (period: 'MAR-JUL' | 'AGO-DIC', unitId: string, teacherId: string) => {
     setAssignments(prev => ({
       ...prev,
       [period]: {
@@ -80,9 +90,16 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
     }
   };
   
-  const getUnitsByPeriod = (period: UnitPeriod) => {
-      return units.filter(unit => unit.period === period);
-  }
+  const unitsByModule = useMemo(() => {
+    return units.reduce((acc, unit) => {
+      const moduleId = unit.moduleId;
+      if (!acc[moduleId]) {
+        acc[moduleId] = [];
+      }
+      acc[moduleId].push(unit);
+      return acc;
+    }, {} as UnitsByModule);
+  }, [units]);
 
   if (loading) {
     return (
@@ -93,14 +110,12 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
         </CardHeader>
         <CardContent className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
           </div>
           <div className="space-y-4">
-            <Skeleton className="h-6 w-1/4" />
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
           </div>
         </CardContent>
       </Card>
@@ -114,7 +129,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
             <div>
                 <CardTitle>Tablero de Asignaciones del Año {year}</CardTitle>
                 <CardDescription>
-                    Asigne un docente a cada unidad didáctica para los dos períodos académicos.
+                    {`Asigne un docente a cada unidad didáctica para el programa de ${program?.name || '...'}.`}
                 </CardDescription>
             </div>
             <Button onClick={handleSaveAssignments} disabled={isSaving}>
@@ -123,21 +138,20 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
             </Button>
         </div>
       </CardHeader>
-      <CardContent className="grid md:grid-cols-2 gap-6">
-        <AssignmentColumn
-          period="MAR-JUL"
-          units={getUnitsByPeriod('MAR-JUL')}
-          teachers={teachers}
-          assignments={assignments['MAR-JUL']}
-          onAssignmentChange={handleAssignmentChange}
-        />
-        <AssignmentColumn
-          period="AGO-DIC"
-          units={getUnitsByPeriod('AGO-DIC')}
-          teachers={teachers}
-          assignments={assignments['AGO-DIC']}
-          onAssignmentChange={handleAssignmentChange}
-        />
+      <CardContent className="space-y-6">
+        {program?.modules.map(module => (
+          <ModuleAssignmentGroup
+            key={module.code}
+            module={module}
+            units={unitsByModule[module.code] || []}
+            teachers={teachers}
+            assignments={assignments}
+            onAssignmentChange={handleAssignmentChange}
+          />
+        ))}
+        {Object.keys(unitsByModule).length === 0 && !loading && (
+            <p className="text-muted-foreground text-center">No hay unidades didácticas registradas para este programa.</p>
+        )}
       </CardContent>
     </Card>
   );
