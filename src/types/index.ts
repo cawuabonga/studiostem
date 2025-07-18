@@ -76,3 +76,7 @@ export interface Teacher {
   specialty: string;
   active: boolean;
 }
+
+export interface Assignment {
+  [unitId: string]: string; // unitId -> teacherId
+}

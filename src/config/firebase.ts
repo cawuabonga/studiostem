@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -178,6 +178,11 @@ export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>
     await updateDoc(userRef, data);
 };
 
+export const updateUserByInstituteAdmin = async (instituteId: string, uid: string, data: Partial<AppUser>): Promise<void> => {
+    const userRef = doc(db, 'users', uid);
+    await updateDoc(userRef, data);
+};
+
 // --- Institute-Specific Data Management ---
 
 const getSubCollectionRef = (instituteId: string, collectionName: string) => {
@@ -289,3 +294,29 @@ export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teache
     });
     await batch.commit();
 }
+
+// Assignments
+export const getAssignments = async (
+  instituteId: string,
+  year: string,
+  programId: string
+): Promise<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }> => {
+  const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
+  const docSnap = await getDoc(assignmentDocRef);
+
+  if (docSnap.exists()) {
+    return docSnap.data() as { 'MAR-JUL': Assignment; 'AGO-DIC': Assignment };
+  }
+  
+  return { 'MAR-JUL': {}, 'AGO-DIC': {} };
+};
+
+export const saveAssignments = async (
+  instituteId: string,
+  year: string,
+  programId: string,
+  assignments: { 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }
+): Promise<void> => {
+  const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
+  await setDoc(assignmentDocRef, assignments);
+};
