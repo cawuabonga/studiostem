@@ -27,6 +27,7 @@ export function AssignmentPeriodColumn({
 }: AssignmentPeriodColumnProps) {
 
   const unitsByModule = useMemo(() => {
+    if (!units) return {};
     return units.reduce((acc, unit) => {
       const moduleId = unit.moduleId;
       if (!acc[moduleId]) {
@@ -53,10 +54,11 @@ export function AssignmentPeriodColumn({
             teachers={teachers}
             assignments={assignments}
             onAssignmentChange={onAssignmentChange}
+            period={period}
           />
         ))}
 
-        {units.length === 0 && (
+        {(!units || units.length === 0) && (
             <div className="text-center text-muted-foreground p-4">
                 No hay unidades para este período.
             </div>

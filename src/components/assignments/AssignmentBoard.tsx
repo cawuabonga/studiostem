@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getTeachers, getAssignments, getPrograms } from '@/config/firebase';
+import { getUnits, getTeachers, getAssignments, getPrograms, saveAssignments } from '@/config/firebase';
 import type { Unit, Teacher, Assignment, Program, ProgramModule, UnitPeriod } from '@/types';
 import { Save } from 'lucide-react';
 import { AssignmentPeriodColumn } from './AssignmentPeriodColumn';
@@ -45,6 +45,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
       setProgram(currentProgram);
 
     } catch (error) {
+       console.error("Error fetching assignment data:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los datos para la asignación.",
@@ -78,6 +79,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
         description: "Las asignaciones se han guardado correctamente.",
       });
     } catch (error) {
+       console.error("Error saving assignments:", error);
       toast({
         title: "Error al Guardar",
         description: "No se pudieron guardar las asignaciones.",
@@ -89,10 +91,18 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
   };
   
   const unitsByPeriod = useMemo(() => {
-    return {
-      'MAR-JUL': units.filter(u => u.period === 'MAR-JUL'),
-      'AGO-DIC': units.filter(u => u.period === 'AGO-DIC'),
-    }
+    const grouped: { [key in UnitPeriod]: Unit[] } = {
+        'MAR-JUL': [],
+        'AGO-DIC': [],
+    };
+
+    units.forEach(unit => {
+        if (grouped[unit.period]) {
+            grouped[unit.period].push(unit);
+        }
+    });
+
+    return grouped;
   }, [units]);
 
   if (loading) {

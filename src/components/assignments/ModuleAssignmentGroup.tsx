@@ -10,10 +10,11 @@ interface ModuleAssignmentGroupProps {
     units: Unit[];
     teachers: Teacher[];
     assignments: Assignment;
+    period: UnitPeriod;
     onAssignmentChange: (period: UnitPeriod, unitId: string, teacherId: string) => void;
 }
 
-export function ModuleAssignmentGroup({ module, units, teachers, assignments, onAssignmentChange }: ModuleAssignmentGroupProps) {
+export function ModuleAssignmentGroup({ module, units, teachers, assignments, period, onAssignmentChange }: ModuleAssignmentGroupProps) {
     if (units.length === 0) {
         return null; // Don't render anything if there are no units for this module in this period
     }
@@ -30,9 +31,9 @@ export function ModuleAssignmentGroup({ module, units, teachers, assignments, on
                         key={unit.id}
                         unit={unit}
                         teachers={teachers}
-                        period={unit.period}
+                        period={period}
                         selectedTeacherId={assignments[unit.id] || ''}
-                        onAssignmentChange={(teacherId) => onAssignmentChange(unit.period, unit.id, teacherId)}
+                        onAssignmentChange={(teacherId) => onAssignmentChange(period, unit.id, teacherId)}
                     />
                 ))}
             </CardContent>
