@@ -8,11 +8,11 @@ import { Button } from "@/components/ui/button";
 import { getPrograms } from "@/config/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Program } from "@/types";
-import { AssignmentContainer } from '@/components/assignments/AssignmentContainer';
 import { Label } from '@/components/ui/label';
+import { AssignmentBoard } from '@/components/assignments/AssignmentBoard';
 
 export default function AsignacionesPage() {
-  const { instituteId, loading: authLoading } = useAuth();
+  const { instituteId } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
@@ -78,7 +78,7 @@ export default function AsignacionesPage() {
       </Card>
 
       {showAssignments && instituteId && (
-        <AssignmentContainer 
+        <AssignmentBoard 
           key={`${instituteId}-${selectedProgramId}-${selectedYear}`}
           instituteId={instituteId} 
           programId={selectedProgramId} 
