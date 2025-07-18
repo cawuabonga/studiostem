@@ -1,0 +1,40 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow users to create their own profile, and read/update it.
+    match /users/{userId} {
+      allow create;
+      allow read, update: if request.auth.uid == userId;
+    }
+
+    // Allow SuperAdmins to read the entire user list.
+    match /users/{userId} {
+        allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // --- Institute Data Rules ---
+    match /institutes/{instituteId} {
+        // SuperAdmins can do anything.
+        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+    
+    // --- Config Rules (e.g., Login Design) ---
+    match /config/{document=**} {
+        // Allow read for anyone (for login page styling)
+        allow read;
+        // Allow write only for SuperAdmins
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+    
+    // --- Rules for Subcollections within Institutes ---
+    match /institutes/{instituteId}/{collection}/{docId} {
+        // Users belonging to the institute with role Admin or Coordinator can read/write.
+        allow read, write: if request.auth.uid != null &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+    }
+  }
+}

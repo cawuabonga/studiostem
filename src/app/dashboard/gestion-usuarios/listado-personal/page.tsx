@@ -1,7 +1,5 @@
-
-// This file is no longer used and has been deprecated.
-// All users are now managed from a single table by the SuperAdmin.
-// The concept of separate student/staff lists for institute admins has been removed for simplicity.
+// This file is no longer used and is deprecated.
+// All institute users are displayed in a single table now.
 export default function ListadoPersonalPage() {
     return null;
 }

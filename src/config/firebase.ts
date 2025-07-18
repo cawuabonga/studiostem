@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment } from '@/types';
 
@@ -172,6 +172,14 @@ export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
 };
+
+export const getUsersFromInstitute = async (instituteId: string): Promise<AppUser[]> => {
+    const usersCol = collection(db, 'users');
+    const q = query(usersCol, where("instituteId", "==", instituteId), orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
+}
+
 
 export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>): Promise<void> => {
     const userRef = doc(db, 'users', uid);
