@@ -11,15 +11,9 @@ import { useEffect, useState } from "react";
 import { BulkUploadUnits } from "@/components/units/BulkUploadUnits";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Upload } from "lucide-react";
-import type { Institute } from "@/types";
 
-interface ManageUnitsPageProps {
-  instituteId: string | null;
-  institute: Institute | null;
-}
-
-export default function ManageUnitsPage({ instituteId }: ManageUnitsPageProps) {
-  const { user, loading } = useAuth();
+export default function ManageUnitsPage() {
+  const { user, instituteId, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -80,7 +74,7 @@ export default function ManageUnitsPage({ instituteId }: ManageUnitsPageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UnitsList key={refreshKey} instituteId={instituteId} onDataChange={handleDataChange} />
+          <UnitsList key={refreshKey} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>

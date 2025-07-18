@@ -8,15 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { Institute } from "@/types";
 
-interface ManageProgramsPageProps {
-  instituteId: string | null;
-  institute: Institute | null;
-}
-
-export default function ManageProgramsPage({ instituteId }: ManageProgramsPageProps) {
-  const { user, loading } = useAuth();
+export default function ManageProgramsPage() {
+  const { user, instituteId, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 

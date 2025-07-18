@@ -11,15 +11,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Upload } from "lucide-react";
-import type { Institute } from "@/types";
 
-interface ManageTeachersPageProps {
-  instituteId: string | null;
-  institute: Institute | null;
-}
-
-export default function ManageTeachersPage({ instituteId }: ManageTeachersPageProps) {
-  const { user, loading } = useAuth();
+export default function ManageTeachersPage() {
+  const { user, instituteId, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 

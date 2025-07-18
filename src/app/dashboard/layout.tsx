@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, cloneElement, isValidElement } from "react";
+import React, { useEffect } from "react";
 import DashboardMainLayout from "@/components/layout/DashboardMainLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -54,15 +54,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
      )
   }
 
-  // Clone children to pass down institute props if needed.
-  // This approach is generally safe for passing context-like props to immediate page components.
-  const childrenWithProps = React.Children.map(children, child => {
-    if (isValidElement(child)) {
-      // Pass institute and instituteId to page components
-      return cloneElement(child, { institute, instituteId } as React.Attributes & { institute: any, instituteId: any });
-    }
-    return child;
-  });
-
-  return <DashboardMainLayout>{childrenWithProps}</DashboardMainLayout>;
+  // Children now access institute data directly from the context.
+  // No need to clone and pass props.
+  return <DashboardMainLayout>{children}</DashboardMainLayout>;
 }
