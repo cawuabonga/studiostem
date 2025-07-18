@@ -1,55 +1,68 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Rules for accessing institute data
-    match /institutes/{instituteId}/{document=**} {
-      // Allow read access if the user is a SuperAdmin or belongs to the institute.
-      allow read: if request.auth != null && 
-                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin' || 
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId);
-      
-      // Allow write access if the user is a SuperAdmin or an Admin/Coordinator of the institute.
-      allow write: if request.auth != null &&
-                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin' ||
-                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator']));
-    }
-
-    // Rules for the `users` collection itself
-    match /users/{userId} {
-        // SuperAdmins can read/write any user document.
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-
-        // An institute admin/coordinator can read users of their own institute.
-        allow read: if request.auth != null && 
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == resource.data.instituteId &&
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
-        
-        // A user can update their own profile information, but cannot change their role or institute.
-        allow update: if request.auth != null && request.auth.uid == userId &&
-                       !('role' in request.resource.data) &&
-                       !('instituteId' in request.resource.data);
-    }
-
-    // Unauthenticated users can read login design settings for the login page
+    
+    // Allow anyone to read the login design configuration
     match /config/{docId} {
       allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-    match /config/loginDesign/images/{imageId} {
-      allow read: if true;
-      allow write, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-
-    // This rule allows a user to validate their profile by checking against all Staff/Student profiles
-    match /{path=**}/staffProfiles/{profileId} {
-      allow get: if request.auth != null;
+      
+      // Allow SuperAdmins to write to login config and images
+      match /images/{imageId} {
+         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      }
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    match /{path=**}/studentProfiles/{profileId} {
-      allow get: if request.auth != null;
+    // Allow users to create and manage their own user document
+    match /users/{userId} {
+      allow create, read, update: if request.auth.uid == userId;
+    }
+
+    // SuperAdmins can manage anything in any institute
+    match /institutes/{instituteId}/{document=**} {
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+    
+    // Rules for verified users belonging to an institute
+    function isVerifiedUserOfInstitute(instituteId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return request.auth.uid != null && userDoc.isVerified == true && userDoc.instituteId == instituteId;
+    }
+
+    function isInstituteAdmin(instituteId) {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      return isVerifiedUserOfInstitute(instituteId) && (userDoc.role == 'Admin' || userDoc.role == 'Coordinator');
+    }
+    
+    // Admins/Coordinators can manage their own institute's documents
+    match /institutes/{instituteId} {
+        allow read, write: if isInstituteAdmin(instituteId);
+        
+        match /programs/{programId} {
+            allow read, write: if isInstituteAdmin(instituteId);
+        }
+        match /units/{unitId} {
+            allow read, write: if isInstituteAdmin(instituteId);
+        }
+        match /teachers/{teacherId} {
+            allow read, write: if isInstituteAdmin(instituteId);
+        }
+        match /staffProfiles/{dni} {
+            allow read, write: if isInstituteAdmin(instituteId);
+        }
+        match /studentProfiles/{dni} {
+             allow read, write: if isInstituteAdmin(instituteId);
+        }
+    }
+
+    // A user needs to be able to read profiles to validate their own
+    match /{path=**}/staffProfiles/{dni} {
+      allow read: if request.auth.uid != null;
+    }
+     match /{path=**}/studentProfiles/{dni} {
+      allow read: if request.auth.uid != null;
     }
   }
 }
