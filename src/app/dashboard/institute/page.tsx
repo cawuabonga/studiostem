@@ -13,24 +13,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 const DEFAULT_INSTITUTE_ID = "istp-principal";
 
 export default function InstituteSelectorPage() {
-  const { user, loading, setInstitute } = useAuth();
+  const { user, loading, setInstitute, instituteId } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
-      // In a real scenario, you might check if an institute is already selected
-      // or present a list. For now, we set a default one.
+    if (loading) return; // Wait until auth state is resolved
+
+    if (!user) {
+      // If for some reason the user is not authenticated, send them to login.
+      router.replace('/');
+      return;
+    }
+
+    // If an institute is already selected, redirect to dashboard.
+    if (instituteId) {
+      router.replace('/dashboard');
+      return;
+    }
+
+    // If no institute is selected, set the default one.
+    // The change in context will trigger a re-render and the condition above will redirect.
+    if (!instituteId) {
       console.log(`Setting default institute ID: ${DEFAULT_INSTITUTE_ID}`);
       setInstitute(DEFAULT_INSTITUTE_ID);
-      
-      // Redirect to the main academic dashboard after setting the institute.
-      router.replace('/dashboard/academic');
-
-    } else if (!loading && !user) {
-        // If for some reason the user is not authenticated, send them to login.
-        router.replace('/');
     }
-  }, [user, loading, setInstitute, router]);
+
+  }, [user, loading, instituteId, setInstitute, router]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full">

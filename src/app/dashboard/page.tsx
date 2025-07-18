@@ -19,14 +19,16 @@ export default function DashboardRedirectPage() {
           break;
         case 'Admin':
         case 'Coordinator':
+          router.push('/dashboard/gestion-academica');
+          break;
         case 'Teacher':
-          router.push('/dashboard/academic');
+          router.push('/dashboard/academic'); // TODO: Create teacher dashboard
           break;
         case 'Student':
-           router.push('/dashboard/student');
+           router.push('/dashboard/academic'); // TODO: Create student dashboard
            break;
         default:
-          // Fallback for any other roles to the institute selector.
+          // Fallback for any other roles or if role is not defined yet.
           router.push('/dashboard/institute');
           break;
       }
