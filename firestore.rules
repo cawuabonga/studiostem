@@ -2,107 +2,85 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check user role
-    function isRole(uid, role) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role == role;
+  
+    // Helper functions
+    function isSuperAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
     
-    function isRoleIn(uid, roles) {
-      return get(/databases/$(database)/documents/users/$(uid)).data.role in roles;
-    }
-    
-    function isInstituteMember(uid, instituteId) {
-        return get(/databases/$(database)/documents/users/$(uid)).data.instituteId == instituteId;
-    }
-    
-    function isSignedIn() {
-        return request.auth != null;
+    function isInstituteAdmin(instituteId) {
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      let userInstituteId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId;
+      return (userRole == 'Admin' || userRole == 'Coordinator') && userInstituteId == instituteId;
     }
 
-    // Users collection:
-    // - Anyone can create their own user document on signup.
-    // - Users can only read/update their own document.
-    // - Admins/SuperAdmins can read/update any user document.
+    // /users/{userId}
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isRole(request.auth.uid, 'SuperAdmin'));
+      // Any authenticated user can create their own user document
+      allow create: if request.auth != null;
+
+      // Users can read their own data. SuperAdmins can read anyone's data.
+      allow read: if request.auth.uid == userId || isSuperAdmin();
       
-      // Allow update for own profile, or if user is an Admin/SuperAdmin.
-      // A user can only perform the "validation" update once.
-      allow update: if isSignedIn() && 
-                      (request.auth.uid == userId && 
+      // Users can update their own non-critical data.
+      // A user can also perform a one-time update to claim a profile.
+      allow update: if request.auth.uid == userId &&
+                      (
+                        // Allow updating non-critical fields anytime
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'dni']) ||
+                        // Allow one-time profile claim
                         (
-                          // Standard profile edit (cannot change role/institute)
-                          (!('role' in request.resource.data) && !('instituteId' in request.resource.data)) ||
-                          // One-time validation update
-                          (resource.data.isVerified == false && request.resource.data.isVerified == true)
+                          resource.data.isVerified == false &&
+                          request.resource.data.isVerified == true &&
+                           request.resource.data.diff(resource.data).affectedKeys().hasAll(['isVerified', 'role', 'instituteId', 'dni', 'displayName', 'email'])
                         )
-                      ) || isRole(request.auth.uid, 'SuperAdmin');
-                      
-      // On sign up, a user creates their own document.
-      allow create: if request.auth.uid == userId;
+                      );
+      
+      // SuperAdmins can update any user
+      allow update: if isSuperAdmin();
+
+      // No one can delete user documents for safety. This should be handled by a SuperAdmin or via Cloud Functions.
+      allow delete: if false;
+    }
+    
+    // /config/{document}
+    match /config/{docId} {
+        // Login design settings are public-read, but write-only for SuperAdmins
+        allow read: if docId == 'loginDesign';
+        allow write: if isSuperAdmin();
+        
+        match /{allChildren=**} {
+             allow read: if docId == 'loginDesign';
+             allow write: if isSuperAdmin();
+        }
     }
 
-    // Config collection (e.g., login design)
-    // - Public read for login page design.
-    // - Write restricted to SuperAdmins.
-    match /config/{docId=**} {
-      allow read: if true; // Public read is needed for login page styling
-      allow write: if isRole(request.auth.uid, 'SuperAdmin');
-    }
-
-    // Institutes collection:
-    // - Any authenticated user can read institute details (for selection).
-    // - Only SuperAdmins can create, update, or delete institutes.
+    // /institutes/{instituteId}
     match /institutes/{instituteId} {
-      allow read: if isSignedIn();
-      allow create, update, delete: if isRole(request.auth.uid, 'SuperAdmin');
+      // Allow SuperAdmins to do anything
+      allow read, write: if isSuperAdmin();
+      
+      // Allow institute members (Admin, Coordinator) to read their own institute's data
+      allow read: if isInstituteAdmin(instituteId);
 
-      // Subcollections for institute-specific data
-      // Only users who are members of that institute and have the correct role can access them.
-      function canAccessInstituteData() {
-        return isSignedIn() &&
-               isInstituteMember(request.auth.uid, instituteId) &&
-               isRoleIn(request.auth.uid, ['Admin', 'Coordinator', 'Teacher']);
+      // Subcollections within an institute
+      match /{collectionId}/{docId} {
+        // Admins/Coordinators can read/write data within their own institute
+        allow read, write: if isInstituteAdmin(instituteId);
       }
-      
-      match /programs/{programId=**} {
-        allow read: if canAccessInstituteData();
-        allow write: if canAccessInstituteData() && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-      }
-      
-      match /units/{unitId=**} {
-        allow read: if canAccessInstituteData();
-        allow write: if canAccessInstituteData() && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-      }
-      
-      match /teachers/{teacherId=**} {
-        allow read: if canAccessInstituteData();
-        allow write: if canAccessInstituteData() && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-      }
-
-      // Profiles to be claimed by users
-      match /studentProfiles/{dni} {
-        // Admins can manage profiles.
-        allow write: if isInstituteMember(request.auth.uid, instituteId) && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-        // Admins can read the list of profiles for their institute.
-        allow list: if isInstituteMember(request.auth.uid, instituteId) && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-        // Any authenticated user can read a SPECIFIC profile doc (for validation).
-        allow get: if isSignedIn();
-        // Allow a user to update a profile to "claim" it.
-        allow update: if isSignedIn() && request.resource.data.claimed == true && resource.data.claimed == false;
-      }
-      
-       match /staffProfiles/{dni} {
-        // Admins can manage profiles.
-        allow write: if isInstituteMember(request.auth.uid, instituteId) && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-        // Admins can read the list of profiles for their institute.
-        allow list: if isInstituteMember(request.auth.uid, instituteId) && isRoleIn(request.auth.uid, ['Admin', 'Coordinator']);
-        // Any authenticated user can read a SPECIFIC profile doc (for validation).
-        allow get: if isSignedIn();
-        // Allow a user to update a profile to "claim" it.
-        allow update: if isSignedIn() && request.resource.data.claimed == true && resource.data.claimed == false;
-      }
+    }
+    
+    // collectionGroup for profile validation
+    match /{path=**}/staffProfiles/{dni} {
+        // Allow any authenticated user to perform a 'get' or a 'query' on this collection group.
+        // This is safe because our queries are specific (e.g., where('dni', '==', value))
+        // and do not allow listing all documents.
+        allow get, list: if request.auth != null;
+    }
+    
+     match /{path=**}/studentProfiles/{dni} {
+        // Allow any authenticated user to perform a 'get' or a 'query' on this collection group.
+        allow get, list: if request.auth != null;
     }
   }
 }

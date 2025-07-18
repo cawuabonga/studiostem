@@ -251,6 +251,14 @@ export const createInstituteUser = async (instituteId: string, data: { displayNa
     if (!data.dni) {
         throw new Error("DNI es requerido para crear un perfil de estudiante.");
     }
+    
+    // Check if a profile with this DNI already exists in this institute
+    const profileRef = doc(db, 'institutes', instituteId, 'studentProfiles', data.dni);
+    const docSnap = await getDoc(profileRef);
+    if (docSnap.exists()) {
+        throw new Error("Ya existe un perfil de estudiante con este DNI en este instituto.");
+    }
+
     const studentProfile: StudentProfile = {
         dni: data.dni,
         displayName: data.displayName,
@@ -258,14 +266,6 @@ export const createInstituteUser = async (instituteId: string, data: { displayNa
         claimed: false,
         role: 'Student', // Role is fixed here
     };
-
-    const profileRef = doc(db, 'institutes', instituteId, 'studentProfiles', data.dni);
-    
-    // Check if a profile with this DNI already exists
-    const docSnap = await getDoc(profileRef);
-    if (docSnap.exists()) {
-        throw new Error("Ya existe un perfil de estudiante con este DNI.");
-    }
     
     await setDoc(profileRef, studentProfile);
     
@@ -347,47 +347,44 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
         throw new Error("El usuario no existe o ya ha sido verificado.");
     }
 
-    const institutes = await getInstitutes();
     let foundProfile: {
         profileData: StaffProfile | StudentProfile;
         profileDocRef: any;
-        instituteId: string;
     } | null = null;
 
-    // Iterate through all institutes to find the DNI
-    for (const institute of institutes) {
-        // Check staff profiles first
-        let profileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
-        let profileSnap = await getDoc(profileRef);
+    // Search in staff profiles first
+    const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('dni', '==', dni));
+    const staffSnapshot = await getDocs(staffQuery);
 
-        if (profileSnap.exists()) {
-            const profileData = profileSnap.data() as StaffProfile;
-            if (!profileData.claimed) {
-                foundProfile = { profileData, profileDocRef: profileRef, instituteId: institute.id };
-                break; // Found an unclaimed staff profile, exit loop
-            }
-        }
-
-        // If not found in staff, check student profiles
-        profileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
-        profileSnap = await getDoc(profileRef);
-
-        if (profileSnap.exists()) {
-            const profileData = profileSnap.data() as StudentProfile;
-            if (!profileData.claimed) {
-                foundProfile = { profileData, profileDocRef: profileRef, instituteId: institute.id };
-                break; // Found an unclaimed student profile, exit loop
-            }
+    for (const doc of staffSnapshot.docs) {
+        const profileData = doc.data() as StaffProfile;
+        if (!profileData.claimed) {
+            foundProfile = { profileData, profileDocRef: doc.ref };
+            break;
         }
     }
 
+    // If not found, search in student profiles
+    if (!foundProfile) {
+        const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('dni', '==', dni));
+        const studentSnapshot = await getDocs(studentQuery);
+        for (const doc of studentSnapshot.docs) {
+            const profileData = doc.data() as StudentProfile;
+            if (!profileData.claimed) {
+                foundProfile = { profileData, profileDocRef: doc.ref };
+                break;
+            }
+        }
+    }
+    
     if (!foundProfile) {
         throw new Error("No se encontró ningún perfil con ese DNI o ya fue reclamado.");
     }
 
     // Use a transaction to ensure atomicity
     await runTransaction(db, async (transaction) => {
-        const { profileData, profileDocRef, instituteId } = foundProfile!;
+        const { profileData, profileDocRef } = foundProfile!;
+        const instituteId = profileDocRef.parent.parent.id; // Get institute ID from profile's path
 
         // 1. Update the user's document with the profile data
         const updates: Partial<AppUser> = {
@@ -519,3 +516,4 @@ export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teache
     });
     await batch.commit();
 }
+
