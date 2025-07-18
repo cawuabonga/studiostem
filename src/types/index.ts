@@ -29,6 +29,15 @@ export interface StaffProfile {
     claimed: boolean; // To check if this profile has been claimed
 }
 
+export interface StudentProfile {
+    dni: string;
+    displayName: string;
+    email: string;
+    role: 'Student'; // Role is fixed
+    claimed: boolean;
+}
+
+
 export interface LoginDesign {
   imageUrl: string;
   backgroundColor: string;

@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile, StudentProfile } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -233,8 +233,7 @@ export const getUsersByInstitute = async (instituteId: string, roles: UserRole[]
     const q = query(
         usersCol, 
         where("instituteId", "==", instituteId),
-        where("role", "in", roles),
-        orderBy("displayName")
+        where("role", "in", roles)
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
@@ -248,48 +247,53 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
 };
 
 
-export const createInstituteUser = async (instituteId: string, data: Omit<AppUser, 'uid' | 'photoURL' | 'instituteId'>) => {
-    const { email, ...rest } = data;
-    if (!email) {
-        throw new Error("Email is required to create a user profile.");
+export const createInstituteUser = async (instituteId: string, data: { displayName: string, dni?: string, email: string }) => {
+    if (!data.dni) {
+        throw new Error("DNI es requerido para crear un perfil de estudiante.");
+    }
+    const studentProfile: StudentProfile = {
+        dni: data.dni,
+        displayName: data.displayName,
+        email: data.email,
+        claimed: false,
+        role: 'Student', // Role is fixed here
+    };
+
+    const profileRef = doc(db, 'institutes', instituteId, 'studentProfiles', data.dni);
+    
+    // Check if a profile with this DNI already exists
+    const docSnap = await getDoc(profileRef);
+    if (docSnap.exists()) {
+        throw new Error("Ya existe un perfil de estudiante con este DNI.");
     }
     
-    // Check if user exists in auth. We can't do this from the client securely.
-    // The admin will create a profile, and the user can claim it or be invited.
-    // Let's create the profile in a "studentProfiles" sub-collection for now.
-    // DNI will be the ID to ensure uniqueness for students within an institute.
-    
-    // We don't create an Auth user here. We just create their profile.
-    // The user will have to use "Forgot Password" to set their password.
-    // The error handling in the form should catch if the email is already in use by auth.
-    try {
-        await addStaffProfile(instituteId, {
-            ...rest,
-            email,
-            role: 'Student', // This function is specifically for students
-            claimed: false
-        })
-    } catch(error: any) {
-        if(error.message.includes("already exists")) {
-            throw new Error("A student with this DNI already has a profile.");
-        }
-        throw error;
-    }
+    await setDoc(profileRef, studentProfile);
     
     // Attempt to send a password reset email to invite the user.
     try {
-        await sendPasswordResetEmail(auth, email);
+        await sendPasswordResetEmail(auth, data.email);
     } catch (error) {
-        console.warn(`Could not send password reset email to ${email}. This is okay if the user doesn't have an auth account yet.`, error);
+        console.warn(`Could not send password reset email to ${data.email}. This is okay if the user doesn't have an auth account yet.`, error);
     }
 };
+
+export const getStudentProfilesByInstitute = async (instituteId: string): Promise<StudentProfile[]> => {
+    const studentProfilesCol = collection(db, 'institutes', instituteId, 'studentProfiles');
+    const q = query(studentProfilesCol, orderBy("displayName"));
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(docSnap => docSnap.data() as StudentProfile);
+}
+
 
 // New flow: Admins create a "staff profile" which users can later claim.
 export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId'>) => {
     const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
     // Use DNI as the document ID to enforce uniqueness at the institute level.
     const profileRef = doc(staffProfilesCol, profileData.dni);
-
+    const docSnap = await getDoc(profileRef);
+    if(docSnap.exists()){
+      throw new Error("Ya existe un perfil con este DNI.");
+    }
     await setDoc(profileRef, {
         ...profileData,
         claimed: false, // Mark as not claimed initially
@@ -343,23 +347,47 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
         throw new Error("El usuario no existe o ya ha sido verificado.");
     }
 
+    // Search in staff profiles first
     const staffProfilesQuery = query(
         collectionGroup(db, 'staffProfiles'), 
         where('dni', '==', dni),
         where('claimed', '==', false)
     );
+    let querySnapshot = await getDocs(staffProfilesQuery);
+    
+    let profileDoc: any;
+    let profileData: StaffProfile | StudentProfile | null = null;
+    let profileType: 'staff' | 'student' | null = null;
 
-    const querySnapshot = await getDocs(staffProfilesQuery);
+    if (!querySnapshot.empty) {
+        profileDoc = querySnapshot.docs[0];
+        profileData = profileDoc.data() as StaffProfile;
+        profileType = 'staff';
+    } else {
+        // If not found in staff, search in student profiles
+        const studentProfilesQuery = query(
+            collectionGroup(db, 'studentProfiles'),
+            where('dni', '==', dni),
+            where('claimed', '==', false)
+        );
+        querySnapshot = await getDocs(studentProfilesQuery);
 
-    if (querySnapshot.empty) {
-        throw new Error("No se encontró ningún perfil de personal sin reclamar con ese DNI.");
+        if (!querySnapshot.empty) {
+            profileDoc = querySnapshot.docs[0];
+            profileData = profileDoc.data() as StudentProfile;
+            profileType = 'student';
+        }
     }
+
+
+    if (!profileDoc || !profileData || !profileType) {
+        throw new Error("No se encontró ningún perfil sin reclamar con ese DNI.");
+    }
+    
     if (querySnapshot.size > 1) {
         console.warn(`Se encontraron múltiples perfiles para el DNI ${dni}. Se usará el primero.`);
     }
 
-    const profileDoc = querySnapshot.docs[0];
-    const profileData = profileDoc.data() as StaffProfile;
     const instituteId = profileDoc.ref.parent.parent?.id; // Get instituteId from the path
 
     if (!instituteId) {
@@ -369,19 +397,23 @@ export const validateUserWithDNI = async (uid: string, dni: string) => {
     // Use a transaction to ensure atomicity
     await runTransaction(db, async (transaction) => {
         // 1. Update the user's document with the profile data
-        transaction.update(userRef, {
+        const updates: Partial<AppUser> = {
             dni: profileData.dni,
             displayName: profileData.displayName,
             email: profileData.email,
-            phone: profileData.phone || null,
             role: profileData.role,
-            condition: profileData.condition || null,
-            programId: profileData.programId || null,
             instituteId: instituteId,
-            isVerified: true // Mark as verified
-        });
+            isVerified: true
+        };
 
-        // 2. Mark the staff profile as claimed
+        if ('phone' in profileData) updates.phone = profileData.phone;
+        if ('condition' in profileData) updates.condition = profileData.condition;
+        if ('programId' in profileData) updates.programId = profileData.programId;
+
+
+        transaction.update(userRef, updates);
+
+        // 2. Mark the profile as claimed
         transaction.update(profileDoc.ref, { claimed: true });
     });
 };
