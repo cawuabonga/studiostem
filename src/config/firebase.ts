@@ -368,38 +368,32 @@ export const validateUserWithActivationCode = async (uid: string, dni: string, a
         throw new Error("El usuario no existe o ya ha sido verificado.");
     }
 
-    let foundProfile: {
-        profileData: StaffProfile | StudentProfile;
-        profileDocRef: any;
-    } | null = null;
-    
-    const staffQuery = query(
-        collectionGroup(db, 'staffProfiles'), 
-        where('dni', '==', dni),
-        where('activationCode', '==', activationCode)
-    );
-    const staffSnapshot = await getDocs(staffQuery);
+    const institutes = await getInstitutes();
+    let foundProfile: { profileData: StaffProfile | StudentProfile, profileDocRef: any } | null = null;
 
-    if (!staffSnapshot.empty) {
-        const profileDoc = staffSnapshot.docs[0];
-        const profileData = profileDoc.data() as StaffProfile;
-        if (!profileData.claimed) {
-            foundProfile = { profileData, profileDocRef: profileDoc.ref };
+    // Search through all institutes for a matching profile
+    for (const institute of institutes) {
+        // Check staff profiles first
+        let profileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
+        let profileSnap = await getDoc(profileRef);
+        if (profileSnap.exists()) {
+            const profileData = profileSnap.data() as StaffProfile;
+            if (profileData.activationCode === activationCode && !profileData.claimed) {
+                foundProfile = { profileData, profileDocRef: profileRef };
+                break;
+            }
         }
-    }
 
-    if (!foundProfile) {
-        const studentQuery = query(
-            collectionGroup(db, 'studentProfiles'), 
-            where('dni', '==', dni),
-            where('activationCode', '==', activationCode)
-        );
-        const studentSnapshot = await getDocs(studentQuery);
-        if (!studentSnapshot.empty) {
-            const profileDoc = studentSnapshot.docs[0];
-            const profileData = profileDoc.data() as StudentProfile;
-             if (!profileData.claimed) {
-                foundProfile = { profileData, profileDocRef: profileDoc.ref };
+        // If not found in staff, check student profiles
+        if (!foundProfile) {
+            profileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
+            profileSnap = await getDoc(profileRef);
+            if (profileSnap.exists()) {
+                const profileData = profileSnap.data() as StudentProfile;
+                if (profileData.activationCode === activationCode && !profileData.claimed) {
+                    foundProfile = { profileData, profileDocRef: profileRef };
+                    break;
+                }
             }
         }
     }
