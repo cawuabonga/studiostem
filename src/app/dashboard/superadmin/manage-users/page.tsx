@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 export default function SuperAdminManageUsersPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'SuperAdmin')) {
@@ -19,7 +19,7 @@ export default function SuperAdminManageUsersPage() {
   }, [user, loading, router]);
 
   const handleDataChange = () => {
-    setRefreshKey(prevKey => prevKey + 1);
+    setDataVersion(prev => prev + 1);
   };
   
   if (loading || !user || user.role !== 'SuperAdmin') {
@@ -40,7 +40,7 @@ export default function SuperAdminManageUsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AllUsersTable key={refreshKey} onDataChange={handleDataChange} />
+          <AllUsersTable key={dataVersion} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>

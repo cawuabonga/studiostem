@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getAllUsersFromAllInstitutes } from '@/config/firebase';
 import type { AppUser } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -25,26 +25,26 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
   const [filter, setFilter] = useState('');
   const { toast } = useToast();
 
-  const fetchUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const fetchedUsers = await getAllUsersFromAllInstitutes();
-      setUsers(fetchedUsers);
-    } catch (error) {
-      console.error("Error fetching all users:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los usuarios de la plataforma.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+          const fetchedUsers = await getAllUsersFromAllInstitutes();
+          setUsers(fetchedUsers);
+        } catch (error) {
+          console.error("Error fetching all users:", error);
+          toast({
+            title: "Error",
+            description: "No se pudieron cargar los usuarios de la plataforma.",
+            variant: "destructive",
+          });
+        } finally {
+          setLoading(false);
+        }
+    };
+
     fetchUsers();
-  }, [fetchUsers]);
+  }, [toast]);
 
   const handleEditUser = (user: AppUser) => {
     setSelectedUser(user);
@@ -55,16 +55,16 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
     setIsEditDialogOpen(false);
     setSelectedUser(null);
     if (updated) {
-        fetchUsers();
         onDataChange();
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    (user.displayName || '').toLowerCase().includes(filter.toLowerCase()) ||
-    (user.email || '').toLowerCase().includes(filter.toLowerCase()) ||
-    (user.instituteId || '').toLowerCase().includes(filter.toLowerCase())
-  );
+  const filteredUsers = useMemo(() =>
+    users.filter(user => 
+        (user.displayName || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (user.email || '').toLowerCase().includes(filter.toLowerCase()) ||
+        (user.instituteId || '').toLowerCase().includes(filter.toLowerCase())
+    ), [users, filter]);
 
   if (loading) {
     return (
