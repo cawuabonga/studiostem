@@ -248,22 +248,33 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
 };
 
 
-export const createInstituteUser = async (instituteId: string, data: Omit<AppUser, 'uid' | 'photoURL' | 'role' | 'instituteId'>) => {
-    const { email, displayName, ...rest } = data;
+export const createInstituteUser = async (instituteId: string, data: Omit<AppUser, 'uid' | 'photoURL' | 'instituteId'>) => {
+    const { email, ...rest } = data;
     if (!email) {
         throw new Error("Email is required to create a user profile.");
     }
     
+    // Check if user exists in auth. We can't do this from the client securely.
+    // The admin will create a profile, and the user can claim it or be invited.
+    // Let's create the profile in a "studentProfiles" sub-collection for now.
+    // DNI will be the ID to ensure uniqueness for students within an institute.
+    
     // We don't create an Auth user here. We just create their profile.
     // The user will have to use "Forgot Password" to set their password.
-    const userProfileRef = doc(db, 'institutes', instituteId, 'studentProfiles', email);
-    
-    await setDoc(userProfileRef, {
-        email,
-        displayName,
-        role: 'Student',
-        ...rest
-    });
+    // The error handling in the form should catch if the email is already in use by auth.
+    try {
+        await addStaffProfile(instituteId, {
+            ...rest,
+            email,
+            role: 'Student', // This function is specifically for students
+            claimed: false
+        })
+    } catch(error: any) {
+        if(error.message.includes("already exists")) {
+            throw new Error("A student with this DNI already has a profile.");
+        }
+        throw error;
+    }
     
     // Attempt to send a password reset email to invite the user.
     try {
