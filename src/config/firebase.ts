@@ -330,8 +330,20 @@ export const saveAssignments = async (
 };
 
 
-// STAFF PROFILES - NO LONGER RECOMMENDED, BUT KEPT FOR REFERENCE
-export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffProfile, 'dni'>[]) => {
+// STAFF PROFILES
+export const addStaffProfile = async (instituteId: string, data: Omit<StaffProfile, 'linkedUserUid'>) => {
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    const profileRef = doc(staffCol, data.dni); // Use DNI as the document ID
+    const docSnap = await getDoc(profileRef);
+
+    if (docSnap.exists()) {
+        throw new Error(`Un perfil con el DNI ${data.dni} ya existe.`);
+    }
+
+    await setDoc(profileRef, data);
+};
+
+export const bulkAddStaff = async (instituteId: string, staffList: StaffProfile[]) => {
     const batch = writeBatch(db);
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     staffList.forEach(staffData => {

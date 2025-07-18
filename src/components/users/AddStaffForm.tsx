@@ -1,7 +1,228 @@
 
-// This component is no longer used and has been deprecated.
-// The concept of pre-creating staff profiles to be claimed has been removed.
-// All users are created via the main registration form, and roles are assigned by a SuperAdmin.
-export function AddStaffForm() {
-  return null;
+"use client";
+
+import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { addStaffProfile, getPrograms } from '@/config/firebase';
+import type { Program, UserRole } from '@/types';
+
+const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
+const roleDisplayMap: Record<string, string> = {
+    Teacher: 'Docente',
+    Coordinator: 'Coordinador',
+    Admin: 'Administrador',
+};
+const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
+
+const addStaffSchema = z.object({
+  displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
+  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
+  email: z.string().email({ message: 'Email inválido.' }),
+  phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
+  role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
+  condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
+  programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
+});
+
+type AddStaffFormValues = z.infer<typeof addStaffSchema>;
+
+interface AddStaffFormProps {
+  instituteId: string;
+  onProfileCreated: () => void;
 }
+
+export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProps) {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [programs, setPrograms] = useState<Program[]>([]);
+
+  useEffect(() => {
+    if (instituteId) {
+      getPrograms(instituteId).then(setPrograms).catch(console.error);
+    }
+  }, [instituteId]);
+
+  const form = useForm<AddStaffFormValues>({
+    resolver: zodResolver(addStaffSchema),
+    defaultValues: {
+      displayName: '',
+      dni: '',
+      email: '',
+      phone: '',
+    },
+  });
+
+  const onSubmit = async (data: AddStaffFormValues) => {
+    setLoading(true);
+    try {
+      await addStaffProfile(instituteId, data);
+      toast({
+        title: '¡Éxito!',
+        description: 'El perfil del personal ha sido creado. El usuario podrá reclamarlo desde su dashboard.',
+      });
+      form.reset();
+      onProfileCreated();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo crear el perfil.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Nombre Completo</FormLabel>
+                <FormControl>
+                    <Input placeholder="Ej: Maria Lopez" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="dni"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>DNI</FormLabel>
+                <FormControl>
+                    <Input placeholder="Documento de Identidad" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                    <Input type="email" placeholder="maria.lopez@email.com" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Celular</FormLabel>
+                <FormControl>
+                    <Input placeholder="987654321" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <FormField
+                control={form.control}
+                name="condition"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Condición</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una condición" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {conditions.map((cond) => (
+                            <SelectItem key={cond} value={cond}>
+                            {cond.charAt(0).toUpperCase() + cond.slice(1).toLowerCase()}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+            <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Rol</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un rol" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {assignableRoles.map((roleValue) => (
+                            <SelectItem key={roleValue} value={roleValue}>
+                            {roleDisplayMap[roleValue]}
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+        </div>
+
+         <FormField
+            control={form.control}
+            name="programId"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel>Programa de Estudios</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!programs.length}>
+                <FormControl>
+                    <SelectTrigger>
+                    <SelectValue placeholder={programs.length ? "Seleccione un programa" : "No hay programas"} />
+                    </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                    {programs.map((program) => (
+                    <SelectItem key={program.id} value={program.id}>
+                        {program.name}
+                    </SelectItem>
+                    ))}
+                </SelectContent>
+                </Select>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
+        
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Creando Perfil...' : 'Crear Perfil de Personal'}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
