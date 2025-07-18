@@ -6,20 +6,19 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { bulkAddTeachers } from '@/config/firebase';
 import type { Teacher } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
 
 interface BulkUploadTeachersProps {
+    instituteId: string;
     onUploadSuccess: () => void;
 }
 
-export function BulkUploadTeachers({ onUploadSuccess }: BulkUploadTeachersProps) {
+export function BulkUploadTeachers({ instituteId, onUploadSuccess }: BulkUploadTeachersProps) {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
-    const { instituteId } = useAuth();
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
@@ -37,10 +36,10 @@ export function BulkUploadTeachers({ onUploadSuccess }: BulkUploadTeachersProps)
     };
 
     const handleUpload = async () => {
-        if (!file || !instituteId) {
+        if (!file) {
             toast({
                 title: 'Error',
-                description: 'Por favor, selecciona un archivo y asegúrate de haber seleccionado un instituto.',
+                description: 'Por favor, selecciona un archivo.',
                 variant: 'destructive',
             });
             return;
@@ -82,6 +81,10 @@ export function BulkUploadTeachers({ onUploadSuccess }: BulkUploadTeachersProps)
             } finally {
                 setLoading(false);
                 setFile(null);
+                 const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+                if (fileInput) {
+                  fileInput.value = '';
+                }
             }
         };
         reader.readAsArrayBuffer(file);
@@ -114,4 +117,3 @@ export function BulkUploadTeachers({ onUploadSuccess }: BulkUploadTeachersProps)
         </div>
     );
 }
-

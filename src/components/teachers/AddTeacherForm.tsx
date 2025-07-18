@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { addTeacher } from '@/config/firebase';
 
 const addTeacherSchema = z.object({
@@ -25,12 +24,12 @@ const addTeacherSchema = z.object({
 type AddTeacherFormValues = z.infer<typeof addTeacherSchema>;
 
 interface AddTeacherFormProps {
+  instituteId: string;
   onTeacherAdded: () => void;
 }
 
-export function AddTeacherForm({ onTeacherAdded }: AddTeacherFormProps) {
+export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [loading, setLoading] = React.useState(false);
 
   const form = useForm<AddTeacherFormValues>({
@@ -46,10 +45,6 @@ export function AddTeacherForm({ onTeacherAdded }: AddTeacherFormProps) {
   });
 
   const onSubmit = async (data: AddTeacherFormValues) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'No se ha seleccionado un instituto.', variant: 'destructive'});
-        return;
-    }
     setLoading(true);
     try {
       await addTeacher(instituteId, data);

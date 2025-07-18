@@ -11,10 +11,15 @@ import { useEffect, useState } from "react";
 import { BulkUploadUnits } from "@/components/units/BulkUploadUnits";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Upload } from "lucide-react";
+import type { Institute } from "@/types";
 
+interface ManageUnitsPageProps {
+  instituteId: string | null;
+  institute: Institute | null;
+}
 
-export default function ManageUnitsPage() {
-  const { user, instituteId, loading } = useAuth();
+export default function ManageUnitsPage({ instituteId }: ManageUnitsPageProps) {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -22,17 +27,14 @@ export default function ManageUnitsPage() {
     if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
       router.push('/dashboard');
     }
-    if (!loading && !instituteId) {
-        router.push('/dashboard/institute');
-    }
-  }, [user, instituteId, loading, router]);
+  }, [user, loading, router]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
-  if (loading || !instituteId || !user) {
-    return <p>Cargando...</p>;
+  if (!instituteId) {
+    return <p>Cargando instituto...</p>;
   }
 
   return (
@@ -49,7 +51,7 @@ export default function ManageUnitsPage() {
                             <CardDescription>Este proceso le permite agregar múltiples unidades didácticas a un programa y módulo específicos de una sola vez.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <BulkUploadUnits onUploadSuccess={handleDataChange} />
+                            <BulkUploadUnits instituteId={instituteId} onUploadSuccess={handleDataChange} />
                         </CardContent>
                     </Card>
                 </AccordionContent>
@@ -64,7 +66,7 @@ export default function ManageUnitsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddUnitForm onUnitAdded={handleDataChange} />
+          <AddUnitForm instituteId={instituteId} onUnitAdded={handleDataChange} />
         </CardContent>
       </Card>
       
@@ -78,7 +80,7 @@ export default function ManageUnitsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UnitsList key={refreshKey} onDataChange={handleDataChange} />
+          <UnitsList key={refreshKey} instituteId={instituteId} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>

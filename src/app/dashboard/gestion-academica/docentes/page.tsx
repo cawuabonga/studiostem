@@ -11,10 +11,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Upload } from "lucide-react";
+import type { Institute } from "@/types";
 
+interface ManageTeachersPageProps {
+  instituteId: string | null;
+  institute: Institute | null;
+}
 
-export default function ManageTeachersPage() {
-  const { user, instituteId, loading } = useAuth();
+export default function ManageTeachersPage({ instituteId }: ManageTeachersPageProps) {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -22,17 +27,14 @@ export default function ManageTeachersPage() {
     if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
       router.push('/dashboard');
     }
-    if (!loading && !instituteId) {
-        router.push('/dashboard/institute');
-    }
-  }, [user, instituteId, loading, router]);
+  }, [user, loading, router]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
-  if (loading || !instituteId || !user) {
-    return <p>Cargando...</p>;
+  if (!instituteId) {
+    return <p>Cargando instituto...</p>;
   }
 
   return (
@@ -50,7 +52,7 @@ export default function ManageTeachersPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <TeachersList key={refreshKey} onDataChange={handleDataChange} />
+            <TeachersList key={refreshKey} instituteId={instituteId} onDataChange={handleDataChange} />
           </CardContent>
         </Card>
       </TabsContent>
@@ -68,7 +70,7 @@ export default function ManageTeachersPage() {
                                 <CardDescription>Descargue la plantilla, complete los datos de los docentes y súbala para un registro rápido.</CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <BulkUploadTeachers onUploadSuccess={handleDataChange} />
+                                <BulkUploadTeachers instituteId={instituteId} onUploadSuccess={handleDataChange} />
                             </CardContent>
                         </Card>
                     </AccordionContent>
@@ -83,7 +85,7 @@ export default function ManageTeachersPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AddTeacherForm onTeacherAdded={handleDataChange} />
+                    <AddTeacherForm instituteId={instituteId} onTeacherAdded={handleDataChange} />
                 </CardContent>
             </Card>
         </div>

@@ -21,7 +21,6 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import type { Teacher } from '@/types';
 import { updateTeacher } from '@/config/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 
 const editTeacherSchema = z.object({
   fullName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -36,13 +35,13 @@ type EditTeacherFormValues = z.infer<typeof editTeacherSchema>;
 
 interface EditTeacherDialogProps {
   teacher: Teacher;
+  instituteId: string;
   isOpen: boolean;
   onClose: (updated?: boolean) => void;
 }
 
-export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialogProps) {
+export function EditTeacherDialog({ teacher, instituteId, isOpen, onClose }: EditTeacherDialogProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<EditTeacherFormValues>({
@@ -57,10 +56,6 @@ export function EditTeacherDialog({ teacher, isOpen, onClose }: EditTeacherDialo
   }, [teacher, form, isOpen]);
 
   const onSubmit = async (data: EditTeacherFormValues) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
-        return;
-    }
     setIsSubmitting(true);
     try {
       await updateTeacher(instituteId, teacher.id, data);

@@ -10,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { EditTeacherDialog } from './EditTeacherDialog';
 import { DeleteTeacherDialog } from './DeleteTeacherDialog';
 import {
@@ -23,12 +22,13 @@ import {
 import { Input } from '../ui/input';
 
 interface TeachersListProps {
+    instituteId: string;
     onDataChange: () => void;
 }
 
 const PAGE_SIZE = 10;
 
-export function TeachersList({ onDataChange }: TeachersListProps) {
+export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
@@ -37,7 +37,6 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
-  const { instituteId } = useAuth();
 
   const fetchTeachers = useCallback(async (id: string) => {
     setLoading(true);
@@ -58,8 +57,6 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
   useEffect(() => {
     if (instituteId) {
       fetchTeachers(instituteId);
-    } else {
-      setLoading(false);
     }
   }, [instituteId, fetchTeachers]);
   
@@ -99,10 +96,6 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
     );
   }
   
-  if (!instituteId) {
-      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
-  }
-
   if (!teachers.length) {
     return <p className="text-center text-muted-foreground">No hay docentes registrados.</p>;
   }
@@ -192,6 +185,7 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
       {selectedTeacher && isEditDialogOpen && (
         <EditTeacherDialog 
           teacher={selectedTeacher}
+          instituteId={instituteId}
           isOpen={isEditDialogOpen}
           onClose={handleDialogClose}
         />
@@ -199,6 +193,7 @@ export function TeachersList({ onDataChange }: TeachersListProps) {
        {selectedTeacher && isDeleteDialogOpen && (
         <DeleteTeacherDialog 
           teacher={selectedTeacher}
+          instituteId={instituteId}
           isOpen={isDeleteDialogOpen}
           onClose={handleDialogClose}
         />

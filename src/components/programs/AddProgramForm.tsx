@@ -9,10 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { addProgram } from '@/config/firebase';
 import { Separator } from '../ui/separator';
-import { cn } from '@/lib/utils';
 
 const addProgramSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
@@ -29,12 +27,12 @@ const addProgramSchema = z.object({
 type AddProgramFormValues = z.infer<typeof addProgramSchema>;
 
 interface AddProgramFormProps {
+  instituteId: string;
   onProgramAdded: () => void;
 }
 
-export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
+export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [loading, setLoading] = React.useState(false);
 
   const form = useForm<AddProgramFormValues>({
@@ -83,10 +81,6 @@ export function AddProgramForm({ onProgramAdded }: AddProgramFormProps) {
 
 
   const onSubmit = async (data: AddProgramFormValues) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'No se ha seleccionado un instituto.', variant: 'destructive'});
-        return;
-    }
     setLoading(true);
     try {
       await addProgram(instituteId, data);

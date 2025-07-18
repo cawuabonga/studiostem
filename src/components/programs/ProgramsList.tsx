@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { EditProgramDialog } from './EditProgramDialog';
 import { DeleteProgramDialog } from './DeleteProgramDialog';
 import {
@@ -22,12 +21,13 @@ import {
 import { Input } from '../ui/input';
 
 interface ProgramsListProps {
+    instituteId: string;
     onDataChange: () => void;
 }
 
 const PAGE_SIZE = 10;
 
-export function ProgramsList({ onDataChange }: ProgramsListProps) {
+export function ProgramsList({ instituteId, onDataChange }: ProgramsListProps) {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
@@ -36,7 +36,6 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
-  const { instituteId } = useAuth();
 
   const fetchPrograms = useCallback(async (id: string) => {
     setLoading(true);
@@ -57,8 +56,6 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
   useEffect(() => {
     if (instituteId) {
       fetchPrograms(instituteId);
-    } else {
-      setLoading(false); // No institute ID yet, so not loading
     }
   }, [instituteId, fetchPrograms]);
   
@@ -66,7 +63,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedProgram(null);
-    if (updated && instituteId) {
+    if (updated) {
       fetchPrograms(instituteId);
       onDataChange();
     }
@@ -97,10 +94,6 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
     );
   }
   
-  if (!instituteId) {
-      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
-  }
-
   if (!programs.length) {
     return <p className="text-center text-muted-foreground">No hay programas registrados en este instituto.</p>;
   }
@@ -187,6 +180,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
       {selectedProgram && isEditDialogOpen && (
         <EditProgramDialog 
           program={selectedProgram}
+          instituteId={instituteId}
           isOpen={isEditDialogOpen}
           onClose={handleDialogClose}
         />
@@ -194,6 +188,7 @@ export function ProgramsList({ onDataChange }: ProgramsListProps) {
        {selectedProgram && isDeleteDialogOpen && (
         <DeleteProgramDialog 
           program={selectedProgram}
+          instituteId={instituteId}
           isOpen={isDeleteDialogOpen}
           onClose={handleDialogClose}
         />

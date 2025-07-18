@@ -8,9 +8,15 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import type { Institute } from "@/types";
 
-export default function ManageProgramsPage() {
-  const { user, instituteId, loading } = useAuth();
+interface ManageProgramsPageProps {
+  instituteId: string | null;
+  institute: Institute | null;
+}
+
+export default function ManageProgramsPage({ instituteId }: ManageProgramsPageProps) {
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -18,17 +24,15 @@ export default function ManageProgramsPage() {
     if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
       router.push('/dashboard');
     }
-    if (!loading && !instituteId) {
-        router.push('/dashboard/institute');
-    }
-  }, [user, instituteId, loading, router]);
+  }, [user, loading, router]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
-  if (loading || !instituteId || !user) {
-    return <p>Cargando...</p>;
+  // The layout handles the main loading state for the institute
+  if (!instituteId) {
+    return <p>Cargando instituto...</p>;
   }
 
   return (
@@ -41,7 +45,7 @@ export default function ManageProgramsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddProgramForm onProgramAdded={handleDataChange} />
+          <AddProgramForm instituteId={instituteId} onProgramAdded={handleDataChange} />
         </CardContent>
       </Card>
       
@@ -55,7 +59,7 @@ export default function ManageProgramsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProgramsList key={refreshKey} onDataChange={handleDataChange} />
+          <ProgramsList key={refreshKey} instituteId={instituteId} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
     </div>

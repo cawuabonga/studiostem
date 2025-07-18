@@ -6,7 +6,6 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { bulkAddUnits, getPrograms } from '@/config/firebase';
 import type { Unit, Program, ProgramModule } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
@@ -14,14 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 
 interface BulkUploadUnitsProps {
+    instituteId: string;
     onUploadSuccess: () => void;
 }
 
-export function BulkUploadUnits({ onUploadSuccess }: BulkUploadUnitsProps) {
+export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnitsProps) {
     const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
-    const { instituteId } = useAuth();
     const [programs, setPrograms] = useState<Program[]>([]);
     const [modules, setModules] = useState<ProgramModule[]>([]);
     const [selectedProgramId, setSelectedProgramId] = useState<string>('');
@@ -73,7 +72,7 @@ export function BulkUploadUnits({ onUploadSuccess }: BulkUploadUnitsProps) {
     };
 
     const handleUpload = async () => {
-        if (!file || !instituteId || !selectedProgramId || !selectedModuleId) {
+        if (!file || !selectedProgramId || !selectedModuleId) {
             toast({
                 title: 'Información Faltante',
                 description: 'Por favor, selecciona un programa, un módulo y un archivo antes de subir.',

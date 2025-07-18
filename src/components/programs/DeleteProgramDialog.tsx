@@ -16,24 +16,19 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import type { Program } from '@/types';
 import { deleteProgram } from '@/config/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface DeleteProgramDialogProps {
   program: Program;
+  instituteId: string;
   isOpen: boolean;
   onClose: (updated?: boolean) => void;
 }
 
-export function DeleteProgramDialog({ program, isOpen, onClose }: DeleteProgramDialogProps) {
+export function DeleteProgramDialog({ program, instituteId, isOpen, onClose }: DeleteProgramDialogProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
-        return;
-    }
     setIsDeleting(true);
     try {
       await deleteProgram(instituteId, program.id);

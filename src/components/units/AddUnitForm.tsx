@@ -10,7 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { addUnit, getPrograms } from '@/config/firebase';
 import type { Program, ProgramModule, UnitPeriod, UnitType } from '@/types';
 
@@ -33,12 +32,12 @@ const addUnitSchema = z.object({
 type AddUnitFormValues = z.infer<typeof addUnitSchema>;
 
 interface AddUnitFormProps {
+  instituteId: string;
   onUnitAdded: () => void;
 }
 
-export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
+export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [loading, setLoading] = React.useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [modules, setModules] = useState<ProgramModule[]>([]);
@@ -81,10 +80,6 @@ export function AddUnitForm({ onUnitAdded }: AddUnitFormProps) {
   }, [theoreticalHours, practicalHours, form]);
 
   const onSubmit = async (data: AddUnitFormValues) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'No se ha seleccionado un instituto.', variant: 'destructive'});
-        return;
-    }
     setLoading(true);
     try {
       await addUnit(instituteId, data);

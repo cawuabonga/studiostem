@@ -20,7 +20,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import type { Program } from '@/types';
 import { updateProgram } from '@/config/firebase';
-import { useAuth } from '@/contexts/AuthContext';
 import { Separator } from '../ui/separator';
 
 const editProgramSchema = z.object({
@@ -39,13 +38,13 @@ type EditProgramFormValues = z.infer<typeof editProgramSchema>;
 
 interface EditProgramDialogProps {
   program: Program;
+  instituteId: string;
   isOpen: boolean;
   onClose: (updated?: boolean) => void;
 }
 
-export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialogProps) {
+export function EditProgramDialog({ program, instituteId, isOpen, onClose }: EditProgramDialogProps) {
   const { toast } = useToast();
-  const { instituteId } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<EditProgramFormValues>({
@@ -106,10 +105,6 @@ export function EditProgramDialog({ program, isOpen, onClose }: EditProgramDialo
 
 
   const onSubmit = async (data: EditProgramFormValues) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
-        return;
-    }
     setIsSubmitting(true);
     try {
       await updateProgram(instituteId, program.id, data);
