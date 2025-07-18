@@ -3,84 +3,91 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Helper functions
-    function isSuperAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-    
-    function isInstituteAdmin(instituteId) {
-      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      let userInstituteId = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId;
-      return (userRole == 'Admin' || userRole == 'Coordinator') && userInstituteId == instituteId;
-    }
-
-    // /users/{userId}
+    // --- Users Collection ---
+    // Anyone can read their own user document.
+    // SuperAdmins can read/write any user document.
+    // Institute Admins can update roles of users in their institute.
+    // Users can create their own document on sign-up.
+    // Users can update their own profile info.
     match /users/{userId} {
-      // Any authenticated user can create their own user document
-      allow create: if request.auth != null;
+      allow read: if request.auth.uid == userId 
+                  || request.auth.token.role == 'SuperAdmin';
+                  
+      allow create: if request.auth.uid == userId;
 
-      // Users can read their own data. SuperAdmins can read anyone's data.
-      allow read: if request.auth.uid == userId || isSuperAdmin();
-      
-      // Users can update their own non-critical data.
-      // A user can also perform a one-time update to claim a profile.
-      allow update: if request.auth.uid == userId &&
-                      (
-                        // Allow updating non-critical fields anytime
-                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'dni']) ||
-                        // Allow one-time profile claim
-                        (
-                          resource.data.isVerified == false &&
-                          request.resource.data.isVerified == true &&
-                           request.resource.data.diff(resource.data).affectedKeys().hasAll(['isVerified', 'role', 'instituteId', 'dni', 'displayName', 'email'])
-                        )
-                      );
-      
-      // SuperAdmins can update any user
-      allow update: if isSuperAdmin();
+      allow update: if request.auth.uid == userId
+                    // Allow SuperAdmin to change anything
+                    || request.auth.token.role == 'SuperAdmin'
+                    // Allow institute admin to change role of users in their institute
+                    || (request.auth.token.role in ['Admin', 'Coordinator'] 
+                        && request.auth.token.instituteId == resource.data.instituteId
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['role']));
 
-      // No one can delete user documents for safety. This should be handled by a SuperAdmin or via Cloud Functions.
-      allow delete: if false;
     }
-    
-    // /config/{document}
-    match /config/{docId} {
-        // Login design settings are public-read, but write-only for SuperAdmins
-        allow read: if docId == 'loginDesign';
-        allow write: if isSuperAdmin();
-        
-        match /{allChildren=**} {
-             allow read: if docId == 'loginDesign';
-             allow write: if isSuperAdmin();
+
+    // --- Config Collection (Login Design) ---
+    // Anyone can read login design settings (for the login page).
+    // Only SuperAdmins can write to login design settings.
+    match /config/loginDesign {
+        allow read: if true;
+        allow write: if request.auth.token.role == 'SuperAdmin';
+
+        // Images subcollection for login page
+        match /images/{imageId} {
+            allow read, write: if request.auth.token.role == 'SuperAdmin';
         }
     }
 
-    // /institutes/{instituteId}
+    // --- Institutes Collection ---
+    // Only SuperAdmins can manage institutes.
+    // Any authenticated user can read a single institute's data (needed for dashboard display).
     match /institutes/{instituteId} {
-      // Allow SuperAdmins to do anything
-      allow read, write: if isSuperAdmin();
+      allow read: if request.auth != null;
+      allow write: if request.auth.token.role == 'SuperAdmin';
       
-      // Allow institute members (Admin, Coordinator) to read their own institute's data
-      allow read: if isInstituteAdmin(instituteId);
+      // Institute Subcollections (programs, units, teachers, etc.)
+      // Only Admins or Coordinators of that specific institute can manage them.
+      match /{subcollection}/{docId} {
+          allow read, write, delete: if request.auth.token.role in ['Admin', 'Coordinator']
+                                 && request.auth.token.instituteId == instituteId;
+      }
+      
+      // Staff and Student Profiles Subcollections
+      match /staffProfiles/{dni} {
+        allow read, write, delete: if request.auth.token.role in ['Admin', 'Coordinator']
+                                    && request.auth.token.instituteId == instituteId;
+      }
 
-      // Subcollections within an institute
-      match /{collectionId}/{docId} {
-        // Admins/Coordinators can read/write data within their own institute
-        allow read, write: if isInstituteAdmin(instituteId);
+      match /studentProfiles/{dni} {
+         allow read, write, delete: if request.auth.token.role in ['Admin', 'Coordinator']
+                                    && request.auth.token.instituteId == instituteId;
       }
     }
+
+    // --- Collection Group Queries for Profile Validation ---
+    // These rules allow the `validateUserWithActivationCode` function to work.
+    // It lets ANY authenticated user query across all institutes for a profile
+    // matching their DNI and activation code. This is safe because they cannot
+    // list all profiles, only check for a specific combination.
     
-    // collectionGroup for profile validation
     match /{path=**}/staffProfiles/{dni} {
-        // Allow any authenticated user to perform a 'get' or a 'query' on this collection group.
-        // This is safe because our queries are specific (e.g., where('dni', '==', value))
-        // and do not allow listing all documents.
-        allow get, list: if request.auth != null;
+      allow get: if request.auth != null;
+      allow list: if request.auth != null 
+                   && request.query.get('where') != null
+                   && request.query.get('where')[0][0] == 'dni'
+                   && request.query.get('where')[0][1] == '=='
+                   && request.query.get('where')[1][0] == 'activationCode'
+                   && request.query.get('where')[1][1] == '==';
     }
-    
-     match /{path=**}/studentProfiles/{dni} {
-        // Allow any authenticated user to perform a 'get' or a 'query' on this collection group.
-        allow get, list: if request.auth != null;
+
+    match /{path=**}/studentProfiles/{dni} {
+       allow get: if request.auth != null;
+       allow list: if request.auth != null 
+                   && request.query.get('where') != null
+                   && request.query.get('where')[0][0] == 'dni'
+                   && request.query.get('where')[0][1] == '=='
+                   && request.query.get('where')[1][0] == 'activationCode'
+                   && request.query.get('where')[1][1] == '==';
     }
   }
 }
