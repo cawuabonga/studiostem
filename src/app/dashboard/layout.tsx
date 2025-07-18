@@ -12,13 +12,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) return;
+
+    if (!user) {
         router.push('/');
         return;
     }
-    // If auth is loaded and there is no institute selected, redirect to the selector
-    if (!loading && user && !instituteId) {
-      if(user.role !== 'SuperAdmin'){
+
+    // If auth is loaded, user exists, but no institute is selected
+    if (user && !instituteId) {
+      // SuperAdmins don't need an institute.
+      // Unverified students are waiting to claim a profile, so they don't need an institute yet either.
+      if(user.role !== 'SuperAdmin' && user.isVerified){
          router.push('/dashboard/institute');
       }
     }
@@ -33,8 +38,11 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [institute]);
 
-  // While loading user auth or institute data, show a loading state
-  if (loading || (user && user.role !== 'SuperAdmin' && !institute)) {
+  // Determine the loading condition more accurately
+  const showLoadingSkeleton = loading || (user && user.role !== 'SuperAdmin' && !institute && user.isVerified);
+
+
+  if (showLoadingSkeleton) {
      return (
        <DashboardMainLayout>
           <div className="space-y-4">

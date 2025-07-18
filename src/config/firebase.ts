@@ -1,6 +1,6 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile, StudentProfile } from '@/types';
@@ -25,7 +25,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const firebaseStorage = getStorage(app);
 
-export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider };
+export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
 const generateActivationCode = (prefix: string = 'ACTIV') => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

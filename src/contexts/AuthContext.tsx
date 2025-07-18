@@ -8,14 +8,15 @@ import {
   db, 
   GoogleAuthProvider, 
   saveUserAdditionalData,
-  getInstitute
+  getInstitute,
+  createUserWithEmailAndPassword
 } from '@/config/firebase'; 
 import { 
   onAuthStateChanged, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
   signInWithPopup, 
   signOut as firebaseSignOut,
+  updateProfile,
   type User as FirebaseUser
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -81,6 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 photoURL: firebaseUser.photoURL,
                 role: 'Student',
                 instituteId: null,
+                isVerified: false,
              };
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
@@ -148,7 +150,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // onAuthStateChanged will handle the rest by creating a user doc
+      // Update the new user's profile with the provided name
+      await updateProfile(userCredential.user, { displayName: name });
+      // onAuthStateChanged will now pick up the user and create their Firestore document
+      // with the correct displayName.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
