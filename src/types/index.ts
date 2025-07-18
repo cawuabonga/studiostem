@@ -14,31 +14,7 @@ export interface AppUser {
   phone?: string;
   condition?: 'NOMBRADO' | 'CONTRATADO';
   programId?: string;
-  isVerified?: boolean; // Flag to check if user has claimed a profile
 }
-
-// Represents a profile created by an Admin, to be claimed by a user.
-export interface StaffProfile {
-    dni: string;
-    displayName: string;
-    email: string;
-    role: UserRole;
-    phone?: string;
-    condition?: 'NOMBRADO' | 'CONTRATADO';
-    programId?: string;
-    claimed: boolean; // To check if this profile has been claimed
-    activationCode?: string; // New field for the unique activation code
-}
-
-export interface StudentProfile {
-    dni: string;
-    displayName: string;
-    email: string;
-    role: 'Student'; // Role is fixed
-    claimed: boolean;
-    activationCode?: string; // New field for the unique activation code
-}
-
 
 export interface LoginDesign {
   imageUrl: string;
@@ -50,7 +26,7 @@ export interface LoginDesign {
 export interface LoginImage {
   id: string;
   name: string;
-  url: string; // This will now be a long Base64 Data URI string
+  url: string;
   createdAt: Timestamp;
 }
 

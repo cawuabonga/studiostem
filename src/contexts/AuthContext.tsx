@@ -80,9 +80,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
                 photoURL: firebaseUser.photoURL,
-                role: 'Student',
-                instituteId: null,
-                isVerified: false,
+                role: 'Student', // Default role
+                instituteId: null, // No institute assigned on signup
              };
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
@@ -140,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Sign in error:", error);
-      toast({ title: 'Fallo de Inicio de Sesión', description: error.message || 'Por favor, verifica tus credenciales.', variant: 'destructive' });
+      toast({ title: 'Fallo de Inicio de Sesión', description: 'Por favor, verifica tus credenciales.', variant: 'destructive' });
       setUser(null);
       setLoading(false);
     }
@@ -170,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Google sign in error:", error);
-      toast({ title: 'Fallo de Inicio de Sesión con Google', description: error.message || 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
+      toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
       setUser(null);
       setLoading(false);
     }

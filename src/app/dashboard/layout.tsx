@@ -22,8 +22,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // If auth is loaded, user exists, but no institute is selected
     if (user && !instituteId) {
       // SuperAdmins don't need an institute.
-      // Unverified students are waiting to claim a profile, so they don't need an institute yet either.
-      if(user.role !== 'SuperAdmin' && user.isVerified){
+      if(user.role !== 'SuperAdmin'){
          router.push('/dashboard/institute');
       }
     }
@@ -39,7 +38,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [institute]);
 
   // Determine the loading condition more accurately
-  const showLoadingSkeleton = loading || (user && user.role !== 'SuperAdmin' && !institute && user.isVerified);
+  const showLoadingSkeleton = loading || (user && user.role !== 'SuperAdmin' && !institute);
 
 
   if (showLoadingSkeleton) {

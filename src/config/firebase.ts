@@ -1,9 +1,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, where, QueryConstraint, serverTimestamp, writeBatch, limit, collectionGroup, Timestamp, Query, WhereFilterOp, runTransaction } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, StaffProfile, StudentProfile } from '@/types';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -27,16 +27,6 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-const generateActivationCode = (prefix: string = 'ACTIV') => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `${prefix}-${result}`;
-}
-
-
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
   try {
@@ -48,7 +38,6 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
       displayName: user.displayName, 
       photoURL: user.photoURL,
       instituteId: instituteId || null,
-      isVerified: false, // Add verification flag
     }, { merge: true });
     console.log("User data saved to Firestore.");
   } catch (error) {
@@ -143,69 +132,13 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
     return null;
 };
 
-
-// --- Helper function for image compression ---
-const compressAndConvertToDataURI = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          return reject(new Error('Failed to get canvas context'));
-        }
-
-        // --- RESIZING ---
-        const MAX_WIDTH = 1024; // Max width for the image
-        let width = img.width;
-        let height = img.height;
-
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // --- COMPRESSION ---
-        // Convert to JPEG with quality 0.75
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-        resolve(dataUrl);
-      };
-      img.onerror = (error) => reject(error);
-    };
-    reader.onerror = (error) => reject(error);
-  });
-};
-
-
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    try {
-        const dataUrl = await compressAndConvertToDataURI(file);
-
-        if (dataUrl.length > 1048576) { // Firestore document limit is 1 MiB (1,048,576 bytes)
-            throw new Error('La imagen es demasiado grande incluso después de la compresión. Por favor, elige una imagen más pequeña.');
-        }
-
-        const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
-        await setDoc(imageDocRef, {
-            name,
-            url: dataUrl, // Save Data URI directly
-            createdAt: serverTimestamp(),
-        });
-    } catch (error) {
-        console.error('Error processing or uploading image:', error);
-        throw error; // Re-throw to be caught by the form handler
-    }
+    const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
+    const storageRef = ref(firebaseStorage, `loginImages/${imageDocRef.id}`);
+    await uploadBytes(storageRef, file);
+    const url = await getDownloadURL(storageRef);
+    await setDoc(imageDocRef, { name, url, createdAt: new Date() });
 };
 
 export const getLoginImages = async (): Promise<LoginImage[]> => {
@@ -222,8 +155,15 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
     const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
+    const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
+    try {
+        await deleteObject(storageRef);
+    } catch (error: any) {
+        if (error.code !== 'storage/object-not-found') {
+            throw error;
+        }
+    }
 };
-
 
 // --- User Management ---
 export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
@@ -237,195 +177,6 @@ export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>
     const userRef = doc(db, 'users', uid);
     await updateDoc(userRef, data);
 };
-
-
-export const getUsersByInstitute = async (instituteId: string, roles: UserRole[]): Promise<AppUser[]> => {
-    const usersCol = collection(db, 'users');
-    const q = query(
-        usersCol, 
-        where("instituteId", "==", instituteId),
-        where("role", "in", roles)
-    );
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
-};
-
-export const updateUserByInstituteAdmin = async (instituteId: string, uid: string, data: { role: UserRole }) => {
-    // A future improvement would be to verify the admin's permissions here via a cloud function.
-    // For now, we trust the client-side role check.
-    const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, data);
-};
-
-
-export const createInstituteUser = async (instituteId: string, data: { displayName: string, dni?: string, email: string }) => {
-    if (!data.dni) {
-        throw new Error("DNI es requerido para crear un perfil de estudiante.");
-    }
-    
-    // Check if a profile with this DNI already exists in this institute
-    const profileRef = doc(db, 'institutes', instituteId, 'studentProfiles', data.dni);
-    const docSnap = await getDoc(profileRef);
-    if (docSnap.exists()) {
-        throw new Error("Ya existe un perfil de estudiante con este DNI en este instituto.");
-    }
-
-    const studentProfile: StudentProfile = {
-        dni: data.dni,
-        displayName: data.displayName,
-        email: data.email,
-        claimed: false,
-        role: 'Student', // Role is fixed here
-        activationCode: generateActivationCode('STD'),
-    };
-    
-    await setDoc(profileRef, studentProfile);
-    
-    // Attempt to send a password reset email to invite the user.
-    try {
-        await sendPasswordResetEmail(auth, data.email);
-    } catch (error) {
-        console.warn(`Could not send password reset email to ${data.email}. This is okay if the user doesn't have an auth account yet.`, error);
-    }
-};
-
-export const getStudentProfilesByInstitute = async (instituteId: string): Promise<StudentProfile[]> => {
-    const studentProfilesCol = collection(db, 'institutes', instituteId, 'studentProfiles');
-    const q = query(studentProfilesCol, orderBy("displayName"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => docSnap.data() as StudentProfile);
-}
-
-
-// New flow: Admins create a "staff profile" which users can later claim.
-export const addStaffProfile = async (instituteId: string, profileData: Omit<StaffProfile, 'claimed' | 'instituteId' | 'activationCode'>) => {
-    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
-    // Use DNI as the document ID to enforce uniqueness at the institute level.
-    const profileRef = doc(staffProfilesCol, profileData.dni);
-    const docSnap = await getDoc(profileRef);
-    if(docSnap.exists()){
-      throw new Error("Ya existe un perfil con este DNI.");
-    }
-    await setDoc(profileRef, {
-        ...profileData,
-        claimed: false, // Mark as not claimed initially
-        activationCode: generateActivationCode('STF'),
-    });
-};
-
-export const updateStaffProfile = async (instituteId: string, dni: string, data: Partial<StaffProfile>) => {
-    const profileRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
-    await updateDoc(profileRef, data);
-}
-
-export const getStaffProfilesByInstitute = async (instituteId: string): Promise<StaffProfile[]> => {
-    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
-    const q = query(staffProfilesCol, orderBy("displayName"));
-    const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
-}
-
-
-export const bulkAddStaff = async (instituteId: string, staffList: Omit<AppUser, 'uid' | 'photoURL'>[]) => {
-    const batch = writeBatch(db);
-    const staffProfilesCol = collection(db, 'institutes', instituteId, 'staffProfiles');
-
-    const roleDisplayMap: Record<string, UserRole> = {
-        'docente': 'Teacher',
-        'coordinador': 'Coordinator',
-        'administrador': 'Admin',
-    };
-
-    for (const staffData of staffList) {
-        if(!staffData.dni) continue; // Skip if no DNI
-        const profileRef = doc(staffProfilesCol, staffData.dni);
-        
-        const roleStr = String(staffData.role || '').toLowerCase().trim();
-        const role = roleDisplayMap[roleStr] || staffData.role; // Fallback to original if not in map
-
-        const dataToSave: StaffProfile = {
-            dni: staffData.dni,
-            displayName: staffData.displayName || '',
-            email: staffData.email || '',
-            phone: staffData.phone,
-            role: role || 'Teacher',
-            condition: staffData.condition,
-            programId: staffData.programId,
-            claimed: false,
-            activationCode: generateActivationCode('STF')
-        };
-
-        batch.set(profileRef, dataToSave);
-    }
-
-    await batch.commit();
-};
-
-export const validateUserWithActivationCode = async (uid: string, dni: string, activationCode: string) => {
-    const userRef = doc(db, 'users', uid);
-    const userDoc = await getDoc(userRef);
-    if (!userDoc.exists() || userDoc.data()?.isVerified) {
-        throw new Error("El usuario no existe o ya ha sido verificado.");
-    }
-
-    const institutes = await getInstitutes();
-    let foundProfile: { profileData: StaffProfile | StudentProfile, profileDocRef: any } | null = null;
-
-    // Search through all institutes for a matching profile
-    for (const institute of institutes) {
-        // Check staff profiles first
-        let profileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
-        let profileSnap = await getDoc(profileRef);
-        if (profileSnap.exists()) {
-            const profileData = profileSnap.data() as StaffProfile;
-            if (profileData.activationCode === activationCode && !profileData.claimed) {
-                foundProfile = { profileData, profileDocRef: profileRef };
-                break;
-            }
-        }
-
-        // If not found in staff, check student profiles
-        if (!foundProfile) {
-            profileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
-            profileSnap = await getDoc(profileRef);
-            if (profileSnap.exists()) {
-                const profileData = profileSnap.data() as StudentProfile;
-                if (profileData.activationCode === activationCode && !profileData.claimed) {
-                    foundProfile = { profileData, profileDocRef: profileRef };
-                    break;
-                }
-            }
-        }
-    }
-    
-    if (!foundProfile) {
-        throw new Error("No se encontró ningún perfil con esa combinación de DNI y código, o ya fue reclamado.");
-    }
-
-    await runTransaction(db, async (transaction) => {
-        const { profileData, profileDocRef } = foundProfile!;
-        const instituteId = profileDocRef.parent.parent.id;
-
-        const updates: Partial<AppUser> = {
-            dni: profileData.dni,
-            displayName: profileData.displayName,
-            email: profileData.email,
-            role: profileData.role,
-            instituteId: instituteId,
-            isVerified: true
-        };
-
-        if ('phone' in profileData && profileData.phone) updates.phone = profileData.phone;
-        if ('condition' in profileData && profileData.condition) updates.condition = profileData.condition;
-        if ('programId' in profileData && profileData.programId) updates.programId = profileData.programId;
-
-        transaction.update(userRef, updates);
-
-        transaction.update(profileDocRef, { claimed: true, activationCode: null });
-    });
-};
-
-
 
 // --- Institute-Specific Data Management ---
 
