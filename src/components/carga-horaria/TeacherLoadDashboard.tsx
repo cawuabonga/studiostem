@@ -6,7 +6,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { getUnits, getStaffProfiles, getAssignments, getPrograms } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile } from '@/types';
+import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile, Program } from '@/types';
 import { TeacherLoadCard } from './TeacherLoadCard';
 
 interface TeacherLoadDashboardProps {
@@ -23,6 +23,7 @@ interface TeacherWithLoad {
 export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLoadDashboardProps) {
   const [loading, setLoading] = useState(true);
   const [teachersWithLoad, setTeachersWithLoad] = useState<TeacherWithLoad[]>([]);
+  const [programMap, setProgramMap] = useState<Map<string, Program>>(new Map());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,6 +36,9 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
           getPrograms(instituteId),
         ]);
         
+        const currentProgramMap = new Map(allPrograms.map(p => [p.id, p]));
+        setProgramMap(currentProgramMap);
+
         // Filter staff (teachers and coordinators) that belong to the selected program.
         const staffInSelectedProgram = allStaffProfiles.filter(
             staff => (staff.role === 'Teacher' || staff.role === 'Coordinator') && staff.programId === programId
@@ -78,7 +82,8 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
                 email: staff.email,
                 phone: staff.phone || '',
                 active: true, // Assuming active, can be refined
-                specialty: '' // Placeholder
+                specialty: '', // Placeholder
+                programName: currentProgramMap.get(staff.programId)?.name || 'N/A'
             };
 
             return {
@@ -132,7 +137,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         </CardHeader>
       <div className="p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {teachersWithLoad.map(({ teacher, units }) => (
-          <TeacherLoadCard key={teacher.id} teacher={teacher} units={units} />
+          <TeacherLoadCard key={teacher.id} teacher={teacher} units={units} programMap={programMap} />
         ))}
          {teachersWithLoad.length === 0 && (
             <div className="col-span-full text-center text-muted-foreground py-10">

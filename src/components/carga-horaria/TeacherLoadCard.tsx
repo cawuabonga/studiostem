@@ -4,7 +4,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import type { Unit, Teacher, UnitPeriod } from '@/types';
+import type { Unit, Teacher, UnitPeriod, Program } from '@/types';
 import { Badge } from '../ui/badge';
 import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 interface TeacherLoadCardProps {
     teacher: Teacher;
     units: Unit[];
+    programMap: Map<string, Program>;
 }
 
 const getHoursColor = (hours: number): string => {
@@ -20,7 +21,7 @@ const getHoursColor = (hours: number): string => {
     return 'text-muted-foreground';
 };
 
-export function TeacherLoadCard({ teacher, units }: TeacherLoadCardProps) {
+export function TeacherLoadCard({ teacher, units, programMap }: TeacherLoadCardProps) {
 
     const { unitsByPeriod, hoursByPeriod } = useMemo(() => {
         const unitsByPeriod: Record<UnitPeriod, Unit[]> = { 'MAR-JUL': [], 'AGO-DIC': [] };
@@ -42,7 +43,7 @@ export function TeacherLoadCard({ teacher, units }: TeacherLoadCardProps) {
         <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle className="text-xl">{teacher.fullName}</CardTitle>
-                <CardDescription>{teacher.dni}</CardDescription>
+                <CardDescription>DNI: {teacher.dni} | {teacher.programName}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
                 {(Object.keys(unitsByPeriod) as UnitPeriod[]).map(period => (
@@ -51,8 +52,9 @@ export function TeacherLoadCard({ teacher, units }: TeacherLoadCardProps) {
                             <h4 className="font-semibold text-sm mb-2">Período: {period}</h4>
                             <ul className="space-y-1 text-sm text-muted-foreground">
                                 {unitsByPeriod[period].map(unit => (
-                                    <li key={unit.id} className="flex justify-between items-center">
-                                        <span>{unit.name}</span>
+                                    <li key={unit.id} className="flex justify-between items-center gap-2">
+                                        <span className="flex-1">{unit.name}</span>
+                                        <Badge variant="outline">{programMap.get(unit.programId)?.abbreviation}</Badge>
                                         <Badge variant="secondary">{unit.totalHours} hrs</Badge>
                                     </li>
                                 ))}
@@ -60,6 +62,9 @@ export function TeacherLoadCard({ teacher, units }: TeacherLoadCardProps) {
                         </div>
                     )
                 ))}
+                 {units.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin carga horaria asignada para este año.</p>
+                )}
             </CardContent>
             <Separator />
             <CardFooter className="p-4 bg-muted/50 flex-col items-start space-y-2">
@@ -74,6 +79,12 @@ export function TeacherLoadCard({ teacher, units }: TeacherLoadCardProps) {
                         </div>
                      )
                  ))}
+                 {units.length === 0 && (
+                     <div className="flex items-center justify-between w-full font-bold text-sm text-muted-foreground">
+                        <span>Total Horas</span>
+                        <span>0</span>
+                     </div>
+                 )}
             </CardFooter>
         </Card>
     );
