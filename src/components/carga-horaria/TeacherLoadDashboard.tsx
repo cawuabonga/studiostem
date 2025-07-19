@@ -18,7 +18,6 @@ interface TeacherLoadDashboardProps {
 interface TeacherWithLoad {
     teacher: Teacher;
     units: Unit[];
-    totalHours: number;
 }
 
 export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLoadDashboardProps) {
@@ -38,19 +37,13 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
 
         const programUnits = allUnits.filter(unit => unit.programId === programId);
         const unitMap = new Map(programUnits.map(unit => [unit.id, unit]));
-
-        const allAssignedUnitIds = [
-            ...Object.keys(assignments['MAR-JUL']),
-            ...Object.keys(assignments['AGO-DIC'])
-        ];
-
+        
         const assignedTeachers: { [teacherId: string]: TeacherWithLoad } = {};
 
         allTeachers.forEach(teacher => {
             assignedTeachers[teacher.id] = {
                 teacher,
                 units: [],
-                totalHours: 0
             };
         });
         
@@ -61,7 +54,6 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
 
                 if (teacherId && unit && assignedTeachers[teacherId]) {
                     assignedTeachers[teacherId].units.push(unit);
-                    assignedTeachers[teacherId].totalHours += unit.totalHours || 0;
                 }
             }
         };
@@ -115,8 +107,8 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
             </CardDescription>
         </CardHeader>
       <div className="p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {teachersWithLoad.map(({ teacher, units, totalHours }) => (
-          <TeacherLoadCard key={teacher.id} teacher={teacher} units={units} totalHours={totalHours} />
+        {teachersWithLoad.map(({ teacher, units }) => (
+          <TeacherLoadCard key={teacher.id} teacher={teacher} units={units} />
         ))}
          {teachersWithLoad.length === 0 && (
             <div className="col-span-full text-center text-muted-foreground py-10">
