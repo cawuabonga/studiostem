@@ -286,9 +286,9 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const snapshot = await getDocs(q);
     
     const allStaff = snapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
-    const teachers = allStaff.filter(staff => staff.role === 'Teacher');
+    const assignableStaff = allStaff.filter(staff => staff.role === 'Teacher' || staff.role === 'Coordinator');
 
-    return teachers.map(data => {
+    return assignableStaff.map(data => {
         return { 
             id: data.dni, // Use DNI as the unique ID for the list key
             fullName: data.displayName,
