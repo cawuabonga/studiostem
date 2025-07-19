@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -37,6 +37,13 @@ const academicModules = [
     icon: ListPlus,
     roles: ["Admin", "Coordinator"],
   },
+  {
+    title: "Carga Horaria Docente",
+    description: "Visualizar la carga horaria de docentes y coordinadores por programa.",
+    href: "/dashboard/gestion-academica/carga-horaria",
+    icon: Hourglass,
+    roles: ["Admin", "Coordinator"],
+  }
 ];
 
 export default function GestionAcademicaPage() {
