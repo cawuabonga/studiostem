@@ -35,33 +35,29 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
           getPrograms(instituteId),
         ]);
         
-        // Fetch assignments for ALL programs for the given year
         const allAssignmentsPromises = allPrograms.map(p => getAssignments(instituteId, year, p.id));
         const allAssignmentsResults = await Promise.all(allAssignmentsPromises);
 
         const unitMap = new Map(allUnits.map(unit => [unit.id, unit]));
         
-        const assignedTeachers: { [teacherId: string]: TeacherWithLoad } = {};
+        const teacherTotalLoad: { [teacherId: string]: TeacherWithLoad } = {};
 
-        // Initialize every teacher so they appear if they are in the program, even with 0 hours
         allTeachers.forEach(teacher => {
-            assignedTeachers[teacher.id] = {
+            teacherTotalLoad[teacher.id] = {
                 teacher,
                 units: [],
             };
         });
         
-        // Process assignments from all programs
         allAssignmentsResults.forEach(programAssignments => {
             const processPeriod = (periodAssignments: Assignment) => {
                  for (const unitId in periodAssignments) {
                     const teacherId = periodAssignments[unitId];
                     const unit = unitMap.get(unitId);
 
-                    if (teacherId && unit && assignedTeachers[teacherId]) {
-                        // Check for duplicates before pushing
-                        if (!assignedTeachers[teacherId].units.some(u => u.id === unit.id)) {
-                           assignedTeachers[teacherId].units.push(unit);
+                    if (teacherId && unit && teacherTotalLoad[teacherId]) {
+                        if (!teacherTotalLoad[teacherId].units.some(u => u.id === unit.id)) {
+                           teacherTotalLoad[teacherId].units.push(unit);
                         }
                     }
                 }
@@ -70,11 +66,15 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
             processPeriod(programAssignments['AGO-DIC']);
         });
         
-        const filteredAndSortedTeachers = Object.values(assignedTeachers)
-            .filter(t => t.units.length > 0)
-            .sort((a, b) => a.teacher.fullName.localeCompare(b.teacher.fullName));
+        const allAssignedTeachers = Object.values(teacherTotalLoad).filter(t => t.units.length > 0);
+        
+        const teachersInSelectedProgram = allAssignedTeachers.filter(t => 
+            t.units.some(unit => unit.programId === programId)
+        );
 
-        setTeachersWithLoad(filteredAndSortedTeachers);
+        const sortedTeachers = teachersInSelectedProgram.sort((a, b) => a.teacher.fullName.localeCompare(b.teacher.fullName));
+
+        setTeachersWithLoad(sortedTeachers);
 
       } catch (error) {
         console.error("Error fetching teacher load data:", error);
@@ -112,7 +112,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         <CardHeader>
             <CardTitle>Resumen de Carga Horaria - {year}</CardTitle>
             <CardDescription>
-                Listado de docentes y coordinadores con su carga horaria total en el instituto para el año seleccionado.
+                Listado de docentes y coordinadores con asignaciones en este programa. La carga horaria mostrada es su total en todo el instituto.
             </CardDescription>
         </CardHeader>
       <div className="p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -121,7 +121,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         ))}
          {teachersWithLoad.length === 0 && (
             <div className="col-span-full text-center text-muted-foreground py-10">
-                No se encontraron docentes con carga horaria asignada para este año.
+                No se encontraron docentes con carga horaria asignada para este programa y año.
             </div>
         )}
       </div>
