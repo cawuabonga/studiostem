@@ -5,8 +5,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getTeachers, getAssignments, getPrograms } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, UnitPeriod } from '@/types';
+import { getUnits, getStaffProfiles, getAssignments, getPrograms } from '@/config/firebase';
+import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile } from '@/types';
 import { TeacherLoadCard } from './TeacherLoadCard';
 
 interface TeacherLoadDashboardProps {
@@ -29,35 +29,38 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [allUnits, allTeachers, allPrograms] = await Promise.all([
+        const [allUnits, allStaffProfiles, allPrograms] = await Promise.all([
           getUnits(instituteId),
-          getTeachers(instituteId),
+          getStaffProfiles(instituteId),
           getPrograms(instituteId),
         ]);
         
+        // Filter staff (teachers and coordinators) that belong to the selected program.
+        const staffInSelectedProgram = allStaffProfiles.filter(
+            staff => (staff.role === 'Teacher' || staff.role === 'Coordinator') && staff.programId === programId
+        );
+
+        // Then, fetch all assignments for the selected year to calculate their total load.
         const allAssignmentsPromises = allPrograms.map(p => getAssignments(instituteId, year, p.id));
         const allAssignmentsResults = await Promise.all(allAssignmentsPromises);
 
         const unitMap = new Map(allUnits.map(unit => [unit.id, unit]));
         
-        const teacherTotalLoad: { [teacherId: string]: TeacherWithLoad } = {};
-
-        allTeachers.forEach(teacher => {
-            teacherTotalLoad[teacher.id] = {
-                teacher,
-                units: [],
-            };
+        // Calculate load for ALL staff in the institute.
+        const allStaffTotalLoad: { [staffId: string]: Unit[] } = {};
+        allStaffProfiles.forEach(staff => {
+            allStaffTotalLoad[staff.dni] = [];
         });
-        
+
         allAssignmentsResults.forEach(programAssignments => {
             const processPeriod = (periodAssignments: Assignment) => {
                  for (const unitId in periodAssignments) {
-                    const teacherId = periodAssignments[unitId];
+                    const staffDni = periodAssignments[unitId];
                     const unit = unitMap.get(unitId);
 
-                    if (teacherId && unit && teacherTotalLoad[teacherId]) {
-                        if (!teacherTotalLoad[teacherId].units.some(u => u.id === unit.id)) {
-                           teacherTotalLoad[teacherId].units.push(unit);
+                    if (staffDni && unit && allStaffTotalLoad[staffDni]) {
+                        if (!allStaffTotalLoad[staffDni].some(u => u.id === unit.id)) {
+                           allStaffTotalLoad[staffDni].push(unit);
                         }
                     }
                 }
@@ -65,14 +68,26 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
             processPeriod(programAssignments['MAR-JUL']);
             processPeriod(programAssignments['AGO-DIC']);
         });
-        
-        const allAssignedTeachers = Object.values(teacherTotalLoad).filter(t => t.units.length > 0);
-        
-        const teachersInSelectedProgram = allAssignedTeachers.filter(t => 
-            t.units.some(unit => unit.programId === programId)
-        );
 
-        const sortedTeachers = teachersInSelectedProgram.sort((a, b) => a.teacher.fullName.localeCompare(b.teacher.fullName));
+        // Now, build the final list based on the staff from the selected program.
+        const finalTeacherLoadList: TeacherWithLoad[] = staffInSelectedProgram.map(staff => {
+            const teacher: Teacher = {
+                id: staff.dni,
+                dni: staff.dni,
+                fullName: staff.displayName,
+                email: staff.email,
+                phone: staff.phone || '',
+                active: true, // Assuming active, can be refined
+                specialty: '' // Placeholder
+            };
+
+            return {
+                teacher: teacher,
+                units: allStaffTotalLoad[staff.dni] || [], // Get their total load, which might be empty.
+            };
+        });
+
+        const sortedTeachers = finalTeacherLoadList.sort((a, b) => a.teacher.fullName.localeCompare(b.teacher.fullName));
 
         setTeachersWithLoad(sortedTeachers);
 
@@ -112,7 +127,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         <CardHeader>
             <CardTitle>Resumen de Carga Horaria - {year}</CardTitle>
             <CardDescription>
-                Listado de docentes y coordinadores con asignaciones en este programa. La carga horaria mostrada es su total en todo el instituto.
+                Listado del personal del programa seleccionado. La carga horaria mostrada es su total en todo el instituto para el año consultado.
             </CardDescription>
         </CardHeader>
       <div className="p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -121,7 +136,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         ))}
          {teachersWithLoad.length === 0 && (
             <div className="col-span-full text-center text-muted-foreground py-10">
-                No se encontraron docentes con carga horaria asignada para este programa y año.
+                No se encontraron docentes o coordinadores registrados en este programa de estudios.
             </div>
         )}
       </div>
