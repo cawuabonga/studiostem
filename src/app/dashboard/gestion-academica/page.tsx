@@ -24,8 +24,8 @@ const academicModules = [
     roles: ["Admin", "Coordinator"],
   },
   {
-    title: "Gestionar Docentes",
-    description: "Registrar y administrar la información de los docentes.",
+    title: "Lista de Docentes",
+    description: "Aquí solamente se muestra la lista de los docentes.",
     href: "/dashboard/gestion-academica/docentes",
     icon: Users,
     roles: ["Admin", "Coordinator"],
