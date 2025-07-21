@@ -16,6 +16,9 @@ import { Loader2 } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
 
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
 const addStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   lastName: z.string().min(2, { message: 'El apellido debe tener al menos 2 caracteres.' }),
@@ -26,14 +29,29 @@ const addStudentSchema = z.object({
   age: z.coerce.number().min(15, { message: 'La edad debe ser al menos 15 años.' }),
   gender: z.enum(genders, { required_error: 'Debe seleccionar un género.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
-  photoURL: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
+  photoURL: z.instanceof(FileList).optional()
+    .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 2MB.`)
+    .refine(
+      files => !files || files.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      "Solo se aceptan formatos .jpg, .jpeg, .png y .webp."
+    ),
 });
+
 
 type AddStudentFormValues = z.infer<typeof addStudentSchema>;
 
 interface AddStudentFormProps {
   instituteId: string;
   onProfileCreated: () => void;
+}
+
+const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
 }
 
 export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentFormProps) {
@@ -62,12 +80,27 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
   const onSubmit = async (data: AddStudentFormValues) => {
     setLoading(true);
     try {
-      await addStudentProfile(instituteId, data);
+      let photoDataUri = '';
+      if (data.photoURL && data.photoURL.length > 0) {
+          photoDataUri = await fileToDataUri(data.photoURL[0]);
+      }
+      
+      const { photoURL, ...studentData } = data;
+
+      await addStudentProfile(instituteId, {
+        ...studentData,
+        photoURL: photoDataUri,
+      });
+
       toast({
         title: '¡Éxito!',
         description: 'El perfil del estudiante ha sido creado.',
       });
       form.reset();
+       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
+      if (fileInput) {
+        fileInput.value = '';
+      }
       onProfileCreated();
     } catch (error: any) {
       toast({
@@ -83,14 +116,18 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
+         <FormField
           control={form.control}
           name="photoURL"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>URL de la Foto</FormLabel>
+              <FormLabel>Foto del Estudiante (Opcional)</FormLabel>
               <FormControl>
-                <Input placeholder="https://ejemplo.com/foto.png" {...field} />
+                <Input 
+                  type="file" 
+                  accept="image/*" 
+                  {...form.register('photoURL')} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
