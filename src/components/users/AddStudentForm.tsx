@@ -74,6 +74,10 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
       email: '',
       phone: '',
       address: '',
+      age: 0,
+      gender: undefined,
+      programId: '',
+      photoURL: undefined,
     },
   });
 
