@@ -14,15 +14,17 @@ export default function ListadoEstudiantesPage() {
         setDataVersion(prev => prev + 1);
     };
 
-    if (!instituteId) return <p>Cargando...</p>;
+    if (!instituteId) {
+        return <p>Cargando...</p>;
+    }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle>Listado de Estudiantes</CardTitle>
                 <CardDescription>
-                    Perfiles de estudiantes registrados en el instituto. Los estudiantes deben validar su perfil para acceder al sistema.
-                </Description>
+                    Busca, filtra y gestiona los perfiles de estudiantes registrados en el instituto.
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <StudentsTable 
