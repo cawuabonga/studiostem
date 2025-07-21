@@ -154,6 +154,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
               <TableHead>Programa</TableHead>
               <TableHead>Módulo</TableHead>
               <TableHead>Período</TableHead>
+              <TableHead>Turno</TableHead>
               <TableHead>Total Horas</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -168,6 +169,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                     <TableCell>{program?.name || 'N/A'}</TableCell>
                     <TableCell>{module?.code || 'N/A'}</TableCell>
                     <TableCell>{unit.period}</TableCell>
+                    <TableCell>{unit.turno}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
                     <TableCell className="text-right space-x-2">
                        <Button variant="outline" size="icon" onClick={() => handleDuplicate(unit)}>

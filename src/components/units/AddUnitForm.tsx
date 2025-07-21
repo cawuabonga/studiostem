@@ -11,10 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { addUnit, getPrograms } from '@/config/firebase';
-import type { Program, ProgramModule, UnitPeriod, UnitType } from '@/types';
+import type { Program, ProgramModule, UnitPeriod, UnitType, UnitTurno } from '@/types';
 
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const unitTypes: UnitType[] = ['Empleabilidad', 'Especifica'];
+const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 
 const addUnitSchema = z.object({
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
@@ -26,6 +27,7 @@ const addUnitSchema = z.object({
   totalHours: z.coerce.number(),
   period: z.enum(periods, { required_error: 'Debe seleccionar un período.' }),
   unitType: z.enum(unitTypes, { required_error: 'Debe seleccionar un tipo de unidad.' }),
+  turno: z.enum(turnos, { required_error: 'Debe seleccionar un turno.' }),
   code: z.string().min(1, { message: 'El código es requerido.' }),
 });
 
@@ -253,24 +255,44 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
             )}
             />
         </div>
-        <FormField
-            control={form.control}
-            name="unitType"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Tipo de Unidad</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                    {unitTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-                <FormMessage />
-                </FormItem>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="unitType"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Tipo de Unidad</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Seleccione tipo" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {unitTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
             />
+            <FormField
+                control={form.control}
+                name="turno"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Turno</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Seleccione turno" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
 
         <Button type="submit" disabled={loading}>
           {loading ? 'Registrando...' : 'Registrar Unidad'}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { bulkAddUnits, getPrograms } from '@/config/firebase';
-import type { Unit, Program, ProgramModule } from '@/types';
+import type { Unit, Program, ProgramModule, UnitTurno } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -59,6 +59,7 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
                 practicalHours: 2,
                 period: "MAR-JUL",
                 unitType: "Especifica",
+                turno: "Mañana",
             },
         ]);
         const workbook = XLSX.utils.book_new();
@@ -101,6 +102,7 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
                     practicalHours: Number(row.practicalHours),
                     period: String(row.period) as any,
                     unitType: String(row.unitType) as any,
+                    turno: String(row.turno) as UnitTurno,
                 }));
 
                 await bulkAddUnits(instituteId, unitsToUpload);

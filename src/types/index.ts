@@ -82,6 +82,7 @@ export interface Program {
 
 export type UnitPeriod = 'MAR-JUL' | 'AGO-DIC';
 export type UnitType = 'Empleabilidad' | 'Especifica';
+export type UnitTurno = 'Mañana' | 'Tarde' | 'Noche';
 
 export interface Unit {
   id: string;
@@ -93,6 +94,7 @@ export interface Unit {
   totalHours: number;
   period: UnitPeriod;
   unitType: UnitType;
+  turno: UnitTurno;
   programId: string;
   moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
 }
