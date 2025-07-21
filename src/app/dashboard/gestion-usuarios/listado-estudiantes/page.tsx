@@ -21,8 +21,8 @@ export default function ListadoEstudiantesPage() {
             <CardHeader>
                 <CardTitle>Listado de Estudiantes</CardTitle>
                 <CardDescription>
-                    Perfiles de estudiantes registrados en el instituto.
-                </CardDescription>
+                    Perfiles de estudiantes registrados en el instituto. Los estudiantes deben validar su perfil para acceder al sistema.
+                </Description>
             </CardHeader>
             <CardContent>
                 <StudentsTable 

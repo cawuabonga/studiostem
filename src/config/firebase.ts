@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -408,8 +408,48 @@ export const deleteStaffProfile = async (instituteId: string, dni: string) => {
     await deleteDoc(staffRef);
 }
 
+// STUDENT PROFILES
+export const addStudentProfile = async (instituteId: string, data: Omit<StudentProfile, 'fullName' | 'linkedUserUid'>) => {
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    const profileRef = doc(studentsCol, data.dni);
+    const docSnap = await getDoc(profileRef);
+
+    if (docSnap.exists()) {
+        throw new Error(`Un perfil de estudiante con el DNI ${data.dni} ya existe.`);
+    }
+
+    const profileData: StudentProfile = {
+        ...data,
+        fullName: `${data.firstName} ${data.lastName}`,
+        linkedUserUid: null,
+    };
+    await setDoc(profileRef, profileData);
+};
+
+export const getStudentProfiles = async (instituteId: string): Promise<StudentProfile[]> => {
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    const q = query(studentsCol, orderBy("lastName"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => doc.data() as StudentProfile);
+};
+
+export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'fullName'| 'linkedUserUid'>[]) => {
+    const batch = writeBatch(db);
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    studentList.forEach(studentData => {
+        const docRef = doc(studentsCol, studentData.dni);
+        const profileData: StudentProfile = {
+            ...studentData,
+            fullName: `${studentData.firstName} ${studentData.lastName}`,
+            linkedUserUid: null,
+        };
+        batch.set(docRef, profileData);
+    });
+    await batch.commit();
+};
     
 
     
 
     
+

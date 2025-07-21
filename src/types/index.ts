@@ -1,3 +1,4 @@
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -23,6 +24,21 @@ export interface StaffProfile {
   condition: 'NOMBRADO' | 'CONTRATADO';
   programId: string;
   // This will be null until a user account is linked
+  linkedUserUid?: string | null;
+}
+
+export interface StudentProfile {
+  dni: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  gender: 'Masculino' | 'Femenino';
+  age: number;
+  email: string;
+  phone?: string;
+  address?: string;
+  photoURL?: string;
+  programId: string;
   linkedUserUid?: string | null;
 }
 
