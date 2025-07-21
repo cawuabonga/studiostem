@@ -22,24 +22,6 @@ export default function RegistrarEstudiantePage() {
 
     return (
         <div className="space-y-6">
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                        <Upload className="h-5 w-5"/> Carga Masiva de Estudiantes
-                    </AccordionTrigger>
-                    <AccordionContent>
-                         <Card>
-                            <CardHeader>
-                                <CardTitle>Registro por Lotes de Estudiantes</CardTitle>
-                                <CardDescription>Descargue la plantilla, complete los datos de los estudiantes y súbala para un registro rápido.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <BulkUploadStudents instituteId={instituteId} onUploadSuccess={handleDataChange} />
-                            </CardContent>
-                        </Card>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
             <Card>
                 <CardHeader>
                     <CardTitle>Registrar Nuevo Estudiante (Individual)</CardTitle>
@@ -54,6 +36,25 @@ export default function RegistrarEstudiantePage() {
                     />
                 </CardContent>
             </Card>
+
+            <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="item-1">
+                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
+                        <Upload className="h-5 w-5"/> Carga Masiva de Estudiantes
+                    </AccordionTrigger>
+                    <AccordionContent>
+                         <Card>
+                            <CardHeader>
+                                <CardTitle>Registro por Lotes de Estudiantes</CardTitle>
+                                <CardDescription>Descargue la plantilla, complete los datos de los estudiantes y súbala para un registro rápido.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <BulkUploadStudents onUploadSuccess={handleDataChange} />
+                            </CardContent>
+                        </Card>
+                    </AccordionContent>
+                </AccordionItem>
+            </Accordion>
         </div>
     );
 }
