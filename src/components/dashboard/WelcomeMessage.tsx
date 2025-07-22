@@ -7,14 +7,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '../ui/button';
 import { EditProfileDialog } from '../profile/EditProfileDialog';
 import { useState } from 'react';
+import { LinkProfileDialog } from '../profile/LinkProfileDialog';
 
 export default function WelcomeMessage() {
   const { user, reloadUser } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isLinkProfileOpen, setIsLinkProfileOpen] = useState(false);
+
+  const handleProfileLinked = async () => {
+    await reloadUser();
+    setIsLinkProfileOpen(false);
+  }
 
   if (!user) {
     return null; 
   }
+  
+  // A user is considered "unlinked" if they don't have a DNI in their profile.
+  const isUnlinked = !user.dni;
   
   return (
     <>
@@ -30,15 +40,26 @@ export default function WelcomeMessage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-             <p className="text-center text-muted-foreground">
-                {user.instituteId 
-                    ? 'Utiliza el menú lateral para navegar por las diferentes secciones de la aplicación.'
-                    : 'Este es tu panel de control. Aún no estás asignado a un instituto. Un SuperAdmin debe asignarte uno.'
-                }
-            </p>
+            {isUnlinked ? (
+                 <p className="text-center text-muted-foreground p-4 bg-accent/20 rounded-md border border-accent">
+                    Parece que tu cuenta aún no está vinculada a un perfil del instituto. 
+                    <br/>
+                    <strong>Haz clic en "Vincular mi Perfil"</strong> para conectar tu cuenta con tu información de estudiante o personal.
+                </p>
+            ) : (
+                <p className="text-center text-muted-foreground">
+                    {user.instituteId 
+                        ? 'Utiliza el menú lateral para navegar por las diferentes secciones de la aplicación.'
+                        : 'Este es tu panel de control. Un SuperAdmin debe asignarte un instituto.'
+                    }
+                </p>
+            )}
         </CardContent>
         <CardFooter className="flex justify-center gap-4">
             <Button onClick={() => setIsEditOpen(true)}>Editar Perfil</Button>
+            {isUnlinked && (
+                 <Button variant="secondary" onClick={() => setIsLinkProfileOpen(true)}>Vincular mi Perfil</Button>
+            )}
         </CardFooter>
       </Card>
 
@@ -48,6 +69,13 @@ export default function WelcomeMessage() {
             isOpen={isEditOpen}
             onClose={() => setIsEditOpen(false)}
           />
+      )}
+       {user && isUnlinked && (
+        <LinkProfileDialog
+          isOpen={isLinkProfileOpen}
+          onClose={() => setIsLinkProfileOpen(false)}
+          onProfileLinked={handleProfileLinked}
+        />
       )}
     </>
   );

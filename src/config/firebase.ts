@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
@@ -448,9 +449,67 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
     await batch.commit();
 };
     
+// --- Profile Linking ---
+export const linkUserToProfile = async (uid: string, dni: string, email: string) => {
+    // 1. Get all institutes
+    const institutes = await getInstitutes();
+    let foundProfile: (StaffProfile | StudentProfile) & { type: 'staff' | 'student' } | null = null;
+    let foundInstituteId: string | null = null;
 
+    // 2. Search for a matching profile in all institutes
+    for (const institute of institutes) {
+        // Search in staffProfiles
+        const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
+        const staffDoc = await getDoc(staffProfileRef);
+        if (staffDoc.exists() && staffDoc.data().email === email) {
+            foundProfile = { ...staffDoc.data() as StaffProfile, type: 'staff' };
+            foundInstituteId = institute.id;
+            break;
+        }
+
+        // Search in studentProfiles
+        const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
+        const studentDoc = await getDoc(studentProfileRef);
+        if (studentDoc.exists() && studentDoc.data().email === email) {
+            foundProfile = { ...studentDoc.data() as StudentProfile, type: 'student' };
+            foundInstituteId = institute.id;
+            break;
+        }
+    }
+
+    if (!foundProfile || !foundInstituteId) {
+        throw new Error("No matching profile found with the provided DNI and email.");
+    }
+
+    if (foundProfile.linkedUserUid) {
+        throw new Error("This profile has already been linked to another account.");
+    }
+    
+    // 3. Update the AppUser document
+    const userDocRef = doc(db, 'users', uid);
+    await updateDoc(userDocRef, {
+        dni: foundProfile.dni,
+        role: foundProfile.role,
+        instituteId: foundInstituteId,
+        programId: foundProfile.programId,
+        displayName: foundProfile.displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
+        ...(foundProfile.photoURL && { photoURL: foundProfile.photoURL }),
+    });
+
+    // 4. Update the profile document with the linked UID
+    const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
+    const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, dni);
+    await updateDoc(profileDocRef, {
+        linkedUserUid: uid
+    });
+
+    const instituteName = institutes.find(i => i.id === foundInstituteId)?.name || 'Unknown Institute';
+
+    return { 
+        role: foundProfile.role, 
+        instituteName 
+    };
+};
     
 
     
-
-
