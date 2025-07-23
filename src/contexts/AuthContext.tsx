@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { AppUser, UserRole, Institute } from '@/types';
@@ -108,14 +109,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 photoURL: firebaseUser.photoURL,
                 role: 'Student',
                 instituteId: null, 
+                documentId: '', // Initialize as empty string
              };
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
               appUser.role,
               appUser.instituteId
             );
-            // Ensure the local user object has the documentId set to null for the UI to react correctly.
-            appUser.documentId = null;
           }
           
           setUser(appUser);

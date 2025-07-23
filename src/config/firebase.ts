@@ -39,7 +39,7 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
       displayName: user.displayName, 
       photoURL: user.photoURL,
       instituteId: instituteId || null,
-      documentId: null, // Ensure documentId is explicitly set to null for new users
+      documentId: '', // Use empty string instead of null
     }, { merge: true });
     console.log("User data saved to Firestore.");
   } catch (error) {
