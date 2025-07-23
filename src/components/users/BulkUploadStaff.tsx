@@ -48,7 +48,7 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
         const programAbbreviations = programs.map(p => p.abbreviation).join(' / ');
         const worksheet = XLSX.utils.json_to_sheet([
             { 
-                dni: "87654321",
+                documentId: "87654321",
                 displayName: "Ana Torres",
                 email: "ana.torres@example.com",
                 phone: "912345678",
@@ -102,7 +102,7 @@ export function BulkUploadStaff({ onUploadSuccess }: BulkUploadStaffProps) {
                     }
 
                     return {
-                        dni: String(row.dni),
+                        documentId: String(row.documentId),
                         displayName: String(row.displayName),
                         email: String(row.email),
                         phone: String(row.phone),

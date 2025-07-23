@@ -24,7 +24,7 @@ const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addStaffSchema = z.object({
   displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
+  documentId: z.string().min(8, { message: 'El documento debe tener al menos 8 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
@@ -54,7 +54,7 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
     resolver: zodResolver(addStaffSchema),
     defaultValues: {
       displayName: '',
-      dni: '',
+      documentId: '',
       email: '',
       phone: '',
     },
@@ -100,10 +100,10 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
             />
             <FormField
             control={form.control}
-            name="dni"
+            name="documentId"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>DNI</FormLabel>
+                <FormLabel>N° Documento</FormLabel>
                 <FormControl>
                     <Input placeholder="Documento de Identidad" {...field} />
                 </FormControl>
@@ -225,4 +225,3 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
     </Form>
   );
 }
-

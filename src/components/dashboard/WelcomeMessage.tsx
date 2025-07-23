@@ -23,8 +23,8 @@ export default function WelcomeMessage() {
     return null; 
   }
   
-  // A user is considered "unlinked" if they don't have a DNI in their profile.
-  const isUnlinked = !user.dni;
+  // A user is considered "unlinked" if they don't have a documentId in their profile.
+  const isUnlinked = !user.documentId;
   
   return (
     <>

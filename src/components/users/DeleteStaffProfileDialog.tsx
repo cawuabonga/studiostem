@@ -36,7 +36,7 @@ export function DeleteStaffProfileDialog({ profile, isOpen, onClose }: DeleteSta
     }
     setIsDeleting(true);
     try {
-      await deleteStaffProfile(instituteId, profile.dni);
+      await deleteStaffProfile(instituteId, profile.documentId);
       toast({
         title: '¡Eliminado!',
         description: 'El perfil del personal ha sido eliminado.',

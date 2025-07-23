@@ -10,14 +10,14 @@ export interface AppUser {
   displayName: string | null;
   photoURL: string | null;
   role: UserRole;
-  dni?: string;
+  documentId?: string;
   instituteId: string | null;
 }
 
-// Represents a pre-created profile for a staff member, identified by DNI.
+// Represents a pre-created profile for a staff member, identified by Document ID.
 // This is created by an admin and can be "claimed" by a user.
 export interface StaffProfile {
-  dni: string;
+  documentId: string;
   displayName: string;
   email: string;
   phone?: string;
@@ -29,7 +29,7 @@ export interface StaffProfile {
 }
 
 export interface StudentProfile {
-  dni: string;
+  documentId: string;
   firstName: string;
   lastName: string;
   fullName: string;
@@ -103,10 +103,10 @@ export interface Unit {
 }
 
 // This type is now based on StaffProfile for consistency.
-// The `id` is derived from `dni` for list keys.
+// The `id` is derived from `documentId` for list keys.
 export interface Teacher {
-  id: string; // DNI
-  dni: string;
+  id: string; // Document ID
+  documentId: string;
   fullName: string;
   email: string;
   phone: string;
@@ -116,5 +116,5 @@ export interface Teacher {
 }
 
 export interface Assignment {
-  [unitId: string]: string; // unitId -> teacherId (DNI)
+  [unitId: string]: string; // unitId -> teacherId (Document ID)
 }

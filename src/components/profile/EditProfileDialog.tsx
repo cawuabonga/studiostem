@@ -25,7 +25,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const editProfileSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).optional(),
   photoURL: z.string().url({ message: 'Por favor, ingrese una URL válida.' }).or(z.literal('')).optional(),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }).optional().or(z.literal('')),
+  documentId: z.string().min(8, { message: 'El documento debe tener al menos 8 caracteres.' }).optional().or(z.literal('')),
 });
 
 type EditProfileFormValues = z.infer<typeof editProfileSchema>;
@@ -46,7 +46,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
     defaultValues: {
       displayName: user.displayName || '',
       photoURL: user.photoURL || '',
-      dni: user.dni || '',
+      documentId: user.documentId || '',
     },
   });
 
@@ -55,7 +55,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       form.reset({
         displayName: user.displayName || '',
         photoURL: user.photoURL || '',
-        dni: user.dni || '',
+        documentId: user.documentId || '',
       });
     }
   }, [user, form, isOpen]);
@@ -66,7 +66,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       await updateUserProfile({
         displayName: data.displayName,
         photoURL: data.photoURL,
-        dni: data.dni,
+        documentId: data.documentId,
       });
 
       toast({
@@ -128,12 +128,12 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
             />
             <FormField
               control={form.control}
-              name="dni"
+              name="documentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>DNI</FormLabel>
+                  <FormLabel>Documento de Identidad</FormLabel>
                   <FormControl>
-                    <Input placeholder="Tu DNI de 8 dígitos" {...field} />
+                    <Input placeholder="Tu número de documento" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

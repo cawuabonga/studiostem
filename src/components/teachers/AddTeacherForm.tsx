@@ -17,7 +17,7 @@ const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addTeacherSchema = z.object({
   displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
+  documentId: z.string().min(8, { message: 'El documento de identidad debe tener al menos 8 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }),
   condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
@@ -46,7 +46,7 @@ export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormPr
     resolver: zodResolver(addTeacherSchema),
     defaultValues: {
       displayName: '',
-      dni: '',
+      documentId: '',
       email: '',
       phone: '',
     },
@@ -93,10 +93,10 @@ export function AddTeacherForm({ instituteId, onTeacherAdded }: AddTeacherFormPr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="dni"
+            name="documentId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>DNI</FormLabel>
+                <FormLabel>N° Documento</FormLabel>
                 <FormControl>
                   <Input placeholder="12345678" {...field} />
                 </FormControl>

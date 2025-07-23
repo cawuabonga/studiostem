@@ -81,7 +81,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
   const filteredProfiles = useMemo(() =>
     profiles.filter(profile =>
         profile.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.dni.toLowerCase().includes(filter.toLowerCase()) ||
+        profile.documentId.toLowerCase().includes(filter.toLowerCase()) ||
         profile.email.toLowerCase().includes(filter.toLowerCase())
     ), [profiles, filter]);
   
@@ -112,7 +112,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
     <>
       <div className="mb-4">
         <Input 
-          placeholder="Buscar por nombre, DNI o email..."
+          placeholder="Buscar por nombre, documento o email..."
           value={filter}
           onChange={(e) => {
             setFilter(e.target.value);
@@ -125,7 +125,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>DNI</TableHead>
+              <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Rol</TableHead>
@@ -135,8 +135,8 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
           </TableHeader>
           <TableBody>
             {paginatedProfiles.map((profile) => (
-              <TableRow key={profile.dni}>
-                <TableCell className="font-mono">{profile.dni}</TableCell>
+              <TableRow key={profile.documentId}>
+                <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.displayName}</TableCell>
                 <TableCell>{profile.email}</TableCell>
                 <TableCell>{profile.role}</TableCell>

@@ -23,7 +23,7 @@ import { linkUserToProfile } from '@/config/firebase';
 import { Loader2 } from 'lucide-react';
 
 const linkProfileSchema = z.object({
-  dni: z.string().length(8, { message: 'El DNI debe tener exactamente 8 dígitos.' }),
+  documentId: z.string().min(8, { message: 'El documento de identidad debe tener al menos 8 caracteres.' }),
   email: z.string().email({ message: 'Por favor, ingrese un correo electrónico válido.' }),
 });
 
@@ -43,7 +43,7 @@ export function LinkProfileDialog({ isOpen, onClose, onProfileLinked }: LinkProf
   const form = useForm<LinkProfileFormValues>({
     resolver: zodResolver(linkProfileSchema),
     defaultValues: {
-      dni: '',
+      documentId: '',
       email: '',
     },
   });
@@ -56,7 +56,7 @@ export function LinkProfileDialog({ isOpen, onClose, onProfileLinked }: LinkProf
     
     setIsSubmitting(true);
     try {
-      const result = await linkUserToProfile(user.uid, data.dni, data.email);
+      const result = await linkUserToProfile(user.uid, data.documentId, data.email);
       
       toast({
         title: '¡Perfil Vinculado!',
@@ -83,19 +83,19 @@ export function LinkProfileDialog({ isOpen, onClose, onProfileLinked }: LinkProf
         <DialogHeader>
           <DialogTitle>Vincular Perfil Institucional</DialogTitle>
           <DialogDescription>
-            Ingresa tu DNI y el correo electrónico con el que fuiste registrado en el instituto para vincular tu cuenta.
+            Ingresa tu documento de identidad y el correo electrónico con el que fuiste registrado en el instituto para vincular tu cuenta.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField
               control={form.control}
-              name="dni"
+              name="documentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>DNI</FormLabel>
+                  <FormLabel>N° de Documento de Identidad</FormLabel>
                   <FormControl>
-                    <Input placeholder="Tu número de DNI" {...field} />
+                    <Input placeholder="Tu número de documento" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

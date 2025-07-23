@@ -73,7 +73,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const filteredTeachers = useMemo(() => 
     teachers.filter(teacher => 
         teacher.fullName.toLowerCase().includes(filter.toLowerCase()) ||
-        teacher.dni.toLowerCase().includes(filter.toLowerCase()) ||
+        teacher.documentId.toLowerCase().includes(filter.toLowerCase()) ||
         teacher.email.toLowerCase().includes(filter.toLowerCase())
     ), [teachers, filter]);
   
@@ -104,7 +104,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
     <>
       <div className="mb-4">
         <Input 
-          placeholder="Buscar por nombre, DNI o email..."
+          placeholder="Buscar por nombre, documento o email..."
           value={filter}
           onChange={(e) => {
             setFilter(e.target.value);
@@ -118,7 +118,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre Completo</TableHead>
-              <TableHead>DNI</TableHead>
+              <TableHead>N° Documento</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -128,7 +128,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
             {paginatedTeachers.map((teacher) => (
               <TableRow key={teacher.id}>
                 <TableCell className="font-medium">{teacher.fullName}</TableCell>
-                <TableCell>{teacher.dni}</TableCell>
+                <TableCell>{teacher.documentId}</TableCell>
                 <TableCell>{teacher.email}</TableCell>
                 <TableCell>
                   <Badge variant={teacher.active ? 'default' : 'secondary'}>

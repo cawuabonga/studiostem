@@ -80,7 +80,7 @@ export function EditTeacherDialog({ teacher, instituteId, isOpen, onClose }: Edi
             condition: data.condition,
             programId: data.programId,
         };
-      await updateStaffProfile(instituteId, teacher.dni, updateData);
+      await updateStaffProfile(instituteId, teacher.documentId, updateData);
       toast({
         title: '¡Éxito!',
         description: 'La información del docente ha sido actualizada.',
@@ -103,7 +103,7 @@ export function EditTeacherDialog({ teacher, instituteId, isOpen, onClose }: Edi
         <DialogHeader>
           <DialogTitle>Editar Perfil de Docente</DialogTitle>
           <DialogDescription>
-            Realiza cambios en la información del docente con DNI: {teacher.dni}
+            Realiza cambios en la información del docente con N° Doc: {teacher.documentId}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

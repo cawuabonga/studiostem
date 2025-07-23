@@ -39,7 +39,7 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
       displayName: user.displayName, 
       photoURL: user.photoURL,
       instituteId: instituteId || null,
-      dni: null, // Ensure dni is explicitly set to null for new users
+      documentId: null, // Ensure documentId is explicitly set to null for new users
     }, { merge: true });
     console.log("User data saved to Firestore.");
   } catch (error) {
@@ -48,7 +48,7 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
   }
 };
 
-export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, dni?: string | null }) => {
+export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, documentId?: string | null }) => {
     const user = auth.currentUser;
     if (!user) throw new Error("No user is currently signed in.");
     try {
@@ -63,7 +63,7 @@ export const updateUserProfile = async (data: { displayName?: string | null; pho
         const firestoreUpdates: { [key: string]: any } = {};
         if (data.displayName !== undefined) firestoreUpdates.displayName = data.displayName;
         if (data.photoURL !== undefined) firestoreUpdates.photoURL = data.photoURL;
-        if (data.dni !== undefined) firestoreUpdates.dni = data.dni;
+        if (data.documentId !== undefined) firestoreUpdates.documentId = data.documentId;
         
         if (Object.keys(firestoreUpdates).length > 0) {
             const userDocRef = doc(db, 'users', user.uid);
@@ -292,9 +292,9 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
 
     return assignableStaff.map(data => {
         return { 
-            id: data.dni, // Use DNI as the unique ID for the list key
+            id: data.documentId, // Use Document ID as the unique ID for the list key
             fullName: data.displayName,
-            dni: data.dni,
+            documentId: data.documentId,
             email: data.email,
             phone: data.phone || '',
             specialty: (data as any).specialty || 'N/A', // Assuming specialty might exist
@@ -304,7 +304,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
 };
 
 export const updateTeacher = async (instituteId: string, teacherId: string, data: Partial<Teacher>) => {
-    // teacherId is the DNI in this context
+    // teacherId is the Document ID in this context
     const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
     const updateData: Partial<StaffProfile> = {
         displayName: data.fullName,
@@ -316,7 +316,7 @@ export const updateTeacher = async (instituteId: string, teacherId: string, data
 }
 
 export const deleteTeacher = async (instituteId: string, teacherId: string) => {
-    // teacherId is the DNI
+    // teacherId is the Document ID
     const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
     await deleteDoc(teacherRef);
 }
@@ -325,9 +325,9 @@ export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teache
     const batch = writeBatch(db);
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     teachers.forEach(teacherData => {
-        const docRef = doc(staffCol, teacherData.dni); 
+        const docRef = doc(staffCol, teacherData.documentId); 
         const staffData: Omit<StaffProfile, 'linkedUserUid'> = {
-            dni: teacherData.dni,
+            documentId: teacherData.documentId,
             displayName: teacherData.fullName,
             email: teacherData.email,
             phone: teacherData.phone,
@@ -371,11 +371,11 @@ export const saveAssignments = async (
 // STAFF PROFILES
 export const addStaffProfile = async (instituteId: string, data: Omit<StaffProfile, 'linkedUserUid'>) => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const profileRef = doc(staffCol, data.dni); // Use DNI as the document ID
+    const profileRef = doc(staffCol, data.documentId); // Use Document ID as the document ID
     const docSnap = await getDoc(profileRef);
 
     if (docSnap.exists()) {
-        throw new Error(`Un perfil con el DNI ${data.dni} ya existe.`);
+        throw new Error(`Un perfil con el documento ${data.documentId} ya existe.`);
     }
 
     await setDoc(profileRef, { ...data, linkedUserUid: null });
@@ -393,31 +393,31 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffPro
     const batch = writeBatch(db);
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     staffList.forEach(staffData => {
-        // In Firestore, the document ID will be the DNI
-        const docRef = doc(staffCol, staffData.dni);
+        // In Firestore, the document ID will be the Document ID
+        const docRef = doc(staffCol, staffData.documentId);
         batch.set(docRef, staffData);
     });
     await batch.commit();
 };
 
-export const updateStaffProfile = async (instituteId: string, dni: string, data: Partial<StaffProfile>) => {
-    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
+export const updateStaffProfile = async (instituteId: string, documentId: string, data: Partial<StaffProfile>) => {
+    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', documentId);
     await updateDoc(staffRef, data);
 }
 
-export const deleteStaffProfile = async (instituteId: string, dni: string) => {
-    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', dni);
+export const deleteStaffProfile = async (instituteId: string, documentId: string) => {
+    const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', documentId);
     await deleteDoc(staffRef);
 }
 
 // STUDENT PROFILES
 export const addStudentProfile = async (instituteId: string, data: Omit<StudentProfile, 'fullName' | 'linkedUserUid'>) => {
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
-    const profileRef = doc(studentsCol, data.dni);
+    const profileRef = doc(studentsCol, data.documentId);
     const docSnap = await getDoc(profileRef);
 
     if (docSnap.exists()) {
-        throw new Error(`Un perfil de estudiante con el DNI ${data.dni} ya existe.`);
+        throw new Error(`Un perfil de estudiante con el documento ${data.documentId} ya existe.`);
     }
 
     const profileData: StudentProfile = {
@@ -439,7 +439,7 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
     const batch = writeBatch(db);
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
     studentList.forEach(studentData => {
-        const docRef = doc(studentsCol, studentData.dni);
+        const docRef = doc(studentsCol, studentData.documentId);
         const profileData: StudentProfile = {
             ...studentData,
             fullName: `${studentData.firstName} ${studentData.lastName}`,
@@ -451,7 +451,7 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
 };
     
 // --- Profile Linking ---
-export const linkUserToProfile = async (uid: string, dni: string, email: string) => {
+export const linkUserToProfile = async (uid: string, documentId: string, email: string) => {
     // 1. Get all institutes
     const institutes = await getInstitutes();
     let foundProfile: (StaffProfile | StudentProfile) & { type: 'staff' | 'student' } | null = null;
@@ -460,7 +460,7 @@ export const linkUserToProfile = async (uid: string, dni: string, email: string)
     // 2. Search for a matching profile in all institutes
     for (const institute of institutes) {
         // Search in staffProfiles
-        const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', dni);
+        const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', documentId);
         const staffDoc = await getDoc(staffProfileRef);
         if (staffDoc.exists() && staffDoc.data().email === email) {
             foundProfile = { ...staffDoc.data() as StaffProfile, type: 'staff' };
@@ -469,7 +469,7 @@ export const linkUserToProfile = async (uid: string, dni: string, email: string)
         }
 
         // Search in studentProfiles
-        const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', dni);
+        const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', documentId);
         const studentDoc = await getDoc(studentProfileRef);
         if (studentDoc.exists() && studentDoc.data().email === email) {
             foundProfile = { ...studentDoc.data() as StudentProfile, type: 'student' };
@@ -479,7 +479,7 @@ export const linkUserToProfile = async (uid: string, dni: string, email: string)
     }
 
     if (!foundProfile || !foundInstituteId) {
-        throw new Error("No matching profile found with the provided DNI and email.");
+        throw new Error("No matching profile found with the provided Document ID and email.");
     }
 
     if (foundProfile.linkedUserUid) {
@@ -489,7 +489,7 @@ export const linkUserToProfile = async (uid: string, dni: string, email: string)
     // 3. Update the AppUser document
     const userDocRef = doc(db, 'users', uid);
     await updateDoc(userDocRef, {
-        dni: foundProfile.dni,
+        documentId: foundProfile.documentId,
         role: foundProfile.role,
         instituteId: foundInstituteId,
         programId: foundProfile.programId,
@@ -499,7 +499,7 @@ export const linkUserToProfile = async (uid: string, dni: string, email: string)
 
     // 4. Update the profile document with the linked UID
     const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
-    const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, dni);
+    const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, documentId);
     await updateDoc(profileDocRef, {
         linkedUserUid: uid
     });

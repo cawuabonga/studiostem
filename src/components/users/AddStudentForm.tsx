@@ -22,7 +22,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const addStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   lastName: z.string().min(2, { message: 'El apellido debe tener al menos 2 caracteres.' }),
-  dni: z.string().length(8, { message: 'El DNI debe tener 8 dígitos.' }),
+  documentId: z.string().min(8, { message: 'El documento de identidad debe tener al menos 8 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   address: z.string().min(5, { message: 'La dirección es requerida.' }).optional().or(z.literal('')),
@@ -70,7 +70,7 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
     defaultValues: {
       firstName: '',
       lastName: '',
-      dni: '',
+      documentId: '',
       email: '',
       phone: '',
       address: '',
@@ -169,10 +169,10 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              <FormField
                 control={form.control}
-                name="dni"
+                name="documentId"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>DNI</FormLabel>
+                    <FormLabel>N° Documento</FormLabel>
                     <FormControl>
                         <Input placeholder="12345678" {...field} />
                     </FormControl>

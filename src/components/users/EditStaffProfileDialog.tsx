@@ -85,7 +85,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
     }
     setIsSubmitting(true);
     try {
-      await updateStaffProfile(instituteId, profile.dni, data);
+      await updateStaffProfile(instituteId, profile.documentId, data);
       toast({
         title: '¡Éxito!',
         description: 'El perfil del personal ha sido actualizado.',
@@ -108,7 +108,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
         <DialogHeader>
           <DialogTitle>Editar Perfil de Personal</DialogTitle>
           <DialogDescription>
-            Modificando el perfil para {profile.displayName} (DNI: {profile.dni}).
+            Modificando el perfil para {profile.displayName} (N° Doc: {profile.documentId}).
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

@@ -31,7 +31,7 @@ export function DeleteTeacherDialog({ teacher, instituteId, isOpen, onClose }: D
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // The teacher's ID is their DNI, which is the ID for the staff profile
+      // The teacher's ID is their documentId, which is the ID for the staff profile
       await deleteStaffProfile(instituteId, teacher.id);
       toast({
         title: '¡Eliminado!',

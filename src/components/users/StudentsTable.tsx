@@ -67,7 +67,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
     if (textFilter) {
         profiles = profiles.filter(profile =>
             profile.fullName.toLowerCase().includes(textFilter.toLowerCase()) ||
-            profile.dni.toLowerCase().includes(textFilter.toLowerCase()) ||
+            profile.documentId.toLowerCase().includes(textFilter.toLowerCase()) ||
             profile.email.toLowerCase().includes(textFilter.toLowerCase())
         );
     }
@@ -104,7 +104,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
     <>
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <Input 
-          placeholder="Buscar por nombre, DNI o email..."
+          placeholder="Buscar por nombre, documento o email..."
           value={textFilter}
           onChange={(e) => {
             setTextFilter(e.target.value);
@@ -127,7 +127,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
           <TableHeader>
             <TableRow>
               <TableHead>Foto</TableHead>
-              <TableHead>DNI</TableHead>
+              <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
               <TableHead>Programa</TableHead>
               <TableHead>Vinculado</TableHead>
@@ -136,7 +136,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
           </TableHeader>
           <TableBody>
             {paginatedProfiles.length > 0 ? paginatedProfiles.map((profile) => (
-              <TableRow key={profile.dni}>
+              <TableRow key={profile.documentId}>
                 <TableCell>
                    <Image 
                       src={profile.photoURL || `https://placehold.co/40x40.png?text=${profile.fullName[0]}`} 
@@ -147,7 +147,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
                       data-ai-hint="student photo"
                    />
                 </TableCell>
-                <TableCell className="font-mono">{profile.dni}</TableCell>
+                <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.fullName}</TableCell>
                 <TableCell>{programMap.get(profile.programId)?.name || 'N/A'}</TableCell>
                 <TableCell>

@@ -53,18 +53,18 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         // Calculate load for ALL staff in the institute.
         const allStaffTotalLoad: { [staffId: string]: Unit[] } = {};
         allStaffProfiles.forEach(staff => {
-            allStaffTotalLoad[staff.dni] = [];
+            allStaffTotalLoad[staff.documentId] = [];
         });
 
         allAssignmentsResults.forEach(programAssignments => {
             const processPeriod = (periodAssignments: Assignment) => {
                  for (const unitId in periodAssignments) {
-                    const staffDni = periodAssignments[unitId];
+                    const staffDocumentId = periodAssignments[unitId];
                     const unit = unitMap.get(unitId);
 
-                    if (staffDni && unit && allStaffTotalLoad[staffDni]) {
-                        if (!allStaffTotalLoad[staffDni].some(u => u.id === unit.id)) {
-                           allStaffTotalLoad[staffDni].push(unit);
+                    if (staffDocumentId && unit && allStaffTotalLoad[staffDocumentId]) {
+                        if (!allStaffTotalLoad[staffDocumentId].some(u => u.id === unit.id)) {
+                           allStaffTotalLoad[staffDocumentId].push(unit);
                         }
                     }
                 }
@@ -76,8 +76,8 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         // Now, build the final list based on the staff from the selected program.
         const finalTeacherLoadList: TeacherWithLoad[] = staffInSelectedProgram.map(staff => {
             const teacher: Teacher = {
-                id: staff.dni,
-                dni: staff.dni,
+                id: staff.documentId,
+                documentId: staff.documentId,
                 fullName: staff.displayName,
                 email: staff.email,
                 phone: staff.phone || '',
@@ -88,7 +88,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
 
             return {
                 teacher: teacher,
-                units: allStaffTotalLoad[staff.dni] || [], // Get their total load, which might be empty.
+                units: allStaffTotalLoad[staff.documentId] || [], // Get their total load, which might be empty.
             };
         });
 
