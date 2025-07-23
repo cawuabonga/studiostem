@@ -114,6 +114,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               appUser.role,
               appUser.instituteId
             );
+            // Ensure the local user object has the documentId set to null for the UI to react correctly.
+            appUser.documentId = null;
           }
           
           setUser(appUser);
