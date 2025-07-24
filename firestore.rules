@@ -3,36 +3,37 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Regla para la colección de usuarios
-    // 1. Permite a los usuarios crear su propio documento.
-    // 2. Permite a los usuarios leer/actualizar su propio documento.
-    // 3. Permite a los SuperAdmins leer toda la colección de usuarios.
+
+    // Users can read and write to their own document.
+    // New users can create their own document.
     match /users/{userId} {
-      allow create: if request.auth != null;
       allow read, update: if request.auth.uid == userId;
-      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow create: if request.auth.uid != null;
     }
 
-    // Regla para la configuración del login (pública)
-    // Cualquiera (incluso sin autenticar) puede leer el diseño del login.
-    // Solo los SuperAdmins pueden escribir en la configuración.
-    match /config/{document=**} {
-      allow read: if true;
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    // Public configuration is readable by anyone
+    match /config/loginDesign {
+        allow read: if true;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+     match /config/loginDesign/images/{imageId} {
+        allow read: if true;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
 
-    // Regla para la gestión de institutos
-    // Solo los SuperAdmins pueden leer y escribir en la colección de institutos.
+
+    // Institutes can only be managed by SuperAdmins.
+    // Data within an institute can be read by its members.
     match /institutes/{instituteId} {
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
+      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId ||
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
 
-    // Regla para el contenido DENTRO de un instituto (programas, unidades, etc.)
-    // Permite a los Admins y Coordinadores gestionar los datos de SU instituto.
-    match /institutes/{instituteId}/{document=**} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId
-                          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+      // All subcollections within an institute
+      match /{collection}/{docId} {
+         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId ||
+                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      }
     }
   }
 }
