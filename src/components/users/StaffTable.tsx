@@ -135,7 +135,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
           </TableHeader>
           <TableBody>
             {paginatedProfiles.map((profile) => (
-              <TableRow key={profile.documentId}>
+              <TableRow key={`${profile.documentId}-${profile.email}`}>
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.displayName}</TableCell>
                 <TableCell>{profile.email}</TableCell>
