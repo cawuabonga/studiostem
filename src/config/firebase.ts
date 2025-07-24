@@ -430,7 +430,7 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
     const q = query(studentsCol, orderBy("lastName"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as StudentProfile);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
 
 export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'fullName'| 'linkedUserUid'>[]) => {

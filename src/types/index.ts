@@ -29,6 +29,7 @@ export interface StaffProfile {
 }
 
 export interface StudentProfile {
+  id?: string; // Firestore document ID
   documentId: string;
   firstName: string;
   lastName: string;

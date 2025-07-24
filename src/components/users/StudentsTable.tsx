@@ -136,7 +136,7 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
           </TableHeader>
           <TableBody>
             {paginatedProfiles.length > 0 ? paginatedProfiles.map((profile) => (
-              <TableRow key={profile.documentId}>
+              <TableRow key={profile.id || profile.documentId}>
                 <TableCell>
                    <Image 
                       src={profile.photoURL || `https://placehold.co/40x40.png?text=${profile.fullName[0]}`} 
