@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { AppUser, UserRole, Institute } from '@/types';
@@ -102,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             appUser.displayName = appUser.displayName || firebaseUser.displayName;
             appUser.photoURL = appUser.photoURL || firebaseUser.photoURL;
           } else {
+             // Define the complete user object from the start
              appUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -111,6 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 instituteId: null, 
                 documentId: '', // Initialize as empty string
              };
+             // Save this complete object to the database
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
               appUser.role,
