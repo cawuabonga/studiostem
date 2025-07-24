@@ -2,30 +2,77 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Users can read and update their own user document
+    
+    // Reglas para la colección de usuarios
     match /users/{userId} {
+      // Un usuario solo puede leer y actualizar su propio documento.
+      // Un usuario puede crear su propio documento al registrarse.
       allow read, update: if request.auth.uid == userId;
-    }
-
-    // SuperAdmins can manage institutes
-    match /institutes/{instituteId} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-
-    // Rules for subcollections within an institute
-    match /institutes/{instituteId}/{document=**} {
-      // Allow reads if the user is authenticated and belongs to the institute OR is a SuperAdmin
-      allow read: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin');
-      
-      // Allow writes if the user is an Admin/Coordinator of that institute OR a SuperAdmin
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator', 'SuperAdmin'] && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+      allow create: if request.auth.uid == userId;
+      allow delete: if false; // Nadie puede borrar su propio perfil desde el cliente.
     }
     
-    // Config collection should be restricted
-    match /config/{document=**} {
-      allow read: if request.auth != null; // Allow authenticated users to read config (e.g., login design)
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin'; // Only SuperAdmins can change config
+    // Reglas para la colección de configuración global (ej. diseño del login)
+    match /config/{docId=**} {
+       // SuperAdmin puede escribir, cualquier usuario autenticado puede leer.
+       allow read: if request.auth != null;
+       allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // Reglas para los institutos y sus subcolecciones
+    match /institutes/{instituteId} {
+      // Solo un SuperAdmin puede crear, actualizar o eliminar el documento principal de un instituto.
+      allow read: if request.auth != null; // Todos pueden leer la lista de institutos
+      allow create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // --- Subcolecciones de Institutos ---
+
+    // Perfiles de Estudiantes y Personal:
+    // Un nuevo usuario necesita permiso de lectura aquí para poder encontrar su perfil y vincularlo.
+    match /institutes/{instituteId}/{profilesCollection}/{profileId} 
+      where profilesCollection in ['staffProfiles', 'studentProfiles'] {
+      
+      // LECTURA: Cualquier usuario autenticado puede leer perfiles. Esto es necesario para la vinculación.
+      // Los perfiles no contienen información ultra-sensible.
+      allow read: if request.auth != null;
+      
+      // ESCRITURA: Solo Admins/Coordinators del instituto pueden gestionar perfiles.
+      // Y un usuario puede actualizar su propio perfil una vez vinculado (actualizando el linkedUserUid).
+      allow create, delete: if isSignedIn() && isStaffOf(instituteId);
+      allow update: if (isSignedIn() && isStaffOf(instituteId)) || 
+                      (isSignedIn() && isLinkingOwnProfile(profileId));
+    }
+
+    // Otras subcolecciones (Unidades, Programas, Asignaciones):
+    // Solo personal del instituto puede acceder.
+    match /institutes/{instituteId}/{subcollection}/{docId} 
+      where subcollection in ['programs', 'unidadesDidacticas', 'assignments'] {
+        allow read, write: if isSignedIn() && isStaffOf(instituteId);
+    }
+    
+    // --- Funciones de Ayuda ---
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Verifica si el usuario es Admin o Coordinator del instituto especificado.
+    function isStaffOf(instituteId) {
+      return getUserData().instituteId == instituteId && getUserData().role in ['Admin', 'Coordinator'];
+    }
+    
+    // Permite a un usuario actualizar un perfil si el UID de la petición coincide
+    // con el `linkedUserUid` que se está intentando escribir en el documento.
+    // O si el `documentId` del perfil coincide con el `documentId` del usuario que hace la petición.
+    function isLinkingOwnProfile(profileId) {
+        return (request.resource.data.linkedUserUid == request.auth.uid &&
+                    resource.data.linkedUserUid == null) ||
+               (getUserData().documentId == profileId);
     }
   }
 }
