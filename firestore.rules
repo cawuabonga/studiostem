@@ -1,39 +1,31 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read and write to their own document.
-    // New users can create their own document.
+  
+    // Users can read and update their own user document
     match /users/{userId} {
       allow read, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid != null;
     }
 
-    // Public configuration is readable by anyone
-    match /config/loginDesign {
-        allow read: if true;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-     match /config/loginDesign/images/{imageId} {
-        allow read: if true;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-
-
-    // Institutes can only be managed by SuperAdmins.
-    // Data within an institute can be read by its members.
+    // SuperAdmins can manage institutes
     match /institutes/{instituteId} {
-      allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId ||
-                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
 
-      // All subcollections within an institute
-      match /{collection}/{docId} {
-         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId ||
-                               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-      }
+    // Rules for subcollections within an institute
+    match /institutes/{instituteId}/{document=**} {
+      // Allow reads if the user is authenticated and belongs to the institute OR is a SuperAdmin
+      allow read: if request.auth != null && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin');
+      
+      // Allow writes if the user is an Admin/Coordinator of that institute OR a SuperAdmin
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator', 'SuperAdmin'] && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    }
+    
+    // Config collection should be restricted
+    match /config/{document=**} {
+      allow read: if request.auth != null; // Allow authenticated users to read config (e.g., login design)
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin'; // Only SuperAdmins can change config
     }
   }
 }
