@@ -20,11 +20,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
 
     // If auth is loaded, user exists, but no institute is selected
-    if (user && !instituteId) {
-      // SuperAdmins don't need an institute.
-      if(user.role !== 'SuperAdmin'){
-         router.push('/dashboard/institute');
-      }
+    // This logic is now more specific and should only apply to users who NEED an institute
+    // but don't have one, like Admins. New students are exempt from this check.
+    if (user && !instituteId && user.role !== 'Student' && user.role !== 'SuperAdmin') {
+       router.push('/dashboard/institute');
     }
   }, [user, instituteId, loading, router]);
 
@@ -36,7 +35,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }, [institute]);
 
   // Show loading skeleton only when the auth context is loading.
-  // We no longer check for the institute here to avoid blocking new users.
   if (loading) {
      return (
        <DashboardMainLayout>
@@ -53,6 +51,5 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   // Children now access institute data directly from the context.
-  // No need to clone and pass props.
   return <DashboardMainLayout>{children}</DashboardMainLayout>;
 }
