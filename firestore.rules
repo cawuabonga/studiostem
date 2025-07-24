@@ -1,47 +1,42 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // USERS: Users can read/update their own data. Only they can create their own doc.
+    // Users can create their own document, and only read/update their own.
     match /users/{userId} {
       allow create: if request.auth.uid == userId;
       allow read, update: if request.auth.uid == userId;
-      allow delete: if false; // Users cannot delete their own accounts from the app
+      allow delete: if false; // Nobody can delete a user document from the client
     }
 
-    // INSTITUTES: Any authenticated user can list/get institutes (needed for profile linking).
-    // Only SuperAdmins can create, update, or delete them.
+    // Config is public read, but only SuperAdmin can write.
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    // Institute list is public, but only SuperAdmin can write.
     match /institutes/{instituteId} {
-      allow get, list: if request.auth.uid != null;
+      allow get, list: if request.auth != null;
       allow create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-
-      // STAFF PROFILES: Any auth user can read (needed for linking). Admins/Coords of that institute can write.
-      match /staffProfiles/{profileId} {
-        allow read: if request.auth.uid != null;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
-      }
-
-      // STUDENT PROFILES: Any auth user can read (needed for linking). Admins/Coords of that institute can write.
-      match /studentProfiles/{profileId} {
-        allow read: if request.auth.uid != null;
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
-      }
-      
-      // All other subcollections (units, assignments, etc.)
-      match /{document=**} {
-         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-      }
     }
 
-    // CONFIG: Only SuperAdmins can read/write global config
-    match /config/{docId=**} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    // Profiles can be read by any authenticated user (for linking)
+    // but only written to by admins/coordinators of that institute.
+    match /institutes/{instituteId}/staffProfiles/{profileId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
+    }
+    
+    match /institutes/{instituteId}/studentProfiles/{profileId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId && (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
+    }
+
+    // All other subcollections can only be accessed by users belonging to that institute.
+    match /institutes/{instituteId}/{document=**} {
+      allow read, write: if request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
     }
   }
 }
