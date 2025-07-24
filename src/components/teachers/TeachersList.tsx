@@ -126,7 +126,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
           </TableHeader>
           <TableBody>
             {paginatedTeachers.map((teacher) => (
-              <TableRow key={teacher.id}>
+              <TableRow key={teacher.documentId}>
                 <TableCell className="font-medium">{teacher.fullName}</TableCell>
                 <TableCell>{teacher.documentId}</TableCell>
                 <TableCell>{teacher.email}</TableCell>
