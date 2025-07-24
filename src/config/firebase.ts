@@ -273,15 +273,6 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
 
 
 // Teachers (derived from StaffProfiles)
-export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id' | 'role' | 'linkedUserUid'>) => {
-    const staffData: StaffProfile = {
-        ...data,
-        role: 'Teacher',
-        linkedUserUid: null
-    };
-    await addStaffProfile(instituteId, staffData);
-};
-
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     const q = query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"));
@@ -300,44 +291,6 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
         } as Teacher;
     });
 };
-
-export const updateTeacher = async (instituteId: string, teacherId: string, data: Partial<Teacher>) => {
-    // teacherId is the Document ID in this context
-    const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
-    const updateData: Partial<StaffProfile> = {
-        displayName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        // any other mappable fields
-    };
-    await updateDoc(teacherRef, updateData);
-}
-
-export const deleteTeacher = async (instituteId: string, teacherId: string) => {
-    // teacherId is the Document ID
-    const teacherRef = doc(db, 'institutes', instituteId, 'staffProfiles', teacherId);
-    await deleteDoc(teacherRef);
-}
-
-export const bulkAddTeachers = async (instituteId: string, teachers: Omit<Teacher, 'id'>[]) => {
-    const batch = writeBatch(db);
-    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    teachers.forEach(teacherData => {
-        const docRef = doc(staffCol, teacherData.documentId); 
-        const staffData: Omit<StaffProfile, 'linkedUserUid'> = {
-            documentId: teacherData.documentId,
-            displayName: teacherData.fullName,
-            email: teacherData.email,
-            phone: teacherData.phone,
-            condition: 'CONTRATADO', // Default or decide how to handle
-            programId: 'general', // Default or decide
-            role: 'Teacher'
-        };
-        batch.set(docRef, staffData);
-    });
-    await batch.commit();
-}
-
 
 // Assignments
 export const getAssignments = async (
@@ -486,14 +439,23 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     
     // 3. Update the AppUser document
     const userDocRef = doc(db, 'users', uid);
-    await updateDoc(userDocRef, {
+    const userUpdateData: Partial<AppUser> = {
         documentId: foundProfile.documentId,
-        role: foundProfile.role,
         instituteId: foundInstituteId,
-        programId: foundProfile.programId,
         displayName: foundProfile.displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
-        ...(foundProfile.photoURL && { photoURL: foundProfile.photoURL }),
-    });
+    };
+    // Only update the role if the found profile is not a student
+    if (foundProfile.role) {
+        userUpdateData.role = foundProfile.role;
+    }
+    if ((foundProfile as StudentProfile).programId) {
+        (userUpdateData as any).programId = (foundProfile as StudentProfile).programId;
+    }
+     if (foundProfile.photoURL) {
+        userUpdateData.photoURL = foundProfile.photoURL;
+    }
+
+    await updateDoc(userDocRef, userUpdateData);
 
     // 4. Update the profile document with the linked UID
     const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
@@ -505,7 +467,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     const instituteName = institutes.find(i => i.id === foundInstituteId)?.name || 'Unknown Institute';
 
     return { 
-        role: foundProfile.role, 
+        role: foundProfile.role || 'Student', 
         instituteName 
     };
 };

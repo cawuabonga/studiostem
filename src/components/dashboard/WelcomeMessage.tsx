@@ -23,8 +23,9 @@ export default function WelcomeMessage() {
     return null; 
   }
   
-  // A user is considered "unlinked" if they don't have a documentId in their profile.
-  const isUnlinked = !user.documentId;
+  // A user is considered "unlinked" if they don't have a documentId AND they have the default Student role.
+  // This is a robust way to identify newly registered users who haven't completed the linking process.
+  const isUnlinked = !user.documentId && user.role === 'Student';
   
   return (
     <>
