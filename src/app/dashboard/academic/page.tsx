@@ -15,13 +15,6 @@ export default function DashboardAcademicPage() {
 
   useEffect(() => {
     if (!loading && user) {
-        // If the user is a student and does not have a documentId,
-        // they are considered unlinked and must be redirected to the linking page.
-        if (user.role === 'Student' && !user.documentId) {
-            router.replace('/dashboard/link-profile');
-            return;
-        }
-
         // Admins/Coordinators/SuperAdmins get redirected from the main dashboard page
         // to their respective management views. This page is primarily for linked
         // students and teachers.
@@ -33,7 +26,10 @@ export default function DashboardAcademicPage() {
     }
   }, [user, loading, router]);
   
-  if (loading || (user?.role === 'Student' && !user.documentId)) {
+  // This page is primarily for Students and Teachers.
+  // The WelcomeMessage component will handle the display logic,
+  // including the prompt to link a profile for new students.
+  if (loading) {
       return (
           <div className="space-y-4">
               <Skeleton className="h-10 w-1/3 mb-4" />
