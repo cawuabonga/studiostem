@@ -442,7 +442,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     const userUpdateData: Partial<AppUser> = {
         documentId: foundProfile.documentId,
         instituteId: foundInstituteId,
-        displayName: foundProfile.displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
+        displayName: (foundProfile as StaffProfile).displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
     };
     // Only update the role if the found profile is not a student
     if (foundProfile.role) {
