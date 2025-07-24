@@ -284,21 +284,19 @@ export const addTeacher = async (instituteId: string, data: Omit<Teacher, 'id' |
 
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const q = query(staffCol, orderBy("displayName"));
+    const q = query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"));
     const snapshot = await getDocs(q);
-    
-    const allStaff = snapshot.docs.map(docSnap => docSnap.data() as StaffProfile);
-    const assignableStaff = allStaff.filter(staff => staff.role === 'Teacher' || staff.role === 'Coordinator');
 
-    return assignableStaff.map(data => {
+    return snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as StaffProfile;
         return { 
-            id: data.documentId, // Use Document ID as the unique ID for the list key
+            id: data.documentId,
             fullName: data.displayName,
             documentId: data.documentId,
             email: data.email,
             phone: data.phone || '',
-            specialty: (data as any).specialty || 'N/A', // Assuming specialty might exist
-            active: true // Assuming all fetched teachers are active, or add logic
+            specialty: (data as any).specialty || 'N/A',
+            active: true 
         } as Teacher;
     });
 };
