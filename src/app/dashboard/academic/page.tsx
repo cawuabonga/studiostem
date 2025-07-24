@@ -1,34 +1,15 @@
 
 "use client";
 
-import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import WelcomeMessage from "@/components/dashboard/WelcomeMessage";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
 
 
-// This page now serves as the primary welcome/landing page for most authenticated users.
+// This page now serves as the primary welcome/landing page for students and teachers.
 export default function DashboardAcademicPage() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && user) {
-        // Admins/Coordinators/SuperAdmins get redirected from the main dashboard page
-        // to their respective management views. This page is primarily for linked
-        // students and teachers.
-        if (user.role === 'Admin' || user.role === 'Coordinator') {
-            router.replace('/dashboard/gestion-academica');
-        } else if (user.role === 'SuperAdmin') {
-            router.replace('/dashboard/superadmin/manage-institutes');
-        }
-    }
-  }, [user, loading, router]);
+  const { loading } = useAuth();
   
-  // This page is primarily for Students and Teachers.
-  // The WelcomeMessage component will handle the display logic,
-  // including the prompt to link a profile for new students.
   if (loading) {
       return (
           <div className="space-y-4">
@@ -42,6 +23,7 @@ export default function DashboardAcademicPage() {
       )
   }
 
-  // For Students and Teachers, or while redirects are being processed, show the welcome message.
+  // The WelcomeMessage component will handle the display logic for all user types
+  // that land here, including showing the link profile button for new, unlinked students.
   return <WelcomeMessage />;
 }
