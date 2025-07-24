@@ -35,11 +35,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [institute]);
 
-  // Show loading skeleton if auth is loading, or if the user is not a SuperAdmin and the institute data is not yet available.
-  const showLoadingSkeleton = loading || (user && user.role !== 'SuperAdmin' && !institute);
-
-
-  if (showLoadingSkeleton) {
+  // Show loading skeleton only when the auth context is loading.
+  // We no longer check for the institute here to avoid blocking new users.
+  if (loading) {
      return (
        <DashboardMainLayout>
           <div className="space-y-4">
