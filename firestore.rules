@@ -1,49 +1,47 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    // Checks if the requesting user belongs to a specific institute
-    function isUserInInstitute(instituteId) {
-      return request.auth.uid != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-    }
-
-    // Gets the role of the requesting user
-    function userRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    // --- User Profiles ---
-    // Users can create their own doc, and only read/update their own doc.
+    // USERS: Users can read/update their own data. Only they can create their own doc.
     match /users/{userId} {
-      allow create: if request.auth.uid != null;
+      allow create: if request.auth.uid == userId;
       allow read, update: if request.auth.uid == userId;
+      allow delete: if false; // Users cannot delete their own accounts from the app
     }
 
-    // --- Institute Subcollections ---
+    // INSTITUTES: Any authenticated user can list/get institutes (needed for profile linking).
+    // Only SuperAdmins can create, update, or delete them.
     match /institutes/{instituteId} {
+      allow get, list: if request.auth.uid != null;
+      allow create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
 
-        // Staff Profiles can be read by any authenticated user for linking purposes.
-        // Writes are restricted to admins/coordinators of that institute.
-        match /staffProfiles/{profileId} {
-            allow read: if request.auth.uid != null;
-            allow write: if isUserInInstitute(instituteId) && (userRole() == 'Admin' || userRole() == 'Coordinator');
-        }
+      // STAFF PROFILES: Any auth user can read (needed for linking). Admins/Coords of that institute can write.
+      match /staffProfiles/{profileId} {
+        allow read: if request.auth.uid != null;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
+                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
+      }
 
-        // Student Profiles can be read by any authenticated user for linking purposes.
-        // Writes are restricted to admins/coordinators of that institute.
-        match /studentProfiles/{profileId} {
-            allow read: if request.auth.uid != null;
-            allow write: if isUserInInstitute(instituteId) && (userRole() == 'Admin' || userRole() == 'Coordinator');
-        }
+      // STUDENT PROFILES: Any auth user can read (needed for linking). Admins/Coords of that institute can write.
+      match /studentProfiles/{profileId} {
+        allow read: if request.auth.uid != null;
+        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
+                       (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Admin' ||
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Coordinator');
+      }
+      
+      // All other subcollections (units, assignments, etc.)
+      match /{document=**} {
+         allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+      }
+    }
 
-        // --- Generic Rules for other subcollections ---
-        // This rule applies to any other collection inside an institute document.
-        // Allows read/write access only to users who are part of that institute.
-        match /{document=**} {
-            allow read, write: if isUserInInstitute(instituteId);
-        }
+    // CONFIG: Only SuperAdmins can read/write global config
+    match /config/{docId=**} {
+      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
   }
 }
