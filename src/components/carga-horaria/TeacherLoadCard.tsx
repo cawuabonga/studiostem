@@ -43,7 +43,9 @@ export function TeacherLoadCard({ teacher, units, programMap }: TeacherLoadCardP
         <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle className="text-xl">{teacher.fullName}</CardTitle>
-                <CardDescription>Documento: {teacher.documentId} | {teacher.programName}</CardDescription>
+                <CardDescription>
+                    {teacher.documentId} | {teacher.condition} | {teacher.programName}
+                </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
                 {(Object.keys(unitsByPeriod) as UnitPeriod[]).map(period => (

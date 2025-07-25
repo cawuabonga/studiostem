@@ -83,7 +83,8 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
                 phone: staff.phone || '',
                 active: true, // Assuming active, can be refined
                 specialty: '', // Placeholder
-                programName: currentProgramMap.get(staff.programId)?.name || 'N/A'
+                programName: currentProgramMap.get(staff.programId)?.name || 'N/A',
+                condition: staff.condition,
             };
 
             return {

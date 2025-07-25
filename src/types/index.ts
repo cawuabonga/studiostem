@@ -114,6 +114,7 @@ export interface Teacher {
   specialty: string;
   active: boolean; // Could be derived from linked status or a specific field
   programName?: string;
+  condition: 'NOMBRADO' | 'CONTRATADO';
 }
 
 export interface Assignment {
