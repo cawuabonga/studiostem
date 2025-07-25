@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -35,8 +35,12 @@ export function AppSidebarContents() {
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: Briefcase, roles: ['Admin', 'Coordinator'] },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin', 'Coordinator'] },
   ];
+  
+  const teacherItems = [
+      { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, roles: ['Teacher'] },
+  ];
 
-  const allNavItems = [...superAdminItems, ...instituteAdminItems].filter(item => user?.role && item.roles.includes(user.role));
+  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems].filter(item => user?.role && item.roles.includes(user.role));
 
   const getSidebarTitle = () => {
     if (user?.role === 'SuperAdmin' && !institute) {
@@ -79,7 +83,7 @@ export function AppSidebarContents() {
         <SidebarSeparator className="my-2 group-data-[collapsible=icon]:hidden" />
         <SidebarMenu>
           <SidebarMenuItem>
-              <Link href="/dashboard" legacyBehavior passHref>
+              <Link href="/dashboard/academic" legacyBehavior passHref>
                 <SidebarMenuButton 
                   asChild 
                   isActive={pathname === '/dashboard/academic' || pathname === '/dashboard'}

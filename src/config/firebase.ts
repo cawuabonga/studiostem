@@ -278,6 +278,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const programs = await getPrograms(instituteId);
     const programMap = new Map(programs.map(p => [p.id, p.name]));
     
+    // Simplification: Fetch all teachers/coordinators and sort in the client
     const q = query(staffCol, where("role", "in", ["Teacher", "Coordinator"]));
     const snapshot = await getDocs(q);
 
