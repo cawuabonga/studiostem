@@ -22,7 +22,7 @@ export default function DashboardRedirectPage() {
           router.push('/dashboard/gestion-academica');
           break;
         case 'Teacher':
-          router.push('/dashboard/academic'); // TODO: Create teacher dashboard
+          router.push('/dashboard/docente');
           break;
         case 'Student':
            router.push('/dashboard/academic'); // TODO: Create student dashboard

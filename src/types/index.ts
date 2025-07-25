@@ -32,7 +32,7 @@ export interface StudentProfile {
   id?: string; // Firestore document ID
   documentId: string;
   firstName: string;
-  lastName: string;
+  lastName:string;
   fullName: string;
   gender: 'Masculino' | 'Femenino';
   age: number;
@@ -119,4 +119,42 @@ export interface Teacher {
 
 export interface Assignment {
   [unitId: string]: string; // unitId -> teacherId (Document ID)
+}
+
+// --- NEW ACADEMIC TYPES ---
+
+export interface AchievementIndicator {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export type ContentType = 'file' | 'link' | 'text';
+
+export interface Content {
+  id: string;
+  title: string;
+  type: ContentType;
+  value: string; // URL for file/link, or markdown text
+  createdAt: Timestamp;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: Timestamp;
+  fileUrl?: string; // URL to an attached file from the teacher
+  createdAt: Timestamp;
+}
+
+export interface Submission {
+  id: string;
+  studentUid: string;
+  studentName: string;
+  taskId: string;
+  fileUrl: string; // URL to the student's submitted file
+  submittedAt: Timestamp;
+  grade?: number;
+  feedback?: string;
 }
