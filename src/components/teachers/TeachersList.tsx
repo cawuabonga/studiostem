@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getTeachers } from '@/config/firebase';
-import type { Teacher } from '@/types';
+import { getTeachers, getPrograms } from '@/config/firebase';
+import type { Teacher, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -120,6 +120,8 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
               <TableHead>Nombre Completo</TableHead>
               <TableHead>N° Documento</TableHead>
               <TableHead>Email</TableHead>
+              <TableHead>Programa</TableHead>
+              <TableHead>Condición</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -130,6 +132,8 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
                 <TableCell className="font-medium">{teacher.fullName}</TableCell>
                 <TableCell>{teacher.documentId}</TableCell>
                 <TableCell>{teacher.email}</TableCell>
+                <TableCell>{teacher.programName || 'N/A'}</TableCell>
+                <TableCell><Badge variant="outline">{teacher.condition || 'N/A'}</Badge></TableCell>
                 <TableCell>
                   <Badge variant={teacher.active ? 'default' : 'secondary'}>
                     {teacher.active ? 'Activo' : 'Inactivo'}
