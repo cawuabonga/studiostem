@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Unit } from "@/types";
 import { ArrowRight, BookOpen, Clock } from "lucide-react";
+import Link from "next/link";
 
 interface AssignedUnit extends Unit {
     programName: string;
@@ -37,10 +38,12 @@ export function UnitCard({ unit }: UnitCardProps) {
                 </div>
             </CardContent>
             <CardFooter>
-                <Button className="w-full">
-                    Gestionar Unidad
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
+                <Link href={`/dashboard/docente/unidad/${unit.id}`} className="w-full">
+                    <Button className="w-full">
+                        Gestionar Unidad
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                </Link>
             </CardFooter>
         </Card>
     );

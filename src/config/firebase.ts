@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -240,6 +240,15 @@ export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'tota
     await addDoc(unitsCol, unitData);
 }
 
+export const getUnit = async (instituteId: string, unitId: string): Promise<Unit | null> => {
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    const docSnap = await getDoc(unitRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Unit;
+    }
+    return null;
+}
+
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     const q = query(unitsCol, orderBy("name"));
@@ -278,7 +287,6 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const programs = await getPrograms(instituteId);
     const programMap = new Map(programs.map(p => [p.id, p.name]));
     
-    // Simplification: Fetch all teachers/coordinators and sort in the client
     const q = query(staffCol, where("role", "in", ["Teacher", "Coordinator"]));
     const snapshot = await getDocs(q);
 
@@ -479,6 +487,27 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
         instituteName 
     };
 };
-    
 
-    
+// --- ACHIEVEMENT INDICATORS ---
+
+export const addAchievementIndicator = async (instituteId: string, unitId: string, data: Omit<AchievementIndicator, 'id'>) => {
+    const indicatorsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators');
+    await addDoc(indicatorsCol, data);
+};
+
+export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
+    const indicatorsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators');
+    const q = query(indicatorsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AchievementIndicator));
+};
+
+export const updateAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string, data: Partial<Omit<AchievementIndicator, 'id'>>) => {
+    const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
+    await updateDoc(indicatorRef, data);
+};
+
+export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
+    const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
+    await deleteDoc(indicatorRef);
+};
