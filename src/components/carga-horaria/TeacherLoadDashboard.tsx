@@ -137,7 +137,7 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
         </CardHeader>
       <div className="p-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {teachersWithLoad.map(({ teacher, units }) => (
-          <TeacherLoadCard key={`${teacher.id}-${teacher.programName}`} teacher={teacher} units={units} programMap={programMap} />
+          <TeacherLoadCard key={`${teacher.fullName}-${teacher.programName}`} teacher={teacher} units={units} programMap={programMap} />
         ))}
          {teachersWithLoad.length === 0 && (
             <div className="col-span-full text-center text-muted-foreground py-10">
