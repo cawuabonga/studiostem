@@ -127,7 +127,8 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
             <TableRow>
               <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>Programa</TableHead>
+              <TableHead>Condición</TableHead>
               <TableHead>Rol</TableHead>
               <TableHead>Vinculado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
@@ -138,7 +139,10 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
               <TableRow key={`${profile.documentId}-${profile.email}`}>
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.displayName}</TableCell>
-                <TableCell>{profile.email}</TableCell>
+                <TableCell>{programs.get(profile.programId)?.name || 'N/A'}</TableCell>
+                <TableCell>
+                    <Badge variant="outline">{profile.condition}</Badge>
+                </TableCell>
                 <TableCell>{profile.role}</TableCell>
                 <TableCell>
                   <Badge variant={profile.linkedUserUid ? 'default' : 'secondary'}>
