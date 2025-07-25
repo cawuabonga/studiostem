@@ -1,0 +1,18 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "staffProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "role",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "displayName",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ]
+}
