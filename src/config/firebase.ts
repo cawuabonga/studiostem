@@ -275,10 +275,10 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
 // Teachers (derived from StaffProfiles)
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const q = query(staffCol, where("role", "==", "Teacher"), orderBy("displayName"));
+    const q = query(staffCol, where("role", "==", "Teacher"));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(docSnap => {
+    const teachers = snapshot.docs.map(docSnap => {
         const data = docSnap.data() as StaffProfile;
         return { 
             id: data.documentId,
@@ -290,6 +290,9 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
             active: true 
         } as Teacher;
     });
+
+    // Sort in code instead of in the query
+    return teachers.sort((a, b) => a.fullName.localeCompare(b.fullName));
 };
 
 // Assignments
