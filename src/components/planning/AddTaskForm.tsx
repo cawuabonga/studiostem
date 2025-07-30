@@ -32,9 +32,10 @@ interface AddTaskFormProps {
   unit: Unit;
   weekNumber: number;
   onTaskAdded: () => void;
+  onCancel: () => void;
 }
 
-export function AddTaskForm({ unit, weekNumber, onTaskAdded }: AddTaskFormProps) {
+export function AddTaskForm({ unit, weekNumber, onTaskAdded, onCancel }: AddTaskFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -71,8 +72,7 @@ export function AddTaskForm({ unit, weekNumber, onTaskAdded }: AddTaskFormProps)
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-lg border p-4">
-        <h4 className="font-medium">Añadir Nueva Tarea</h4>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
             control={form.control}
@@ -142,10 +142,13 @@ export function AddTaskForm({ unit, weekNumber, onTaskAdded }: AddTaskFormProps)
             )}
         />
         
-        <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Añadir Tarea
-        </Button>
+        <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Añadir Tarea
+            </Button>
+        </div>
       </form>
     </Form>
   );

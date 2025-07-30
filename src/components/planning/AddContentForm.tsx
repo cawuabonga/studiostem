@@ -28,12 +28,12 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const addContentSchema = z.object({
   title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
   type: z.enum(contentTypes, { required_error: 'Debe seleccionar un tipo de contenido.' }),
-  value: z.string().min(1, 'El contenido es requerido.'),
+  value: z.string().optional(),
   file: z.instanceof(FileList).optional(),
 }).refine(data => {
     if (data.type === 'link') {
         try {
-            new URL(data.value);
+            new URL(data.value || '');
             return true;
         } catch (_) {
             return false;
@@ -47,10 +47,13 @@ const addContentSchema = z.object({
     if (data.type === 'file') {
         return data.file && data.file.length > 0;
     }
+    if (data.type === 'text') {
+        return !!data.value && data.value.length > 0;
+    }
     return true;
 }, {
-    message: 'Por favor, seleccione un archivo.',
-    path: ['file'],
+    message: 'El contenido es requerido.',
+    path: ['value'],
 }).refine(data => {
     if (data.type === 'file' && data.file && data.file[0]) {
         return data.file[0].size <= MAX_FILE_SIZE;
@@ -67,9 +70,10 @@ interface AddContentFormProps {
   unit: Unit;
   weekNumber: number;
   onContentAdded: () => void;
+  onCancel: () => void;
 }
 
-export function AddContentForm({ unit, weekNumber, onContentAdded }: AddContentFormProps) {
+export function AddContentForm({ unit, weekNumber, onContentAdded, onCancel }: AddContentFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -86,7 +90,7 @@ export function AddContentForm({ unit, weekNumber, onContentAdded }: AddContentF
     setLoading(true);
     try {
         const file = data.file?.[0];
-        const contentData = { title: data.title, type: data.type, value: data.value };
+        const contentData = { title: data.title, type: data.type, value: data.value || '' };
         
         await addContentToWeek(instituteId, unit.id, weekNumber, contentData, file);
         
@@ -106,8 +110,7 @@ export function AddContentForm({ unit, weekNumber, onContentAdded }: AddContentF
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-lg border p-4">
-        <h4 className="font-medium">Añadir Nuevo Contenido</h4>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
             control={form.control}
@@ -192,10 +195,13 @@ export function AddContentForm({ unit, weekNumber, onContentAdded }: AddContentF
             />
         )}
 
-        <Button type="submit" disabled={loading}>
-          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Añadir Contenido
-        </Button>
+        <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>Cancelar</Button>
+            <Button type="submit" disabled={loading}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Añadir Contenido
+            </Button>
+        </div>
       </form>
     </Form>
   );
