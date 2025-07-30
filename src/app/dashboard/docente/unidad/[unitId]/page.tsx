@@ -9,6 +9,8 @@ import { getUnit } from '@/config/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
+import { Separator } from '@/components/ui/separator';
+import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
 
 export default function UnitManagementPage() {
     const { instituteId } = useAuth();
@@ -76,6 +78,10 @@ export default function UnitManagementPage() {
             </Card>
 
             <IndicatorsManager unit={unit} />
+            
+            <Separator />
+
+            <WeeklyPlanner unit={unit} />
 
         </div>
     );
