@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -513,15 +513,14 @@ export const deleteAchievementIndicator = async (instituteId: string, unitId: st
 };
 
 
-// --- WEEKLY CONTENT ---
+// --- WEEKLY CONTENT & TASKS ---
 
-const getWeeklyPlanRef = (instituteId: string, unitId: string, weekNumber: number) => {
-    // This path might need to be adjusted based on final data model for assignments
-    return collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'contents');
+const getWeeklyPlanRef = (instituteId: string, unitId: string, weekNumber: number, subCollection: 'contents' | 'tasks') => {
+    return collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, subCollection);
 };
 
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt'>, file?: File): Promise<void> => {
-    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber);
+    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'contents');
     let contentUrl = data.value;
 
     if (data.type === 'file' && file) {
@@ -540,8 +539,21 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
 }
 
 export const getContentsForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Content[]> => {
-    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber);
+    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'contents');
     const q = query(contentCol, orderBy("createdAt", "asc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
+};
+
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt'>): Promise<void> => {
+    const tasksCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'tasks');
+    const taskData = { ...data, createdAt: Timestamp.now() };
+    await addDoc(tasksCol, taskData);
+};
+
+export const getTasksForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Task[]> => {
+    const tasksCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'tasks');
+    const q = query(tasksCol, orderBy("createdAt", "asc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 };

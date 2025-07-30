@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { BookCheck } from 'lucide-react';
 import { ContentManager } from './ContentManager';
+import { Separator } from '../ui/separator';
+import { TaskManager } from './TaskManager';
 
 interface WeeklyPlannerProps {
     unit: Unit;
@@ -42,7 +43,7 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
                                 <AccordionTrigger className="text-lg font-medium">
                                     Semana {weekNumber}
                                 </AccordionTrigger>
-                                <AccordionContent className="space-y-4">
+                                <AccordionContent className="space-y-6">
                                     <div className="flex items-center justify-between rounded-lg border p-4">
                                         <div className="space-y-0.5">
                                             <Label htmlFor={`visibility-switch-${weekNumber}`} className="text-base">
@@ -60,6 +61,10 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
                                     </div>
                                     
                                     <ContentManager unit={unit} weekNumber={weekNumber} />
+
+                                    <Separator />
+                                    
+                                    <TaskManager unit={unit} weekNumber={weekNumber} />
 
                                 </AccordionContent>
                             </AccordionItem>
