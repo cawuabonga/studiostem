@@ -2,9 +2,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -510,4 +510,38 @@ export const updateAchievementIndicator = async (instituteId: string, unitId: st
 export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
     const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
     await deleteDoc(indicatorRef);
+};
+
+
+// --- WEEKLY CONTENT ---
+
+const getWeeklyPlanRef = (instituteId: string, unitId: string, weekNumber: number) => {
+    // This path might need to be adjusted based on final data model for assignments
+    return collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'contents');
+};
+
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt'>, file?: File): Promise<void> => {
+    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber);
+    let contentUrl = data.value;
+
+    if (data.type === 'file' && file) {
+        const fileRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/week${weekNumber}/${file.name}`);
+        await uploadBytes(fileRef, file);
+        contentUrl = await getDownloadURL(fileRef);
+    }
+    
+    const contentData = {
+        ...data,
+        value: contentUrl,
+        createdAt: Timestamp.now()
+    }
+
+    await addDoc(contentCol, contentData);
+}
+
+export const getContentsForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Content[]> => {
+    const contentCol = getWeeklyPlanRef(instituteId, unitId, weekNumber);
+    const q = query(contentCol, orderBy("createdAt", "asc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
 };

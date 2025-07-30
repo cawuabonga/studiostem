@@ -1,0 +1,202 @@
+
+"use client";
+
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { addContentToWeek } from '@/config/firebase';
+import type { ContentType, Unit } from '@/types';
+import { Loader2 } from 'lucide-react';
+
+const contentTypes: ContentType[] = ['text', 'link', 'file'];
+const contentTypeLabels: Record<ContentType, string> = {
+    text: 'Texto Plano',
+    link: 'Enlace (URL)',
+    file: 'Archivo (PDF, Word, etc.)',
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+const addContentSchema = z.object({
+  title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
+  type: z.enum(contentTypes, { required_error: 'Debe seleccionar un tipo de contenido.' }),
+  value: z.string().min(1, 'El contenido es requerido.'),
+  file: z.instanceof(FileList).optional(),
+}).refine(data => {
+    if (data.type === 'link') {
+        try {
+            new URL(data.value);
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+    return true;
+}, {
+    message: 'Por favor, ingrese una URL válida.',
+    path: ['value'],
+}).refine(data => {
+    if (data.type === 'file') {
+        return data.file && data.file.length > 0;
+    }
+    return true;
+}, {
+    message: 'Por favor, seleccione un archivo.',
+    path: ['file'],
+}).refine(data => {
+    if (data.type === 'file' && data.file && data.file[0]) {
+        return data.file[0].size <= MAX_FILE_SIZE;
+    }
+    return true;
+}, {
+    message: `El tamaño máximo del archivo es ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+    path: ['file'],
+});
+
+type AddContentFormValues = z.infer<typeof addContentSchema>;
+
+interface AddContentFormProps {
+  unit: Unit;
+  weekNumber: number;
+  onContentAdded: () => void;
+}
+
+export function AddContentForm({ unit, weekNumber, onContentAdded }: AddContentFormProps) {
+  const { instituteId } = useAuth();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const form = useForm<AddContentFormValues>({
+    resolver: zodResolver(addContentSchema),
+    defaultValues: { title: '', type: 'text', value: '', file: undefined },
+  });
+
+  const contentType = form.watch('type');
+
+  const onSubmit = async (data: AddContentFormValues) => {
+    if (!instituteId) return;
+    setLoading(true);
+    try {
+        const file = data.file?.[0];
+        const contentData = { title: data.title, type: data.type, value: data.value };
+        
+        await addContentToWeek(instituteId, unit.id, weekNumber, contentData, file);
+        
+        toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
+        form.reset();
+        onContentAdded();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo añadir el contenido.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 rounded-lg border p-4">
+        <h4 className="font-medium">Añadir Nuevo Contenido</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Título</FormLabel>
+                <FormControl>
+                    <Input placeholder="Ej: Lectura sobre la Célula" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+             <FormField
+                control={form.control}
+                name="type"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Tipo de Contenido</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {contentTypes.map(type => (
+                            <SelectItem key={type} value={type}>{contentTypeLabels[type]}</SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        </div>
+
+        {contentType === 'text' && (
+            <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Contenido de Texto</FormLabel>
+                    <FormControl>
+                        <Textarea placeholder="Escriba aquí el contenido..." {...field} rows={5} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
+
+        {contentType === 'link' && (
+            <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>URL del Enlace</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://ejemplo.com/recurso" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
+        
+        {contentType === 'file' && (
+            <FormField
+                control={form.control}
+                name="file"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Subir Archivo</FormLabel>
+                    <FormControl>
+                        <Input type="file" {...form.register('file')} />
+                    </FormControl>
+                     <FormMessage />
+                </FormItem>
+                )}
+            />
+        )}
+
+        <Button type="submit" disabled={loading}>
+          {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Añadir Contenido
+        </Button>
+      </form>
+    </Form>
+  );
+}

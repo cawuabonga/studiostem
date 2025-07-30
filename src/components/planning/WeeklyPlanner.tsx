@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { BookCheck } from 'lucide-react';
+import { ContentManager } from './ContentManager';
 
 interface WeeklyPlannerProps {
     unit: Unit;
@@ -61,9 +62,7 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
                                         />
                                     </div>
                                     
-                                    <div className="p-4 bg-muted/50 rounded-md text-center">
-                                        <p className="text-sm text-muted-foreground">Aquí se añadirán los contenidos y tareas de la semana {weekNumber}.</p>
-                                    </div>
+                                    <ContentManager unit={unit} weekNumber={weekNumber} />
 
                                 </AccordionContent>
                             </AccordionItem>
@@ -78,4 +77,3 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
         </Card>
     );
 }
-
