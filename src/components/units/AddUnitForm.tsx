@@ -22,6 +22,7 @@ const addUnitSchema = z.object({
   moduleId: z.string({ required_error: 'Debe seleccionar un módulo.' }),
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
+  totalWeeks: z.coerce.number().min(1, 'Debe haber al menos 1 semana.').max(20, 'No puede durar más de 20 semanas.'),
   theoreticalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   practicalHours: z.coerce.number().min(0, { message: 'Las horas deben ser un número positivo.' }),
   totalHours: z.coerce.number(),
@@ -56,6 +57,7 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
       name: '',
       code: '',
       credits: 0,
+      totalWeeks: 16,
       theoreticalHours: 0,
       practicalHours: 0,
       totalHours: 0,
@@ -168,7 +170,7 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
                 </FormItem>
             )}
         />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <FormField
             control={form.control}
             name="code"
@@ -188,6 +190,19 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
             render={({ field }) => (
                 <FormItem>
                 <FormLabel>Créditos</FormLabel>
+                <FormControl>
+                    <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="totalWeeks"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Total de Semanas</FormLabel>
                 <FormControl>
                     <Input type="number" {...field} />
                 </FormControl>

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { getAchievementIndicators } from '@/config/firebase';
-import type { AchievementIndicator } from '@/types';
+import type { AchievementIndicator, Unit } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddIndicatorForm } from './AddIndicatorForm';
@@ -13,10 +13,10 @@ import { IndicatorItem } from './IndicatorItem';
 import { Separator } from '../ui/separator';
 
 interface IndicatorsManagerProps {
-  unitId: string;
+  unit: Unit;
 }
 
-export function IndicatorsManager({ unitId }: IndicatorsManagerProps) {
+export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
@@ -24,10 +24,10 @@ export function IndicatorsManager({ unitId }: IndicatorsManagerProps) {
   const [version, setVersion] = useState(0);
 
   const fetchIndicators = useCallback(async () => {
-    if (!instituteId || !unitId) return;
+    if (!instituteId || !unit.id) return;
     setLoading(true);
     try {
-      const fetchedIndicators = await getAchievementIndicators(instituteId, unitId);
+      const fetchedIndicators = await getAchievementIndicators(instituteId, unit.id);
       setIndicators(fetchedIndicators);
     } catch (error) {
       console.error("Error fetching indicators:", error);
@@ -39,7 +39,7 @@ export function IndicatorsManager({ unitId }: IndicatorsManagerProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unitId, toast]);
+  }, [instituteId, unit.id, toast]);
 
   useEffect(() => {
     fetchIndicators();
@@ -59,7 +59,7 @@ export function IndicatorsManager({ unitId }: IndicatorsManagerProps) {
 
   return (
     <div className="space-y-6">
-        <AddIndicatorForm unitId={unitId} onIndicatorAdded={handleDataChanged} />
+        <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} />
 
         <Separator />
         
@@ -71,15 +71,15 @@ export function IndicatorsManager({ unitId }: IndicatorsManagerProps) {
             <CardContent className="space-y-4">
                 {loading ? (
                     <>
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-20 w-full" />
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-24 w-full" />
                     </>
                 ) : indicators.length > 0 ? (
                     indicators.map(indicator => (
                         <IndicatorItem
                             key={indicator.id}
                             indicator={indicator}
-                            unitId={unitId}
+                            unitId={unit.id}
                             onIndicatorDeleted={handleDataChanged}
                             onEdit={handleEdit}
                         />

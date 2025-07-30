@@ -1,5 +1,6 @@
 
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -96,6 +97,7 @@ export interface Unit {
   theoreticalHours: number;
   practicalHours: number;
   totalHours: number;
+  totalWeeks: number;
   period: UnitPeriod;
   unitType: UnitType;
   turno: UnitTurno;
@@ -127,6 +129,8 @@ export interface AchievementIndicator {
   id: string;
   name: string;
   description: string;
+  startWeek: number;
+  endWeek: number;
 }
 
 export type ContentType = 'file' | 'link' | 'text';

@@ -51,6 +51,7 @@ export default function UnitManagementPage() {
             <div className="space-y-6">
                 <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-48 w-full" />
+                 <Skeleton className="h-64 w-full" />
             </div>
         );
     }
@@ -69,12 +70,12 @@ export default function UnitManagementPage() {
                 <CardHeader>
                     <CardTitle className="text-2xl">{unit.name}</CardTitle>
                     <CardDescription>
-                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas
+                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.totalWeeks} Semanas
                     </CardDescription>
                 </CardHeader>
             </Card>
 
-            <IndicatorsManager unitId={unit.id} />
+            <IndicatorsManager unit={unit} />
 
         </div>
     );

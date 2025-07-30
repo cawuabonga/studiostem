@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, CalendarRange } from 'lucide-react';
 import type { AchievementIndicator } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '../ui/badge';
 
 interface IndicatorItemProps {
   indicator: AchievementIndicator;
@@ -54,7 +55,13 @@ export function IndicatorItem({ indicator, unitId, onIndicatorDeleted, onEdit }:
   return (
     <Card className="bg-muted/30">
       <CardHeader>
-        <CardTitle className="text-lg">{indicator.name}</CardTitle>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg flex-1">{indicator.name}</CardTitle>
+          <Badge variant="outline" className="flex items-center gap-2">
+            <CalendarRange className="h-4 w-4" />
+            Semanas: {indicator.startWeek} - {indicator.endWeek}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground">{indicator.description}</p>
