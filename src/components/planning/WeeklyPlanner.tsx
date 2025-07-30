@@ -29,10 +29,7 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
     return (
         <Card>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <BookCheck className="h-6 w-6"/>
-                    Planificación Semanal del Sílabo
-                </CardTitle>
+                <CardTitle>Planificación Semanal del Sílabo</CardTitle>
                 <CardDescription>
                     Organiza los contenidos, actividades y tareas para cada semana de la unidad. Habilita cada semana para que los estudiantes puedan ver su contenido.
                 </CardDescription>

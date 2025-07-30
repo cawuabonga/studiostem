@@ -9,8 +9,10 @@ import { getUnit } from '@/config/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
-import { Separator } from '@/components/ui/separator';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NotebookText, CalendarDays, Percent } from 'lucide-react';
+import { GradebookManager } from '@/components/grades/GradebookManager';
 
 export default function UnitManagementPage() {
     const { instituteId } = useAuth();
@@ -52,8 +54,8 @@ export default function UnitManagementPage() {
         return (
             <div className="space-y-6">
                 <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-48 w-full" />
-                 <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-10 w-1/3" />
+                <Skeleton className="h-64 w-full" />
             </div>
         );
     }
@@ -77,12 +79,31 @@ export default function UnitManagementPage() {
                 </CardHeader>
             </Card>
 
-            <IndicatorsManager unit={unit} />
-            
-            <Separator />
-
-            <WeeklyPlanner unit={unit} />
-
+            <Tabs defaultValue="indicators" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="indicators">
+                        <NotebookText className="mr-2 h-4 w-4" />
+                        Indicadores de Logro
+                    </TabsTrigger>
+                    <TabsTrigger value="planning">
+                        <CalendarDays className="mr-2 h-4 w-4" />
+                        Planificación Semanal
+                    </TabsTrigger>
+                    <TabsTrigger value="grades">
+                        <Percent className="mr-2 h-4 w-4" />
+                        Registro de Calificaciones
+                    </TabsTrigger>
+                </TabsList>
+                <TabsContent value="indicators">
+                    <IndicatorsManager unit={unit} />
+                </TabsContent>
+                <TabsContent value="planning">
+                    <WeeklyPlanner unit={unit} />
+                </TabsContent>
+                <TabsContent value="grades">
+                    <GradebookManager unit={unit} />
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

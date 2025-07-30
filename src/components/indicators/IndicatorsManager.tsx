@@ -28,7 +28,9 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
     setLoading(true);
     try {
       const fetchedIndicators = await getAchievementIndicators(instituteId, unit.id);
-      setIndicators(fetchedIndicators);
+      // Sort indicators by startWeek
+      const sortedIndicators = fetchedIndicators.sort((a, b) => a.startWeek - b.startWeek);
+      setIndicators(sortedIndicators);
     } catch (error) {
       console.error("Error fetching indicators:", error);
       toast({
@@ -58,17 +60,21 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <Card>
+      <CardHeader>
+        <CardTitle>Gestión de Indicadores de Logro</CardTitle>
+        <CardDescription>
+          Define los indicadores que los estudiantes deben alcanzar en esta unidad, y el rango de semanas que abarcan.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
         <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} />
-
-        <Separator />
         
-        <Card>
-            <CardHeader>
-                <CardTitle>Indicadores Registrados</CardTitle>
-                <CardDescription>Lista de todos los indicadores de logro para esta unidad didáctica.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <Separator />
+
+        <div>
+            <h3 className="text-lg font-medium mb-2">Indicadores Registrados</h3>
+            <div className="space-y-4">
                 {loading ? (
                     <>
                         <Skeleton className="h-24 w-full" />
@@ -89,8 +95,9 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
                         Aún no se han registrado indicadores para esta unidad.
                     </p>
                 )}
-            </CardContent>
-        </Card>
-    </div>
+            </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
