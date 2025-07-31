@@ -244,10 +244,14 @@ export const getUnit = async (instituteId: string, unitId: string): Promise<Unit
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     const docSnap = await getDoc(unitRef);
     if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Unit;
+        const data = docSnap.data();
+        // Convert Timestamps to Dates if they exist
+        // This is a common requirement when fetching data that will be serialized
+        // for client components, but for this component, we can probably leave them.
+        return { id: docSnap.id, ...data } as Unit;
     }
     return null;
-}
+};
 
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
