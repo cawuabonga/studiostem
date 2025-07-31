@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getContentsForWeek } from '@/config/firebase';
+import { getContentsForWeek, deleteContentFromWeek } from '@/config/firebase';
 import type { Content, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddContentForm } from './AddContentForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { FileText, Link, Type, PlusCircle } from 'lucide-react';
+import { FileText, Link, Type, PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,23 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from '../ui/button';
 
 interface ContentManagerProps {
@@ -69,6 +86,18 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
     setVersion(v => v + 1);
     setIsAddOpen(false); // Close dialog on success
   };
+
+  const handleDelete = async (contentToDelete: Content) => {
+    if (!instituteId) return;
+    try {
+        await deleteContentFromWeek(instituteId, unit.id, weekNumber, contentToDelete);
+        toast({ title: "Contenido Eliminado", description: "El recurso ha sido eliminado correctamente." });
+        setVersion(v => v + 1);
+    } catch (error) {
+        console.error("Error deleting content:", error);
+        toast({ title: "Error", description: "No se pudo eliminar el contenido.", variant: "destructive" });
+    }
+  }
   
   return (
     <Card className="bg-muted/50">
@@ -106,18 +135,53 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
                 <div className="space-y-2">
                     {contents.map(content => (
                         <div key={content.id} className="flex items-center justify-between rounded-md border bg-background p-3">
-                           <div className="flex items-center gap-3">
+                           <div className="flex items-center gap-3 flex-1">
                              {getIconForType(content.type)}
                              <a 
-                                href={content.type === 'link' ? content.value : content.type === 'file' ? content.value : undefined} 
+                                href={content.type === 'link' || content.type === 'file' ? content.value : undefined} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
-                                className="font-medium hover:underline"
+                                className={`font-medium ${content.type !== 'text' ? 'hover:underline' : 'cursor-default'}`}
                             >
                                 {content.title}
                             </a>
                            </div>
-                           {/* TODO: Add edit/delete buttons */}
+                           {!isStudentView && (
+                             <AlertDialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem disabled>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Editar
+                                        </DropdownMenuItem>
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem className="text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Eliminar
+                                            </DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>¿Estás seguro de eliminar este contenido?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta acción no se puede deshacer. Se eliminará el contenido "{content.title}".
+                                        Si es un archivo, también será borrado del almacenamiento.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(content)}>Sí, eliminar</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                           )}
                         </div>
                     ))}
                 </div>

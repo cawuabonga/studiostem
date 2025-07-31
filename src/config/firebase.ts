@@ -550,6 +550,24 @@ export const getContentsForWeek = async (instituteId: string, unitId: string, we
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
 };
 
+export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content): Promise<void> => {
+    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'contents', content.id);
+    
+    if (content.type === 'file') {
+        try {
+            const fileStorageRef = ref(firebaseStorage, content.value);
+            await deleteObject(fileStorageRef);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Could not delete file from storage, but proceeding to delete firestore doc.", error);
+            }
+        }
+    }
+    
+    await deleteDoc(contentRef);
+};
+
+
 export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber'>): Promise<void> => {
     const tasksCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'tasks');
     const taskData = { ...data, createdAt: Timestamp.now(), weekNumber };
@@ -562,6 +580,12 @@ export const getTasksForWeek = async (instituteId: string, unitId: string, weekN
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 };
+
+export const deleteTaskFromWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string): Promise<void> => {
+    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'tasks', taskId);
+    await deleteDoc(taskRef);
+};
+
 
 export const getAllTasksForUnit = async (instituteId: string, unitId: string, totalWeeks: number): Promise<Task[]> => {
     const allTasks: Task[] = [];
