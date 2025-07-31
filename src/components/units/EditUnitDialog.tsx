@@ -26,10 +26,12 @@ import { useAuth } from '@/contexts/AuthContext';
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const unitTypes: UnitType[] = ['Empleabilidad', 'Especifica'];
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
 const editUnitSchema = z.object({
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
   moduleId: z.string({ required_error: 'Debe seleccionar un módulo.' }),
+  semester: z.coerce.number().min(1, 'Debe seleccionar un semestre.'),
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   credits: z.coerce.number().min(0, { message: 'Los créditos deben ser un número positivo.' }),
   totalWeeks: z.coerce.number().min(1, 'Debe haber al menos 1 semana.').max(20, 'No puede durar más de 20 semanas.'),
@@ -137,7 +139,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <FormField
                     control={form.control}
                     name="programId"
@@ -181,6 +183,24 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
                             </SelectItem>
                             ))}
                         </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="semester"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Semestre</FormLabel>
+                        <Select onValueChange={(val) => field.onChange(Number(val))} value={String(field.value)}>
+                            <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Seleccione semestre" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
+                            </SelectContent>
                         </Select>
                         <FormMessage />
                     </FormItem>

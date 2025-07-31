@@ -102,6 +102,7 @@ export interface Unit {
   turno: UnitTurno;
   programId: string;
   moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
+  semester: number;
 }
 
 // This type is now based on StaffProfile for consistency.
@@ -122,7 +123,22 @@ export interface Assignment {
   [unitId: string]: string; // unitId -> teacherId (Document ID)
 }
 
-// --- NEW ACADEMIC TYPES ---
+// --- ACADEMIC & MATRICULATION TYPES ---
+
+export interface Matriculation {
+    id?: string; // Firestore document ID
+    studentId: string; // The student's document ID
+    unitId: string;
+    programId: string;
+    year: string;
+    period: UnitPeriod;
+    semester: number;
+    moduleId: string;
+    status: 'cursando' | 'aprobado' | 'desaprobado' | 'retirado';
+    finalGrade?: number;
+    createdAt: Timestamp;
+}
+
 
 export interface AchievementIndicator {
   id: string;
