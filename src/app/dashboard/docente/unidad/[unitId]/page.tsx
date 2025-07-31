@@ -98,7 +98,7 @@ export default function UnitManagementPage() {
                     <IndicatorsManager unit={unit} />
                 </TabsContent>
                 <TabsContent value="planning">
-                    <WeeklyPlanner unit={unit} />
+                    <WeeklyPlanner unit={unit} isStudentView={false}/>
                 </TabsContent>
                 <TabsContent value="grades">
                     <GradebookManager unit={unit} />

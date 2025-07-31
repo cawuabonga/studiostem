@@ -182,3 +182,18 @@ export interface Submission {
   grade?: number;
   feedback?: string;
 }
+
+
+// Represents the academic record of a student in a specific unit for a specific period.
+export interface AcademicRecord {
+  id: string; // Composite key, e.g., `${unitId}_${studentId}_${year}_${period}`
+  studentId: string;
+  unitId: string;
+  programId: string;
+  year: string;
+  period: UnitPeriod;
+  grades: { [indicatorId: string]: number }; // Maps indicator ID to a grade
+  finalGrade: number | null;
+  attendancePercentage: number;
+  status: 'cursando' | 'aprobado' | 'desaprobado' | 'inhabilitado' | 'retirado';
+}
