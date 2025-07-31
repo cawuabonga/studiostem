@@ -563,6 +563,18 @@ export const getTasksForWeek = async (instituteId: string, unitId: string, weekN
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 };
 
+export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
+    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', 'visibility');
+    await setDoc(visibilityRef, { [`week_${weekNumber}`]: isVisible }, { merge: true });
+};
+
+export const getWeeksVisibility = async (instituteId: string, unitId: string): Promise<Record<string, boolean>> => {
+    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', 'visibility');
+    const docSnap = await getDoc(visibilityRef);
+    return docSnap.exists() ? docSnap.data() : {};
+};
+
+
 // --- MATRICULATION ---
 
 export const createMatriculations = async (
