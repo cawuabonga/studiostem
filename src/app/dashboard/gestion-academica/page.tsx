@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardUser } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -48,7 +48,7 @@ const academicModules = [
     title: "Matricular Estudiantes",
     description: "Inscribir estudiantes en las unidades didácticas por período académico.",
     href: "/dashboard/gestion-academica/matricula",
-    icon: ClipboardUser,
+    icon: ClipboardList,
     roles: ["Admin", "Coordinator"],
   },
 ];
