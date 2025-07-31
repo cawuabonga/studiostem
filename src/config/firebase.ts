@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -575,7 +575,7 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
 };
 
 
-// --- MATRICULATION ---
+// --- MATRICULATION & ACADEMIC RECORDS ---
 
 export const createMatriculations = async (
     instituteId: string,
@@ -639,4 +639,37 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
     });
 
     return enrolledUnits;
+};
+
+export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<StudentProfile[]> => {
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const q = query(matriculationsCol, 
+        where("unitId", "==", unitId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    
+    const matriculationSnapshot = await getDocs(q);
+    if (matriculationSnapshot.empty) return [];
+
+    const studentDocIds = matriculationSnapshot.docs.map(doc => doc.data().studentId);
+    
+    if (studentDocIds.length === 0) return [];
+    
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    const studentQuery = query(studentsCol, where('documentId', 'in', studentDocIds));
+    const studentSnapshot = await getDocs(studentQuery);
+    
+    return studentSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+};
+
+export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
+  // This function would fetch pre-existing academic records for the given unit and period.
+  // For now, we will return an empty array as we will create them on the fly.
+  return [];
+};
+
+export const updateAcademicRecord = async (instituteId: string, recordId: string, data: Partial<AcademicRecord>) => {
+  const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+  await updateDoc(recordRef, data);
 };

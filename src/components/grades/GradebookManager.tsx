@@ -1,33 +1,116 @@
 
 "use client";
 
-import React from 'react';
-import type { Unit } from '@/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Construction } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit } from '@/config/firebase';
+import { Skeleton } from '../ui/skeleton';
+import { GradebookTable } from './GradebookTable';
+import { Button } from '../ui/button';
+import { Save } from 'lucide-react';
+
 
 interface GradebookManagerProps {
     unit: Unit;
 }
 
 export function GradebookManager({ unit }: GradebookManagerProps) {
+    const { instituteId } = useAuth();
+    const { toast } = useToast();
+    
+    const [students, setStudents] = useState<StudentProfile[]>([]);
+    const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
+    const [academicRecords, setAcademicRecords] = useState<Record<string, AcademicRecord>>({});
+    const [loading, setLoading] = useState(true);
+
+    const fetchData = useCallback(async () => {
+        if (!instituteId) return;
+        setLoading(true);
+        try {
+            const currentYear = new Date().getFullYear().toString();
+            const [enrolledStudents, achievementIndicators, fetchedRecords] = await Promise.all([
+                getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
+                getAchievementIndicators(instituteId, unit.id),
+                getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period)
+            ]);
+
+            const recordsMap: Record<string, AcademicRecord> = {};
+            fetchedRecords.forEach(record => {
+                recordsMap[record.studentId] = record;
+            });
+
+            setStudents(enrolledStudents);
+            setIndicators(achievementIndicators);
+            setAcademicRecords(recordsMap);
+
+        } catch (error) {
+            console.error("Error fetching gradebook data:", error);
+            toast({
+                title: "Error",
+                description: "No se pudieron cargar los datos para el registro de notas.",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
+    }, [instituteId, unit, toast]);
+
+    useEffect(() => {
+        fetchData();
+    }, [fetchData]);
+    
+    const handleGradeChange = (studentId: string, indicatorId: string, grade: number | null) => {
+        // TODO: Implement logic to update state
+    };
+    
+    const handleSaveChanges = () => {
+         toast({
+            title: "Función no implementada",
+            description: "La función para guardar las calificaciones estará disponible pronto.",
+        });
+        // TODO: Implement batch update to Firebase
+    }
+
+    if (loading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2 mt-2" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-64 w-full" />
+                </CardContent>
+            </Card>
+        )
+    }
+
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Registro de Calificaciones</CardTitle>
-                <CardDescription>
-                    Gestiona las calificaciones, promedios por indicador y el promedio final de los estudiantes en la unidad: {unit.name}.
-                </CardDescription>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Registro de Calificaciones</CardTitle>
+                        <CardDescription>
+                            Gestiona las calificaciones de los estudiantes en la unidad: {unit.name}.
+                        </CardDescription>
+                    </div>
+                    <Button onClick={handleSaveChanges}>
+                        <Save className="mr-2 h-4 w-4" />
+                        Guardar Cambios
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
-                <Alert>
-                    <Construction className="h-4 w-4" />
-                    <AlertTitle>¡En Construcción!</AlertTitle>
-                    <AlertDescription>
-                        El módulo para gestionar las calificaciones y los promedios estará disponible próximamente.
-                    </AlertDescription>
-                </Alert>
+               <GradebookTable 
+                    students={students}
+                    indicators={indicators}
+                    records={academicRecords}
+                    onGradeChange={handleGradeChange}
+               />
             </CardContent>
         </Card>
     );

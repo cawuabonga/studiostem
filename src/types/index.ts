@@ -192,7 +192,7 @@ export interface AcademicRecord {
   programId: string;
   year: string;
   period: UnitPeriod;
-  grades: { [indicatorId: string]: number }; // Maps indicator ID to a grade
+  grades: { [indicatorId: string]: number | null }; // Maps indicator ID to a grade
   finalGrade: number | null;
   attendancePercentage: number;
   status: 'cursando' | 'aprobado' | 'desaprobado' | 'inhabilitado' | 'retirado';
