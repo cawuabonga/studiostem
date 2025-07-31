@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,8 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addContentToWeek } from '@/config/firebase';
-import type { ContentType, Unit } from '@/types';
+import { addContentToWeek, updateContentInWeek } from '@/config/firebase';
+import type { Content, ContentType, Unit } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 const contentTypes: ContentType[] = ['text', 'link', 'file'];
@@ -44,17 +44,28 @@ const addContentSchema = z.object({
     message: 'Por favor, ingrese una URL válida.',
     path: ['value'],
 }).refine(data => {
-    if (data.type === 'file') {
-        return data.file && data.file.length > 0;
-    }
     if (data.type === 'text') {
         return !!data.value && data.value.length > 0;
+    }
+    // For link, value is checked by URL validation.
+    // For file, we check the file input itself, not `value`.
+    if (data.type === 'link') {
+        return !!data.value;
     }
     return true;
 }, {
     message: 'El contenido es requerido.',
     path: ['value'],
 }).refine(data => {
+     if (data.type === 'file') {
+        return data.file && data.file.length > 0;
+    }
+    return true;
+}, {
+    message: 'Debe seleccionar un archivo.',
+    path: ['file'],
+})
+.refine(data => {
     if (data.type === 'file' && data.file && data.file[0]) {
         return data.file[0].size <= MAX_FILE_SIZE;
     }
@@ -69,38 +80,71 @@ type AddContentFormValues = z.infer<typeof addContentSchema>;
 interface AddContentFormProps {
   unit: Unit;
   weekNumber: number;
-  onContentAdded: () => void;
+  initialData?: Content | null;
+  onDataChanged: () => void;
   onCancel: () => void;
 }
 
-export function AddContentForm({ unit, weekNumber, onContentAdded, onCancel }: AddContentFormProps) {
+export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, onCancel }: AddContentFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  
+  const isEditMode = !!initialData;
 
   const form = useForm<AddContentFormValues>({
     resolver: zodResolver(addContentSchema),
-    defaultValues: { title: '', type: 'text', value: '', file: undefined },
+    defaultValues: {
+        title: initialData?.title || '',
+        type: initialData?.type || 'text',
+        value: initialData?.type !== 'file' ? initialData?.value : '',
+        file: undefined
+    },
   });
+
+   useEffect(() => {
+    if (initialData) {
+        form.reset({
+            title: initialData.title,
+            type: initialData.type,
+            value: initialData.type !== 'file' ? initialData.value : '',
+            file: undefined,
+        })
+    } else {
+        form.reset({ title: '', type: 'text', value: '', file: undefined });
+    }
+  }, [initialData, form]);
 
   const contentType = form.watch('type');
 
   const onSubmit = async (data: AddContentFormValues) => {
     if (!instituteId) return;
     setLoading(true);
+
     try {
-        const file = data.file?.[0];
-        const contentData = { title: data.title, type: data.type, value: data.value || '' };
+        if (isEditMode && initialData) {
+            // Logic for updating existing content
+            await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, {
+                title: data.title,
+                value: data.value || initialData.value // Keep old value if not changed (e.g. for file)
+            });
+            toast({ title: '¡Éxito!', description: 'El contenido ha sido actualizado.' });
+
+        } else {
+            // Logic for adding new content
+            const file = data.file?.[0];
+            const contentData = { title: data.title, type: data.type, value: data.value || '' };
+            await addContentToWeek(instituteId, unit.id, weekNumber, contentData, file);
+            toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
+        }
         
-        await addContentToWeek(instituteId, unit.id, weekNumber, contentData, file);
-        
-        toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
         form.reset();
-        onContentAdded();
+        onDataChanged();
+
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo añadir el contenido.',
+        description: error.message || `No se pudo ${isEditMode ? 'actualizar' : 'añadir'} el contenido.`,
         variant: 'destructive',
       });
     } finally {
@@ -131,7 +175,7 @@ export function AddContentForm({ unit, weekNumber, onContentAdded, onCancel }: A
                 render={({ field }) => (
                 <FormItem>
                     <FormLabel>Tipo de Contenido</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isEditMode}>
                     <FormControl>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                     </FormControl>
@@ -187,8 +231,9 @@ export function AddContentForm({ unit, weekNumber, onContentAdded, onCancel }: A
                 <FormItem>
                     <FormLabel>Subir Archivo</FormLabel>
                     <FormControl>
-                        <Input type="file" {...form.register('file')} />
+                        <Input type="file" {...form.register('file')} disabled={isEditMode} />
                     </FormControl>
+                    {isEditMode && <p className="text-xs text-muted-foreground">La subida de un nuevo archivo no está permitida en la edición. Para cambiar el archivo, elimine este contenido y cree uno nuevo.</p>}
                      <FormMessage />
                 </FormItem>
                 )}
@@ -199,7 +244,7 @@ export function AddContentForm({ unit, weekNumber, onContentAdded, onCancel }: A
             <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Añadir Contenido
+            {isEditMode ? 'Actualizar Contenido' : 'Añadir Contenido'}
             </Button>
         </div>
       </form>

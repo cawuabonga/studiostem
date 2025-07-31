@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -18,8 +18,8 @@ import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addTaskToWeek } from '@/config/firebase';
-import type { Unit } from '@/types';
+import { addTaskToWeek, updateTaskInWeek } from '@/config/firebase';
+import type { Task, Unit } from '@/types';
 
 const addTaskSchema = z.object({
   title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
@@ -32,19 +32,41 @@ type AddTaskFormValues = z.infer<typeof addTaskSchema>;
 interface AddTaskFormProps {
   unit: Unit;
   weekNumber: number;
-  onTaskAdded: () => void;
+  initialData?: Task | null;
+  onDataChanged: () => void;
   onCancel: () => void;
 }
 
-export function AddTaskForm({ unit, weekNumber, onTaskAdded, onCancel }: AddTaskFormProps) {
+export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCancel }: AddTaskFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const isEditMode = !!initialData;
 
   const form = useForm<AddTaskFormValues>({
     resolver: zodResolver(addTaskSchema),
-    defaultValues: { title: '', description: '' },
+    defaultValues: { 
+        title: '', 
+        description: '',
+        dueDate: undefined
+    },
   });
+
+  useEffect(() => {
+    if (initialData) {
+        form.reset({
+            title: initialData.title,
+            description: initialData.description,
+            dueDate: initialData.dueDate.toDate(),
+        });
+    } else {
+        form.reset({
+            title: '',
+            description: '',
+            dueDate: undefined
+        });
+    }
+  }, [initialData, form]);
 
   const onSubmit = async (data: AddTaskFormValues) => {
     if (!instituteId) return;
@@ -55,15 +77,20 @@ export function AddTaskForm({ unit, weekNumber, onTaskAdded, onCancel }: AddTask
             dueDate: Timestamp.fromDate(data.dueDate),
         };
         
-        await addTaskToWeek(instituteId, unit.id, weekNumber, taskData);
+        if (isEditMode && initialData) {
+            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskData);
+            toast({ title: '¡Éxito!', description: 'La tarea ha sido actualizada.' });
+        } else {
+            await addTaskToWeek(instituteId, unit.id, weekNumber, taskData);
+            toast({ title: '¡Éxito!', description: 'La tarea ha sido añadida a la semana.' });
+        }
         
-        toast({ title: '¡Éxito!', description: 'La tarea ha sido añadida a la semana.' });
         form.reset();
-        onTaskAdded();
+        onDataChanged();
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo añadir la tarea.',
+        description: error.message || `No se pudo ${isEditMode ? 'actualizar' : 'añadir'} la tarea.`,
         variant: 'destructive',
       });
     } finally {
@@ -147,7 +174,7 @@ export function AddTaskForm({ unit, weekNumber, onTaskAdded, onCancel }: AddTask
             <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Añadir Tarea
+            {isEditMode ? 'Actualizar Tarea' : 'Añadir Tarea'}
             </Button>
         </div>
       </form>

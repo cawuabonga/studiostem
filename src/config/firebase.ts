@@ -567,6 +567,11 @@ export const deleteContentFromWeek = async (instituteId: string, unitId: string,
     await deleteDoc(contentRef);
 };
 
+export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>): Promise<void> => {
+    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'contents', contentId);
+    await updateDoc(contentRef, data);
+}
+
 
 export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber'>): Promise<void> => {
     const tasksCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'tasks');
@@ -585,6 +590,11 @@ export const deleteTaskFromWeek = async (instituteId: string, unitId: string, we
     const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'tasks', taskId);
     await deleteDoc(taskRef);
 };
+
+export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>): Promise<void> => {
+    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', `semana_${weekNumber}`, 'tasks', taskId);
+    await updateDoc(taskRef, data);
+}
 
 
 export const getAllTasksForUnit = async (instituteId: string, unitId: string, totalWeeks: number): Promise<Task[]> => {

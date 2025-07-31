@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTasksForWeek, deleteTaskFromWeek } from '@/config/firebase';
+import { getTasksForWeek, deleteTaskFromWeek, updateTaskInWeek } from '@/config/firebase';
 import type { Task, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,7 +49,9 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
 
   const fetchTasks = useCallback(async () => {
     if (!instituteId) return;
@@ -73,10 +75,16 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
     fetchTasks();
   }, [fetchTasks, version]);
 
-  const handleTaskAdded = () => {
+  const handleDataChange = () => {
     setVersion(v => v + 1);
-    setIsAddOpen(false); // Close dialog on success
+    setIsFormOpen(false);
+    setEditingTask(null);
   };
+  
+  const handleOpenForm = (task: Task | null = null) => {
+    setEditingTask(task);
+    setIsFormOpen(true);
+  }
 
   const handleDelete = async (taskId: string, taskTitle: string) => {
     if (!instituteId) return;
@@ -98,25 +106,10 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
                 <CardDescription>Actividades calificables para esta semana.</CardDescription>
             </div>
              {!isStudentView && (
-                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Añadir Tarea
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Añadir Nueva Tarea a la Semana {weekNumber}</DialogTitle>
-                        </DialogHeader>
-                        <AddTaskForm 
-                            unit={unit}
-                            weekNumber={weekNumber}
-                            onTaskAdded={handleTaskAdded}
-                            onCancel={() => setIsAddOpen(false)}
-                        />
-                    </DialogContent>
-                </Dialog>
+                <Button variant="outline" size="sm" onClick={() => handleOpenForm()}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Tarea
+                </Button>
              )}
         </CardHeader>
         <CardContent className="space-y-4">
@@ -146,7 +139,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem disabled>
+                                        <DropdownMenuItem onClick={() => handleOpenForm(task)}>
                                             <Edit className="mr-2 h-4 w-4" />
                                             Editar
                                         </DropdownMenuItem>
@@ -181,6 +174,21 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
                 </p>
             )}
         </CardContent>
+
+         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingTask ? 'Editar Tarea' : 'Añadir Nueva Tarea'} a la Semana {weekNumber}</DialogTitle>
+                </DialogHeader>
+                <AddTaskForm 
+                    unit={unit}
+                    weekNumber={weekNumber}
+                    onDataChanged={handleDataChange}
+                    onCancel={() => setIsFormOpen(false)}
+                    initialData={editingTask}
+                />
+            </DialogContent>
+        </Dialog>
     </Card>
   );
 }

@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getContentsForWeek, deleteContentFromWeek } from '@/config/firebase';
+import { getContentsForWeek, deleteContentFromWeek, updateContentInWeek } from '@/config/firebase';
 import type { Content, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddContentForm } from './AddContentForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { FileText, Link, Type, PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { FileText, Link as LinkIcon, Type, PlusCircle, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +45,7 @@ interface ContentManagerProps {
 const getIconForType = (type: Content['type']) => {
     switch(type) {
         case 'file': return <FileText className="h-5 w-5 text-blue-500" />;
-        case 'link': return <Link className="h-5 w-5 text-green-500" />;
+        case 'link': return <LinkIcon className="h-5 w-5 text-green-500" />;
         case 'text': return <Type className="h-5 w-5 text-orange-500" />;
         default: return <FileText className="h-5 w-5" />;
     }
@@ -58,7 +58,8 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
 
   const fetchContents = useCallback(async () => {
     if (!instituteId) return;
@@ -82,10 +83,16 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
     fetchContents();
   }, [fetchContents, version]);
 
-  const handleContentAdded = () => {
+  const handleDataChange = () => {
     setVersion(v => v + 1);
-    setIsAddOpen(false); // Close dialog on success
+    setIsFormOpen(false);
+    setEditingContent(null);
   };
+  
+  const handleOpenForm = (content: Content | null = null) => {
+    setEditingContent(content);
+    setIsFormOpen(true);
+  }
 
   const handleDelete = async (contentToDelete: Content) => {
     if (!instituteId) return;
@@ -107,25 +114,10 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
                 <CardDescription>Recursos como archivos, enlaces o texto.</CardDescription>
             </div>
             {!isStudentView && (
-                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Añadir Contenido
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                        <DialogHeader>
-                            <DialogTitle>Añadir Nuevo Contenido a la Semana {weekNumber}</DialogTitle>
-                        </DialogHeader>
-                        <AddContentForm 
-                            unit={unit}
-                            weekNumber={weekNumber}
-                            onContentAdded={handleContentAdded}
-                            onCancel={() => setIsAddOpen(false)}
-                        />
-                    </DialogContent>
-                </Dialog>
+                <Button variant="outline" size="sm" onClick={() => handleOpenForm()}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Contenido
+                </Button>
             )}
         </CardHeader>
         <CardContent className="space-y-4">
@@ -155,7 +147,7 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem disabled>
+                                        <DropdownMenuItem onClick={() => handleOpenForm(content)}>
                                             <Edit className="mr-2 h-4 w-4" />
                                             Editar
                                         </DropdownMenuItem>
@@ -191,6 +183,21 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
                 </p>
             )}
         </CardContent>
+
+         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingContent ? 'Editar Contenido' : 'Añadir Nuevo Contenido'} a la Semana {weekNumber}</DialogTitle>
+                </DialogHeader>
+                <AddContentForm 
+                    unit={unit}
+                    weekNumber={weekNumber}
+                    onDataChanged={handleDataChange}
+                    onCancel={() => setIsFormOpen(false)}
+                    initialData={editingContent}
+                />
+            </DialogContent>
+        </Dialog>
     </Card>
   );
 }
