@@ -76,7 +76,7 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
         });
     };
 
-    const handleSelectAll = (checked: boolean) => {
+    const handleSelectAll = (checked: boolean | string) => {
         if (checked) {
             setSelectedStudents(new Set(students.map(s => s.id!)));
         } else {
@@ -95,6 +95,9 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
     if (loading) {
         return <Skeleton className="h-96 w-full" />
     }
+
+    const isAllSelected = selectedStudents.size > 0 && selectedStudents.size === students.length;
+    const isPartiallySelected = selectedStudents.size > 0 && selectedStudents.size < students.length;
 
     return (
         <Card>
@@ -118,8 +121,10 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
                                         <TableHead className="w-[50px]">
                                             <Checkbox 
                                                 onCheckedChange={handleSelectAll}
-                                                checked={selectedStudents.size > 0 && selectedStudents.size === students.length}
-                                                indeterminate={selectedStudents.size > 0 && selectedStudents.size < students.length}
+                                                checked={isAllSelected}
+                                                aria-label="Seleccionar todos"
+                                                // This is how you handle indeterminate state in shadcn
+                                                ref={el => { if (el) el.indeterminate = isPartiallySelected }}
                                             />
                                         </TableHead>
                                         <TableHead>Nombre del Estudiante</TableHead>
@@ -133,6 +138,7 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
                                                 <Checkbox
                                                     checked={selectedStudents.has(student.id!)}
                                                     onCheckedChange={() => handleSelectStudent(student.id!)}
+                                                    aria-label={`Seleccionar a ${student.fullName}`}
                                                 />
                                             </TableCell>
                                             <TableCell>{student.fullName}</TableCell>
