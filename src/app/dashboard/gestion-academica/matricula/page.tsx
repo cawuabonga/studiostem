@@ -9,8 +9,7 @@ import { getPrograms } from "@/config/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Program, ProgramModule } from "@/types";
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Construction } from 'lucide-react';
+import { MatriculationDashboard } from '@/components/matricula/MatriculationDashboard';
 
 export default function MatriculaPage() {
   const { instituteId } = useAuth();
@@ -51,6 +50,9 @@ export default function MatriculaPage() {
       setShowDashboard(true);
     }
   };
+  
+  const selectedProgram = programs.find(p => p.id === selectedProgramId);
+  const selectedModule = modules.find(m => m.code === selectedModuleId);
 
   return (
     <div className="space-y-6">
@@ -133,18 +135,16 @@ export default function MatriculaPage() {
         </CardContent>
       </Card>
 
-      {showDashboard && (
-        <Card>
-            <CardContent className="pt-6">
-                <Alert>
-                    <Construction className="h-4 w-4" />
-                    <AlertTitle>¡Funcionalidad en Desarrollo!</AlertTitle>
-                    <AlertDescription>
-                        La capacidad para cargar y matricular estudiantes estará disponible próximamente.
-                    </AlertDescription>
-                </Alert>
-            </CardContent>
-        </Card>
+      {showDashboard && instituteId && selectedProgram && selectedModule && (
+        <MatriculationDashboard 
+            key={`${selectedProgramId}-${selectedYear}-${selectedPeriod}-${selectedModuleId}-${selectedSemester}`}
+            instituteId={instituteId}
+            program={selectedProgram}
+            module={selectedModule}
+            year={selectedYear}
+            period={selectedPeriod as any}
+            semester={Number(selectedSemester)}
+        />
       )}
     </div>
   );
