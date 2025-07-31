@@ -139,6 +139,11 @@ export interface Matriculation {
     createdAt: Timestamp;
 }
 
+export interface EnrolledUnit extends Unit {
+    programName: string;
+    teacherName?: string; // To be added later
+}
+
 
 export interface AchievementIndicator {
   id: string;

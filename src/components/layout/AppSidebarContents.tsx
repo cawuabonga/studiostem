@@ -40,7 +40,11 @@ export function AppSidebarContents() {
       { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, roles: ['Teacher'] },
   ];
 
-  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems].filter(item => user?.role && item.roles.includes(user.role));
+  const studentItems = [
+    { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, roles: ['Student'] },
+  ];
+
+  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems, ...studentItems].filter(item => user?.role && item.roles.includes(user.role));
 
   const getSidebarTitle = () => {
     if (user?.role === 'SuperAdmin' && !institute) {
