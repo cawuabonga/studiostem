@@ -15,8 +15,14 @@ interface GradebookTableProps {
     indicators: AchievementIndicator[];
     tasks: Task[];
     records: Record<string, AcademicRecord>;
-    onGradeChange: (studentId: string, indicatorId: string, grade: number | null) => void;
+    onGradeChange: (studentId: string, indicatorId: string, taskId: string, grade: number | null) => void;
 }
+
+const calculateAverage = (grades: number[]): number | null => {
+    if (grades.length === 0) return null;
+    const sum = grades.reduce((acc, grade) => acc + grade, 0);
+    return Math.round(sum / grades.length);
+};
 
 export function GradebookTable({ students, indicators, tasks, records, onGradeChange }: GradebookTableProps) {
 
@@ -82,37 +88,46 @@ export function GradebookTable({ students, indicators, tasks, records, onGradeCh
                 <TableBody>
                     {students.map(student => {
                         const record = records[student.documentId];
+                        const indicatorAverages: (number | null)[] = [];
+
                         return (
                              <TableRow key={student.documentId}>
                                 <TableCell className="font-medium sticky left-0 bg-background z-10">{student.fullName}</TableCell>
                                 {indicators.map(indicator => {
                                      const evaluations = evaluationsByIndicator[indicator.id] || [];
+                                     const gradesForIndicator = record?.grades?.[indicator.id]?.map(g => g.grade).filter(g => g !== null) as number[] || [];
+                                     const indicatorAverage = calculateAverage(gradesForIndicator);
+                                     if(indicatorAverage !== null) indicatorAverages.push(indicatorAverage);
+
                                      return (
                                         <React.Fragment key={`${student.documentId}-${indicator.id}`}>
-                                            {evaluations.map(task => (
-                                                <TableCell key={task.id} className="text-center border-l">
-                                                    <Input 
-                                                        type="number" 
-                                                        className="mx-auto max-w-[80px] text-center"
-                                                        // defaultValue={record?.grades?.[indicator.id]?.[task.id] ?? ''}
-                                                        onChange={(e) => onGradeChange(student.documentId, indicator.id, e.target.value === '' ? null : Number(e.target.value))}
-                                                        min="0"
-                                                        max="20"
-                                                    />
-                                                </TableCell>
-                                            ))}
+                                            {evaluations.map(task => {
+                                                const gradeEntry = record?.grades?.[indicator.id]?.find(g => g.refId === task.id);
+                                                return (
+                                                    <TableCell key={task.id} className="text-center border-l">
+                                                        <Input 
+                                                            type="number" 
+                                                            className="mx-auto max-w-[80px] text-center"
+                                                            value={gradeEntry?.grade ?? ''}
+                                                            onChange={(e) => onGradeChange(student.documentId, indicator.id, task.id, e.target.value === '' ? null : Number(e.target.value))}
+                                                            min="0"
+                                                            max="20"
+                                                        />
+                                                    </TableCell>
+                                                )
+                                            })}
                                              <TableCell className="text-center border-l">
                                                 {/* Placeholder for manual grade input */}
                                              </TableCell>
                                              <TableCell className="text-center font-bold border-l bg-muted/50">
-                                                -
+                                                {indicatorAverage ?? '-'}
                                              </TableCell>
                                         </React.Fragment>
                                      )
                                 })}
 
                                 <TableCell className="text-center font-bold">
-                                    {record?.finalGrade ?? '-'}
+                                    {calculateAverage(indicatorAverages as number[]) ?? '-'}
                                 </TableCell>
                                 <TableCell className="text-center">
                                     {record ? `${record.attendancePercentage}%` : '100%'}
@@ -130,5 +145,3 @@ export function GradebookTable({ students, indicators, tasks, records, onGradeCh
         </div>
     );
 }
-
-

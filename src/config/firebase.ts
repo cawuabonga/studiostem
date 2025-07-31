@@ -673,10 +673,30 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
 };
 
 export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
-  // This function would fetch pre-existing academic records for the given unit and period.
-  // For now, we will return an empty array as we will create them on the fly.
-  return [];
+  const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+  const q = query(recordsCol, 
+    where("unitId", "==", unitId),
+    where("year", "==", year),
+    where("period", "==", period)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademicRecord));
 };
+
+
+export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
+    const batch = writeBatch(db);
+    const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+
+    records.forEach(record => {
+        const docRef = doc(recordsCol, record.id);
+        // Ensure we are writing plain objects to Firestore
+        const cleanRecord = JSON.parse(JSON.stringify(record));
+        batch.set(docRef, cleanRecord, { merge: true });
+    });
+
+    await batch.commit();
+}
 
 export const updateAcademicRecord = async (instituteId: string, recordId: string, data: Partial<AcademicRecord>) => {
   const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
