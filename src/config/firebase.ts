@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -702,3 +702,42 @@ export const updateAcademicRecord = async (instituteId: string, recordId: string
   const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
   await updateDoc(recordRef, data);
 };
+
+
+export const addManualEvaluationToRecord = async (
+    instituteId: string,
+    unitId: string, 
+    year: string, 
+    period: UnitPeriod,
+    newEvaluation: Omit<ManualEvaluation, 'id'>
+) => {
+    const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+    const q = query(recordsCol,
+        where("unitId", "==", unitId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+        console.warn("No academic records found for this unit/period to add manual evaluation to.");
+        return;
+    }
+
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(docSnap => {
+        const record = docSnap.data() as AcademicRecord;
+        const evaluations = record.evaluations || {};
+        if (!evaluations[newEvaluation.indicatorId]) {
+            evaluations[newEvaluation.indicatorId] = [];
+        }
+        
+        const evaluationId = doc(collection(db, 'idGenerator')).id; // Generate a unique ID
+        const finalEvaluation = { ...newEvaluation, id: evaluationId };
+
+        evaluations[newEvaluation.indicatorId].push(finalEvaluation);
+        batch.update(docSnap.ref, { evaluations });
+    });
+
+    await batch.commit();
+}

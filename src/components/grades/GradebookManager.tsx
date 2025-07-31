@@ -2,12 +2,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, GradeEntry } from '@/types';
+import React, { useState, useEffect, useCallback } from 'react';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, GradeEntry, ManualEvaluation } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { GradebookTable } from './GradebookTable';
 import { Button } from '../ui/button';
@@ -25,6 +25,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [manualEvals, setManualEvals] = useState<Record<string, ManualEvaluation[]>>({});
     const [records, setRecords] = useState<Record<string, AcademicRecord>>({});
     const [initialRecords, setInitialRecords] = useState<Record<string, AcademicRecord>>({});
     const [loading, setLoading] = useState(true);
@@ -47,13 +48,17 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             setTasks(allTasks);
 
             const recordsMap: Record<string, AcademicRecord> = {};
-            // Initialize records for all enrolled students
+            const allManualEvals: Record<string, ManualEvaluation[]> = {};
+
             enrolledStudents.forEach(student => {
                 const existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
                 if (existingRecord) {
                     recordsMap[student.documentId] = existingRecord;
+                    // Aggregate all manual evaluations from the first student's record
+                     if (Object.keys(allManualEvals).length === 0 && existingRecord.evaluations) {
+                        Object.assign(allManualEvals, existingRecord.evaluations);
+                    }
                 } else {
-                    // Create a new blank record if none exists
                     recordsMap[student.documentId] = {
                         id: `${unit.id}_${student.documentId}_${currentYear}_${unit.period}`,
                         studentId: student.documentId,
@@ -70,8 +75,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 }
             });
             
+            setManualEvals(allManualEvals);
             setRecords(recordsMap);
-            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); // Deep copy for initial state
+            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); 
 
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
@@ -89,41 +95,63 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         fetchData();
     }, [fetchData]);
     
-    const handleGradeChange = (studentId: string, indicatorId: string, taskId: string, grade: number | null) => {
+    const handleGradeChange = (studentId: string, indicatorId: string, refId: string, grade: number | null, type: 'task' | 'manual', label: string, weekNumber: number) => {
         setRecords(
             produce(draft => {
                 const studentRecord = draft[studentId];
                 if (!studentRecord) return;
 
-                // Ensure the grades object for the indicator exists
                 if (!studentRecord.grades[indicatorId]) {
                     studentRecord.grades[indicatorId] = [];
                 }
 
-                const gradeEntryIndex = studentRecord.grades[indicatorId].findIndex(g => g.refId === taskId);
-                const task = tasks.find(t => t.id === taskId);
+                const gradeEntryIndex = studentRecord.grades[indicatorId].findIndex(g => g.refId === refId);
                 
                 if (gradeEntryIndex !== -1) {
-                    // Update existing grade entry
                     if (grade === null) {
-                         // Remove the entry if grade is cleared
                         studentRecord.grades[indicatorId].splice(gradeEntryIndex, 1);
                     } else {
                         studentRecord.grades[indicatorId][gradeEntryIndex].grade = grade;
                     }
-                } else if (grade !== null && task) {
-                    // Add new grade entry if it doesn't exist and grade is not null
+                } else if (grade !== null) {
                     const newGradeEntry: GradeEntry = {
-                        type: 'task',
-                        refId: taskId,
-                        label: task.title,
-                        grade: grade,
-                        weekNumber: task.weekNumber,
+                        type,
+                        refId,
+                        label,
+                        grade,
+                        weekNumber,
                     };
                     studentRecord.grades[indicatorId].push(newGradeEntry);
                 }
             })
         );
+    };
+
+     const handleManualEvaluationAdded = async (indicatorId: string, label: string, weekNumber: number) => {
+        if (!instituteId) return;
+
+        const newEvaluation: Omit<ManualEvaluation, 'id'> = {
+            indicatorId,
+            label,
+            weekNumber,
+        };
+        
+        try {
+            // This function updates all student records for the unit/period
+            await addManualEvaluationToRecord(instituteId, unit.id, new Date().getFullYear().toString(), unit.period, newEvaluation);
+            
+            toast({
+                title: "Columna Creada",
+                description: `Se añadió la evaluación "${label}" para todos los estudiantes.`,
+            });
+
+            // Refetch data to get the updated records with the new manual evaluation structure
+            fetchData();
+
+        } catch (error) {
+            console.error("Error adding manual evaluation:", error);
+            toast({ title: "Error", description: "No se pudo crear la columna de evaluación.", variant: "destructive" });
+        }
     };
     
     const handleSaveChanges = async () => {
@@ -132,7 +160,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         try {
             const updatedRecords: AcademicRecord[] = [];
             for (const studentId in records) {
-                // Only update if the record has changed from its initial state
                 if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
                     updatedRecords.push(records[studentId]);
                 }
@@ -153,7 +180,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            // Update the initial state to match the newly saved state
             setInitialRecords(JSON.parse(JSON.stringify(records)));
 
         } catch(error) {
@@ -199,8 +225,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     students={students}
                     indicators={indicators}
                     tasks={tasks}
+                    manualEvals={manualEvals}
                     records={records}
+                    unit={unit}
                     onGradeChange={handleGradeChange}
+                    onManualEvaluationAdded={handleManualEvaluationAdded}
                />
             </CardContent>
         </Card>

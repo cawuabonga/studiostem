@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -135,7 +134,6 @@ export interface Matriculation {
     semester: number;
     moduleId: string;
     status: 'cursando' | 'aprobado' | 'desaprobado' | 'retirado';
-    finalGrade?: number;
     createdAt: Timestamp;
 }
 
