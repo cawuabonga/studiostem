@@ -1,12 +1,13 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord } from '@/types';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { GradebookTable } from './GradebookTable';
 import { Button } from '../ui/button';
@@ -23,6 +24,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [academicRecords, setAcademicRecords] = useState<Record<string, AcademicRecord>>({});
     const [loading, setLoading] = useState(true);
 
@@ -31,10 +33,16 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
-            const [enrolledStudents, achievementIndicators, fetchedRecords] = await Promise.all([
+            const [
+                enrolledStudents, 
+                achievementIndicators, 
+                fetchedRecords,
+                allTasks
+            ] = await Promise.all([
                 getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
                 getAchievementIndicators(instituteId, unit.id),
-                getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period)
+                getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period),
+                getAllTasksForUnit(instituteId, unit.id, unit.totalWeeks)
             ]);
 
             const recordsMap: Record<string, AcademicRecord> = {};
@@ -44,6 +52,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
             setStudents(enrolledStudents);
             setIndicators(achievementIndicators);
+            setTasks(allTasks);
             setAcademicRecords(recordsMap);
 
         } catch (error) {
@@ -108,6 +117,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                <GradebookTable 
                     students={students}
                     indicators={indicators}
+                    tasks={tasks}
                     records={academicRecords}
                     onGradeChange={handleGradeChange}
                />

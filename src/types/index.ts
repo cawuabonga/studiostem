@@ -170,6 +170,7 @@ export interface Task {
   dueDate: Timestamp;
   fileUrl?: string; // URL to an attached file from the teacher
   createdAt: Timestamp;
+  weekNumber: number; // The week this task belongs to
 }
 
 export interface Submission {
@@ -183,6 +184,23 @@ export interface Submission {
   feedback?: string;
 }
 
+// Represents a single grade entry for an evaluation
+export interface GradeEntry {
+  type: 'task' | 'manual';
+  refId: string; // The ID of the original task, or a generated ID for a manual entry
+  label: string; // Title of the task or manual evaluation
+  grade: number | null;
+  weekNumber: number;
+}
+
+// Represents a manually added evaluation column by the teacher for an indicator
+export interface ManualEvaluation {
+    id: string;
+    indicatorId: string;
+    label: string;
+    weekNumber: number;
+}
+
 
 // Represents the academic record of a student in a specific unit for a specific period.
 export interface AcademicRecord {
@@ -192,7 +210,10 @@ export interface AcademicRecord {
   programId: string;
   year: string;
   period: UnitPeriod;
-  grades: { [indicatorId: string]: number | null }; // Maps indicator ID to a grade
+  // A map where each key is an indicator ID, and the value is an array of grade entries
+  grades: { [indicatorId: string]: GradeEntry[] };
+  // A map of evaluations manually added by the teacher
+  evaluations: { [indicatorId: string]: ManualEvaluation[] };
   finalGrade: number | null;
   attendancePercentage: number;
   status: 'cursando' | 'aprobado' | 'desaprobado' | 'inhabilitado' | 'retirado';

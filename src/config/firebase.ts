@@ -550,9 +550,9 @@ export const getContentsForWeek = async (instituteId: string, unitId: string, we
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
 };
 
-export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt'>): Promise<void> => {
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber'>): Promise<void> => {
     const tasksCol = getWeeklyPlanRef(instituteId, unitId, weekNumber, 'tasks');
-    const taskData = { ...data, createdAt: Timestamp.now() };
+    const taskData = { ...data, createdAt: Timestamp.now(), weekNumber };
     await addDoc(tasksCol, taskData);
 };
 
@@ -562,6 +562,15 @@ export const getTasksForWeek = async (instituteId: string, unitId: string, weekN
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 };
+
+export const getAllTasksForUnit = async (instituteId: string, unitId: string, totalWeeks: number): Promise<Task[]> => {
+    const allTasks: Task[] = [];
+    for (let i = 1; i <= totalWeeks; i++) {
+        const weeklyTasks = await getTasksForWeek(instituteId, unitId, i);
+        allTasks.push(...weeklyTasks);
+    }
+    return allTasks;
+}
 
 export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
     const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlan', 'visibility');
