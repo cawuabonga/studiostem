@@ -13,10 +13,11 @@ import { TaskManager } from './TaskManager';
 
 interface WeeklyPlannerProps {
     unit: Unit;
+    isStudentView: boolean;
 }
 
 // Internal component for a single week's section
-function WeekSection({ weekNumber, unit }: { weekNumber: number; unit: Unit; }) {
+function WeekSection({ weekNumber, unit, isStudentView }: { weekNumber: number; unit: Unit; isStudentView: boolean; }) {
     // In a real implementation, this state would come from Firestore
     const [isVisible, setIsVisible] = useState(false);
 
@@ -33,27 +34,29 @@ function WeekSection({ weekNumber, unit }: { weekNumber: number; unit: Unit; }) 
                     Semana {weekNumber}
                 </AccordionTrigger>
                 <AccordionContent className="space-y-6 px-6 pb-6">
-                    <div className="flex items-center justify-between rounded-lg border p-4 bg-background">
-                        <div className="space-y-0.5">
-                            <Label htmlFor={`visibility-switch-${weekNumber}`} className="text-base">
-                                Visibilidad para Estudiantes
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                                {isVisible ? 'La semana está habilitada y es visible.' : 'La semana está deshabilitada.'}
-                            </p>
+                    {!isStudentView && (
+                        <div className="flex items-center justify-between rounded-lg border p-4 bg-background">
+                            <div className="space-y-0.5">
+                                <Label htmlFor={`visibility-switch-${weekNumber}`} className="text-base">
+                                    Visibilidad para Estudiantes
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                    {isVisible ? 'La semana está habilitada y es visible.' : 'La semana está deshabilitada.'}
+                                </p>
+                            </div>
+                            <Switch
+                                id={`visibility-switch-${weekNumber}`}
+                                checked={isVisible}
+                                onCheckedChange={handleVisibilityChange}
+                            />
                         </div>
-                        <Switch
-                            id={`visibility-switch-${weekNumber}`}
-                            checked={isVisible}
-                            onCheckedChange={handleVisibilityChange}
-                        />
-                    </div>
+                    )}
                     
-                    <ContentManager unit={unit} weekNumber={weekNumber} />
+                    <ContentManager unit={unit} weekNumber={weekNumber} isStudentView={isStudentView} />
 
                     <Separator />
                     
-                    <TaskManager unit={unit} weekNumber={weekNumber} />
+                    <TaskManager unit={unit} weekNumber={weekNumber} isStudentView={isStudentView} />
 
                 </AccordionContent>
             </AccordionItem>
@@ -62,7 +65,7 @@ function WeekSection({ weekNumber, unit }: { weekNumber: number; unit: Unit; }) 
 }
 
 
-export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
+export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
     const totalWeeks = unit.totalWeeks || 0;
 
     return (
@@ -70,7 +73,10 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
             <CardHeader>
                 <CardTitle>Planificación Semanal del Sílabo</CardTitle>
                 <CardDescription>
-                    Organiza los contenidos, actividades y tareas para cada semana de la unidad. Habilita cada semana para que los estudiantes puedan ver su contenido.
+                    {isStudentView
+                        ? "Aquí encontrarás los materiales de estudio y tareas para cada semana."
+                        : "Organiza los contenidos, actividades y tareas para cada semana de la unidad. Habilita cada semana para que los estudiantes puedan ver su contenido."
+                    }
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -81,6 +87,7 @@ export function WeeklyPlanner({ unit }: WeeklyPlannerProps) {
                                 key={`week-section-${weekNumber}`}
                                 weekNumber={weekNumber}
                                 unit={unit}
+                                isStudentView={isStudentView}
                             />
                         ))}
                     </div>

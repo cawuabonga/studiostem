@@ -22,6 +22,7 @@ import { Button } from '../ui/button';
 interface ContentManagerProps {
   unit: Unit;
   weekNumber: number;
+  isStudentView: boolean;
 }
 
 const getIconForType = (type: Content['type']) => {
@@ -34,7 +35,7 @@ const getIconForType = (type: Content['type']) => {
 }
 
 
-export function ContentManager({ unit, weekNumber }: ContentManagerProps) {
+export function ContentManager({ unit, weekNumber, isStudentView }: ContentManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [contents, setContents] = useState<Content[]>([]);
@@ -76,25 +77,27 @@ export function ContentManager({ unit, weekNumber }: ContentManagerProps) {
                 <CardTitle className="text-lg">Contenidos de la Semana</CardTitle>
                 <CardDescription>Recursos como archivos, enlaces o texto.</CardDescription>
             </div>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Añadir Contenido
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Añadir Nuevo Contenido a la Semana {weekNumber}</DialogTitle>
-                    </DialogHeader>
-                    <AddContentForm 
-                        unit={unit}
-                        weekNumber={weekNumber}
-                        onContentAdded={handleContentAdded}
-                        onCancel={() => setIsAddOpen(false)}
-                    />
-                </DialogContent>
-            </Dialog>
+            {!isStudentView && (
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Añadir Contenido
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Añadir Nuevo Contenido a la Semana {weekNumber}</DialogTitle>
+                        </DialogHeader>
+                        <AddContentForm 
+                            unit={unit}
+                            weekNumber={weekNumber}
+                            onContentAdded={handleContentAdded}
+                            onCancel={() => setIsAddOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
         </CardHeader>
         <CardContent className="space-y-4">
             {loading ? (

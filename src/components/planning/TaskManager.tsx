@@ -23,9 +23,10 @@ import { Button } from '../ui/button';
 interface TaskManagerProps {
   unit: Unit;
   weekNumber: number;
+  isStudentView: boolean;
 }
 
-export function TaskManager({ unit, weekNumber }: TaskManagerProps) {
+export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -67,25 +68,27 @@ export function TaskManager({ unit, weekNumber }: TaskManagerProps) {
                 <CardTitle className="text-lg">Tareas de la Semana</CardTitle>
                 <CardDescription>Actividades calificables para esta semana.</CardDescription>
             </div>
-             <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Añadir Tarea
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Añadir Nueva Tarea a la Semana {weekNumber}</DialogTitle>
-                    </DialogHeader>
-                    <AddTaskForm 
-                        unit={unit}
-                        weekNumber={weekNumber}
-                        onTaskAdded={handleTaskAdded}
-                        onCancel={() => setIsAddOpen(false)}
-                    />
-                </DialogContent>
-            </Dialog>
+             {!isStudentView && (
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Añadir Tarea
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Añadir Nueva Tarea a la Semana {weekNumber}</DialogTitle>
+                        </DialogHeader>
+                        <AddTaskForm 
+                            unit={unit}
+                            weekNumber={weekNumber}
+                            onTaskAdded={handleTaskAdded}
+                            onCancel={() => setIsAddOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+             )}
         </CardHeader>
         <CardContent className="space-y-4">
             {loading ? (

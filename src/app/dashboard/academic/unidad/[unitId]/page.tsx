@@ -92,7 +92,7 @@ export default function UnitManagementPage() {
                 <IndicatorsManager unit={unit} />
             </TabsContent>
             <TabsContent value="planning">
-                <WeeklyPlanner unit={unit} />
+                <WeeklyPlanner unit={unit} isStudentView={false} />
             </TabsContent>
             <TabsContent value="grades">
                 <GradebookManager unit={unit} />
@@ -101,7 +101,7 @@ export default function UnitManagementPage() {
     );
 
     const StudentView = () => (
-         <WeeklyPlanner unit={unit} />
+         <WeeklyPlanner unit={unit} isStudentView={true} />
     );
 
     return (
