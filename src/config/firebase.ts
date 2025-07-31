@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -231,7 +231,7 @@ export const deleteProgram = async (instituteId: string, programId: string) => {
 }
 
 // Units
-export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'totalHours'> & { totalHours?: number }) => {
+export const addUnit = async (instituteId: string, data: Omit<Unit, 'id'>) => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
      const unitData = {
         ...data,
@@ -266,14 +266,15 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
     await deleteDoc(unitRef);
 }
 
-export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours'>[]) => {
+export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'semester'>[]) => {
     const batch = writeBatch(db);
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     units.forEach(unitData => {
         const docRef = doc(unitsCol); 
         const dataWithHours = {
             ...unitData,
-            totalHours: (unitData.theoreticalHours || 0) + (unitData.practicalHours || 0)
+            totalHours: (unitData.theoreticalHours || 0) + (unitData.practicalHours || 0),
+            semester: 0, // Default value, should be set properly
         }
         batch.set(docRef, dataWithHours);
     });
@@ -378,7 +379,7 @@ export const deleteStaffProfile = async (instituteId: string, documentId: string
 }
 
 // STUDENT PROFILES
-export const addStudentProfile = async (instituteId: string, data: Omit<StudentProfile, 'fullName' | 'linkedUserUid'>) => {
+export const addStudentProfile = async (instituteId: string, data: Omit<StudentProfile, 'fullName' | 'linkedUserUid' | 'id'>) => {
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
     const profileRef = doc(studentsCol, data.documentId);
     const docSnap = await getDoc(profileRef);
@@ -387,7 +388,7 @@ export const addStudentProfile = async (instituteId: string, data: Omit<StudentP
         throw new Error(`Un perfil de estudiante con el documento ${data.documentId} ya existe.`);
     }
 
-    const profileData: StudentProfile = {
+    const profileData: Omit<StudentProfile, 'id'> = {
         ...data,
         fullName: `${data.firstName} ${data.lastName}`,
         linkedUserUid: null,
@@ -402,12 +403,12 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
 
-export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'fullName'| 'linkedUserUid'>[]) => {
+export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
     studentList.forEach(studentData => {
         const docRef = doc(studentsCol, studentData.documentId);
-        const profileData: StudentProfile = {
+        const profileData: Omit<StudentProfile, 'id'> = {
             ...studentData,
             fullName: `${studentData.firstName} ${studentData.lastName}`,
             linkedUserUid: null,
@@ -556,4 +557,36 @@ export const getTasksForWeek = async (instituteId: string, unitId: string, weekN
     const q = query(tasksCol, orderBy("createdAt", "asc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+};
+
+// --- MATRICULATION ---
+
+export const createMatriculations = async (
+    instituteId: string,
+    studentIds: string[],
+    units: Unit[],
+    context: { year: string, period: UnitPeriod, semester: number, programId: string, moduleId: string }
+) => {
+    const batch = writeBatch(db);
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+
+    studentIds.forEach(studentId => {
+        units.forEach(unit => {
+            const matriculationDocRef = doc(matriculationsCol);
+            const matriculationData: Omit<Matriculation, 'id'> = {
+                studentId: studentId,
+                unitId: unit.id,
+                programId: context.programId,
+                year: context.year,
+                period: context.period,
+                semester: context.semester,
+                moduleId: context.moduleId,
+                status: 'cursando',
+                createdAt: Timestamp.now()
+            };
+            batch.set(matriculationDocRef, matriculationData);
+        });
+    });
+
+    await batch.commit();
 };

@@ -3,16 +3,28 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Program, ProgramModule, Unit, StudentProfile, UnitPeriod } from '@/types';
-import { getStudentProfiles, getUnits } from '@/config/firebase';
+import { getStudentProfiles, getUnits, createMatriculations } from '@/config/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { UserPlus, BookOpen } from 'lucide-react';
+import { UserPlus, BookOpen, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '../ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 interface MatriculationDashboardProps {
     instituteId: string;
@@ -28,6 +40,7 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
     const [units, setUnits] = useState<Unit[]>([]);
     const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
+    const [isMatriculating, setIsMatriculating] = useState(false);
     const { toast } = useToast();
 
     const fetchData = useCallback(async () => {
@@ -78,18 +91,36 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
 
     const handleSelectAll = (checked: boolean | string) => {
         if (checked) {
-            setSelectedStudents(new Set(students.map(s => s.id!)));
+            setSelectedStudents(new Set(students.map(s => s.documentId)));
         } else {
             setSelectedStudents(new Set());
         }
     };
     
-    const handleMatriculate = () => {
-        // TODO: Implement actual matriculation logic
-        toast({
-            title: "Función en Desarrollo",
-            description: `Se matricularían ${selectedStudents.size} estudiantes en ${units.length} unidades.`,
-        });
+    const handleMatriculate = async () => {
+        setIsMatriculating(true);
+        try {
+            await createMatriculations(
+                instituteId, 
+                Array.from(selectedStudents), 
+                units,
+                { year, period, semester, programId: program.id, moduleId: module.code }
+            );
+            toast({
+                title: "¡Matrícula Exitosa!",
+                description: `Se matricularon ${selectedStudents.size} estudiantes en ${units.length} unidades.`,
+            });
+            setSelectedStudents(new Set()); // Clear selection after matriculation
+        } catch (error) {
+             console.error("Matriculation error:", error);
+            toast({
+                title: "Error en la Matrícula",
+                description: "Ocurrió un error al procesar la matrícula.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsMatriculating(false);
+        }
     };
 
     if (loading) {
@@ -98,6 +129,7 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
 
     const isAllSelected = selectedStudents.size > 0 && selectedStudents.size === students.length;
     const isPartiallySelected = selectedStudents.size > 0 && selectedStudents.size < students.length;
+    const canMatriculate = selectedStudents.size > 0 && units.length > 0 && !isMatriculating;
 
     return (
         <Card>
@@ -133,11 +165,11 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
                                 </TableHeader>
                                 <TableBody>
                                     {students.map(student => (
-                                        <TableRow key={student.id}>
+                                        <TableRow key={student.documentId}>
                                             <TableCell>
                                                 <Checkbox
-                                                    checked={selectedStudents.has(student.id!)}
-                                                    onCheckedChange={() => handleSelectStudent(student.id!)}
+                                                    checked={selectedStudents.has(student.documentId)}
+                                                    onCheckedChange={() => handleSelectStudent(student.documentId)}
                                                     aria-label={`Seleccionar a ${student.fullName}`}
                                                 />
                                             </TableCell>
@@ -174,9 +206,26 @@ export function MatriculationDashboard({ instituteId, program, module, year, per
                 </Card>
             </CardContent>
             <div className="p-6 pt-0 text-center">
-                 <Button onClick={handleMatriculate} size="lg" disabled={selectedStudents.size === 0 || units.length === 0}>
-                    Matricular a {selectedStudents.size} Estudiante(s)
-                </Button>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button size="lg" disabled={!canMatriculate}>
+                            {isMatriculating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Matricular a {selectedStudents.size} Estudiante(s)
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Matrícula</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            ¿Está seguro de que desea matricular a <strong>{selectedStudents.size} estudiante(s)</strong> en <strong>{units.length} unidades didácticas</strong> para el semestre {semester} del período {year} {period}? Esta acción no se puede deshacer fácilmente.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleMatriculate}>Sí, matricular</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </Card>
     );
