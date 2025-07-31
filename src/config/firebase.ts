@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -589,4 +589,38 @@ export const createMatriculations = async (
     });
 
     await batch.commit();
+};
+
+export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const q = query(matriculationsCol, where("studentId", "==", studentId));
+    
+    const matriculationSnapshot = await getDocs(q);
+    if (matriculationSnapshot.empty) {
+        return [];
+    }
+
+    const unitIds = matriculationSnapshot.docs.map(doc => doc.data().unitId);
+    
+    // Fetch all programs and units in parallel to create maps for efficient lookup
+    const [programs, allUnits] = await Promise.all([
+        getPrograms(instituteId),
+        getUnits(instituteId)
+    ]);
+    const programMap = new Map(programs.map(p => [p.id, p]));
+    const unitMap = new Map(allUnits.map(u => [u.id, u]));
+
+    const enrolledUnits: EnrolledUnit[] = [];
+    unitIds.forEach(unitId => {
+        const unit = unitMap.get(unitId);
+        if (unit) {
+            const program = programMap.get(unit.programId);
+            enrolledUnits.push({
+                ...unit,
+                programName: program?.name || 'Programa Desconocido'
+            });
+        }
+    });
+
+    return enrolledUnits;
 };
