@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardUser } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -43,7 +43,14 @@ const academicModules = [
     href: "/dashboard/gestion-academica/carga-horaria",
     icon: Hourglass,
     roles: ["Admin", "Coordinator"],
-  }
+  },
+  {
+    title: "Matricular Estudiantes",
+    description: "Inscribir estudiantes en las unidades didácticas por período académico.",
+    href: "/dashboard/gestion-academica/matricula",
+    icon: ClipboardUser,
+    roles: ["Admin", "Coordinator"],
+  },
 ];
 
 export default function GestionAcademicaPage() {
