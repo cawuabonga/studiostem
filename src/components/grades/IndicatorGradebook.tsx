@@ -83,8 +83,6 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 if (a.evalType === 'task' && b.evalType === 'manual') return -1;
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
                 
-                // Now createdAt can be a string (ISO) or a Timestamp object from a newly added record.
-                // new Date() can handle both.
                 const timeA = new Date(a.createdAt as any).getTime();
                 const timeB = new Date(b.createdAt as any).getTime();
                 
@@ -204,7 +202,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                         <TableCell key={ev.id} className={cn(`text-center border-l p-1`, ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : '')}>
                                                             <Input 
                                                                 type="number"
-                                                                className="mx-auto max-w-[50px] text-center"
+                                                                className="w-full text-center border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
                                                                 value={gradeEntry?.grade ?? ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
