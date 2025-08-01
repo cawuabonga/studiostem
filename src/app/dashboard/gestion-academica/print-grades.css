@@ -1,5 +1,10 @@
 
 @media print {
+  @page {
+    size: landscape;
+    margin: 0.5in;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -8,10 +13,10 @@
   }
   .printable-area {
     position: absolute;
-    left: 20px;
-    top: 20px;
-    right: 20px;
-    width: auto;
+    left: 0;
+    top: 0;
+    right: 0;
+    width: 100%;
     font-size: 9px;
   }
   .no-print {
@@ -25,7 +30,7 @@
   }
   th, td {
     border: 1px solid #aaa; /* Lighter border for print */
-    padding: 4px 6px;
+    padding: 3px 5px;
     text-align: left;
     word-wrap: break-word;
   }
