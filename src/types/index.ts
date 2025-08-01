@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -197,6 +198,7 @@ export interface ManualEvaluation {
     indicatorId: string;
     label: string;
     weekNumber: number;
+    createdAt: Timestamp;
 }
 
 

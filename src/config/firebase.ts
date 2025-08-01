@@ -743,7 +743,7 @@ export const addManualEvaluationToRecord = async (
     unitId: string, 
     year: string, 
     period: UnitPeriod,
-    newEvaluation: Omit<ManualEvaluation, 'id'>
+    newEvaluation: Omit<ManualEvaluation, 'id' | 'createdAt'>
 ) => {
     const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
     const q = query(recordsCol,
@@ -767,7 +767,11 @@ export const addManualEvaluationToRecord = async (
         }
         
         const evaluationId = doc(collection(db, 'idGenerator')).id; // Generate a unique ID
-        const finalEvaluation = { ...newEvaluation, id: evaluationId };
+        const finalEvaluation: ManualEvaluation = { 
+            ...newEvaluation, 
+            id: evaluationId,
+            createdAt: Timestamp.now() 
+        };
 
         evaluations[newEvaluation.indicatorId].push(finalEvaluation);
         batch.update(docSnap.ref, { evaluations });

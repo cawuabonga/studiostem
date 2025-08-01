@@ -115,14 +115,14 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 return (
                                     <React.Fragment key={`subhead-week-${week}`}>
                                         {weekEvals.map(ev => (
-                                             <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[150px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
+                                             <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[120px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
                                                 <div className="flex items-center justify-center gap-1">
-                                                    <span>{ev.evalType === 'task' ? ev.title : ev.label}</span>
+                                                    <span className="truncate">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                     {ev.evalType === 'manual' && (
                                                          <AlertDialog>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
                                                                         <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -178,10 +178,10 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                 {weekEvals.map(ev => {
                                                     const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                                     return (
-                                                        <TableCell key={ev.id} className={`text-center border-l ${ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : ''}`}>
+                                                        <TableCell key={ev.id} className={`text-center border-l p-1 ${ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : ''}`}>
                                                             <Input 
                                                                 type="number"
-                                                                className="mx-auto max-w-[80px] text-center"
+                                                                className="mx-auto max-w-[60px] text-center"
                                                                 value={gradeEntry?.grade ?? ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
