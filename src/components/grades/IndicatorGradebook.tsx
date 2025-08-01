@@ -197,7 +197,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                         <TableCell key={ev.id} className={`text-center border-l p-1 ${ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : ''}`}>
                                                             <Input 
                                                                 type="number"
-                                                                className="mx-auto max-w-[50px] text-center"
+                                                                className="mx-auto max-w-[50px] text-center border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
                                                                 value={gradeEntry?.grade ?? ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
