@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -61,11 +60,17 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     // Ensure nested Timestamps are converted to something serializable
                     for (const indId in existingRecord.evaluations) {
                         if (existingRecord.evaluations[indId]) {
-                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
-                                ...ev,
-                                // Convert Timestamp to ISO string immediately upon fetching
-                                createdAt: (ev.createdAt as unknown as Timestamp).toDate().toISOString()
-                            }));
+                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => {
+                                const createdAtTimestamp = ev.createdAt as any;
+                                const createdAtISO = typeof createdAtTimestamp?.toDate === 'function' 
+                                    ? createdAtTimestamp.toDate().toISOString() 
+                                    : createdAtTimestamp;
+
+                                return {
+                                    ...ev,
+                                    createdAt: createdAtISO,
+                                };
+                            });
                         }
                     }
                 } else {
@@ -319,5 +324,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
+
+    
 
     
