@@ -3,8 +3,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, GradeEntry } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord } from '@/config/firebase';
