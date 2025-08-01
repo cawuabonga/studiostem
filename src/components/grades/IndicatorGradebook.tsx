@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -27,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { format } from 'date-fns';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -74,6 +74,17 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
             });
         }
         
+        // Sort items within each week: tasks first, then by creation/due date
+        for (const week in grouped) {
+            grouped[week].sort((a, b) => {
+                if (a.evalType === 'task' && b.evalType === 'manual') return -1;
+                if (a.evalType === 'manual' && b.evalType === 'task') return 1;
+                const dateA = a.evalType === 'task' ? a.dueDate : a.createdAt;
+                const dateB = b.evalType === 'task' ? b.dueDate : b.createdAt;
+                return dateA.toMillis() - dateB.toMillis();
+            });
+        }
+
         return grouped;
 
     }, [indicator, tasks, records]);
@@ -117,7 +128,12 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                         {weekEvals.map(ev => (
                                              <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[120px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
                                                 <div className="flex items-center justify-center gap-1">
-                                                    <span className="truncate">{ev.evalType === 'task' ? ev.title : ev.label}</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
+                                                        {ev.evalType === 'manual' && ev.createdAt && (
+                                                            <span className="text-muted-foreground text-[10px]">{format(ev.createdAt.toDate(), 'dd/MM/yy')}</span>
+                                                        )}
+                                                    </div>
                                                     {ev.evalType === 'manual' && (
                                                          <AlertDialog>
                                                             <DropdownMenu>
@@ -152,7 +168,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                 </div>
                                             </TableHead>
                                         ))}
-                                         <TableHead className="text-center border-l min-w-[50px] align-middle">
+                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
                                             <Button variant="ghost" size="sm" className="w-full h-full p-1" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
                                             </Button>
@@ -224,3 +240,5 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
+
+    
