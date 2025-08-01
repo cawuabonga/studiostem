@@ -83,6 +83,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 if (a.evalType === 'task' && b.evalType === 'manual') return -1;
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
                 
+                // Safe conversion to date object for sorting
                 const timeA = new Date(a.createdAt as any).getTime();
                 const timeB = new Date(b.createdAt as any).getTime();
                 
@@ -250,3 +251,5 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
+
+    
