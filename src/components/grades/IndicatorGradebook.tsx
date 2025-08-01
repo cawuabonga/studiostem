@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -126,7 +127,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 return (
                                     <React.Fragment key={`subhead-week-${week}`}>
                                         {weekEvals.map(ev => (
-                                             <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[100px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
+                                             <TableHead key={ev.id} className={cn(`text-center text-xs font-normal border-l min-w-[100px]`, ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : '')}>
                                                 <div className="flex items-center justify-center gap-1">
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
@@ -194,10 +195,10 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                 {weekEvals.map(ev => {
                                                     const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                                     return (
-                                                        <TableCell key={ev.id} className={`text-center border-l p-1 ${ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : ''}`}>
+                                                        <TableCell key={ev.id} className={cn(`text-center border-l p-1`, ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : '')}>
                                                             <Input 
                                                                 type="number"
-                                                                className="mx-auto max-w-[50px] text-center border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
+                                                                className="mx-auto max-w-[50px] text-center border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 hide-number-spinners"
                                                                 value={gradeEntry?.grade ?? ''}
                                                                 onChange={(e) => {
                                                                     const val = e.target.value;
