@@ -15,9 +15,10 @@
     position: absolute;
     left: 0;
     top: 0;
-    right: 0;
-    width: 100%;
-    font-size: 9px;
+    width: 133.33%; /* 100 / 0.75 */
+    font-size: 10px; /* Base font size for printing */
+    transform: scale(0.75);
+    transform-origin: top left;
   }
   .no-print {
     display: none !important;
@@ -26,11 +27,11 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto; /* Use auto for better column sizing */
+    table-layout: auto;
   }
   th, td {
     border: 1px solid #aaa; /* Lighter border for print */
-    padding: 3px 5px;
+    padding: 4px 6px;
     text-align: left;
     word-wrap: break-word;
   }
