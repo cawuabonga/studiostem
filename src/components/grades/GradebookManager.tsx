@@ -15,6 +15,8 @@ import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
 import { Timestamp } from 'firebase/firestore';
+import { Separator } from '../ui/separator';
+import { GradebookSummaryTable } from './GradebookSummaryTable';
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -230,43 +232,52 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     }
 
     const MainView = () => (
-         <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>Registro de Calificaciones</CardTitle>
-                        <CardDescription>
-                            Seleccione un indicador de logro para comenzar a calificar.
-                        </CardDescription>
+         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Registro de Calificaciones</CardTitle>
+                            <CardDescription>
+                                Seleccione un indicador de logro para comenzar a calificar.
+                            </CardDescription>
+                        </div>
+                        <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Guardar Cambios
+                        </Button>
                     </div>
-                    <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                        Guardar Cambios
-                    </Button>
-                </div>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-               {indicators.length > 0 ? indicators.map(indicator => (
-                   <Card 
-                        key={indicator.id} 
-                        className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col"
-                        onClick={() => setSelectedIndicator(indicator)}
-                    >
-                       <CardHeader className="flex-grow">
-                           <CardTitle className="text-lg">{indicator.name}</CardTitle>
-                           <CardDescription>{indicator.description}</CardDescription>
-                       </CardHeader>
-                       <CardFooter>
-                           <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
-                       </CardFooter>
-                   </Card>
-               )) : (
-                   <p className="col-span-full text-center text-muted-foreground py-8">
-                       No se han definido indicadores de logro para esta unidad. Por favor, añádalos en la pestaña 'Indicadores de Logro'.
-                   </p>
-               )}
-            </CardContent>
-        </Card>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {indicators.length > 0 ? indicators.map(indicator => (
+                    <Card 
+                            key={indicator.id} 
+                            className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col"
+                            onClick={() => setSelectedIndicator(indicator)}
+                        >
+                        <CardHeader className="flex-grow">
+                            <CardTitle className="text-lg">{indicator.name}</CardTitle>
+                            <CardDescription>{indicator.description}</CardDescription>
+                        </CardHeader>
+                        <CardFooter>
+                            <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
+                        </CardFooter>
+                    </Card>
+                )) : (
+                    <p className="col-span-full text-center text-muted-foreground py-8">
+                        No se han definido indicadores de logro para esta unidad. Por favor, añádalos en la pestaña 'Indicadores de Logro'.
+                    </p>
+                )}
+                </CardContent>
+            </Card>
+             {students.length > 0 && indicators.length > 0 && (
+                <GradebookSummaryTable 
+                    students={students}
+                    indicators={indicators}
+                    records={records}
+                />
+            )}
+         </div>
     );
 
     const DetailView = () => (
