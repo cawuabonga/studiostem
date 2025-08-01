@@ -14,6 +14,7 @@ import { Save, Loader2, ArrowLeft } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
+import { Timestamp } from 'firebase/firestore';
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -52,11 +53,20 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const recordsMap: Record<string, AcademicRecord> = {};
             
             enrolledStudents.forEach(student => {
-                const existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
+                let existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
+                
+                // Convert Firestore Timestamps to JS Dates for serialization
                 if (existingRecord) {
-                    recordsMap[student.documentId] = existingRecord;
+                    if (existingRecord.evaluations) {
+                        for (const indId in existingRecord.evaluations) {
+                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
+                                ...ev,
+                                createdAt: (ev.createdAt as unknown as Timestamp).toDate()
+                            }));
+                        }
+                    }
                 } else {
-                    recordsMap[student.documentId] = {
+                     existingRecord = {
                         id: `${unit.id}_${student.documentId}_${currentYear}_${unit.period}`,
                         studentId: student.documentId,
                         unitId: unit.id,
@@ -70,6 +80,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         status: 'cursando',
                     };
                 }
+                 recordsMap[student.documentId] = existingRecord;
             });
             
             setRecords(recordsMap);
@@ -130,6 +141,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             indicatorId,
             label,
             weekNumber,
+            createdAt: Timestamp.now()
         };
         
         try {

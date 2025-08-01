@@ -743,7 +743,7 @@ export const addManualEvaluationToRecord = async (
     unitId: string, 
     year: string, 
     period: UnitPeriod,
-    newEvaluation: Omit<ManualEvaluation, 'id' | 'createdAt'>
+    newEvaluation: Omit<ManualEvaluation, 'id'>
 ) => {
     const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
     const q = query(recordsCol,
@@ -770,7 +770,6 @@ export const addManualEvaluationToRecord = async (
         const finalEvaluation: ManualEvaluation = { 
             ...newEvaluation, 
             id: evaluationId,
-            createdAt: Timestamp.now() 
         };
 
         evaluations[newEvaluation.indicatorId].push(finalEvaluation);

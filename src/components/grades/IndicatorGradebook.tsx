@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -80,9 +82,11 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
             grouped[week].sort((a, b) => {
                 if (a.evalType === 'task' && b.evalType === 'manual') return -1;
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
-                const dateA = a.evalType === 'task' ? a.dueDate : a.createdAt;
-                const dateB = b.evalType === 'task' ? b.dueDate : b.createdAt;
-                return dateA.toMillis() - dateB.toMillis();
+                // Important: The `createdAt` for manual evals might be a Date object or a string/number after serialization.
+                // The `dueDate` for tasks is a Firestore Timestamp. Standardize to milliseconds for comparison.
+                const dateA = a.evalType === 'task' ? (a.dueDate as unknown as Timestamp).toMillis() : new Date(a.createdAt as any).getTime();
+                const dateB = b.evalType === 'task' ? (b.dueDate as unknown as Timestamp).toMillis() : new Date(b.createdAt as any).getTime();
+                return dateA - dateB;
             });
         }
 
@@ -132,7 +136,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                         {ev.evalType === 'manual' && ev.createdAt && (
-                                                            <span className="text-muted-foreground text-[10px]">{format(ev.createdAt.toDate(), 'dd/MM/yy')}</span>
+                                                            <span className="text-muted-foreground text-[10px]">{format(new Date(ev.createdAt as any), 'dd/MM/yy')}</span>
                                                         )}
                                                     </div>
                                                     {ev.evalType === 'manual' && (
