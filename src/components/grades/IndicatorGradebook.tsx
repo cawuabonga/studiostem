@@ -84,7 +84,10 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
                 const dateA = a.evalType === 'task' ? a.dueDate : a.createdAt;
                 const dateB = b.evalType === 'task' ? b.dueDate : b.createdAt;
-                return (dateA as Timestamp).toMillis() - (dateB as Timestamp).toMillis();
+                // Safe conversion to milliseconds for comparison
+                const timeA = (dateA as any)?.seconds ? (dateA as any).toMillis() : new Date(dateA as any).getTime();
+                const timeB = (dateB as any)?.seconds ? (dateB as any).toMillis() : new Date(dateB as any).getTime();
+                return timeA - timeB;
             });
         }
 
@@ -134,7 +137,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                         {ev.evalType === 'manual' && ev.createdAt && (
-                                                            <span className="text-muted-foreground text-[10px]">{format(ev.createdAt.toDate(), 'dd/MM/yy')}</span>
+                                                            <span className="text-muted-foreground text-[10px]">{format(new Date(ev.createdAt as any), 'dd/MM/yy')}</span>
                                                         )}
                                                     </div>
                                                     {ev.evalType === 'manual' && (
@@ -243,8 +246,3 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
-
-    
-
-    
-
