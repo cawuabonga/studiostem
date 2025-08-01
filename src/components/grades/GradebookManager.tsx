@@ -59,9 +59,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 if (existingRecord) {
                     if (existingRecord.evaluations) {
                         for (const indId in existingRecord.evaluations) {
-                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
+                             existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
                                 ...ev,
-                                createdAt: (ev.createdAt as unknown as Timestamp).toDate()
+                                // Safely create a new Date object. This works with Timestamps, strings, etc.
+                                createdAt: new Date(ev.createdAt as any) 
                             }));
                         }
                     }
@@ -306,3 +307,5 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
+
+    
