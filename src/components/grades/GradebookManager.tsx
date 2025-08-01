@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, GradeEntry } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord } from '@/config/firebase';
@@ -69,6 +69,17 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         attendancePercentage: 100,
                         status: 'cursando',
                     };
+                } else {
+                    // This is the key change: ensure all createdAt fields are strings before setting state
+                    if (existingRecord.evaluations) {
+                        for (const indId in existingRecord.evaluations) {
+                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
+                                ...ev,
+                                // Convert Timestamp to ISO string immediately upon fetching
+                                createdAt: (ev.createdAt as unknown as Timestamp).toDate().toISOString()
+                            }));
+                        }
+                    }
                 }
                  recordsMap[student.documentId] = existingRecord;
             });
@@ -173,7 +184,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const updatedRecords: AcademicRecord[] = [];
             for (const studentId in records) {
                 if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
-                    updatedRecords.push(records[studentId]);
+                     // Deep copy before modifying to avoid issues with Immer proxies
+                    const cleanRecord = JSON.parse(JSON.stringify(records[studentId]));
+                    updatedRecords.push(cleanRecord);
                 }
             }
 
@@ -243,9 +256,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                            <CardTitle className="text-lg">{indicator.name}</CardTitle>
                            <CardDescription>{indicator.description}</CardDescription>
                        </CardHeader>
-                       <CardFooter>
+                       <CardContent>
                            <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
-                       </CardFooter>
+                       </CardContent>
                    </Card>
                )) : (
                    <p className="col-span-full text-center text-muted-foreground py-8">

@@ -85,8 +85,8 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 const dateA = a.evalType === 'task' ? a.dueDate : a.createdAt;
                 const dateB = b.evalType === 'task' ? b.dueDate : b.createdAt;
                 // Safe conversion to milliseconds for comparison
-                const timeA = (dateA as any)?.seconds ? (dateA as any).toMillis() : new Date(dateA as any).getTime();
-                const timeB = (dateB as any)?.seconds ? (dateB as any).toMillis() : new Date(dateB as any).getTime();
+                const timeA = new Date(dateA as any).getTime();
+                const timeB = new Date(dateB as any).getTime();
                 return timeA - timeB;
             });
         }
