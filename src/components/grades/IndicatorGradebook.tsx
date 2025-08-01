@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -118,10 +117,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 const weekEvals = evaluationsByWeek[week] || [];
                                 const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
                                 return (
-                                     <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">
-                                        <span className="print:hidden">Semana {week}</span>
-                                        <span className="hidden print-only">S{week}</span>
-                                     </TableHead>
+                                     <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">Semana {week}</TableHead>
                                 )
                              })}
                             <TableHead rowSpan={2} className="text-center min-w-[100px] bg-muted/50">Promedio Indicador</TableHead>
@@ -133,7 +129,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                     <React.Fragment key={`subhead-week-${week}`}>
                                         {weekEvals.length > 0 ? weekEvals.map(ev => (
                                              <TableHead key={ev.id} className={cn(`text-center text-xs font-normal border-l min-w-[100px]`, ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : '')}>
-                                                <div className="flex items-center justify-center gap-1 print:hidden">
+                                                <div className="flex items-center justify-center gap-1">
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                         {ev.evalType === 'manual' && ev.createdAt && (
@@ -144,7 +140,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                          <AlertDialog>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 no-print">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
                                                                         <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -174,7 +170,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                 </div>
                                             </TableHead>
                                         )) : <TableHead className="text-center text-xs font-normal border-l min-w-[100px]"></TableHead>}
-                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1 no-print">
+                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
                                             <Button variant="ghost" size="sm" className="w-full h-full p-1" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
                                             </Button>
@@ -224,7 +220,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                         </TableCell>
                                                     )
                                                 }) : <TableCell className="border-l"></TableCell>}
-                                                <TableCell className="text-center border-l no-print"></TableCell>
+                                                <TableCell className="text-center border-l"></TableCell>
                                             </React.Fragment>
                                         )
                                     })}
