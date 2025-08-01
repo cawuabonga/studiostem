@@ -82,11 +82,12 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
             grouped[week].sort((a, b) => {
                 if (a.evalType === 'task' && b.evalType === 'manual') return -1;
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
-                const dateA = a.evalType === 'task' ? a.dueDate : a.createdAt;
-                const dateB = b.evalType === 'task' ? b.dueDate : b.createdAt;
-                // Safe conversion to milliseconds for comparison
-                const timeA = new Date(dateA as any).getTime();
-                const timeB = new Date(dateB as any).getTime();
+                
+                // Now createdAt can be a string (ISO) or a Timestamp object from a newly added record.
+                // new Date() can handle both.
+                const timeA = new Date(a.createdAt as any).getTime();
+                const timeB = new Date(b.createdAt as any).getTime();
+                
                 return timeA - timeB;
             });
         }

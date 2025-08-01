@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, GradeEntry } from '@/types';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, GradeEntry, UnitPeriod } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -55,7 +55,18 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             enrolledStudents.forEach(student => {
                 let existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
                 
-                if (!existingRecord) {
+                if (existingRecord) {
+                    // Ensure nested Timestamps are converted to something serializable
+                    for (const indId in existingRecord.evaluations) {
+                        if (existingRecord.evaluations[indId]) {
+                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
+                                ...ev,
+                                // Convert Timestamp to ISO string immediately upon fetching
+                                createdAt: (ev.createdAt as unknown as Timestamp).toDate().toISOString()
+                            }));
+                        }
+                    }
+                } else {
                      existingRecord = {
                         id: `${unit.id}_${student.documentId}_${currentYear}_${unit.period}`,
                         studentId: student.documentId,
