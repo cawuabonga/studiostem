@@ -8,11 +8,11 @@
   }
   .printable-area {
     position: absolute;
-    left: 40px;
-    top: 40px;
-    right: 40px;
+    left: 20px;
+    top: 20px;
+    right: 20px;
     width: auto;
-    font-size: 10px;
+    font-size: 9px;
   }
   .no-print {
     display: none !important;
@@ -21,17 +21,17 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto; /* Use auto for better column sizing */
   }
   th, td {
-    border: 1px solid #ddd;
-    padding: 6px;
+    border: 1px solid #aaa; /* Lighter border for print */
+    padding: 4px 6px;
     text-align: left;
     word-wrap: break-word;
   }
   th {
-    background-color: #f2f2f2;
-    color: #333;
+    background-color: #e9ecef; /* Light gray background for headers */
+    color: #212529; /* Dark text for headers */
   }
   /* Hide scrollbars in print */
   .overflow-x-auto::-webkit-scrollbar {
@@ -44,5 +44,28 @@
   }
   h1, h2, h3, h4, p {
     color: #000;
+  }
+  .print-header {
+    margin-bottom: 1rem;
+  }
+  .print-title {
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+   .print-info-table {
+    width: 100%;
+    border: 1px solid #aaa;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+  }
+  .print-info-table td {
+    border: 1px solid #aaa;
+    padding: 4px 8px;
+  }
+  .print-info-table .label {
+    font-weight: bold;
+    width: 15%;
   }
 }

@@ -114,11 +114,14 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 <Table className="min-w-full">
                     <TableHeader>
                         <TableRow>
-                            <TableHead rowSpan={2} className="sticky left-0 bg-background z-10 min-w-[200px]">Estudiante</TableHead>
+                            <TableHead rowSpan={2} className="w-[40px] text-center">N°</TableHead>
+                            <TableHead rowSpan={2} className="w-[100px]">DNI</TableHead>
+                            <TableHead rowSpan={2} className="sticky left-0 bg-background z-10 min-w-[250px]">Apellidos y Nombres</TableHead>
                              {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                 const weekEvals = evaluationsByWeek[week] || [];
+                                const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
                                 return (
-                                     <TableHead key={week} colSpan={weekEvals.length + 1} className="text-center border-l border-r">
+                                     <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">
                                         Semana {week}
                                      </TableHead>
                                 )
@@ -130,7 +133,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 const weekEvals = evaluationsByWeek[week] || [];
                                 return (
                                     <React.Fragment key={`subhead-week-${week}`}>
-                                        {weekEvals.map(ev => (
+                                        {weekEvals.length > 0 ? weekEvals.map(ev => (
                                              <TableHead key={ev.id} className={cn(`text-center text-xs font-normal border-l min-w-[100px]`, ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : '')}>
                                                 <div className="flex items-center justify-center gap-1">
                                                     <div className="flex flex-col">
@@ -172,7 +175,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                     )}
                                                 </div>
                                             </TableHead>
-                                        ))}
+                                        )) : <TableHead className="text-center text-xs font-normal border-l min-w-[100px]"></TableHead>}
                                          <TableHead className="text-center border-l min-w-[50px] align-middle p-1 no-print">
                                             <Button variant="ghost" size="sm" className="w-full h-full p-1" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
@@ -184,19 +187,21 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {students.map(student => {
+                        {students.map((student, index) => {
                             const studentRecord = records[student.documentId];
                             const allGradesForIndicator = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
                             const indicatorAverage = calculateAverage(allGradesForIndicator);
 
                             return (
                                 <TableRow key={student.documentId}>
+                                    <TableCell className="text-center">{index + 1}</TableCell>
+                                    <TableCell>{student.documentId}</TableCell>
                                     <TableCell className="font-medium sticky left-0 bg-background z-10">{student.fullName}</TableCell>
                                     {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                         const weekEvals = evaluationsByWeek[week] || [];
                                         return (
                                             <React.Fragment key={`row-${student.documentId}-week-${week}`}>
-                                                {weekEvals.map(ev => {
+                                                {weekEvals.length > 0 ? weekEvals.map(ev => {
                                                     const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                                     return (
                                                         <TableCell key={ev.id} className={cn(`text-center border-l p-1`, ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : '')}>
@@ -220,7 +225,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                             />
                                                         </TableCell>
                                                     )
-                                                })}
+                                                }) : <TableCell className="border-l"></TableCell>}
                                                 <TableCell className="text-center border-l no-print"></TableCell>
                                             </React.Fragment>
                                         )

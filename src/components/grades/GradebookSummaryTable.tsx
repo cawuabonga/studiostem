@@ -22,8 +22,8 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 
 export function GradebookSummaryTable({ students, indicators, records }: GradebookSummaryTableProps) {
     return (
-        <Card className="printable-area">
-            <CardHeader>
+        <Card>
+            <CardHeader className="no-print">
                 <CardTitle>Resumen de Calificaciones Finales</CardTitle>
                 <CardDescription>
                     Promedio final por cada indicador y promedio general de la unidad didáctica.
@@ -34,7 +34,9 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="sticky left-0 bg-background z-10 min-w-[200px]">Estudiante</TableHead>
+                                <TableHead className="w-[40px]">N°</TableHead>
+                                <TableHead className="w-[100px]">DNI</TableHead>
+                                <TableHead className="sticky left-0 bg-background z-10 min-w-[250px]">Apellidos y Nombres</TableHead>
                                 {indicators.map(indicator => (
                                     <TableHead key={indicator.id} className="text-center min-w-[150px]">{indicator.name}</TableHead>
                                 ))}
@@ -42,7 +44,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {students.map(student => {
+                            {students.map((student, index) => {
                                 const studentRecord = records[student.documentId];
                                 const indicatorAverages = indicators.map(indicator => {
                                     const grades = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
@@ -52,14 +54,16 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
 
                                 return (
                                     <TableRow key={student.documentId}>
+                                        <TableCell className="text-center">{index + 1}</TableCell>
+                                        <TableCell>{student.documentId}</TableCell>
                                         <TableCell className="font-medium sticky left-0 bg-background z-10">{student.fullName}</TableCell>
                                         {indicatorAverages.map((avg, index) => (
                                             <TableCell key={indicators[index].id} className={cn("text-center font-semibold", (avg ?? 0) < 11 ? 'text-destructive' : '')}>
-                                                {avg ?? 'N/A'}
+                                                {avg ?? ''}
                                             </TableCell>
                                         ))}
                                         <TableCell className={cn("text-center font-bold text-lg bg-muted/50", (finalAverage ?? 0) < 11 ? 'text-destructive' : 'text-primary')}>
-                                            {finalAverage ?? 'N/A'}
+                                            {finalAverage ?? ''}
                                         </TableCell>
                                     </TableRow>
                                 );

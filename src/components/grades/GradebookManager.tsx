@@ -1,22 +1,21 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, GradeEntry, UnitPeriod } from '@/types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, UnitPeriod, Program, Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { Save, Loader2, ArrowLeft, Printer } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
-import { Timestamp } from 'firebase/firestore';
-import { Separator } from '../ui/separator';
 import { GradebookSummaryTable } from './GradebookSummaryTable';
 import '@/app/dashboard/gestion-academica/print-grades.css';
+import { PrintLayout } from '../printing/PrintLayout';
 
 
 interface GradebookManagerProps {
@@ -24,7 +23,7 @@ interface GradebookManagerProps {
 }
 
 export function GradebookManager({ unit }: GradebookManagerProps) {
-    const { instituteId } = useAuth();
+    const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     
     const [students, setStudents] = useState<StudentProfile[]>([]);
@@ -32,6 +31,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [tasks, setTasks] = useState<Task[]>([]);
     const [records, setRecords] = useState<Record<string, AcademicRecord>>({});
     const [initialRecords, setInitialRecords] = useState<Record<string, AcademicRecord>>({});
+    const [program, setProgram] = useState<Program | null>(null);
+    const [teacher, setTeacher] = useState<Teacher | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
@@ -41,12 +42,32 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
-            const [enrolledStudents, achievementIndicators, fetchedRecords, allTasks] = await Promise.all([
+            const [
+                enrolledStudents, 
+                achievementIndicators, 
+                fetchedRecords, 
+                allTasks,
+                allPrograms,
+                allTeachers,
+            ] = await Promise.all([
                 getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
                 getAchievementIndicators(instituteId, unit.id),
                 getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period),
-                getAllTasksForUnit(instituteId, unit.id, unit.totalWeeks)
+                getAllTasksForUnit(instituteId, unit.id, unit.totalWeeks),
+                getPrograms(instituteId),
+                getTeachers(instituteId),
             ]);
+
+            const currentProgram = allPrograms.find(p => p.id === unit.programId) || null;
+            setProgram(currentProgram);
+
+            // Find assigned teacher
+            const assignments = await getAssignments(instituteId, currentYear, unit.programId);
+            const teacherId = assignments[unit.period]?.[unit.id];
+            if (teacherId) {
+                const assignedTeacher = allTeachers.find(t => t.documentId === teacherId) || null;
+                setTeacher(assignedTeacher);
+            }
             
             setStudents(enrolledStudents);
             const sortedIndicators = achievementIndicators.sort((a,b) => a.name.localeCompare(b.name));
@@ -61,18 +82,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 if (existingRecord) {
                     for (const indId in existingRecord.evaluations) {
                         if (existingRecord.evaluations[indId]) {
-                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => {
-                                // Ensure createdAt is a serializable format (ISO string)
-                                const createdAtTimestamp = ev.createdAt as any;
-                                const createdAtISO = typeof createdAtTimestamp?.toDate === 'function' 
-                                    ? createdAtTimestamp.toDate().toISOString() 
-                                    : createdAtTimestamp; // Assume it's already a string if no toDate
-
-                                return {
-                                    ...ev,
-                                    createdAt: createdAtISO,
-                                };
-                            });
+                            existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
+                                ...ev,
+                                // Convert Timestamp to ISO string immediately upon fetching
+                                createdAt: (ev.createdAt as any).toDate().toISOString()
+                            }));
                         }
                     }
                 } else {
@@ -240,7 +254,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const MainView = () => (
          <div className="space-y-6">
             <Card>
-                <CardHeader>
+                <CardHeader className="no-print">
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Registro de Calificaciones</CardTitle>
@@ -260,11 +274,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CardContent className="no-print">
                 {indicators.length > 0 ? indicators.map(indicator => (
                     <Card 
                             key={indicator.id} 
-                            className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col"
+                            className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col mb-4"
                             onClick={() => setSelectedIndicator(indicator)}
                         >
                         <CardHeader className="flex-grow">
@@ -283,18 +297,26 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 </CardContent>
             </Card>
              {students.length > 0 && indicators.length > 0 && (
-                <GradebookSummaryTable 
-                    students={students}
-                    indicators={indicators}
-                    records={records}
-                />
+                <PrintLayout
+                    institute={institute}
+                    program={program}
+                    unit={unit}
+                    teacher={teacher}
+                    title={`CONSOLIDADO DE REGISTRO DE EVALUACIÓN - ${unit.period} ${new Date().getFullYear()}`}
+                    >
+                    <GradebookSummaryTable 
+                        students={students}
+                        indicators={indicators}
+                        records={records}
+                    />
+                </PrintLayout>
             )}
          </div>
     );
 
     const DetailView = () => (
         selectedIndicator && (
-             <Card className="printable-area">
+             <Card>
                 <CardHeader className="no-print">
                     <div className="flex justify-between items-start">
                         <div>
@@ -320,16 +342,24 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <IndicatorGradebook 
-                        students={students}
-                        indicator={selectedIndicator}
-                        tasks={tasks}
-                        records={records}
+                    <PrintLayout
+                        institute={institute}
+                        program={program}
                         unit={unit}
-                        onGradeChange={handleGradeChange}
-                        onManualEvaluationAdded={handleManualEvaluationAdded}
-                        onManualEvaluationDeleted={handleManualEvaluationDeleted}
-                    />
+                        teacher={teacher}
+                        title={`REGISTRO AUXILIAR DE EVALUACIÓN: ${selectedIndicator.name}`}
+                    >
+                        <IndicatorGradebook 
+                            students={students}
+                            indicator={selectedIndicator}
+                            tasks={tasks}
+                            records={records}
+                            unit={unit}
+                            onGradeChange={handleGradeChange}
+                            onManualEvaluationAdded={handleManualEvaluationAdded}
+                            onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                        />
+                    </PrintLayout>
                 </CardContent>
             </Card>
         )
