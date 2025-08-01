@@ -22,6 +22,12 @@
   .no-print {
     display: none !important;
   }
+  .print-only {
+      display: initial !important;
+  }
+  .print\:hidden {
+      display: none !important;
+  }
   /* Ensure table fits the page */
   table {
     width: 100%;

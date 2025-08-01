@@ -68,25 +68,21 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
             grouped[task.weekNumber].push({ ...task, evalType: 'task' });
         });
         
-        // This assumes records for at least one student exist to get the manual eval structure
         const firstRecord = Object.values(records)[0];
         if (firstRecord?.evaluations?.[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(manualEval => {
                 if (!grouped[manualEval.weekNumber]) grouped[manualEval.weekNumber] = [];
-                grouped[manualEval.weekNumber].push({ ...manualEval, evalType: 'manual' });
+                const evalDate = (manualEval.createdAt as any)?.toDate ? (manualEval.createdAt as any).toDate() : new Date(manualEval.createdAt as any);
+                grouped[manualEval.weekNumber].push({ ...manualEval, createdAt: evalDate, evalType: 'manual' });
             });
         }
         
-        // Sort items within each week: tasks first, then by creation/due date
         for (const week in grouped) {
             grouped[week].sort((a, b) => {
-                if (a.evalType === 'task' && b.evalType === 'manual') return -1;
-                if (a.evalType === 'manual' && b.evalType === 'task') return 1;
-                
-                // Safe conversion to date object for sorting
                 const timeA = new Date(a.createdAt as any).getTime();
                 const timeB = new Date(b.createdAt as any).getTime();
-                
+                if (a.evalType === 'task' && b.evalType === 'manual') return -1;
+                if (a.evalType === 'manual' && b.evalType === 'task') return 1;
                 return timeA - timeB;
             });
         }
@@ -123,7 +119,8 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
                                 return (
                                      <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">
-                                        Semana {week}
+                                        <span className="print:hidden">Semana {week}</span>
+                                        <span className="hidden print-only">S{week}</span>
                                      </TableHead>
                                 )
                              })}
@@ -136,7 +133,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                     <React.Fragment key={`subhead-week-${week}`}>
                                         {weekEvals.length > 0 ? weekEvals.map(ev => (
                                              <TableHead key={ev.id} className={cn(`text-center text-xs font-normal border-l min-w-[100px]`, ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : '')}>
-                                                <div className="flex items-center justify-center gap-1">
+                                                <div className="flex items-center justify-center gap-1 print:hidden">
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                         {ev.evalType === 'manual' && ev.createdAt && (
