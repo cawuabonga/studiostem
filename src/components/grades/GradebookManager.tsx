@@ -55,18 +55,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             enrolledStudents.forEach(student => {
                 let existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
                 
-                // Convert Firestore Timestamps to JS Dates for serialization
-                if (existingRecord) {
-                    if (existingRecord.evaluations) {
-                        for (const indId in existingRecord.evaluations) {
-                             existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => ({
-                                ...ev,
-                                // Safely create a new Date object. This works with Timestamps, strings, etc.
-                                createdAt: new Date(ev.createdAt as any) 
-                            }));
-                        }
-                    }
-                } else {
+                if (!existingRecord) {
                      existingRecord = {
                         id: `${unit.id}_${student.documentId}_${currentYear}_${unit.period}`,
                         studentId: student.documentId,
@@ -138,11 +127,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
      const handleManualEvaluationAdded = async (indicatorId: string, label: string, weekNumber: number) => {
         if (!instituteId) return;
 
-        const newEvaluation: Omit<ManualEvaluation, 'id'> = {
+        const newEvaluation: Omit<ManualEvaluation, 'id' | 'createdAt'> = {
             indicatorId,
             label,
             weekNumber,
-            createdAt: Timestamp.now()
         };
         
         try {

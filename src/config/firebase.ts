@@ -724,9 +724,7 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
 
     records.forEach(record => {
         const docRef = doc(recordsCol, record.id);
-        // Ensure we are writing plain objects to Firestore
-        const cleanRecord = JSON.parse(JSON.stringify(record));
-        batch.set(docRef, cleanRecord, { merge: true });
+        batch.set(docRef, record, { merge: true });
     });
 
     await batch.commit();
@@ -743,7 +741,7 @@ export const addManualEvaluationToRecord = async (
     unitId: string, 
     year: string, 
     period: UnitPeriod,
-    newEvaluation: Omit<ManualEvaluation, 'id'>
+    newEvaluation: Omit<ManualEvaluation, 'id' | 'createdAt'>
 ) => {
     const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
     const q = query(recordsCol,
@@ -770,6 +768,7 @@ export const addManualEvaluationToRecord = async (
         const finalEvaluation: ManualEvaluation = { 
             ...newEvaluation, 
             id: evaluationId,
+            createdAt: Timestamp.now()
         };
 
         evaluations[newEvaluation.indicatorId].push(finalEvaluation);
