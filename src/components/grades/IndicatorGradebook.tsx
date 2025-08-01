@@ -126,7 +126,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 return (
                                     <React.Fragment key={`subhead-week-${week}`}>
                                         {weekEvals.map(ev => (
-                                             <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[120px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
+                                             <TableHead key={ev.id} className={`text-center text-xs font-normal border-l min-w-[100px] ${ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : ''}`}>
                                                 <div className="flex items-center justify-center gap-1">
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
