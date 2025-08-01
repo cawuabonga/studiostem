@@ -9,13 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, ArrowLeft } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Printer } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
 import { Timestamp } from 'firebase/firestore';
 import { Separator } from '../ui/separator';
 import { GradebookSummaryTable } from './GradebookSummaryTable';
+import '@/app/dashboard/gestion-academica/print-grades.css';
+
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -57,14 +59,14 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 let existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
                 
                 if (existingRecord) {
-                    // Ensure nested Timestamps are converted to something serializable
                     for (const indId in existingRecord.evaluations) {
                         if (existingRecord.evaluations[indId]) {
                             existingRecord.evaluations[indId] = existingRecord.evaluations[indId].map(ev => {
+                                // Ensure createdAt is a serializable format (ISO string)
                                 const createdAtTimestamp = ev.createdAt as any;
                                 const createdAtISO = typeof createdAtTimestamp?.toDate === 'function' 
                                     ? createdAtTimestamp.toDate().toISOString() 
-                                    : createdAtTimestamp;
+                                    : createdAtTimestamp; // Assume it's already a string if no toDate
 
                                 return {
                                     ...ev,
@@ -191,7 +193,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const updatedRecords: AcademicRecord[] = [];
             for (const studentId in records) {
                 if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
-                     // Deep copy before modifying to avoid issues with Immer proxies
                     const cleanRecord = JSON.parse(JSON.stringify(records[studentId]));
                     updatedRecords.push(cleanRecord);
                 }
@@ -247,10 +248,16 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                 Seleccione un indicador de logro para comenzar a calificar.
                             </CardDescription>
                         </div>
-                        <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Guardar Cambios
-                        </Button>
+                        <div className="flex gap-2">
+                             <Button variant="outline" onClick={() => window.print()} className="no-print">
+                                <Printer className="mr-2 h-4 w-4" />
+                                Imprimir Resumen
+                            </Button>
+                            <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Guardar Cambios
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -287,8 +294,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     const DetailView = () => (
         selectedIndicator && (
-             <Card>
-                <CardHeader>
+             <Card className="printable-area">
+                <CardHeader className="no-print">
                     <div className="flex justify-between items-start">
                         <div>
                              <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
@@ -300,10 +307,16 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                 Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
                             </CardDescription>
                         </div>
-                        <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Guardar Cambios
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => window.print()}>
+                                <Printer className="mr-2 h-4 w-4" />
+                                Imprimir Indicador
+                            </Button>
+                            <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                Guardar Cambios
+                            </Button>
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -324,7 +337,3 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
-
-    
-
-    

@@ -1,0 +1,48 @@
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 40px;
+    top: 40px;
+    right: 40px;
+    width: auto;
+    font-size: 10px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Ensure table fits the page */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 6px;
+    text-align: left;
+    word-wrap: break-word;
+  }
+  th {
+    background-color: #f2f2f2;
+    color: #333;
+  }
+  /* Hide scrollbars in print */
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+  .overflow-x-auto {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+    overflow-x: initial;
+  }
+  h1, h2, h3, h4, p {
+    color: #000;
+  }
+}

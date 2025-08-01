@@ -143,7 +143,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                          <AlertDialog>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 no-print">
                                                                         <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -173,7 +173,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                 </div>
                                             </TableHead>
                                         ))}
-                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
+                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1 no-print">
                                             <Button variant="ghost" size="sm" className="w-full h-full p-1" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
                                             </Button>
@@ -221,7 +221,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                         </TableCell>
                                                     )
                                                 })}
-                                                <TableCell className="text-center border-l"></TableCell>
+                                                <TableCell className="text-center border-l no-print"></TableCell>
                                             </React.Fragment>
                                         )
                                     })}
