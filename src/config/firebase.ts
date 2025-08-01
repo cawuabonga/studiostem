@@ -775,3 +775,50 @@ export const addManualEvaluationToRecord = async (
 
     await batch.commit();
 }
+
+
+export const deleteManualEvaluationFromRecord = async (
+    instituteId: string,
+    unitId: string, 
+    year: string, 
+    period: UnitPeriod,
+    indicatorId: string,
+    evaluationId: string
+) => {
+    const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+    const q = query(recordsCol,
+        where("unitId", "==", unitId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) {
+        console.warn("No academic records found for this unit/period to delete manual evaluation from.");
+        return;
+    }
+
+    const batch = writeBatch(db);
+    snapshot.docs.forEach(docSnap => {
+        const record = docSnap.data() as AcademicRecord;
+        if (record.evaluations && record.evaluations[indicatorId]) {
+            // Filter out the evaluation to delete
+            const updatedEvalsForIndicator = record.evaluations[indicatorId].filter(e => e.id !== evaluationId);
+            const updatedEvaluations = {
+                ...record.evaluations,
+                [indicatorId]: updatedEvalsForIndicator
+            };
+
+            // Also remove associated grades
+            const updatedGrades = record.grades || {};
+            if (updatedGrades[indicatorId]) {
+                const updatedGradesForIndicator = updatedGrades[indicatorId].filter(g => g.refId !== evaluationId);
+                 updatedGrades[indicatorId] = updatedGradesForIndicator;
+            }
+            
+            batch.update(docSnap.ref, { evaluations: updatedEvaluations, grades: updatedGrades });
+        }
+    });
+
+    await batch.commit();
+}

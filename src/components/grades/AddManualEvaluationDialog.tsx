@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,36 +20,31 @@ import {
 } from '@/components/ui/dialog';
 import type { AchievementIndicator, Unit } from '@/types';
 
-const addEvalSchema = (startWeek: number, endWeek: number) => z.object({
+const addEvalSchema = z.object({
   label: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  weekNumber: z.coerce.number()
-    .min(startWeek, `La semana debe estar entre ${startWeek} y ${endWeek}.`)
-    .max(endWeek, `La semana debe estar entre ${startWeek} y ${endWeek}.`),
 });
 
 interface AddManualEvaluationDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (label: string, weekNumber: number) => void;
+    onSubmit: (label: string) => void;
     indicator: AchievementIndicator;
     unit: Unit;
+    weekNumber: number;
 }
 
-export function AddManualEvaluationDialog({ isOpen, onClose, onSubmit, indicator, unit }: AddManualEvaluationDialogProps) {
-
-    const formSchema = addEvalSchema(indicator.startWeek, indicator.endWeek);
-    type FormValues = z.infer<typeof formSchema>;
+export function AddManualEvaluationDialog({ isOpen, onClose, onSubmit, indicator, unit, weekNumber }: AddManualEvaluationDialogProps) {
+    type FormValues = z.infer<typeof addEvalSchema>;
 
     const form = useForm<FormValues>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(addEvalSchema),
         defaultValues: {
             label: '',
-            weekNumber: indicator.startWeek,
         },
     });
 
     const handleFormSubmit = (data: FormValues) => {
-        onSubmit(data.label, data.weekNumber);
+        onSubmit(data.label);
         form.reset();
     };
 
@@ -58,8 +54,7 @@ export function AddManualEvaluationDialog({ isOpen, onClose, onSubmit, indicator
                 <DialogHeader>
                     <DialogTitle>Añadir Evaluación Manual</DialogTitle>
                     <DialogDescription>
-                        Crea una nueva columna de calificación para el indicador "{indicator.name}".
-                        Esta evaluación debe estar dentro del rango de semanas del indicador ({indicator.startWeek} - {indicator.endWeek}).
+                        Crea una nueva columna de calificación para la <span className="font-bold">Semana {weekNumber}</span> del indicador "{indicator.name}".
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -77,24 +72,6 @@ export function AddManualEvaluationDialog({ isOpen, onClose, onSubmit, indicator
                                 </FormItem>
                             )}
                         />
-                         <FormField
-                            control={form.control}
-                            name="weekNumber"
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Semana de la Evaluación</FormLabel>
-                                <FormControl>
-                                    <Input 
-                                        type="number" 
-                                        min={indicator.startWeek}
-                                        max={indicator.endWeek}
-                                        {...field} 
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                        />
                         <DialogFooter>
                             <DialogClose asChild>
                                 <Button type="button" variant="ghost">Cancelar</Button>
@@ -107,4 +84,3 @@ export function AddManualEvaluationDialog({ isOpen, onClose, onSubmit, indicator
         </Dialog>
     );
 }
-
