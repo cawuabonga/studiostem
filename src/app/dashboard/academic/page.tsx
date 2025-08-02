@@ -2,13 +2,14 @@
 "use client";
 
 import WelcomeMessage from "@/components/dashboard/WelcomeMessage";
+import { CareerProgressTimeline } from "@/components/student/CareerProgressTimeline";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 
 
 // This page now serves as the primary welcome/landing page for students and teachers.
 export default function DashboardAcademicPage() {
-  const { loading } = useAuth();
+  const { user, loading } = useAuth();
   
   if (loading) {
       return (
@@ -25,5 +26,12 @@ export default function DashboardAcademicPage() {
 
   // The WelcomeMessage component will handle the display logic for all user types
   // that land here, including showing the link profile button for new, unlinked students.
-  return <WelcomeMessage />;
+  return (
+    <div className="space-y-8">
+        <WelcomeMessage />
+        {user?.role === 'Student' && user.documentId && (
+            <CareerProgressTimeline />
+        )}
+    </div>
+  );
 }

@@ -684,6 +684,14 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
     return enrolledUnits;
 };
 
+export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const q = query(matriculationsCol, where("studentId", "==", studentId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Matriculation));
+};
+
+
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<StudentProfile[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
     const q = query(matriculationsCol, 
