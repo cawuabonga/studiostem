@@ -110,8 +110,8 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
     
     return (
         <>
-            <div className="rounded-md border overflow-x-auto">
-                <Table className="min-w-full">
+            <div className="relative w-full overflow-auto rounded-md border">
+                <Table>
                     <TableHeader>
                         <TableRow>
                             <TableHead rowSpan={2} className="w-[40px] text-center sticky left-0 bg-background z-10">N°</TableHead>
@@ -144,7 +144,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                          <AlertDialog>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 no-print">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 screen-only">
                                                                         <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -175,7 +175,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                             </TableHead>
                                         )) : <TableHead className="text-center text-xs font-normal border-l min-w-[100px]"></TableHead>}
                                          <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
-                                            <Button variant="ghost" size="sm" className="w-full h-full p-1 no-print" onClick={() => handleOpenDialog(week)}>
+                                            <Button variant="ghost" size="sm" className="w-full h-full p-1 screen-only" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
                                             </Button>
                                         </TableHead>

@@ -23,14 +23,14 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 export function GradebookSummaryTable({ students, indicators, records }: GradebookSummaryTableProps) {
     return (
         <Card>
-            <CardHeader className="no-print">
+            <CardHeader className="screen-only">
                 <CardTitle>Resumen de Calificaciones Finales</CardTitle>
                 <CardDescription>
                     Promedio final por cada indicador y promedio general de la unidad didáctica.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+                <div className="relative w-full overflow-auto rounded-md border">
                     <Table>
                         <TableHeader>
                             <TableRow>
