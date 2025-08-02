@@ -269,21 +269,25 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         </div>
                     </CardHeader>
                     <CardContent>
-                    {indicators.length > 0 ? indicators.map(indicator => (
-                        <Card 
-                                key={indicator.id} 
-                                className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col mb-4"
-                                onClick={() => setSelectedIndicator(indicator)}
-                            >
-                            <CardHeader className="flex-grow">
-                                <CardTitle className="text-lg">{indicator.name}</CardTitle>
-                                <CardDescription>{indicator.description}</CardDescription>
-                            </CardHeader>
-                            <CardFooter>
-                                <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
-                            </CardFooter>
-                        </Card>
-                    )) : (
+                    {indicators.length > 0 ? (
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {indicators.map(indicator => (
+                                <Card 
+                                    key={indicator.id} 
+                                    className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col"
+                                    onClick={() => setSelectedIndicator(indicator)}
+                                >
+                                    <CardHeader className="flex-grow">
+                                        <CardTitle className="text-lg">{indicator.name}</CardTitle>
+                                        <CardDescription>{indicator.description}</CardDescription>
+                                    </CardHeader>
+                                    <CardFooter>
+                                        <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                    ) : (
                         <p className="col-span-full text-center text-muted-foreground py-8">
                             No se han definido indicadores de logro para esta unidad. Por favor, añádalos en la pestaña 'Indicadores de Logro'.
                         </p>
@@ -397,5 +401,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
+
+    
 
     
