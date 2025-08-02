@@ -9,13 +9,15 @@ import { useToast } from '@/hooks/use-toast';
 import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, ArrowLeft, Printer } from 'lucide-react';
+import { Save, Loader2, ArrowLeft, Printer, ZoomIn, ZoomOut } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
 import { GradebookSummaryTable } from './GradebookSummaryTable';
 import '@/app/dashboard/gestion-academica/print-grades.css';
 import { PrintLayout } from '../printing/PrintLayout';
+import { Slider } from "@/components/ui/slider"
+import { Label } from "@/components/ui/label"
 
 
 interface GradebookManagerProps {
@@ -36,6 +38,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
+    const [zoom, setZoom] = useState(1);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -289,11 +292,18 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
              {students.length > 0 && indicators.length > 0 && (
                 <>
                     <div className="screen-only">
-                        <GradebookSummaryTable 
-                            students={students}
-                            indicators={indicators}
-                            records={records}
-                        />
+                         <div style={{ height: `${(students.length * 50 + 200) * zoom}px`, transition: 'height 0.2s ease-out' }}>
+                            <div
+                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                                className="transition-transform"
+                            >
+                                <GradebookSummaryTable 
+                                    students={students}
+                                    indicators={indicators}
+                                    records={records}
+                                />
+                            </div>
+                        </div>
                     </div>
                     <div className="print-only">
                         <PrintLayout
@@ -320,7 +330,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
              <div>
                 <Card className="screen-only">
                     <CardHeader>
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start flex-wrap gap-4">
                             <div>
                                 <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
                                     <ArrowLeft className="mr-2 h-4 w-4" />
@@ -331,29 +341,48 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                     Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
                                 </CardDescription>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 w-48">
+                                    <ZoomOut className="h-5 w-5" />
+                                    <Slider
+                                        defaultValue={[1]}
+                                        value={[zoom]}
+                                        min={0.5}
+                                        max={1}
+                                        step={0.1}
+                                        onValueChange={(value) => setZoom(value[0])}
+                                    />
+                                    <ZoomIn className="h-5 w-5" />
+                                </div>
                                 <Button variant="outline" onClick={() => window.print()}>
                                     <Printer className="mr-2 h-4 w-4" />
-                                    Imprimir Indicador
+                                    Imprimir
                                 </Button>
                                 <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
                                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    Guardar Cambios
+                                    Guardar
                                 </Button>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <IndicatorGradebook 
-                            students={students}
-                            indicator={selectedIndicator}
-                            tasks={tasks}
-                            records={records}
-                            unit={unit}
-                            onGradeChange={handleGradeChange}
-                            onManualEvaluationAdded={handleManualEvaluationAdded}
-                            onManualEvaluationDeleted={handleManualEvaluationDeleted}
-                        />
+                         <div style={{ height: `${(students.length * 50 + 200) * zoom}px`, transition: 'height 0.2s ease-out' }}>
+                            <div
+                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                                className="transition-transform"
+                            >
+                                <IndicatorGradebook 
+                                    students={students}
+                                    indicator={selectedIndicator}
+                                    tasks={tasks}
+                                    records={records}
+                                    unit={unit}
+                                    onGradeChange={handleGradeChange}
+                                    onManualEvaluationAdded={handleManualEvaluationAdded}
+                                    onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                                />
+                             </div>
+                        </div>
                     </CardContent>
                 </Card>
                 <div className="print-only">
