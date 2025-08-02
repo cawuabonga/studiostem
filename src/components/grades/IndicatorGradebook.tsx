@@ -124,7 +124,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                      <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">Semana {week}</TableHead>
                                 )
                              })}
-                            <TableHead rowSpan={2} className="text-center min-w-[100px] bg-muted/50">Promedio Indicador</TableHead>
+                            <TableHead rowSpan={2} className="text-center min-w-[100px] bg-muted/50 sticky right-0 z-10">Promedio Indicador</TableHead>
                         </TableRow>
                         <TableRow>
                             {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
@@ -228,7 +228,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                             </React.Fragment>
                                         )
                                     })}
-                                    <TableCell className="text-center font-bold bg-muted/50">
+                                    <TableCell className="text-center font-bold bg-muted/50 sticky right-0 z-10">
                                         {indicatorAverage ?? '-'}
                                     </TableCell>
                                 </TableRow>

@@ -40,7 +40,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                 {indicators.map(indicator => (
                                     <TableHead key={indicator.id} className="text-center min-w-[150px]">{indicator.name}</TableHead>
                                 ))}
-                                <TableHead className="text-center font-bold bg-muted/50 min-w-[150px]">Promedio Final</TableHead>
+                                <TableHead className="text-center font-bold bg-muted/50 min-w-[150px] sticky right-0 z-10">Promedio Final</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -57,12 +57,12 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                         <TableCell className="text-center sticky left-0 bg-background z-10">{index + 1}</TableCell>
                                         <TableCell className="sticky left-[40px] bg-background z-10">{student.documentId}</TableCell>
                                         <TableCell className="font-medium sticky left-[140px] bg-background z-10">{student.fullName}</TableCell>
-                                        {indicatorAverages.map((avg, index) => (
-                                            <TableCell key={indicators[index].id} className={cn("text-center font-semibold", (avg ?? 0) < 11 ? 'text-destructive' : '')}>
+                                        {indicatorAverages.map((avg, i) => (
+                                            <TableCell key={indicators[i].id} className={cn("text-center font-semibold", (avg ?? 0) < 11 ? 'text-destructive' : '')}>
                                                 {avg ?? ''}
                                             </TableCell>
                                         ))}
-                                        <TableCell className={cn("text-center font-bold text-lg bg-muted/50", (finalAverage ?? 0) < 11 ? 'text-destructive' : 'text-primary')}>
+                                        <TableCell className={cn("text-center font-bold text-lg bg-muted/50 sticky right-0 z-10", (finalAverage ?? 0) < 11 ? 'text-destructive' : 'text-primary')}>
                                             {finalAverage ?? ''}
                                         </TableCell>
                                     </TableRow>
