@@ -74,8 +74,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                  const finalEval: EvaluationItem = { 
                     ...manualEval, 
                     evalType: 'manual',
-                    createdAt: (manualEval.createdAt as any)?.toDate ? (manualEval.createdAt as any).toDate() : new Date(manualEval.createdAt as any)
-                };
+                 };
                 
                 grouped[manualEval.weekNumber].push(finalEval);
             });
