@@ -72,7 +72,12 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
             firstRecord.evaluations[indicator.id].forEach(manualEval => {
                 if (!grouped[manualEval.weekNumber]) grouped[manualEval.weekNumber] = [];
                 const evalDate = (manualEval.createdAt as any)?.toDate ? (manualEval.createdAt as any).toDate() : new Date(manualEval.createdAt as any);
-                grouped[manualEval.weekNumber].push({ ...manualEval, createdAt: evalDate, evalType: 'manual' });
+                const finalEval = { ...manualEval, createdAt: evalDate, evalType: 'manual' as const };
+                 if ((manualEval.createdAt as any)?.toDate) {
+                     finalEval.createdAt = (manualEval.createdAt as any).toDate().toISOString();
+                 }
+                
+                grouped[manualEval.weekNumber].push(finalEval);
             });
         }
         
@@ -112,7 +117,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                         <TableRow>
                             <TableHead rowSpan={2} className="w-[40px] text-center">N°</TableHead>
                             <TableHead rowSpan={2} className="w-[100px]">DNI</TableHead>
-                            <TableHead rowSpan={2} className="sticky left-0 bg-background z-10 min-w-[250px]">Apellidos y Nombres</TableHead>
+                            <TableHead rowSpan={2} className="min-w-[250px]">Apellidos y Nombres</TableHead>
                              {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                 const weekEvals = evaluationsByWeek[week] || [];
                                 const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
@@ -140,7 +145,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                          <AlertDialog>
                                                             <DropdownMenu>
                                                                 <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 no-print">
                                                                         <MoreVertical className="h-4 w-4" />
                                                                     </Button>
                                                                 </DropdownMenuTrigger>
@@ -171,7 +176,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                             </TableHead>
                                         )) : <TableHead className="text-center text-xs font-normal border-l min-w-[100px]"></TableHead>}
                                          <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
-                                            <Button variant="ghost" size="sm" className="w-full h-full p-1" onClick={() => handleOpenDialog(week)}>
+                                            <Button variant="ghost" size="sm" className="w-full h-full p-1 no-print" onClick={() => handleOpenDialog(week)}>
                                                 <PlusCircle className="h-4 w-4" />
                                             </Button>
                                         </TableHead>
@@ -190,7 +195,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                 <TableRow key={student.documentId}>
                                     <TableCell className="text-center">{index + 1}</TableCell>
                                     <TableCell>{student.documentId}</TableCell>
-                                    <TableCell className="font-medium sticky left-0 bg-background z-10">{student.fullName}</TableCell>
+                                    <TableCell className="font-medium">{student.fullName}</TableCell>
                                     {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                         const weekEvals = evaluationsByWeek[week] || [];
                                         return (
@@ -244,5 +249,3 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
-
-    

@@ -36,7 +36,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                             <TableRow>
                                 <TableHead className="w-[40px]">N°</TableHead>
                                 <TableHead className="w-[100px]">DNI</TableHead>
-                                <TableHead className="sticky left-0 bg-background z-10 min-w-[250px]">Apellidos y Nombres</TableHead>
+                                <TableHead className="min-w-[250px]">Apellidos y Nombres</TableHead>
                                 {indicators.map(indicator => (
                                     <TableHead key={indicator.id} className="text-center min-w-[150px]">{indicator.name}</TableHead>
                                 ))}
@@ -56,7 +56,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                     <TableRow key={student.documentId}>
                                         <TableCell className="text-center">{index + 1}</TableCell>
                                         <TableCell>{student.documentId}</TableCell>
-                                        <TableCell className="font-medium sticky left-0 bg-background z-10">{student.fullName}</TableCell>
+                                        <TableCell className="font-medium">{student.fullName}</TableCell>
                                         {indicatorAverages.map((avg, index) => (
                                             <TableCell key={indicators[index].id} className={cn("text-center font-semibold", (avg ?? 0) < 11 ? 'text-destructive' : '')}>
                                                 {avg ?? ''}
