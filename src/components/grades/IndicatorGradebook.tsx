@@ -71,11 +71,11 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         if (firstRecord?.evaluations?.[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(manualEval => {
                 if (!grouped[manualEval.weekNumber]) grouped[manualEval.weekNumber] = [];
-                const evalDate = (manualEval.createdAt as any)?.toDate ? (manualEval.createdAt as any).toDate() : new Date(manualEval.createdAt as any);
-                const finalEval = { ...manualEval, createdAt: evalDate, evalType: 'manual' as const };
-                 if ((manualEval.createdAt as any)?.toDate) {
-                     finalEval.createdAt = (manualEval.createdAt as any).toDate().toISOString();
-                 }
+                 const finalEval: EvaluationItem = { 
+                    ...manualEval, 
+                    evalType: 'manual',
+                    createdAt: (manualEval.createdAt as any)?.toDate ? (manualEval.createdAt as any).toDate() : new Date(manualEval.createdAt as any)
+                };
                 
                 grouped[manualEval.weekNumber].push(finalEval);
             });
@@ -115,9 +115,9 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                 <Table className="min-w-full">
                     <TableHeader>
                         <TableRow>
-                            <TableHead rowSpan={2} className="w-[40px] text-center">N°</TableHead>
-                            <TableHead rowSpan={2} className="w-[100px]">DNI</TableHead>
-                            <TableHead rowSpan={2} className="min-w-[250px]">Apellidos y Nombres</TableHead>
+                            <TableHead rowSpan={2} className="w-[40px] text-center sticky left-0 bg-background z-10">N°</TableHead>
+                            <TableHead rowSpan={2} className="w-[100px] sticky left-[40px] bg-background z-10">DNI</TableHead>
+                            <TableHead rowSpan={2} className="min-w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
                              {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                 const weekEvals = evaluationsByWeek[week] || [];
                                 const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
@@ -193,9 +193,9 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
 
                             return (
                                 <TableRow key={student.documentId}>
-                                    <TableCell className="text-center">{index + 1}</TableCell>
-                                    <TableCell>{student.documentId}</TableCell>
-                                    <TableCell className="font-medium">{student.fullName}</TableCell>
+                                    <TableCell className="text-center sticky left-0 bg-background z-10">{index + 1}</TableCell>
+                                    <TableCell className="sticky left-[40px] bg-background z-10">{student.documentId}</TableCell>
+                                    <TableCell className="font-medium sticky left-[140px] bg-background z-10">{student.fullName}</TableCell>
                                     {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                         const weekEvals = evaluationsByWeek[week] || [];
                                         return (

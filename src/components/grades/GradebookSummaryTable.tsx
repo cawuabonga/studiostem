@@ -34,9 +34,9 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[40px]">N°</TableHead>
-                                <TableHead className="w-[100px]">DNI</TableHead>
-                                <TableHead className="min-w-[250px]">Apellidos y Nombres</TableHead>
+                                <TableHead className="w-[40px] sticky left-0 bg-background z-10">N°</TableHead>
+                                <TableHead className="w-[100px] sticky left-[40px] bg-background z-10">DNI</TableHead>
+                                <TableHead className="min-w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
                                 {indicators.map(indicator => (
                                     <TableHead key={indicator.id} className="text-center min-w-[150px]">{indicator.name}</TableHead>
                                 ))}
@@ -54,9 +54,9 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
 
                                 return (
                                     <TableRow key={student.documentId}>
-                                        <TableCell className="text-center">{index + 1}</TableCell>
-                                        <TableCell>{student.documentId}</TableCell>
-                                        <TableCell className="font-medium">{student.fullName}</TableCell>
+                                        <TableCell className="text-center sticky left-0 bg-background z-10">{index + 1}</TableCell>
+                                        <TableCell className="sticky left-[40px] bg-background z-10">{student.documentId}</TableCell>
+                                        <TableCell className="font-medium sticky left-[140px] bg-background z-10">{student.fullName}</TableCell>
                                         {indicatorAverages.map((avg, index) => (
                                             <TableCell key={indicators[index].id} className={cn("text-center font-semibold", (avg ?? 0) < 11 ? 'text-destructive' : '')}>
                                                 {avg ?? ''}
