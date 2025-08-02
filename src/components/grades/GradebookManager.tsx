@@ -38,7 +38,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
-    const [zoom, setZoom] = useState(1);
+    const [zoom, setZoom] = useState(0.75);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -246,81 +246,67 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     const MainView = () => (
          <div className="space-y-6">
-            <Card className="screen-only">
-                <CardHeader>
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle>Registro de Calificaciones</CardTitle>
-                            <CardDescription>
-                                Seleccione un indicador de logro para comenzar a calificar.
-                            </CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                             <Button variant="outline" onClick={() => window.print()}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Imprimir Resumen
-                            </Button>
-                            <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Guardar Cambios
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                {indicators.length > 0 ? indicators.map(indicator => (
-                    <Card 
-                            key={indicator.id} 
-                            className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col mb-4"
-                            onClick={() => setSelectedIndicator(indicator)}
-                        >
-                        <CardHeader className="flex-grow">
-                            <CardTitle className="text-lg">{indicator.name}</CardTitle>
-                            <CardDescription>{indicator.description}</CardDescription>
-                        </CardHeader>
-                        <CardFooter>
-                            <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
-                        </CardFooter>
-                    </Card>
-                )) : (
-                    <p className="col-span-full text-center text-muted-foreground py-8">
-                        No se han definido indicadores de logro para esta unidad. Por favor, añádalos en la pestaña 'Indicadores de Logro'.
-                    </p>
-                )}
-                </CardContent>
-            </Card>
-             {students.length > 0 && indicators.length > 0 && (
-                <>
-                    <div className="screen-only">
-                         <div style={{ height: `${(students.length * 50 + 200) * zoom}px`, transition: 'height 0.2s ease-out' }}>
-                            <div
-                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-                                className="transition-transform"
-                            >
-                                <GradebookSummaryTable 
-                                    students={students}
-                                    indicators={indicators}
-                                    records={records}
-                                />
+            <div className="screen-only">
+                <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Registro de Calificaciones</CardTitle>
+                                <CardDescription>
+                                    Seleccione un indicador de logro para comenzar a calificar.
+                                </CardDescription>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => window.print()}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Imprimir Resumen
+                                </Button>
+                                <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Guardar Cambios
+                                </Button>
                             </div>
                         </div>
-                    </div>
-                    <div className="print-only">
-                        <PrintLayout
-                            institute={institute}
-                            program={program}
-                            unit={unit}
-                            teacher={teacher}
-                            title={`CONSOLIDADO DE REGISTRO DE EVALUACIÓN - ${unit.period} ${new Date().getFullYear()}`}
+                    </CardHeader>
+                    <CardContent>
+                    {indicators.length > 0 ? indicators.map(indicator => (
+                        <Card 
+                                key={indicator.id} 
+                                className="hover:shadow-md hover:border-primary cursor-pointer transition-all flex flex-col mb-4"
+                                onClick={() => setSelectedIndicator(indicator)}
                             >
-                            <GradebookSummaryTable 
-                                students={students}
-                                indicators={indicators}
-                                records={records}
-                            />
-                        </PrintLayout>
-                    </div>
-                </>
+                            <CardHeader className="flex-grow">
+                                <CardTitle className="text-lg">{indicator.name}</CardTitle>
+                                <CardDescription>{indicator.description}</CardDescription>
+                            </CardHeader>
+                            <CardFooter>
+                                <Badge variant="secondary">Semanas: {indicator.startWeek} - {indicator.endWeek}</Badge>
+                            </CardFooter>
+                        </Card>
+                    )) : (
+                        <p className="col-span-full text-center text-muted-foreground py-8">
+                            No se han definido indicadores de logro para esta unidad. Por favor, añádalos en la pestaña 'Indicadores de Logro'.
+                        </p>
+                    )}
+                    </CardContent>
+                </Card>
+            </div>
+             {students.length > 0 && indicators.length > 0 && (
+                 <div className="print-only">
+                    <PrintLayout
+                        institute={institute}
+                        program={program}
+                        unit={unit}
+                        teacher={teacher}
+                        title={`CONSOLIDADO DE REGISTRO DE EVALUACIÓN - ${unit.period} ${new Date().getFullYear()}`}
+                        >
+                        <GradebookSummaryTable 
+                            students={students}
+                            indicators={indicators}
+                            records={records}
+                        />
+                    </PrintLayout>
+                </div>
             )}
          </div>
     );
@@ -345,11 +331,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                 <div className="flex items-center gap-2 w-48">
                                     <ZoomOut className="h-5 w-5" />
                                     <Slider
-                                        defaultValue={[1]}
+                                        defaultValue={[0.75]}
                                         value={[zoom]}
                                         min={0.5}
                                         max={1}
-                                        step={0.1}
+                                        step={0.05}
                                         onValueChange={(value) => setZoom(value[0])}
                                     />
                                     <ZoomIn className="h-5 w-5" />
@@ -411,3 +397,5 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
+
+    
