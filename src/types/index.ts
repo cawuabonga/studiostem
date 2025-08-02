@@ -218,3 +218,19 @@ export interface AcademicRecord {
   attendancePercentage: number;
   status: 'cursando' | 'aprobado' | 'desaprobado' | 'inhabilitado' | 'retirado';
 }
+
+// --- ATTENDANCE TYPES ---
+export type AttendanceStatus = 'P' | 'T' | 'F' | 'J' | 'U'; // Presente, Tarde, Falta, Justificada, Unmarked
+
+export interface AttendanceRecord {
+    id: string; // Composite key, e.g., `${unitId}_${year}_${period}`
+    unitId: string;
+    year: string;
+    period: UnitPeriod;
+    // Map of studentId -> { week_N: [status, status, status, status, status] }
+    records: {
+        [studentId: string]: {
+            [week: string]: AttendanceStatus[];
+        };
+    };
+}

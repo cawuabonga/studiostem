@@ -11,8 +11,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotebookText, CalendarDays, Percent } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
+import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage() {
     const { instituteId } = useAuth();
@@ -80,7 +81,7 @@ export default function UnitManagementPage() {
             </Card>
 
             <Tabs defaultValue="indicators" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="indicators">
                         <NotebookText className="mr-2 h-4 w-4" />
                         Indicadores de Logro
@@ -88,6 +89,10 @@ export default function UnitManagementPage() {
                     <TabsTrigger value="planning">
                         <CalendarDays className="mr-2 h-4 w-4" />
                         Planificación Semanal
+                    </TabsTrigger>
+                    <TabsTrigger value="attendance">
+                        <CalendarCheck className="mr-2 h-4 w-4" />
+                        Registro de Asistencias
                     </TabsTrigger>
                     <TabsTrigger value="grades">
                         <Percent className="mr-2 h-4 w-4" />
@@ -99,6 +104,9 @@ export default function UnitManagementPage() {
                 </TabsContent>
                 <TabsContent value="planning">
                     <WeeklyPlanner unit={unit} isStudentView={false}/>
+                </TabsContent>
+                <TabsContent value="attendance">
+                    <AttendanceManager unit={unit} />
                 </TabsContent>
                 <TabsContent value="grades">
                     <GradebookManager unit={unit} />
