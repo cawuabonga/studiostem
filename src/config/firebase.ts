@@ -717,6 +717,16 @@ export const getAcademicRecordsForUnit = async (instituteId: string, unitId: str
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademicRecord));
 };
 
+export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
+    const recordId = `${unitId}_${studentId}_${year}_${period}`;
+    const recordRef = doc(getSubCollectionRef(instituteId, 'academicRecords'), recordId);
+    const docSnap = await getDoc(recordRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as AcademicRecord;
+    }
+    return null;
+}
+
 
 export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
     const batch = writeBatch(db);

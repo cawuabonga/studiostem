@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -42,6 +42,7 @@ export function AppSidebarContents() {
 
   const studentItems = [
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, roles: ['Student'] },
+    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, roles: ['Student'] },
   ];
 
   const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems, ...studentItems].filter(item => user?.role && item.roles.includes(user.role));
