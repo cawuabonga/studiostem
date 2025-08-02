@@ -24,6 +24,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -110,7 +111,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
     return (
         <>
             <div className="relative w-full overflow-auto rounded-md border">
-                <Table>
+                <Table className="min-w-full">
                     <TableHeader>
                         <TableRow>
                             <TableHead rowSpan={2} className="w-[40px] text-center sticky left-0 bg-background z-10">N°</TableHead>
@@ -247,5 +248,3 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
-
-    
