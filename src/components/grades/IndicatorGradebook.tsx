@@ -24,7 +24,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -228,7 +227,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                             </React.Fragment>
                                         )
                                     })}
-                                    <TableCell className="text-center font-bold bg-muted/50 sticky right-0 z-10">
+                                    <TableCell className={cn("text-center font-bold bg-muted/50 sticky right-0 z-10", (indicatorAverage ?? 20) < 11 ? 'text-destructive' : '')}>
                                         {indicatorAverage ?? '-'}
                                     </TableCell>
                                 </TableRow>
@@ -248,3 +247,5 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
+
+    

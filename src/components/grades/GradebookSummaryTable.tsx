@@ -75,3 +75,5 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
         </Card>
     );
 }
+
+    
