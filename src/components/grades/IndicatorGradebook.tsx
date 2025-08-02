@@ -116,7 +116,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                         <TableRow>
                             <TableHead rowSpan={2} className="w-[40px] text-center sticky left-0 bg-background z-10">N°</TableHead>
                             <TableHead rowSpan={2} className="w-[100px] sticky left-[40px] bg-background z-10">DNI</TableHead>
-                            <TableHead rowSpan={2} className="min-w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
+                            <TableHead rowSpan={2} className="w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
                              {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
                                 const weekEvals = evaluationsByWeek[week] || [];
                                 const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;

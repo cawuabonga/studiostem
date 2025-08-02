@@ -36,7 +36,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                             <TableRow>
                                 <TableHead className="w-[40px] sticky left-0 bg-background z-10">N°</TableHead>
                                 <TableHead className="w-[100px] sticky left-[40px] bg-background z-10">DNI</TableHead>
-                                <TableHead className="min-w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
+                                <TableHead className="w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
                                 {indicators.map(indicator => (
                                     <TableHead key={indicator.id} className="text-center min-w-[150px]">{indicator.name}</TableHead>
                                 ))}

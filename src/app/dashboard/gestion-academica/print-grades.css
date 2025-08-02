@@ -8,70 +8,93 @@
   body * {
     visibility: hidden;
   }
+  
   .printable-area, .printable-area * {
     visibility: visible;
   }
+  
   .printable-area {
     position: absolute;
     left: 0;
     top: 0;
-    width: 133.33%; /* 100 / 0.75 */
+    width: 100%;
     font-size: 10px; /* Base font size for printing */
-    transform: scale(0.75);
     transform-origin: top left;
   }
-  .no-print {
-    display: none !important;
+
+  .print-only {
+    display: block !important;
+    visibility: visible !important;
   }
+  
+  .screen-only, .no-print {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
   /* Ensure table fits the page */
   table {
     width: 100%;
     border-collapse: collapse;
     table-layout: auto;
   }
+  
   th, td {
     border: 1px solid #aaa; /* Lighter border for print */
     padding: 4px 6px;
     text-align: left;
     word-wrap: break-word;
   }
+  
   th {
     background-color: #e9ecef; /* Light gray background for headers */
     color: #212529; /* Dark text for headers */
   }
+  
   /* Hide scrollbars in print */
   .overflow-x-auto::-webkit-scrollbar {
     display: none;
   }
+  
   .overflow-x-auto {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
     overflow-x: initial;
   }
+  
   h1, h2, h3, h4, p {
     color: #000;
   }
+  
   .print-header {
     margin-bottom: 1rem;
   }
+  
   .print-title {
     text-align: center;
     font-size: 1.2rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
   }
-   .print-info-table {
+  
+  .print-info-table {
     width: 100%;
     border: 1px solid #aaa;
     border-collapse: collapse;
     margin-bottom: 1rem;
   }
+  
   .print-info-table td {
     border: 1px solid #aaa;
     padding: 4px 8px;
   }
+  
   .print-info-table .label {
     font-weight: bold;
     width: 15%;
   }
+}
+
+.print-only {
+  display: none;
 }

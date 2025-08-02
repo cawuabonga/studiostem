@@ -243,8 +243,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     const MainView = () => (
          <div className="space-y-6">
-            <Card>
-                <CardHeader className="no-print">
+            <Card className="screen-only">
+                <CardHeader>
                     <div className="flex justify-between items-center">
                         <div>
                             <CardTitle>Registro de Calificaciones</CardTitle>
@@ -253,7 +253,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             </CardDescription>
                         </div>
                         <div className="flex gap-2">
-                             <Button variant="outline" onClick={() => window.print()} className="no-print">
+                             <Button variant="outline" onClick={() => window.print()}>
                                 <Printer className="mr-2 h-4 w-4" />
                                 Imprimir Resumen
                             </Button>
@@ -264,7 +264,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="no-print">
+                <CardContent>
                 {indicators.length > 0 ? indicators.map(indicator => (
                     <Card 
                             key={indicator.id} 
@@ -287,52 +287,77 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 </CardContent>
             </Card>
              {students.length > 0 && indicators.length > 0 && (
-                <PrintLayout
-                    institute={institute}
-                    program={program}
-                    unit={unit}
-                    teacher={teacher}
-                    title={`CONSOLIDADO DE REGISTRO DE EVALUACIÓN - ${unit.period} ${new Date().getFullYear()}`}
-                    >
-                    <GradebookSummaryTable 
-                        students={students}
-                        indicators={indicators}
-                        records={records}
-                    />
-                </PrintLayout>
+                <>
+                    <div className="screen-only">
+                        <GradebookSummaryTable 
+                            students={students}
+                            indicators={indicators}
+                            records={records}
+                        />
+                    </div>
+                    <div className="print-only">
+                        <PrintLayout
+                            institute={institute}
+                            program={program}
+                            unit={unit}
+                            teacher={teacher}
+                            title={`CONSOLIDADO DE REGISTRO DE EVALUACIÓN - ${unit.period} ${new Date().getFullYear()}`}
+                            >
+                            <GradebookSummaryTable 
+                                students={students}
+                                indicators={indicators}
+                                records={records}
+                            />
+                        </PrintLayout>
+                    </div>
+                </>
             )}
          </div>
     );
 
     const DetailView = () => (
         selectedIndicator && (
-             <Card>
-                <CardHeader className="no-print">
-                    <div className="flex justify-between items-start">
-                        <div>
-                             <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                Volver a Indicadores
-                            </Button>
-                            <CardTitle>Calificaciones para: {selectedIndicator.name}</CardTitle>
-                            <CardDescription>
-                                Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
-                            </CardDescription>
+             <div>
+                <Card className="screen-only">
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
+                                    <ArrowLeft className="mr-2 h-4 w-4" />
+                                    Volver a Indicadores
+                                </Button>
+                                <CardTitle>Calificaciones para: {selectedIndicator.name}</CardTitle>
+                                <CardDescription>
+                                    Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
+                                </CardDescription>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => window.print()}>
+                                    <Printer className="mr-2 h-4 w-4" />
+                                    Imprimir Indicador
+                                </Button>
+                                <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Guardar Cambios
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => window.print()}>
-                                <Printer className="mr-2 h-4 w-4" />
-                                Imprimir Indicador
-                            </Button>
-                            <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                Guardar Cambios
-                            </Button>
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <PrintLayout
+                    </CardHeader>
+                    <CardContent>
+                        <IndicatorGradebook 
+                            students={students}
+                            indicator={selectedIndicator}
+                            tasks={tasks}
+                            records={records}
+                            unit={unit}
+                            onGradeChange={handleGradeChange}
+                            onManualEvaluationAdded={handleManualEvaluationAdded}
+                            onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                        />
+                    </CardContent>
+                </Card>
+                <div className="print-only">
+                     <PrintLayout
                         institute={institute}
                         program={program}
                         unit={unit}
@@ -350,12 +375,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             onManualEvaluationDeleted={handleManualEvaluationDeleted}
                         />
                     </PrintLayout>
-                </CardContent>
-            </Card>
+                </div>
+            </div>
         )
     );
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
-
-    
