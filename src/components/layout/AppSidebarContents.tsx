@@ -37,7 +37,7 @@ export function AppSidebarContents() {
   ];
   
   const teacherItems = [
-      { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, roles: ['Teacher'] },
+      { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, roles: ['Teacher', 'Coordinator'] },
   ];
 
   const studentItems = [
