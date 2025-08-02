@@ -207,12 +207,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       await firebaseSignOut(auth);
-      router.push('/');
+      // Hard redirect to clear all state and force a full refresh.
+      window.location.href = '/';
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
+      // Still attempt to redirect even if there's a toast error
+      window.location.href = '/';
     } finally {
-        // onAuthStateChanged will handle setting state to null.
         setLoading(false);
     }
   };
