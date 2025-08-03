@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
 import { useRouter } from 'next/navigation';
 import type { PaymentConcept } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -98,14 +99,20 @@ export function RegisterPaymentForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Concepto de Pago</FormLabel>
-                <FormControl>
-                    <select {...field} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                        <option value="" disabled>Selecciona un concepto...</option>
-                        {paymentConcepts.map(concept => (
-                            <option key={concept.id} value={concept.name}>{concept.name}</option>
-                        ))}
-                    </select>
-                </FormControl>
+                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un concepto..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {paymentConcepts.map((concept) => (
+                        <SelectItem key={concept.id} value={concept.name}>
+                          {concept.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 <FormMessage />
               </FormItem>
             )}
