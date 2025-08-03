@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -494,6 +494,32 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
 };
 
 // --- PAYMENTS ---
+export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentConcept, 'id' | 'createdAt'>): Promise<void> => {
+    const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
+    await addDoc(conceptsCol, { ...data, createdAt: Timestamp.now() });
+};
+
+export const getPaymentConcepts = async (instituteId: string, activeOnly = false): Promise<PaymentConcept[]> => {
+    const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
+    let q = query(conceptsCol, orderBy("name"));
+    if (activeOnly) {
+        q = query(conceptsCol, where("isActive", "==", true), orderBy("name"));
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));
+};
+
+export const updatePaymentConcept = async (instituteId: string, conceptId: string, data: Partial<PaymentConcept>): Promise<void> => {
+    const conceptRef = doc(db, 'institutes', instituteId, 'paymentConcepts', conceptId);
+    await updateDoc(conceptRef, data);
+};
+
+export const deletePaymentConcept = async (instituteId: string, conceptId: string): Promise<void> => {
+    const conceptRef = doc(db, 'institutes', instituteId, 'paymentConcepts', conceptId);
+    await deleteDoc(conceptRef);
+};
+
+
 export const registerPayment = async (
     instituteId: string, 
     data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt'>, 

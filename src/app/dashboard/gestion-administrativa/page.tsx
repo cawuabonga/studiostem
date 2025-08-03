@@ -1,13 +1,20 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 const adminModules = [
+   {
+    title: "Gestionar Tasas Educativas",
+    description: "Crear y administrar los conceptos de pago y sus costos (ej. matrícula, constancias).",
+    href: "/dashboard/gestion-administrativa/tasas",
+    icon: Banknote,
+    roles: ["Admin", "Coordinator"],
+  },
   {
     title: "Validación de Pagos",
     description: "Revisar, aprobar o rechazar los vouchers de pago registrados por los estudiantes.",

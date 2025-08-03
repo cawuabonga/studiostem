@@ -125,13 +125,20 @@ export interface Assignment {
 
 // --- PAYMENTS ---
 export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
-export type PaymentConcept = 'Matrícula' | 'Constancia de Estudios' | 'Carnet' | 'Otro';
+
+export interface PaymentConcept {
+  id: string;
+  name: string;
+  amount: number;
+  isActive: boolean;
+  createdAt: Timestamp;
+}
 
 export interface Payment {
   id: string;
   studentId: string;
   studentName: string;
-  concept: string;
+  concept: string; // This will now be the name from PaymentConcept
   amount: number;
   paymentDate: Timestamp;
   operationNumber: string;

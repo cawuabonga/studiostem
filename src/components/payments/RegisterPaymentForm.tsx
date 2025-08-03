@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,18 +15,9 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { registerPayment } from '@/config/firebase';
+import { registerPayment, getPaymentConcepts } from '@/config/firebase';
 import { useRouter } from 'next/navigation';
-
-// TODO: In a real app, these would be fetched from the database
-const paymentConcepts = [
-    'Matrícula 2024-I',
-    'Matrícula 2024-II',
-    'Constancia de Estudios',
-    'Carnet de Estudiante',
-    'Examen de Rezagado',
-    'Otro',
-];
+import type { PaymentConcept } from '@/types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -49,13 +40,32 @@ export function RegisterPaymentForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [paymentConcepts, setPaymentConcepts] = useState<PaymentConcept[]>([]);
+
+  useEffect(() => {
+    if (instituteId) {
+        getPaymentConcepts(instituteId, true) // Fetch only active concepts
+            .then(setPaymentConcepts)
+            .catch(console.error);
+    }
+  }, [instituteId]);
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       concept: "",
+      amount: 0
     }
   });
+
+  const selectedConceptName = form.watch('concept');
+
+  useEffect(() => {
+      const selectedConcept = paymentConcepts.find(c => c.name === selectedConceptName);
+      if (selectedConcept) {
+          form.setValue('amount', selectedConcept.amount);
+      }
+  }, [selectedConceptName, paymentConcepts, form]);
 
   const onSubmit = async (data: PaymentFormValues) => {
     if (!user || !instituteId || !user.documentId) {
@@ -81,7 +91,6 @@ export function RegisterPaymentForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Concept and Amount */}
         <div className="grid md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -93,7 +102,7 @@ export function RegisterPaymentForm() {
                     <select {...field} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
                         <option value="" disabled>Selecciona un concepto...</option>
                         {paymentConcepts.map(concept => (
-                            <option key={concept} value={concept}>{concept}</option>
+                            <option key={concept.id} value={concept.name}>{concept.name}</option>
                         ))}
                     </select>
                 </FormControl>
@@ -108,7 +117,7 @@ export function RegisterPaymentForm() {
               <FormItem>
                 <FormLabel>Monto Pagado (S/)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="Ej: 70.00" {...field} />
+                  <Input type="number" step="0.01" placeholder="0.00" {...field} readOnly className="bg-muted" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,7 +125,6 @@ export function RegisterPaymentForm() {
           />
         </div>
         
-        {/* Date and Operation Number */}
         <div className="grid md:grid-cols-2 gap-4">
              <FormField
                 control={form.control}
@@ -172,7 +180,6 @@ export function RegisterPaymentForm() {
             />
         </div>
 
-        {/* Voucher Upload */}
         <FormField
           control={form.control}
           name="voucher"
