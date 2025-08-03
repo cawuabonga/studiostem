@@ -15,8 +15,8 @@ import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
+    const { unitId } = params;
     const { instituteId } = useAuth();
-    const unitId = params.unitId;
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);

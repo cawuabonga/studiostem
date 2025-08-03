@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
+    const { studentId } = params;
     const { instituteId } = useAuth();
     const router = useRouter();
-    const studentId = params.studentId;
 
     if (!instituteId) {
         return (
