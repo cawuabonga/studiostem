@@ -407,6 +407,15 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
 
+export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
+    const studentRef = doc(getSubCollectionRef(instituteId, 'studentProfiles'), studentId);
+    const docSnap = await getDoc(studentRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as StudentProfile;
+    }
+    return null;
+}
+
 export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
@@ -577,29 +586,28 @@ export const updatePaymentStatus = async (
 
 export const createMatriculations = async (
     instituteId: string,
-    studentIds: string[],
+    studentId: string,
     units: Unit[],
-    context: { year: string, period: UnitPeriod, semester: number, programId: string, moduleId: string }
+    year: string,
+    period: UnitPeriod
 ) => {
     const batch = writeBatch(db);
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
 
-    studentIds.forEach(studentId => {
-        units.forEach(unit => {
-            const matriculationDocRef = doc(matriculationsCol);
-            const matriculationData: Omit<Matriculation, 'id'> = {
-                studentId: studentId,
-                unitId: unit.id,
-                programId: context.programId,
-                year: context.year,
-                period: context.period,
-                semester: context.semester,
-                moduleId: context.moduleId,
-                status: 'cursando',
-                createdAt: Timestamp.now()
-            };
-            batch.set(matriculationDocRef, matriculationData);
-        });
+    units.forEach(unit => {
+        const matriculationDocRef = doc(matriculationsCol);
+        const matriculationData: Omit<Matriculation, 'id'> = {
+            studentId: studentId,
+            unitId: unit.id,
+            programId: unit.programId,
+            year: year,
+            period: period,
+            semester: unit.semester,
+            moduleId: unit.moduleId,
+            status: 'cursando',
+            createdAt: Timestamp.now()
+        };
+        batch.set(matriculationDocRef, matriculationData);
     });
 
     await batch.commit();
@@ -641,7 +649,7 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
 
 export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
-    const q = query(matriculationsCol, where("studentId", "==", studentId));
+    const q = query(matriculationsCol, where("studentId", "==", studentId), orderBy('year', 'desc'), orderBy('period', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Matriculation));
 };

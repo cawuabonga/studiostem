@@ -7,22 +7,24 @@ import type { StudentProfile, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface StudentsTableProps {
     instituteId: string;
     onDataChange: () => void;
+    isMatriculaMode?: boolean;
 }
 
 const PAGE_SIZE = 10;
 
-export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps) {
+export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = false }: StudentsTableProps) {
   const [allProfiles, setAllProfiles] = useState<StudentProfile[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,19 +158,27 @@ export function StudentsTable({ instituteId, onDataChange }: StudentsTableProps)
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menú</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem disabled>Editar (Próximamente)</DropdownMenuItem>
-                      <DropdownMenuItem disabled className="text-destructive">Eliminar (Próximamente)</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    {isMatriculaMode ? (
+                        <Button asChild variant="outline" size="sm">
+                            <Link href={`/dashboard/gestion-academica/matricula/${profile.documentId}`}>
+                                Matricular <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    ) : (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem disabled>Editar (Próximamente)</DropdownMenuItem>
+                            <DropdownMenuItem disabled className="text-destructive">Eliminar (Próximamente)</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
                 </TableCell>
               </TableRow>
             )) : (
