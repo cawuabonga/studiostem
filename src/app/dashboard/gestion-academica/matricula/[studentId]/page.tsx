@@ -3,16 +3,15 @@
 
 import { StudentMatriculationSheet } from "@/components/matricula/StudentMatriculationSheet";
 import { useAuth } from "@/contexts/AuthContext";
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export default function StudentMatriculationPage() {
+export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
     const { instituteId } = useAuth();
-    const params = useParams();
     const router = useRouter();
-    const studentId = params.studentId as string;
+    const studentId = params.studentId;
 
     if (!instituteId) {
         return (
@@ -36,4 +35,3 @@ export default function StudentMatriculationPage() {
         </div>
     );
 }
-

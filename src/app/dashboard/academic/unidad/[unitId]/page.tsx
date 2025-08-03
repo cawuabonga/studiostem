@@ -3,7 +3,6 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -16,10 +15,9 @@ import { NotebookText, CalendarDays, Percent, CalendarCheck } from 'lucide-react
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
-export default function UnitManagementPage() {
+export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
     const { user, instituteId } = useAuth();
-    const params = useParams();
-    const unitId = params.unitId as string;
+    const unitId = params.unitId;
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
