@@ -50,7 +50,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         if (unitId) {
             fetchUnitDetails(unitId);
         }
-    }, [params, fetchUnitDetails]);
+    }, [params.unitId, fetchUnitDetails]);
 
     if (loading) {
         return (
