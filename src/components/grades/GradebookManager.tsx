@@ -101,7 +101,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(recordsMap);
+            setInitialRecords(JSON.parse(JSON.stringify(recordsMap)));
+
 
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
@@ -198,10 +199,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setIsSaving(true);
         try {
             const updatedRecords: AcademicRecord[] = [];
-            const initialRecordsCopy = JSON.parse(JSON.stringify(initialRecords));
-
+            
             for (const studentId in records) {
-                if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecordsCopy[studentId])) {
+                if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
                     updatedRecords.push(records[studentId]);
                 }
             }
@@ -222,7 +222,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            setInitialRecords(records);
+            // Update the initial state to reflect the saved state
+            setInitialRecords(JSON.parse(JSON.stringify(records)));
 
         } catch(error) {
             console.error("Error saving grades:", error);
@@ -319,7 +320,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     const DetailView = () => (
         selectedIndicator && (
-             <div>
+             <div className="space-y-4">
                 <Card className="screen-only">
                     <CardHeader>
                         <div className="flex justify-between items-start flex-wrap gap-4">
@@ -357,24 +358,25 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="overflow-auto">
-                        <div
-                            style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-                            className="transition-transform w-full"
-                        >
-                            <IndicatorGradebook 
-                                students={students}
-                                indicator={selectedIndicator}
-                                tasks={tasks}
-                                records={records}
-                                unit={unit}
-                                onGradeChange={handleGradeChange}
-                                onManualEvaluationAdded={handleManualEvaluationAdded}
-                                onManualEvaluationDeleted={handleManualEvaluationDeleted}
-                            />
-                        </div>
-                    </CardContent>
                 </Card>
+                <div className="overflow-x-auto screen-only">
+                    <div
+                        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                        className="transition-transform"
+                    >
+                        <IndicatorGradebook 
+                            students={students}
+                            indicator={selectedIndicator}
+                            tasks={tasks}
+                            records={records}
+                            unit={unit}
+                            onGradeChange={handleGradeChange}
+                            onManualEvaluationAdded={handleManualEvaluationAdded}
+                            onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                        />
+                    </div>
+                </div>
+
                 <div className="print-only">
                      <PrintLayout
                         institute={institute}
