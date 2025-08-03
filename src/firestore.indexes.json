@@ -42,24 +42,6 @@
           "order": "ASCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "matriculations",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "year",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "period",
-          "order": "DESCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []

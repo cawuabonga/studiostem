@@ -520,13 +520,17 @@ export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentC
 export const getPaymentConcepts = async (instituteId: string, activeOnly = false): Promise<PaymentConcept[]> => {
     const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
     let q;
+    // We only filter, not sort, to avoid composite indexes if not needed
     if (activeOnly) {
-        q = query(conceptsCol, where("isActive", "==", true), orderBy("name"));
+        q = query(conceptsCol, where("isActive", "==", true));
     } else {
-        q = query(conceptsCol, orderBy("name"));
+        q = query(conceptsCol);
     }
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));
+    const concepts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));
+    
+    // Sort manually in the code
+    return concepts.sort((a,b) => a.name.localeCompare(b.name));
 };
 
 export const updatePaymentConcept = async (instituteId: string, conceptId: string, data: Partial<PaymentConcept>): Promise<void> => {
@@ -658,9 +662,20 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
 
 export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
-    const q = query(matriculationsCol, where("studentId", "==", studentId), orderBy('year', 'desc'), orderBy('period', 'desc'));
+    // Simple query by studentId only
+    const q = query(matriculationsCol, where("studentId", "==", studentId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Matriculation));
+    const matriculations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Matriculation));
+
+    // Manual sorting in code to avoid composite index
+    matriculations.sort((a, b) => {
+        if (a.year !== b.year) {
+            return b.year.localeCompare(a.year); // Sort by year descending
+        }
+        return b.period.localeCompare(a.period); // Then by period descending
+    });
+    
+    return matriculations;
 };
 
 
