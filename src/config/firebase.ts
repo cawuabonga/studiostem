@@ -667,6 +667,23 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
     return studentSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
 
+export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
+    const indicatorsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators');
+    const q = query(indicatorsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AchievementIndicator));
+}
+
+export const addAchievementIndicator = async (instituteId: string, unitId: string, data: Omit<AchievementIndicator, 'id'>) => {
+    const indicatorsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators');
+    await addDoc(indicatorsCol, data);
+}
+
+export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
+    const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
+    await deleteDoc(indicatorRef);
+}
+
 export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
   const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
   const q = query(recordsCol, 
@@ -811,3 +828,92 @@ export const saveAttendance = async (instituteId: string, attendanceData: Attend
     // Use set with merge to create the document if it doesn't exist or update it if it does.
     await setDoc(attendanceRef, attendanceData, { merge: true });
 };
+
+// --- PLANNING: CONTENT & TASKS ---
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt' | 'value'> & { value: string }, file?: File) => {
+    const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'contents');
+    const contentDocRef = doc(contentCol);
+
+    let finalValue = data.value;
+    if (data.type === 'file' && file) {
+        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentDocRef.id}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        finalValue = await getDownloadURL(storageRef);
+    }
+    
+    await setDoc(contentDocRef, { ...data, value: finalValue, createdAt: Timestamp.now() });
+}
+
+export const getContentsForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Content[]> => {
+    const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'contents');
+    const q = query(contentCol, orderBy("createdAt"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
+}
+
+export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>) => {
+    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'contents', contentId);
+    await updateDoc(contentRef, data);
+}
+
+export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
+    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'contents', content.id);
+    await deleteDoc(contentRef);
+    if (content.type === 'file') {
+        try {
+            const fileRef = ref(firebaseStorage, content.value);
+            await deleteObject(fileRef);
+        } catch(error: any) {
+            // Ignore if file doesn't exist, might have been cleaned up already.
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Error deleting file from storage:", error);
+            }
+        }
+    }
+}
+
+
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber'>) => {
+    const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks');
+    await addDoc(taskCol, { ...data, weekNumber, createdAt: Timestamp.now() });
+}
+
+export const getTasksForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Task[]> => {
+    const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks');
+    const q = query(taskCol, orderBy("dueDate"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+}
+
+export const getAllTasksForUnit = async (instituteId: string, unitId: string, totalWeeks: number): Promise<Task[]> => {
+    const allTasks: Task[] = [];
+    for (let i = 1; i <= totalWeeks; i++) {
+        const weeklyTasks = await getTasksForWeek(instituteId, unitId, i);
+        allTasks.push(...weeklyTasks);
+    }
+    return allTasks;
+}
+
+export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>) => {
+    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId);
+    await updateDoc(taskRef, data);
+}
+
+export const deleteTaskFromWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string) => {
+    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId);
+    await deleteDoc(taskRef);
+}
+
+export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
+    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', 'visibility');
+    await setDoc(visibilityRef, { [`week_${weekNumber}`]: isVisible }, { merge: true });
+}
+
+export const getWeeksVisibility = async (instituteId: string, unitId: string): Promise<Record<string, boolean>> => {
+    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', 'visibility');
+    const docSnap = await getDoc(visibilityRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as Record<string, boolean>;
+    }
+    return {};
+}
