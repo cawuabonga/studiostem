@@ -22,8 +22,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchUnitDetails = useCallback(async () => {
-        const { unitId } = params;
+    const fetchUnitDetails = useCallback(async (unitId: string) => {
         if (!instituteId || !unitId) {
             setLoading(false);
             setError("Faltan datos para cargar la unidad.");
@@ -44,11 +43,13 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         } finally {
             setLoading(false);
         }
-    }, [instituteId, params]);
+    }, [instituteId]);
 
     useEffect(() => {
-        fetchUnitDetails();
-    }, [fetchUnitDetails]);
+        if (params.unitId) {
+            fetchUnitDetails(params.unitId);
+        }
+    }, [params.unitId, fetchUnitDetails]);
 
     if (loading) {
         return (

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 
 export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
     const { instituteId } = useAuth();
