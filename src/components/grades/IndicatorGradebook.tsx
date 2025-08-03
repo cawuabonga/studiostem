@@ -82,8 +82,8 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         
         for (const week in grouped) {
             grouped[week].sort((a, b) => {
-                const timeA = new Date(a.createdAt as any).getTime();
-                const timeB = new Date(b.createdAt as any).getTime();
+                const timeA = a.createdAt instanceof Timestamp ? a.createdAt.toDate().getTime() : 0;
+                const timeB = b.createdAt instanceof Timestamp ? b.createdAt.toDate().getTime() : 0;
                 if (a.evalType === 'task' && b.evalType === 'manual') return -1;
                 if (a.evalType === 'manual' && b.evalType === 'task') return 1;
                 return timeA - timeB;
@@ -137,7 +137,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                     <div className="flex flex-col">
                                                         <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
                                                         {ev.evalType === 'manual' && ev.createdAt && (
-                                                            <span className="text-muted-foreground text-[10px]">{format(new Date(ev.createdAt as any), 'dd/MM/yy')}</span>
+                                                            <span className="text-muted-foreground text-[10px]">{format((ev.createdAt as Timestamp).toDate(), 'dd/MM/yy')}</span>
                                                         )}
                                                     </div>
                                                     {ev.evalType === 'manual' && (
