@@ -46,11 +46,10 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
     }, [instituteId]);
 
     useEffect(() => {
-        const unitId = params.unitId;
-        if (unitId) {
-            fetchUnitDetails(unitId);
+        if (params.unitId) {
+            fetchUnitDetails(params.unitId);
         }
-    }, [params.unitId, fetchUnitDetails]);
+    }, [params, fetchUnitDetails]);
 
     if (loading) {
         return (
