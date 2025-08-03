@@ -101,7 +101,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); 
+            setInitialRecords(recordsMap); 
 
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
@@ -220,7 +220,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            setInitialRecords(JSON.parse(JSON.stringify(records)));
+            setInitialRecords(records);
 
         } catch(error) {
             console.error("Error saving grades:", error);
