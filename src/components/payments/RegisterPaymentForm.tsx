@@ -32,7 +32,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const paymentSchema = z.object({
-  concept: z.string({ required_error: 'Debe seleccionar un concepto.' }),
+  concept: z.string({ required_error: 'Debe seleccionar un concepto.' }).min(1, 'Debe seleccionar un concepto.'),
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor a cero.'),
   paymentDate: z.date({ required_error: 'La fecha de pago es requerida.' }),
   operationNumber: z.string().min(4, 'El número de operación es requerido.'),
@@ -52,11 +52,14 @@ export function RegisterPaymentForm() {
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      concept: "",
+    }
   });
 
   const onSubmit = async (data: PaymentFormValues) => {
-    if (!user || !instituteId) {
-      toast({ title: "Error", description: "No se pudo identificar al usuario o instituto.", variant: "destructive" });
+    if (!user || !instituteId || !user.documentId) {
+      toast({ title: "Error", description: "No se pudo identificar al usuario o instituto. Asegúrate de que tu perfil esté vinculado.", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -88,7 +91,7 @@ export function RegisterPaymentForm() {
                 <FormLabel>Concepto de Pago</FormLabel>
                 <FormControl>
                     <select {...field} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                        <option value="" disabled selected>Selecciona un concepto...</option>
+                        <option value="" disabled>Selecciona un concepto...</option>
                         {paymentConcepts.map(concept => (
                             <option key={concept} value={concept}>{concept}</option>
                         ))}
