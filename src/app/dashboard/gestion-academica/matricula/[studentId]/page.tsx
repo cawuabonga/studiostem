@@ -13,6 +13,7 @@ import { useEffect } from "react";
 export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
     const { instituteId } = useAuth();
     const router = useRouter();
+    const studentId = params.studentId;
 
     if (!instituteId) {
         return (
@@ -31,7 +32,7 @@ export default function StudentMatriculationPage({ params }: { params: { student
             </Button>
             <StudentMatriculationSheet
                 instituteId={instituteId}
-                studentId={params.studentId}
+                studentId={studentId}
             />
         </div>
     );

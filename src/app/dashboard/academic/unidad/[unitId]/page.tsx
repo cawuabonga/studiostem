@@ -17,13 +17,14 @@ import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
     const { user, instituteId } = useAuth();
-    
+    const unitId = params.unitId;
+
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchUnitDetails = useCallback(async (unitId: string) => {
-        if (!instituteId || !unitId) {
+    const fetchUnitDetails = useCallback(async (id: string) => {
+        if (!instituteId || !id) {
             setLoading(false);
             setError("Faltan datos para cargar la unidad.");
             return;
@@ -31,7 +32,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
 
         try {
             setLoading(true);
-            const unitData = await getUnit(instituteId, unitId);
+            const unitData = await getUnit(instituteId, id);
             if (unitData) {
                 setUnit(unitData);
             } else {
@@ -46,10 +47,10 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
     }, [instituteId]);
 
     useEffect(() => {
-        if (params.unitId) {
-            fetchUnitDetails(params.unitId);
+        if (unitId) {
+            fetchUnitDetails(unitId);
         }
-    }, [params, fetchUnitDetails]);
+    }, [unitId, fetchUnitDetails]);
 
     if (loading) {
         return (
