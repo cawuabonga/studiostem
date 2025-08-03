@@ -101,7 +101,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(JSON.parse(JSON.stringify(recordsMap)));
+            setInitialRecords(recordsMap);
 
 
         } catch (error) {
@@ -201,7 +201,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const updatedRecords: AcademicRecord[] = [];
             
             for (const studentId in records) {
-                if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
+                 if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
                     updatedRecords.push(records[studentId]);
                 }
             }
@@ -223,7 +223,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             // Update the initial state to reflect the saved state
-            setInitialRecords(JSON.parse(JSON.stringify(records)));
+            setInitialRecords(records);
 
         } catch(error) {
             console.error("Error saving grades:", error);
