@@ -101,7 +101,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(recordsMap); 
+            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); 
 
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
@@ -198,10 +198,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setIsSaving(true);
         try {
             const updatedRecords: AcademicRecord[] = [];
-            for (const studentId in records) {
+             for (const studentId in records) {
                 if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
-                    const cleanRecord = JSON.parse(JSON.stringify(records[studentId]));
-                    updatedRecords.push(cleanRecord);
+                    updatedRecords.push(records[studentId]);
                 }
             }
 
@@ -220,7 +219,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            setInitialRecords(records);
+            setInitialRecords(JSON.parse(JSON.stringify(records)));
 
         } catch(error) {
             console.error("Error saving grades:", error);
@@ -401,7 +400,5 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
-
-    
 
     
