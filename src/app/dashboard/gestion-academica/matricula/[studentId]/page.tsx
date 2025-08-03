@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { StudentMatriculationSheet } from "@/components/matricula/StudentMatriculationSheet";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
-    const { studentId } = params;
     const { instituteId } = useAuth();
     const router = useRouter();
 
@@ -30,7 +30,7 @@ export default function StudentMatriculationPage({ params }: { params: { student
             </Button>
             <StudentMatriculationSheet
                 instituteId={instituteId}
-                studentId={studentId}
+                studentId={params.studentId}
             />
         </div>
     );

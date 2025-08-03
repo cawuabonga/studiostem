@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -16,39 +16,38 @@ import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
-    const { unitId } = params;
     const { instituteId } = useAuth();
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const fetchUnitDetails = useCallback(async () => {
+        if (!instituteId || !params.unitId) {
+            setLoading(false);
+            setError("Faltan datos para cargar la unidad.");
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const unitData = await getUnit(instituteId, params.unitId);
+            if (unitData) {
+                setUnit(unitData);
+            } else {
+                setError("No se encontró la unidad didáctica.");
+            }
+        } catch (err) {
+            console.error("Error fetching unit details:", err);
+            setError("Ocurrió un error al cargar los detalles de la unidad.");
+        } finally {
+            setLoading(false);
+        }
+    }, [instituteId, params.unitId]);
+
     useEffect(() => {
-        const fetchUnitDetails = async () => {
-            if (!instituteId || !unitId) {
-                setLoading(false);
-                setError("Faltan datos para cargar la unidad.");
-                return;
-            }
-
-            try {
-                setLoading(true);
-                const unitData = await getUnit(instituteId, unitId);
-                if (unitData) {
-                    setUnit(unitData);
-                } else {
-                    setError("No se encontró la unidad didáctica.");
-                }
-            } catch (err) {
-                console.error("Error fetching unit details:", err);
-                setError("Ocurrió un error al cargar los detalles de la unidad.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUnitDetails();
-    }, [instituteId, unitId]);
+    }, [fetchUnitDetails]);
 
     if (loading) {
         return (

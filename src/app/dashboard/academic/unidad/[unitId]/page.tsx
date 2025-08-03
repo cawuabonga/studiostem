@@ -16,7 +16,6 @@ import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
-    const { unitId } = params;
     const { user, instituteId } = useAuth();
     
     const [unit, setUnit] = useState<Unit | null>(null);
@@ -24,7 +23,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
     const [error, setError] = useState<string | null>(null);
 
     const fetchUnitDetails = useCallback(async () => {
-        if (!instituteId || !unitId) {
+        if (!instituteId || !params.unitId) {
             setLoading(false);
             setError("Faltan datos para cargar la unidad.");
             return;
@@ -32,7 +31,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
 
         try {
             setLoading(true);
-            const unitData = await getUnit(instituteId, unitId);
+            const unitData = await getUnit(instituteId, params.unitId);
             if (unitData) {
                 setUnit(unitData);
             } else {
@@ -44,7 +43,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unitId]);
+    }, [instituteId, params.unitId]);
 
     useEffect(() => {
         fetchUnitDetails();
