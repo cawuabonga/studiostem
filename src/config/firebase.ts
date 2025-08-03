@@ -601,8 +601,7 @@ export const createMatriculations = async (
     instituteId: string,
     studentId: string,
     units: Unit[],
-    year: string,
-    period: UnitPeriod
+    year: string
 ) => {
     const batch = writeBatch(db);
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
@@ -614,7 +613,7 @@ export const createMatriculations = async (
             unitId: unit.id,
             programId: unit.programId,
             year: year,
-            period: period,
+            period: unit.period,
             semester: unit.semester,
             moduleId: unit.moduleId,
             status: 'cursando',

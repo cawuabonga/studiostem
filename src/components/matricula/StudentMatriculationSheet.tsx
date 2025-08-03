@@ -20,6 +20,8 @@ interface StudentMatriculationSheetProps {
     studentId: string;
 }
 
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+
 export function StudentMatriculationSheet({ instituteId, studentId }: StudentMatriculationSheetProps) {
     const { toast } = useToast();
     const [student, setStudent] = useState<StudentProfile | null>(null);
@@ -30,7 +32,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
     const [selectedUnits, setSelectedUnits] = useState<Set<string>>(new Set());
     
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-    const [selectedPeriod, setSelectedPeriod] = useState<UnitPeriod | ''>('');
+    const [selectedSemester, setSelectedSemester] = useState<number | ''>('');
     
     const [loading, setLoading] = useState(true);
     const [isMatriculating, setIsMatriculating] = useState(false);
@@ -71,26 +73,26 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
     }, [fetchData]);
 
     useEffect(() => {
-        if (selectedPeriod && allUnits.length > 0) {
+        if (selectedSemester && allUnits.length > 0) {
             const completedUnitIds = new Set(
                 matriculationHistory.filter(m => m.status === 'aprobado').map(m => m.unitId)
             );
             const currentlyEnrolledUnitIds = new Set(
                  matriculationHistory
-                    .filter(m => m.year === selectedYear && m.period === selectedPeriod)
+                    .filter(m => m.year === selectedYear)
                     .map(m => m.unitId)
             );
 
-            const unitsForPeriod = allUnits.filter(unit => 
-                unit.period === selectedPeriod &&
+            const unitsForSemester = allUnits.filter(unit => 
+                unit.semester === selectedSemester &&
                 !completedUnitIds.has(unit.id) &&
                 !currentlyEnrolledUnitIds.has(unit.id)
             );
-            setAvailableUnits(unitsForPeriod);
+            setAvailableUnits(unitsForSemester);
         } else {
             setAvailableUnits([]);
         }
-    }, [selectedPeriod, selectedYear, allUnits, matriculationHistory]);
+    }, [selectedSemester, selectedYear, allUnits, matriculationHistory]);
 
     const handleSelectUnit = (unitId: string) => {
         setSelectedUnits(prev => {
@@ -113,13 +115,13 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
     };
 
     const handleMatriculate = async () => {
-        if (!student || !program || selectedUnits.size === 0 || !selectedPeriod) return;
+        if (!student || !program || selectedUnits.size === 0) return;
 
         setIsMatriculating(true);
         try {
             const unitsToMatriculate = allUnits.filter(u => selectedUnits.has(u.id));
             
-            await createMatriculations(instituteId, student.documentId, unitsToMatriculate, selectedYear, selectedPeriod);
+            await createMatriculations(instituteId, student.documentId, unitsToMatriculate, selectedYear);
             
             toast({
                 title: "¡Matrícula Exitosa!",
@@ -211,7 +213,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
             <Card>
                 <CardHeader>
                     <CardTitle>Realizar Nueva Matrícula</CardTitle>
-                    <CardDescription>Selecciona el año, período y las unidades a matricular.</CardDescription>
+                    <CardDescription>Selecciona el año, el semestre a cursar y las unidades correspondientes.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex gap-4">
@@ -221,16 +223,15 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
                                 {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                        <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as UnitPeriod)}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar período..." /></SelectTrigger>
+                        <Select value={String(selectedSemester)} onValueChange={(v) => setSelectedSemester(v ? parseInt(v) : '')}>
+                            <SelectTrigger><SelectValue placeholder="Seleccionar semestre..." /></SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="MAR-JUL">MAR-JUL</SelectItem>
-                                <SelectItem value="AGO-DIC">AGO-DIC</SelectItem>
+                                {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {selectedPeriod && (
+                    {selectedSemester && (
                         <div>
                              <Table>
                                 <TableHeader>
@@ -244,8 +245,8 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
                                             />
                                         </TableHead>
                                         <TableHead>Unidad Didáctica Disponible</TableHead>
-                                        <TableHead>Semestre</TableHead>
                                         <TableHead>Módulo</TableHead>
+                                        <TableHead>Período</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -259,14 +260,14 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
                                                     />
                                                 </TableCell>
                                                 <TableCell className="font-medium">{unit.name}</TableCell>
-                                                <TableCell>{unit.semester}</TableCell>
                                                 <TableCell>{program.modules.find(m => m.code === unit.moduleId)?.name}</TableCell>
+                                                <TableCell><Badge variant="outline">{unit.period}</Badge></TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
                                         <TableRow>
                                             <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                                                No hay unidades disponibles para este período o el estudiante ya las cursó/aprobó todas.
+                                                No hay unidades disponibles para este semestre o el estudiante ya las cursó/aprobó todas.
                                             </TableCell>
                                         </TableRow>
                                     )}
