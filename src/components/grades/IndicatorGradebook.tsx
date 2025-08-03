@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
@@ -56,41 +57,24 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
     const [selectedWeek, setSelectedWeek] = useState<number>(0);
     
     // Group evaluations by week
-    const evaluationsByWeek = useMemo(() => {
-        const grouped: Record<number, EvaluationItem[]> = {};
+    const allEvaluations = useMemo(() => {
+        const evals: EvaluationItem[] = [];
         const indicatorTasks = tasks.filter(task => 
             task.weekNumber >= indicator.startWeek && task.weekNumber <= indicator.endWeek
         );
         
         indicatorTasks.forEach(task => {
-            if (!grouped[task.weekNumber]) grouped[task.weekNumber] = [];
-            grouped[task.weekNumber].push({ ...task, evalType: 'task' });
+            evals.push({ ...task, evalType: 'task' });
         });
         
         const firstRecord = Object.values(records)[0];
         if (firstRecord?.evaluations?.[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(manualEval => {
-                if (!grouped[manualEval.weekNumber]) grouped[manualEval.weekNumber] = [];
-                 const finalEval: EvaluationItem = { 
-                    ...manualEval, 
-                    evalType: 'manual',
-                 };
-                
-                grouped[manualEval.weekNumber].push(finalEval);
+                evals.push({ ...manualEval, evalType: 'manual' });
             });
         }
         
-        for (const week in grouped) {
-            grouped[week].sort((a, b) => {
-                const timeA = a.createdAt instanceof Timestamp ? a.createdAt.toDate().getTime() : (a.createdAt as any)?.seconds ? new Timestamp((a.createdAt as any).seconds, (a.createdAt as any).nanoseconds).toDate().getTime() : 0;
-                const timeB = b.createdAt instanceof Timestamp ? b.createdAt.toDate().getTime() : (b.createdAt as any)?.seconds ? new Timestamp((b.createdAt as any).seconds, (b.createdAt as any).nanoseconds).toDate().getTime() : 0;
-                if (a.evalType === 'task' && b.evalType === 'manual') return -1;
-                if (a.evalType === 'manual' && b.evalType === 'task') return 1;
-                return timeA - timeB;
-            });
-        }
-
-        return grouped;
+        return evals.sort((a, b) => a.weekNumber - b.weekNumber);
 
     }, [indicator, tasks, records]);
     
@@ -110,136 +94,87 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
     
     return (
         <>
-            <div className="relative w-full overflow-auto rounded-md border">
-                <Table className="min-w-full">
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead rowSpan={2} className="w-[40px] text-center sticky left-0 bg-background z-10">N°</TableHead>
-                            <TableHead rowSpan={2} className="w-[100px] sticky left-[40px] bg-background z-10">DNI</TableHead>
-                            <TableHead rowSpan={2} className="w-[250px] sticky left-[140px] bg-background z-10">Apellidos y Nombres</TableHead>
-                             {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
-                                const weekEvals = evaluationsByWeek[week] || [];
-                                const colSpan = weekEvals.length > 0 ? weekEvals.length : 1;
-                                return (
-                                     <TableHead key={week} colSpan={colSpan + 1} className="text-center border-l border-r">Semana {week}</TableHead>
-                                )
-                             })}
-                            <TableHead rowSpan={2} className="text-center min-w-[100px] bg-muted/50 sticky right-0 z-10">Promedio Indicador</TableHead>
-                        </TableRow>
-                        <TableRow>
-                            {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
-                                const weekEvals = evaluationsByWeek[week] || [];
-                                return (
-                                    <React.Fragment key={`subhead-week-${week}`}>
-                                        {weekEvals.length > 0 ? weekEvals.map(ev => (
-                                             <TableHead key={ev.id} className={cn(`text-center text-xs font-normal border-l min-w-[100px]`, ev.evalType === 'manual' ? 'bg-sky-100 dark:bg-sky-900' : '')}>
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <div className="flex flex-col">
-                                                        <span className="truncate font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</span>
-                                                        {ev.evalType === 'manual' && ev.createdAt && (
-                                                            <span className="text-muted-foreground text-[10px]">
-                                                                {(ev.createdAt as any)?.seconds 
-                                                                    ? format(new Timestamp((ev.createdAt as any).seconds, (ev.createdAt as any).nanoseconds).toDate(), 'dd/MM/yy')
-                                                                    : format(new Date(ev.createdAt as any), 'dd/MM/yy')}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {ev.evalType === 'manual' && (
-                                                         <AlertDialog>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 screen-only">
-                                                                        <MoreVertical className="h-4 w-4" />
-                                                                    </Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent align="end">
-                                                                     <AlertDialogTrigger asChild>
-                                                                        <DropdownMenuItem className="text-destructive">
-                                                                            <Trash2 className="mr-2 h-4 w-4" />
-                                                                            Eliminar Columna
-                                                                        </DropdownMenuItem>
-                                                                     </AlertDialogTrigger>
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                             <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                <AlertDialogTitle>¿Eliminar "{ev.label}"?</AlertDialogTitle>
-                                                                <AlertDialogDescription>
-                                                                    Esta acción no se puede deshacer. Se eliminará esta columna de calificación y todas sus notas para todos los estudiantes.
-                                                                </AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => onManualEvaluationDeleted(indicator.id, ev.id)}>Sí, eliminar</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    )}
-                                                </div>
-                                            </TableHead>
-                                        )) : <TableHead className="text-center text-xs font-normal border-l min-w-[100px]"></TableHead>}
-                                         <TableHead className="text-center border-l min-w-[50px] align-middle p-1">
-                                            <Button variant="ghost" size="sm" className="w-full h-full p-1 screen-only" onClick={() => handleOpenDialog(week)}>
-                                                <PlusCircle className="h-4 w-4" />
-                                            </Button>
-                                        </TableHead>
-                                    </React.Fragment>
-                                )
-                            })}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {students.map((student, index) => {
-                            const studentRecord = records[student.documentId];
-                            const allGradesForIndicator = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
-                            const indicatorAverage = calculateAverage(allGradesForIndicator);
+            <div className="space-y-4">
+                <div className="flex justify-end screen-only">
+                    {/* For now, let's allow adding evaluations to the first week of the indicator as a default */}
+                    <Button variant="outline" size="sm" onClick={() => handleOpenDialog(indicator.startWeek)}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Añadir Evaluación Manual
+                    </Button>
+                </div>
+                 <Accordion type="multiple" className="w-full space-y-2">
+                    {students.map((student, index) => {
+                        const studentRecord = records[student.documentId];
+                        const allGradesForIndicator = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
+                        const indicatorAverage = calculateAverage(allGradesForIndicator);
 
-                            return (
-                                <TableRow key={student.documentId}>
-                                    <TableCell className="text-center sticky left-0 bg-background z-10">{index + 1}</TableCell>
-                                    <TableCell className="sticky left-[40px] bg-background z-10">{student.documentId}</TableCell>
-                                    <TableCell className="font-medium sticky left-[140px] bg-background z-10">{student.fullName}</TableCell>
-                                    {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => i + indicator.startWeek).map(week => {
-                                        const weekEvals = evaluationsByWeek[week] || [];
-                                        return (
-                                            <React.Fragment key={`row-${student.documentId}-week-${week}`}>
-                                                {weekEvals.length > 0 ? weekEvals.map(ev => {
+                        return (
+                            <AccordionItem key={student.documentId} value={student.documentId} className="border rounded-lg shadow-sm">
+                                <AccordionTrigger className="text-base font-medium px-4 py-2 hover:no-underline">
+                                     <div className="flex justify-between items-center w-full">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-muted-foreground w-6 text-center">{index + 1}</span>
+                                            <span>{student.fullName}</span>
+                                        </div>
+                                        <Badge className={cn(
+                                                "text-lg",
+                                                indicatorAverage === null ? "bg-muted text-muted-foreground" :
+                                                indicatorAverage < 11 ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
+                                            )}>
+                                            Prom: {indicatorAverage ?? '--'}
+                                        </Badge>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-4 pb-4">
+                                    <div className="rounded-md border">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="w-1/2">Evaluación</TableHead>
+                                                    <TableHead>Semana</TableHead>
+                                                    <TableHead className="text-right">Nota</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {allEvaluations.length > 0 ? allEvaluations.map(ev => {
                                                     const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                                     return (
-                                                        <TableCell key={ev.id} className={cn(`text-center border-l p-1`, ev.evalType === 'manual' ? 'bg-sky-50 dark:bg-sky-900/50' : '')}>
-                                                            <Input 
-                                                                type="number"
-                                                                className="w-full text-center border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
-                                                                value={gradeEntry?.grade ?? ''}
-                                                                onChange={(e) => {
-                                                                    const val = e.target.value;
-                                                                    if (val === '') {
-                                                                        onGradeChange(student.documentId, indicator.id, ev.id, null, ev.evalType, ev.evalType === 'task' ? ev.title : ev.label, ev.weekNumber);
-                                                                    } else {
-                                                                        const num = Number(val);
-                                                                        if (num >= 0 && num <= 20) {
-                                                                             onGradeChange(student.documentId, indicator.id, ev.id, num, ev.evalType, ev.evalType === 'task' ? ev.title : ev.label, ev.weekNumber);
+                                                        <TableRow key={ev.id}>
+                                                            <TableCell className="font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</TableCell>
+                                                            <TableCell>{ev.weekNumber}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Input 
+                                                                    type="number"
+                                                                    className="w-20 text-center ml-auto border-0 bg-transparent focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0"
+                                                                    value={gradeEntry?.grade ?? ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        const num = val === '' ? null : Number(val);
+                                                                        if (num === null || (num >= 0 && num <= 20)) {
+                                                                            onGradeChange(student.documentId, indicator.id, ev.id, num, ev.evalType, ev.evalType === 'task' ? ev.title : ev.label, ev.weekNumber);
                                                                         }
-                                                                    }
-                                                                }}
-                                                                min="0"
-                                                                max="20"
-                                                            />
-                                                        </TableCell>
+                                                                    }}
+                                                                    min="0"
+                                                                    max="20"
+                                                                />
+                                                            </TableCell>
+                                                        </TableRow>
                                                     )
-                                                }) : <TableCell className="border-l"></TableCell>}
-                                                <TableCell className="text-center border-l"></TableCell>
-                                            </React.Fragment>
-                                        )
-                                    })}
-                                    <TableCell className={cn("text-center font-bold bg-muted/50 sticky right-0 z-10", (indicatorAverage ?? 20) < 11 ? 'text-destructive' : '')}>
-                                        {indicatorAverage ?? '-'}
-                                    </TableCell>
-                                </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
+                                                }) : (
+                                                    <TableRow>
+                                                        <TableCell colSpan={3} className="text-center h-24 text-muted-foreground">
+                                                            No hay evaluaciones definidas para este indicador.
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        );
+                    })}
+                </Accordion>
             </div>
              <AddManualEvaluationDialog 
                 isOpen={dialogOpen}
@@ -252,5 +187,3 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
         </>
     );
 }
-
-    

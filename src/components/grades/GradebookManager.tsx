@@ -38,8 +38,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
-    const [zoom, setZoom] = useState(0.75);
-
+    
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
@@ -101,7 +100,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); // Deep copy for initial state comparison
+            setInitialRecords(recordsMap);
 
 
         } catch (error) {
@@ -200,7 +199,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         try {
             const updatedRecords: AcademicRecord[] = [];
             
-            for (const studentId in records) {
+             for (const studentId in records) {
                  if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
                     updatedRecords.push(records[studentId]);
                 }
@@ -222,8 +221,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            // Update the initial state to reflect the saved state
-            setInitialRecords(JSON.parse(JSON.stringify(records))); // Deep copy again
+            setInitialRecords(records);
 
         } catch(error) {
             console.error("Error saving grades:", error);
@@ -321,51 +319,34 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const DetailView = () => (
         selectedIndicator && (
              <div className="space-y-4">
-                <div 
-                    className="overflow-x-auto screen-only w-full"
-                >
-                    <div
-                        style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-                        className="transition-transform inline-block"
-                    >
-                        <Card className="min-w-max">
-                            <CardHeader>
-                                <div className="flex justify-between items-start flex-wrap gap-4">
-                                    <div>
-                                        <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
-                                            <ArrowLeft className="mr-2 h-4 w-4" />
-                                            Volver a Indicadores
-                                        </Button>
-                                        <CardTitle>Calificaciones para: {selectedIndicator.name}</CardTitle>
-                                        <CardDescription>
-                                            Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
-                                        </CardDescription>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex items-center gap-2 w-48">
-                                            <ZoomOut className="h-5 w-5" />
-                                            <Slider
-                                                defaultValue={[0.75]}
-                                                value={[zoom]}
-                                                min={0.5}
-                                                max={1}
-                                                step={0.05}
-                                                onValueChange={(value) => setZoom(value[0])}
-                                            />
-                                            <ZoomIn className="h-5 w-5" />
-                                        </div>
-                                        <Button variant="outline" onClick={() => window.print()}>
-                                            <Printer className="mr-2 h-4 w-4" />
-                                            Imprimir
-                                        </Button>
-                                        <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
-                                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                            Guardar
-                                        </Button>
-                                    </div>
+                <div className="w-full screen-only">
+                    <Card>
+                         <CardHeader>
+                            <div className="flex justify-between items-start flex-wrap gap-4">
+                                <div>
+                                    <Button variant="ghost" size="sm" className="mb-2 -ml-4" onClick={() => setSelectedIndicator(null)}>
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Volver a Indicadores
+                                    </Button>
+                                    <CardTitle>Calificaciones para: {selectedIndicator.name}</CardTitle>
+                                    <CardDescription>
+                                        Gestiona las calificaciones de los estudiantes para este indicador. Semanas {selectedIndicator.startWeek} a la {selectedIndicator.endWeek}.
+                                    </CardDescription>
                                 </div>
-                            </CardHeader>
-                            <IndicatorGradebook 
+                                <div className="flex items-center gap-4">
+                                    <Button variant="outline" onClick={() => window.print()}>
+                                        <Printer className="mr-2 h-4 w-4" />
+                                        Imprimir
+                                    </Button>
+                                    <Button onClick={handleSaveChanges} disabled={isSaving || loading}>
+                                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                        Guardar
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                             <IndicatorGradebook 
                                 students={students}
                                 indicator={selectedIndicator}
                                 tasks={tasks}
@@ -375,8 +356,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                 onManualEvaluationAdded={handleManualEvaluationAdded}
                                 onManualEvaluationDeleted={handleManualEvaluationDeleted}
                             />
-                        </Card>
-                    </div>
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <div className="print-only">
