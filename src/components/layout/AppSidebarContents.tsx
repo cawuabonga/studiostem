@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -32,7 +32,7 @@ export function AppSidebarContents() {
   const instituteAdminItems = [
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, roles: ['Admin', 'Coordinator'] },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, roles: ['Admin', 'Coordinator'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: Briefcase, roles: ['Admin', 'Coordinator'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, roles: ['Admin', 'Coordinator', 'Student'] },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin', 'Coordinator'] },
   ];
   
@@ -45,7 +45,13 @@ export function AppSidebarContents() {
     { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, roles: ['Student'] },
   ];
 
-  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems, ...studentItems].filter(item => user?.role && item.roles.includes(user.role));
+  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems, ...studentItems].filter(item => {
+    if (!user?.role) return false;
+    const isRoleMatch = item.roles.includes(user.role);
+    // Basic deduplication by href
+    return isRoleMatch;
+  }).filter((item, index, self) => index === self.findIndex((t) => t.href === item.href));
+
 
   const getSidebarTitle = () => {
     if (user?.role === 'SuperAdmin' && !institute) {

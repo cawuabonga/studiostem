@@ -123,6 +123,27 @@ export interface Assignment {
   [unitId: string]: string; // unitId -> teacherId (Document ID)
 }
 
+// --- PAYMENTS ---
+export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type PaymentConcept = 'Matrícula' | 'Constancia de Estudios' | 'Carnet' | 'Otro';
+
+export interface Payment {
+  id: string;
+  studentId: string;
+  studentName: string;
+  concept: string;
+  amount: number;
+  paymentDate: Timestamp;
+  operationNumber: string;
+  voucherUrl: string;
+  status: PaymentStatus;
+  createdAt: Timestamp;
+  processedAt?: Timestamp;
+  receiptNumber?: string; // Assigned by admin on approval
+  rejectionReason?: string; // Assigned by admin on rejection
+}
+
+
 // --- ACADEMIC & MATRICULATION TYPES ---
 
 export interface Matriculation {
