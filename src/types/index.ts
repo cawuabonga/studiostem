@@ -128,6 +128,7 @@ export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
 
 export interface PaymentConcept {
   id: string;
+  code: string;
   name: string;
   amount: number;
   isActive: boolean;

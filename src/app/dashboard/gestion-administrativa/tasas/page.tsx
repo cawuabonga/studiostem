@@ -53,13 +53,13 @@ export default function TasasPage() {
   };
 
   const handleOpenDialog = (concept?: PaymentConcept) => {
-    setCurrentConcept(concept || { name: '', amount: 0, isActive: true });
+    setCurrentConcept(concept || { code: '', name: '', amount: 0, isActive: true });
     setIsDialogOpen(true);
   };
 
   const handleSave = async () => {
-    if (!instituteId || !currentConcept.name || (currentConcept.amount ?? 0) <= 0) {
-      toast({ title: "Datos incompletos", description: "Por favor, complete el nombre y un monto válido.", variant: "destructive"});
+    if (!instituteId || !currentConcept.code || !currentConcept.name || (currentConcept.amount ?? 0) <= 0) {
+      toast({ title: "Datos incompletos", description: "Por favor, complete el código, nombre y un monto válido.", variant: "destructive"});
       return;
     }
     
@@ -112,6 +112,7 @@ export default function TasasPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
+                        <TableHead>Código</TableHead>
                         <TableHead>Nombre del Concepto</TableHead>
                         <TableHead>Monto (S/)</TableHead>
                         <TableHead>Estado</TableHead>
@@ -121,10 +122,11 @@ export default function TasasPage() {
                 </TableHeader>
                 <TableBody>
                     {loading ? (
-                        <TableRow><TableCell colSpan={5} className="h-24 text-center">Cargando...</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={6} className="h-24 text-center">Cargando...</TableCell></TableRow>
                     ) : concepts.length > 0 ? (
                         concepts.map(concept => (
                             <TableRow key={concept.id}>
+                                <TableCell className="font-mono">{concept.code}</TableCell>
                                 <TableCell className="font-medium">{concept.name}</TableCell>
                                 <TableCell>{concept.amount.toFixed(2)}</TableCell>
                                 <TableCell>
@@ -144,7 +146,7 @@ export default function TasasPage() {
                             </TableRow>
                         ))
                     ) : (
-                         <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay tasas registradas.</TableCell></TableRow>
+                         <TableRow><TableCell colSpan={6} className="h-24 text-center">No hay tasas registradas.</TableCell></TableRow>
                     )}
                 </TableBody>
             </Table>
@@ -161,6 +163,10 @@ export default function TasasPage() {
                   </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                      <Label htmlFor="code">Código</Label>
+                      <Input id="code" value={currentConcept.code || ''} onChange={(e) => setCurrentConcept(p => ({...p, code: e.target.value.toUpperCase()}))} placeholder="Ej: MATR-01"/>
+                  </div>
                   <div className="space-y-2">
                       <Label htmlFor="name">Nombre del Concepto</Label>
                       <Input id="name" value={currentConcept.name || ''} onChange={(e) => setCurrentConcept(p => ({...p, name: e.target.value}))}/>
