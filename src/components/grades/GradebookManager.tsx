@@ -101,7 +101,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             
             setRecords(recordsMap);
-            setInitialRecords(JSON.parse(JSON.stringify(recordsMap))); 
+            setInitialRecords(recordsMap);
 
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
@@ -193,13 +193,15 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     }
     
-    const handleSaveChanges = async () => {
+   const handleSaveChanges = async () => {
         if (!instituteId) return;
         setIsSaving(true);
         try {
             const updatedRecords: AcademicRecord[] = [];
-             for (const studentId in records) {
-                if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecords[studentId])) {
+            const initialRecordsCopy = JSON.parse(JSON.stringify(initialRecords));
+
+            for (const studentId in records) {
+                if (JSON.stringify(records[studentId]) !== JSON.stringify(initialRecordsCopy[studentId])) {
                     updatedRecords.push(records[studentId]);
                 }
             }
@@ -209,6 +211,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     title: "Sin Cambios",
                     description: "No se han realizado cambios para guardar.",
                 });
+                setIsSaving(false);
                 return;
             }
 
@@ -219,7 +222,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 description: `Se han guardado las calificaciones para ${updatedRecords.length} estudiante(s).`,
             });
             
-            setInitialRecords(JSON.parse(JSON.stringify(records)));
+            setInitialRecords(records);
 
         } catch(error) {
             console.error("Error saving grades:", error);
@@ -354,23 +357,21 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent>
-                         <div style={{ height: `${(students.length * 50 + 200) * zoom}px`, transition: 'height 0.2s ease-out' }}>
-                            <div
-                                style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-                                className="transition-transform"
-                            >
-                                <IndicatorGradebook 
-                                    students={students}
-                                    indicator={selectedIndicator}
-                                    tasks={tasks}
-                                    records={records}
-                                    unit={unit}
-                                    onGradeChange={handleGradeChange}
-                                    onManualEvaluationAdded={handleManualEvaluationAdded}
-                                    onManualEvaluationDeleted={handleManualEvaluationDeleted}
-                                />
-                             </div>
+                    <CardContent className="overflow-auto">
+                        <div
+                            style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                            className="transition-transform w-full"
+                        >
+                            <IndicatorGradebook 
+                                students={students}
+                                indicator={selectedIndicator}
+                                tasks={tasks}
+                                records={records}
+                                unit={unit}
+                                onGradeChange={handleGradeChange}
+                                onManualEvaluationAdded={handleManualEvaluationAdded}
+                                onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                            />
                         </div>
                     </CardContent>
                 </Card>
@@ -400,5 +401,3 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
 
     return selectedIndicator ? <DetailView /> : <MainView />;
 }
-
-    
