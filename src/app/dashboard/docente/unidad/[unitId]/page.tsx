@@ -17,13 +17,13 @@ import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 
 export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
     const { instituteId } = useAuth();
-    const { unitId } = params;
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const fetchUnitDetails = useCallback(async () => {
+        const { unitId } = params;
         if (!instituteId || !unitId) {
             setLoading(false);
             setError("Faltan datos para cargar la unidad.");
@@ -44,7 +44,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unitId]);
+    }, [instituteId, params]);
 
     useEffect(() => {
         fetchUnitDetails();
