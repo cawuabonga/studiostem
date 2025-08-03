@@ -501,9 +501,11 @@ export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentC
 
 export const getPaymentConcepts = async (instituteId: string, activeOnly = false): Promise<PaymentConcept[]> => {
     const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
-    let q = query(conceptsCol, orderBy("name"));
+    let q;
     if (activeOnly) {
-        q = query(conceptsCol, where("isActive", "==", true), orderBy("name"));
+        q = query(conceptsCol, where("isActive", "==", true));
+    } else {
+        q = query(conceptsCol, orderBy("name"));
     }
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));

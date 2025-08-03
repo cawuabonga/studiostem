@@ -46,7 +46,11 @@ export function RegisterPaymentForm() {
   useEffect(() => {
     if (instituteId) {
         getPaymentConcepts(instituteId, true) // Fetch only active concepts
-            .then(setPaymentConcepts)
+            .then(concepts => {
+                // Sort client-side
+                const sortedConcepts = concepts.sort((a, b) => a.name.localeCompare(b.name));
+                setPaymentConcepts(sortedConcepts);
+            })
             .catch(console.error);
     }
   }, [instituteId]);

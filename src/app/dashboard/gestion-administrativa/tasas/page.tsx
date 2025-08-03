@@ -44,7 +44,9 @@ export default function TasasPage() {
     setLoading(true);
     try {
       const fetchedConcepts = await getPaymentConcepts(instituteId);
-      setConcepts(fetchedConcepts);
+      // Sort client-side
+      const sortedConcepts = fetchedConcepts.sort((a,b) => a.name.localeCompare(b.name));
+      setConcepts(sortedConcepts);
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar las tasas.", variant: "destructive" });
     } finally {
