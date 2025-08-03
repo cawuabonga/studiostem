@@ -7,7 +7,7 @@ import type { StudentProfile, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, ArrowRight } from 'lucide-react';
+import { MoreHorizontal, ArrowRight, Edit2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -15,6 +15,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import Image from 'next/image';
 import Link from 'next/link';
+import { EditStudentProfileDialog } from './EditStudentProfileDialog';
 
 interface StudentsTableProps {
     instituteId: string;
@@ -32,6 +33,9 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const [programFilter, setProgramFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+
+  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const fetchData = useCallback(async (id: string) => {
     setLoading(true);
@@ -58,6 +62,15 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
       fetchData(instituteId);
     }
   }, [instituteId, fetchData]);
+
+  const handleDialogClose = (updated?: boolean) => {
+    setIsEditDialogOpen(false);
+    setSelectedProfile(null);
+    if (updated) {
+        onDataChange();
+        fetchData(instituteId);
+    }
+  };
 
   const filteredProfiles = useMemo(() => {
     let profiles = allProfiles;
@@ -165,19 +178,10 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                             </Link>
                         </Button>
                     ) : (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem disabled>Editar (Próximamente)</DropdownMenuItem>
-                            <DropdownMenuItem disabled className="text-destructive">Eliminar (Próximamente)</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button variant="outline" size="icon" onClick={() => { setSelectedProfile(profile); setIsEditDialogOpen(true); }}>
+                            <Edit2 className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                        </Button>
                     )}
                 </TableCell>
               </TableRow>
@@ -213,6 +217,14 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             Siguiente
             </Button>
         </div>
+      )}
+       {selectedProfile && isEditDialogOpen && (
+        <EditStudentProfileDialog
+            profile={selectedProfile}
+            isOpen={isEditDialogOpen}
+            onClose={handleDialogClose}
+            instituteId={instituteId}
+        />
       )}
     </>
   );

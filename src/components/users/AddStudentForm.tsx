@@ -11,10 +11,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
-import type { Program } from '@/types';
+import type { Program, UnitPeriod } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
+const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -29,6 +32,8 @@ const addStudentSchema = z.object({
   age: z.coerce.number().min(15, { message: 'La edad debe ser al menos 15 años.' }),
   gender: z.enum(genders, { required_error: 'Debe seleccionar un género.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
+  admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
+  admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
   photoURL: z.instanceof(FileList).optional()
     .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 2MB.`)
     .refine(
@@ -77,6 +82,8 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
       age: 0,
       gender: undefined,
       programId: '',
+      admissionYear: new Date().getFullYear().toString(),
+      admissionPeriod: undefined,
       photoURL: undefined,
     },
   });
@@ -255,31 +262,69 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
                 </FormItem>
             )}
         />
-
-         <FormField
-            control={form.control}
-            name="programId"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Programa de Estudios</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={!programs.length}>
-                <FormControl>
-                    <SelectTrigger>
-                    <SelectValue placeholder={programs.length ? "Seleccione un programa" : "Cargando programas..."} />
-                    </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                    {programs.map((program) => (
-                    <SelectItem key={program.id} value={program.id}>
-                        {program.name}
-                    </SelectItem>
-                    ))}
-                </SelectContent>
-                </Select>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <FormField
+                control={form.control}
+                name="programId"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Programa de Estudios</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!programs.length}>
+                    <FormControl>
+                        <SelectTrigger>
+                        <SelectValue placeholder={programs.length ? "Seleccione un programa" : "Cargando programas..."} />
+                        </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                        {programs.map((program) => (
+                        <SelectItem key={program.id} value={program.id}>
+                            {program.name}
+                        </SelectItem>
+                        ))}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="admissionYear"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Año de Admisión</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue/></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+             <FormField
+                control={form.control}
+                name="admissionPeriod"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Período de Admisión</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Seleccione período"/></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {periods.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
         
         <Button type="submit" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

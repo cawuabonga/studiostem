@@ -41,6 +41,8 @@ export interface StudentProfile {
   address?: string;
   photoURL?: string;
   programId: string;
+  admissionYear: string;
+  admissionPeriod: UnitPeriod;
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
   role?: UserRole; // Will always be 'Student' implicitly
   linkedUserUid?: string | null;

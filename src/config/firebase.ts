@@ -416,6 +416,15 @@ export const getStudentProfile = async (instituteId: string, studentId: string):
     return null;
 }
 
+export const updateStudentProfile = async (instituteId: string, documentId: string, data: Partial<Omit<StudentProfile, 'id' | 'documentId' | 'photoURL'>>) => {
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', documentId);
+    const updateData = {
+        ...data,
+        fullName: `${data.firstName} ${data.lastName}`,
+    }
+    await updateDoc(studentRef, updateData);
+}
+
 export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
@@ -512,7 +521,7 @@ export const getPaymentConcepts = async (instituteId: string, activeOnly = false
     const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
     let q;
     if (activeOnly) {
-        q = query(conceptsCol, where("isActive", "==", true));
+        q = query(conceptsCol, where("isActive", "==", true), orderBy("name"));
     } else {
         q = query(conceptsCol, orderBy("name"));
     }
