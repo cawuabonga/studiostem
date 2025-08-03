@@ -8,8 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
-export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
-    const { studentId } = params;
+export default function StudentMatriculationPage({ params: { studentId } }: { params: { studentId: string } }) {
     const { instituteId } = useAuth();
     const router = useRouter();
 
