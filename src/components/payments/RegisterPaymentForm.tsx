@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -61,7 +62,7 @@ export function RegisterPaymentForm() {
       concept: "",
       amount: 0,
       operationNumber: '',
-      paymentDate: undefined,
+      paymentDate: new Date(),
       voucher: undefined,
     }
   });
@@ -82,7 +83,8 @@ export function RegisterPaymentForm() {
     }
     setLoading(true);
     try {
-      await registerPayment(instituteId, { ...data, studentId: user.documentId!, studentName: user.displayName! }, data.voucher[0]);
+      const { voucher, ...paymentData } = data;
+      await registerPayment(instituteId, { ...paymentData, studentId: user.documentId!, studentName: user.displayName! }, voucher[0]);
       toast({
         title: '¡Pago Registrado!',
         description: 'Tu pago ha sido enviado para validación. Puedes ver su estado en "Mi Historial de Pagos".',

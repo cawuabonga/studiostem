@@ -556,7 +556,7 @@ export const deletePaymentConcept = async (instituteId: string, conceptId: strin
 
 export const registerPayment = async (
     instituteId: string, 
-    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt'>, 
+    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'voucher'>, 
     voucherFile: File
 ): Promise<void> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
@@ -565,7 +565,7 @@ export const registerPayment = async (
     const voucherUrl = await fileToDataUri(voucherFile);
 
     const paymentData: Omit<Payment, 'id'> = {
-        ...data,
+        ...(data as any), // Cast to any to avoid type issues with voucher field
         voucherUrl,
         status: 'Pendiente',
         createdAt: Timestamp.now()
@@ -958,3 +958,4 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
     }
     return {};
 }
+
