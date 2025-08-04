@@ -556,16 +556,19 @@ export const deletePaymentConcept = async (instituteId: string, conceptId: strin
 
 export const registerPayment = async (
     instituteId: string, 
-    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'voucher'>, 
+    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt'>, 
     voucherFile: File
 ): Promise<void> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
     const voucherUrl = await fileToDataUri(voucherFile);
+    
+    // Remove the 'voucher' FileList from the data object before saving to Firestore
+    const { voucher, ...paymentDataToSave } = data as any;
 
     const paymentData: Omit<Payment, 'id'> = {
-        ...(data as any), // Cast to any to avoid type issues with voucher field
+        ...paymentDataToSave,
         voucherUrl,
         status: 'Pendiente',
         createdAt: Timestamp.now()
@@ -582,7 +585,7 @@ export const getStudentPayments = async (instituteId: string, studentId: string)
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("status", "==", status), orderBy("createdAt", "desc"));
+    const q = query(paymentsCol, where("status", "==", status), orderBy("createdAt", "asc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }
