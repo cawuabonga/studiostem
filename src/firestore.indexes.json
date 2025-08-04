@@ -76,6 +76,24 @@
       ]
     },
     {
+      "collectionGroup": "contents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "weekNumber",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "order",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "tasks",
       "queryScope": "COLLECTION",
       "fields": [
@@ -94,7 +112,7 @@
       ]
     },
     {
-      "collectionGroup": "contents",
+      "collectionGroup": "tasks",
       "queryScope": "COLLECTION",
       "fields": [
         {
@@ -103,10 +121,6 @@
         },
         {
           "fieldPath": "order",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "__name__",
           "order": "ASCENDING"
         }
       ]
