@@ -6,7 +6,7 @@ import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, getAllTasksForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments, getTasksForUnit } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { Save, Loader2, ArrowLeft, Printer, ZoomIn, ZoomOut } from 'lucide-react';
@@ -48,17 +48,21 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 enrolledStudents, 
                 achievementIndicators, 
                 fetchedRecords, 
-                allTasks,
                 allPrograms,
                 allTeachers,
             ] = await Promise.all([
                 getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
                 getAchievementIndicators(instituteId, unit.id),
                 getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period),
-                getAllTasksForUnit(instituteId, unit.id, unit.totalWeeks),
                 getPrograms(instituteId),
                 getTeachers(instituteId),
             ]);
+
+            // Fetch tasks for all weeks of the unit to have them available.
+            const taskPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getTasksForUnit(instituteId, unit.id, i + 1));
+            const tasksByWeek = await Promise.all(taskPromises);
+            const allTasks = tasksByWeek.flat();
+            setTasks(allTasks);
 
             const currentProgram = allPrograms.find(p => p.id === unit.programId) || null;
             setProgram(currentProgram);
@@ -74,7 +78,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             setStudents(enrolledStudents);
             const sortedIndicators = achievementIndicators.sort((a,b) => a.name.localeCompare(b.name));
             setIndicators(sortedIndicators);
-            setTasks(allTasks);
 
             const recordsMap: Record<string, AcademicRecord> = {};
             

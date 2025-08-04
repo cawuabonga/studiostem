@@ -578,7 +578,8 @@ export const getStudentPaymentsByStatus = async (instituteId: string, studentId:
     const q = query(
         paymentsCol,
         where("studentId", "==", studentId),
-        where("status", "==", status)
+        where("status", "==", status),
+        orderBy("paymentDate", "desc")
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
@@ -940,13 +941,6 @@ export const addTaskToWeek = async (instituteId: string, unitId: string, weekNum
 export const getTasksForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Task[]> => {
     const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
     const q = query(taskCol, where("weekNumber", "==", weekNumber), orderBy("order"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-}
-
-export const getAllTasksForUnit = async (instituteId: string, unitId: string): Promise<Task[]> => {
-    const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
-    const q = query(taskCol, orderBy("weekNumber"), orderBy("order"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 }
