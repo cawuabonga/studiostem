@@ -28,6 +28,16 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
+// Helper function to convert a file to a Base64 Data URI
+const fileToDataUri = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+};
+
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
   try {
@@ -552,9 +562,7 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const storageRef = ref(firebaseStorage, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
-    await uploadBytes(storageRef, voucherFile);
-    const voucherUrl = await getDownloadURL(storageRef);
+    const voucherUrl = await fileToDataUri(voucherFile);
 
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
@@ -574,7 +582,7 @@ export const getStudentPayments = async (instituteId: string, studentId: string)
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("status", "==", status), orderBy("createdAt", "asc"));
+    const q = query(paymentsCol, where("status", "==", status), orderBy("createdAt", "desc"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }
