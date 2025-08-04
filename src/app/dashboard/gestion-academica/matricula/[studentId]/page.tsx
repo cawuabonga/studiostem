@@ -13,6 +13,8 @@ import { useEffect } from "react";
 export default function StudentMatriculationPage({ params }: { params: { studentId: string } }) {
     const { instituteId } = useAuth();
     const router = useRouter();
+    
+    // Access studentId only inside the component's render logic
     const studentId = params.studentId;
 
     if (!instituteId) {
