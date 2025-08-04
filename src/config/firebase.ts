@@ -578,7 +578,7 @@ export const registerPayment = async (
 
 export const getStudentPayments = async (instituteId: string, studentId: string): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("studentId", "==", studentId), orderBy("createdAt", "desc"));
+    const q = query(paymentsCol, where("studentId", "==", studentId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }

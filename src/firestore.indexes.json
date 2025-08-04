@@ -1,4 +1,5 @@
 
+
 {
   "indexes": [
     {
@@ -25,7 +26,7 @@
         },
         {
           "fieldPath": "createdAt",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
         }
       ]
     },
@@ -38,8 +39,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
+          "fieldPath": "status",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -78,4 +79,5 @@
   ],
   "fieldOverrides": []
 }
+
 
