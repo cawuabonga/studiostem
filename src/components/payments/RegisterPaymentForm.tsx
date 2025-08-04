@@ -59,7 +59,10 @@ export function RegisterPaymentForm() {
     resolver: zodResolver(paymentSchema),
     defaultValues: {
       concept: "",
-      amount: 0
+      amount: 0,
+      operationNumber: '',
+      paymentDate: undefined,
+      voucher: undefined,
     }
   });
 
