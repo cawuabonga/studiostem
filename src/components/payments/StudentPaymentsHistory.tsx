@@ -2,19 +2,20 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Payment } from '@/types';
+import type { Payment, PaymentStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentPayments } from '@/config/firebase';
+import { getStudentPaymentsByStatus } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Clock, XCircle, Eye, Info } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import Image from 'next/image';
+import { Card } from '../ui/card';
 
 const statusConfig = {
     'Pendiente': { text: 'Pendiente de Verificación', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
@@ -22,7 +23,11 @@ const statusConfig = {
     'Rechazado': { text: 'Rechazado', icon: XCircle, color: 'bg-red-100 text-red-800' },
 }
 
-export function StudentPaymentsHistory() {
+interface StudentPaymentsHistoryProps {
+    status: PaymentStatus;
+}
+
+export function StudentPaymentsHistory({ status }: StudentPaymentsHistoryProps) {
     const { user, instituteId } = useAuth();
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -36,7 +41,7 @@ export function StudentPaymentsHistory() {
         }
         setLoading(true);
         try {
-            const studentPayments = await getStudentPayments(instituteId, user.documentId);
+            const studentPayments = await getStudentPaymentsByStatus(instituteId, user.documentId, status);
             setPayments(studentPayments);
         } catch (error) {
             console.error("Error fetching student payments:", error);
@@ -44,7 +49,7 @@ export function StudentPaymentsHistory() {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, user?.documentId, toast]);
+    }, [instituteId, user?.documentId, toast, status]);
 
     useEffect(() => {
         fetchPayments();
@@ -52,31 +57,45 @@ export function StudentPaymentsHistory() {
 
     if (loading) {
         return (
-            <div className="space-y-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
+             <Card>
+                <div className="space-y-4 p-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            </Card>
         );
     }
     
+    if (payments.length === 0) {
+        return (
+             <Card>
+                <div className="text-center p-10 text-muted-foreground">
+                    <Info className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium">No hay pagos</h3>
+                    <p className="mt-1 text-sm">No se encontraron pagos con el estado "{status}".</p>
+                </div>
+            </Card>
+        )
+    }
+
     return (
         <>
-        <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Fecha de Pago</TableHead>
-                        <TableHead>Concepto</TableHead>
-                        <TableHead>Monto</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>N° Comprobante Físico</TableHead>
-                        <TableHead>Voucher</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {payments.length > 0 ? (
-                        payments.map(payment => {
+        <Card>
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Fecha de Pago</TableHead>
+                            <TableHead>Concepto</TableHead>
+                            <TableHead>Monto</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Observaciones</TableHead>
+                            <TableHead>Voucher</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {payments.map(payment => {
                             const config = statusConfig[payment.status] || { text: 'Desconocido', icon: AlertTriangle, color: 'bg-gray-100 text-gray-800' };
                             return (
                                 <TableRow key={payment.id}>
@@ -88,11 +107,11 @@ export function StudentPaymentsHistory() {
                                             <config.icon className="mr-2 h-4 w-4"/>
                                             {config.text}
                                         </Badge>
-                                        {payment.status === 'Rechazado' && (
-                                            <p className="text-xs text-destructive mt-1 italic">{payment.rejectionReason}</p>
-                                        )}
                                     </TableCell>
-                                    <TableCell className="font-mono">{payment.receiptNumber || '---'}</TableCell>
+                                     <TableCell>
+                                        {payment.status === 'Aprobado' && <span className="font-mono text-xs">Comprobante: {payment.receiptNumber || 'N/A'}</span>}
+                                        {payment.status === 'Rechazado' && <p className="text-xs text-destructive italic">{payment.rejectionReason}</p>}
+                                    </TableCell>
                                      <TableCell>
                                         <Button variant="link" className="p-0 h-auto" onClick={() => setViewingVoucherUrl(payment.voucherUrl)}>
                                             <Eye className="mr-1 h-4 w-4"/> Ver
@@ -100,17 +119,11 @@ export function StudentPaymentsHistory() {
                                     </TableCell>
                                 </TableRow>
                             )
-                        })
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={6} className="h-24 text-center">
-                                Aún no has registrado ningún pago.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </div>
+                        })}
+                    </TableBody>
+                </Table>
+            </div>
+        </Card>
         <Dialog open={!!viewingVoucherUrl} onOpenChange={(isOpen) => !isOpen && setViewingVoucherUrl(null)}>
             <DialogContent className="max-w-md">
                 <DialogHeader>

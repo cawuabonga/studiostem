@@ -573,16 +573,20 @@ export const registerPayment = async (
     await setDoc(paymentDocRef, paymentData);
 }
 
-export const getStudentPayments = async (instituteId: string, studentId: string): Promise<Payment[]> => {
+export const getStudentPaymentsByStatus = async (instituteId: string, studentId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("studentId", "==", studentId), orderBy("paymentDate", "desc"));
+    const q = query(
+        paymentsCol, 
+        where("studentId", "==", studentId), 
+        where("status", "==", status)
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("status", "==", status), orderBy("paymentDate", "asc"));
+    const q = query(paymentsCol, where("status", "==", status));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }
@@ -956,8 +960,3 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
     }
     return {};
 }
-
-
-
-
-
