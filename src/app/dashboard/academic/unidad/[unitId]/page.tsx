@@ -13,17 +13,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotebookText, CalendarDays, Percent, CalendarCheck } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
+import { usePathname } from 'next/navigation';
 
-export default function UnitManagementPage({ params }: { params: { unitId: string } }) {
+export default function UnitManagementPage() {
     const { user, instituteId } = useAuth();
+    const pathname = usePathname();
+    const unitId = pathname.split('/').pop() || '';
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const fetchUnitDetails = useCallback(async () => {
-        const unitId = params.unitId;
-        if (!instituteId || !unitId) {
+    const fetchUnitDetails = useCallback(async (id: string) => {
+        if (!instituteId || !id) {
             setLoading(false);
             setError("Faltan datos para cargar la unidad.");
             return;
@@ -31,7 +33,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
 
         try {
             setLoading(true);
-            const unitData = await getUnit(instituteId, unitId);
+            const unitData = await getUnit(instituteId, id);
             if (unitData) {
                 setUnit(unitData);
             } else {
@@ -43,11 +45,13 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         } finally {
             setLoading(false);
         }
-    }, [instituteId, params]);
+    }, [instituteId]);
 
     useEffect(() => {
-        fetchUnitDetails();
-    }, [fetchUnitDetails]);
+        if (unitId) {
+            fetchUnitDetails(unitId);
+        }
+    }, [unitId, fetchUnitDetails]);
 
     if (loading) {
         return (
