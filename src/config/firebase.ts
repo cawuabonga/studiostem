@@ -592,7 +592,7 @@ export const updatePaymentStatus = async (
         ...extraData
     };
     await updateDoc(paymentRef, updateData);
-}
+};
 
 
 // --- ACADEMIC & MATRICULATION TYPES ---
