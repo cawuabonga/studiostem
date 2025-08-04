@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitCard } from '@/components/teacher/UnitCard';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 interface AssignedUnit extends Unit {
     programName: string;
@@ -19,6 +21,9 @@ export default function TeacherDashboardPage() {
     const { toast } = useToast();
     const [assignedUnits, setAssignedUnits] = useState<AssignedUnit[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+
+    const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
     useEffect(() => {
         const fetchAssignedUnits = async () => {
@@ -26,9 +31,8 @@ export default function TeacherDashboardPage() {
                 setLoading(false);
                 return;
             }
-
+            setLoading(true);
             try {
-                const year = new Date().getFullYear().toString();
                 const [allPrograms, allUnits] = await Promise.all([
                     getPrograms(instituteId),
                     getUnits(instituteId)
@@ -37,7 +41,7 @@ export default function TeacherDashboardPage() {
                 const programMap = new Map(allPrograms.map(p => [p.id, p]));
                 const unitMap = new Map(allUnits.map(u => [u.id, u]));
                 
-                const assignmentPromises = allPrograms.map(p => getAssignments(instituteId, year, p.id));
+                const assignmentPromises = allPrograms.map(p => getAssignments(instituteId, selectedYear, p.id));
                 const assignmentResults = await Promise.all(assignmentPromises);
 
                 const unitsForTeacher: AssignedUnit[] = [];
@@ -83,7 +87,7 @@ export default function TeacherDashboardPage() {
         };
 
         fetchAssignedUnits();
-    }, [instituteId, user?.documentId, toast]);
+    }, [instituteId, user?.documentId, toast, selectedYear]);
 
     if (loading) {
         return (
@@ -105,20 +109,35 @@ export default function TeacherDashboardPage() {
         <div className="space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Mis Unidades Didácticas Asignadas</CardTitle>
-                    <CardDescription>
-                        Estas son las unidades que tienes a tu cargo para el presente año académico. Selecciona una para gestionarla.
-                    </CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                        <div>
+                            <CardTitle>Mis Unidades Didácticas Asignadas</CardTitle>
+                            <CardDescription>
+                                Estas son las unidades que tienes a tu cargo. Selecciona una para gestionarla.
+                            </CardDescription>
+                        </div>
+                         <div className="w-full sm:w-48 space-y-2">
+                            <Label htmlFor="year-select">Seleccionar Año</Label>
+                            <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                <SelectTrigger id="year-select">
+                                    <SelectValue placeholder="Seleccione un año" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </CardHeader>
             </Card>
 
             {assignedUnits.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No tienes unidades didácticas asignadas para este año.</p>
+                <p className="text-center text-muted-foreground py-8">No tienes unidades didácticas asignadas para el año {selectedYear}.</p>
             ) : (
                 <>
                     {unitsMarJul.length > 0 && (
                         <div className="space-y-4">
-                            <h2 className="text-2xl font-bold">Período MAR-JUL</h2>
+                            <h2 className="text-2xl font-bold">Período MAR-JUL {selectedYear}</h2>
                              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {unitsMarJul.map(unit => <UnitCard key={unit.id} unit={unit} />)}
                             </div>
@@ -127,7 +146,7 @@ export default function TeacherDashboardPage() {
 
                      {unitsAgoDic.length > 0 && (
                         <div className="space-y-4">
-                            <h2 className="text-2xl font-bold">Período AGO-DIC</h2>
+                            <h2 className="text-2xl font-bold">Período AGO-DIC {selectedYear}</h2>
                              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                 {unitsAgoDic.map(unit => <UnitCard key={unit.id} unit={unit} />)}
                             </div>
