@@ -585,7 +585,7 @@ export const getStudentPayments = async (instituteId: string, studentId: string)
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("status", "==", status), orderBy("createdAt", "asc"));
+    const q = query(paymentsCol, where("status", "==", status));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 }

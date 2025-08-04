@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import type { Payment } from '@/types';
+import type { Payment, PaymentStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPaymentsByStatus, updatePaymentStatus } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -11,13 +11,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
-import { Eye, Check, X } from 'lucide-react';
+import { format, formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Eye, Check, X, Info } from 'lucide-react';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
-import Image from 'next/image';
+import { Card } from '../ui/card';
 
-export function AdminPaymentsDashboard() {
+interface AdminPaymentsDashboardProps {
+    status: PaymentStatus;
+}
+
+
+export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
@@ -30,15 +36,15 @@ export function AdminPaymentsDashboard() {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const pendingPayments = await getPaymentsByStatus(instituteId, 'Pendiente');
-            setPayments(pendingPayments);
+            const fetchedPayments = await getPaymentsByStatus(instituteId, status);
+            setPayments(fetchedPayments.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
         } catch (error) {
-            console.error("Error fetching pending payments:", error);
-            toast({ title: "Error", description: "No se pudieron cargar los pagos pendientes.", variant: "destructive" });
+            console.error(`Error fetching ${status} payments:`, error);
+            toast({ title: "Error", description: "No se pudieron cargar los pagos.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [instituteId, toast]);
+    }, [instituteId, toast, status]);
 
     useEffect(() => {
         fetchPayments();
@@ -67,65 +73,84 @@ export function AdminPaymentsDashboard() {
             toast({ title: "Error", description: "No se pudo rechazar el pago.", variant: "destructive" });
         }
     };
-
-    if (loading) {
-        return (
-            <div className="space-y-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-            </div>
-        );
-    }
     
+    const renderTable = () => {
+         if (loading) {
+            return (
+                <div className="space-y-4 p-4">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            );
+        }
+
+        if (payments.length === 0) {
+            return (
+                <div className="text-center p-10 text-muted-foreground">
+                    <Info className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium">No hay pagos</h3>
+                    <p className="mt-1 text-sm">No se encontraron pagos con el estado "{status}".</p>
+                </div>
+            )
+        }
+
+        return (
+             <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Fecha de Registro</TableHead>
+                        <TableHead>Estudiante</TableHead>
+                        <TableHead>Concepto</TableHead>
+                        <TableHead>Monto</TableHead>
+                        <TableHead>N° Operación</TableHead>
+                         {status === 'Rechazado' && <TableHead>Motivo Rechazo</TableHead>}
+                         {status === 'Aprobado' && <TableHead>N° Comprobante</TableHead>}
+                        <TableHead className="text-right">Voucher</TableHead>
+                         {status === 'Pendiente' && <TableHead className="text-right">Acciones</TableHead>}
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {payments.map(payment => (
+                        <TableRow key={payment.id}>
+                            <TableCell>{formatDistanceToNow(payment.createdAt.toDate(), { addSuffix: true, locale: es })}</TableCell>
+                            <TableCell className="font-medium">{payment.studentName}</TableCell>
+                            <TableCell>{payment.concept}</TableCell>
+                            <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>
+                            <TableCell>{payment.operationNumber}</TableCell>
+                             {status === 'Rechazado' && <TableCell className="text-destructive text-xs">{payment.rejectionReason}</TableCell>}
+                            {status === 'Aprobado' && <TableCell className="font-mono">{payment.receiptNumber}</TableCell>}
+                            <TableCell className="text-right">
+                                 <Button variant="outline" size="sm" asChild>
+                                    <a href={payment.voucherUrl} target="_blank" rel="noopener noreferrer">
+                                        <Eye className="mr-2 h-4 w-4"/> Ver
+                                    </a>
+                                </Button>
+                            </TableCell>
+                             {status === 'Pendiente' && (
+                                <TableCell className="text-right space-x-2">
+                                    <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700" onClick={() => { setSelectedPayment(payment); setIsApproveOpen(true); }}>
+                                        <Check className="mr-2 h-4 w-4"/> Aprobar
+                                    </Button>
+                                    <Button variant="destructive" size="sm" onClick={() => { setSelectedPayment(payment); setIsRejectOpen(true); }}>
+                                        <X className="mr-2 h-4 w-4"/> Rechazar
+                                    </Button>
+                                </TableCell>
+                             )}
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )
+    }
+
     return (
         <>
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Fecha de Registro</TableHead>
-                            <TableHead>Estudiante</TableHead>
-                            <TableHead>Concepto</TableHead>
-                            <TableHead>Monto</TableHead>
-                            <TableHead>N° Operación</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {payments.length > 0 ? (
-                            payments.map(payment => (
-                                <TableRow key={payment.id}>
-                                    <TableCell>{format(payment.createdAt.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                    <TableCell className="font-medium">{payment.studentName}</TableCell>
-                                    <TableCell>{payment.concept}</TableCell>
-                                    <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>
-                                    <TableCell>{payment.operationNumber}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="outline" size="sm" asChild>
-                                            <a href={payment.voucherUrl} target="_blank" rel="noopener noreferrer">
-                                                <Eye className="mr-2 h-4 w-4"/> Ver Voucher
-                                            </a>
-                                        </Button>
-                                        <Button variant="outline" size="sm" className="text-green-600 hover:text-green-700" onClick={() => { setSelectedPayment(payment); setIsApproveOpen(true); }}>
-                                            <Check className="mr-2 h-4 w-4"/> Aprobar
-                                        </Button>
-                                         <Button variant="destructive" size="sm" onClick={() => { setSelectedPayment(payment); setIsRejectOpen(true); }}>
-                                            <X className="mr-2 h-4 w-4"/> Rechazar
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-24 text-center">
-                                    No hay pagos pendientes de validación.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+            <Card>
+                <div className="rounded-md">
+                   {renderTable()}
+                </div>
+            </Card>
             {selectedPayment && (
                 <>
                     <ApprovePaymentDialog
