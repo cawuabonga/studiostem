@@ -190,6 +190,7 @@ export interface Content {
   title: string;
   type: ContentType;
   value: string; // URL for file/link, or markdown text
+  order: number;
   createdAt: Timestamp;
 }
 
@@ -199,6 +200,7 @@ export interface Task {
   description: string;
   dueDate: Timestamp;
   fileUrl?: string; // URL to an attached file from the teacher
+  order: number;
   createdAt: Timestamp;
   weekNumber: number; // The week this task belongs to
 }

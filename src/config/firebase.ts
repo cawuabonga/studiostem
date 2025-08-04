@@ -150,7 +150,7 @@ export const uploadLoginImage = async (file: File, name: string): Promise<void> 
     const storageRef = ref(firebaseStorage, `loginImages/${imageDocRef.id}`);
     await uploadBytes(storageRef, file);
     const url = await getDownloadURL(storageRef);
-    await setDoc(imageDocRef, { name, url, createdAt: new Date() });
+    await setDoc(imageDocRef, { name, url, createdAt: Timestamp.now() });
 };
 
 export const getLoginImages = async (): Promise<LoginImage[]> => {
@@ -576,20 +576,24 @@ export const registerPayment = async (
 export const getStudentPaymentsByStatus = async (instituteId: string, studentId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const q = query(
-        paymentsCol, 
-        where("studentId", "==", studentId), 
+        paymentsCol,
+        where("studentId", "==", studentId),
         where("status", "==", status)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
-}
+};
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(paymentsCol, where("status", "==", status));
+    const q = query(
+        paymentsCol,
+        where("status", "==", status),
+        orderBy("paymentDate", "asc")
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
-}
+};
 
 export const updatePaymentStatus = async (
     instituteId: string, 
@@ -875,10 +879,15 @@ export const saveAttendance = async (instituteId: string, attendanceData: Attend
 };
 
 // --- PLANNING: CONTENT & TASKS ---
-export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt' | 'value'> & { value: string }, file?: File) => {
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt' | 'order' | 'value'> & { value: string }, file?: File) => {
     const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents');
-    const contentDocRef = doc(contentCol);
+    
+    // Get current content to determine next order number
+    const q = query(contentCol, where("weekNumber", "==", weekNumber));
+    const snapshot = await getDocs(q);
+    const nextOrder = snapshot.size + 1;
 
+    const contentDocRef = doc(contentCol);
     let finalValue = data.value;
     if (data.type === 'file' && file) {
         const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${contentDocRef.id}_${file.name}`);
@@ -886,12 +895,12 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
         finalValue = await getDownloadURL(storageRef);
     }
     
-    await setDoc(contentDocRef, { ...data, value: finalValue, weekNumber, createdAt: Timestamp.now() });
+    await setDoc(contentDocRef, { ...data, value: finalValue, weekNumber, order: nextOrder, createdAt: Timestamp.now() });
 }
 
 export const getContentsForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Content[]> => {
     const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents');
-    const q = query(contentCol, where("weekNumber", "==", weekNumber), orderBy("createdAt"));
+    const q = query(contentCol, where("weekNumber", "==", weekNumber), orderBy("order"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
 }
@@ -918,21 +927,26 @@ export const deleteContentFromWeek = async (instituteId: string, unitId: string,
 }
 
 
-export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber'>) => {
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber' | 'order'>) => {
     const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
-    await addDoc(taskCol, { ...data, weekNumber, createdAt: Timestamp.now() });
+    
+    const q = query(taskCol, where("weekNumber", "==", weekNumber));
+    const snapshot = await getDocs(q);
+    const nextOrder = snapshot.size + 1;
+
+    await addDoc(taskCol, { ...data, weekNumber, order: nextOrder, createdAt: Timestamp.now() });
 }
 
 export const getTasksForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Task[]> => {
     const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
-    const q = query(taskCol, where("weekNumber", "==", weekNumber), orderBy("dueDate"));
+    const q = query(taskCol, where("weekNumber", "==", weekNumber), orderBy("order"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 }
 
 export const getAllTasksForUnit = async (instituteId: string, unitId: string): Promise<Task[]> => {
     const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
-    const q = query(taskCol, orderBy("weekNumber"), orderBy("dueDate"));
+    const q = query(taskCol, orderBy("weekNumber"), orderBy("order"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
 }
