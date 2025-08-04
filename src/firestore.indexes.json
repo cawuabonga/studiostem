@@ -38,8 +38,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "status",
-          "order": "ASCENDING"
+          "fieldPath": "paymentDate",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -86,6 +86,10 @@
         {
           "fieldPath": "order",
           "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -99,6 +103,10 @@
         },
         {
           "fieldPath": "order",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
           "order": "ASCENDING"
         }
       ]
