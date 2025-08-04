@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { AlertTriangle, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import Image from 'next/image';
 
 const statusConfig = {
     'Pendiente': { text: 'Pendiente de Verificación', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
@@ -24,7 +27,8 @@ export function StudentPaymentsHistory() {
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
     const [loading, setLoading] = useState(true);
-    
+    const [viewingVoucherUrl, setViewingVoucherUrl] = useState<string | null>(null);
+
     const fetchPayments = useCallback(async () => {
         if (!instituteId || !user?.documentId) {
             setLoading(false);
@@ -57,6 +61,7 @@ export function StudentPaymentsHistory() {
     }
     
     return (
+        <>
         <div className="rounded-md border">
             <Table>
                 <TableHeader>
@@ -89,9 +94,9 @@ export function StudentPaymentsHistory() {
                                     </TableCell>
                                     <TableCell className="font-mono">{payment.receiptNumber || '---'}</TableCell>
                                      <TableCell>
-                                        <a href={payment.voucherUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                            <Eye className="h-4 w-4"/> Ver
-                                        </a>
+                                        <Button variant="link" className="p-0 h-auto" onClick={() => setViewingVoucherUrl(payment.voucherUrl)}>
+                                            <Eye className="mr-1 h-4 w-4"/> Ver
+                                        </Button>
                                     </TableCell>
                                 </TableRow>
                             )
@@ -106,5 +111,18 @@ export function StudentPaymentsHistory() {
                 </TableBody>
             </Table>
         </div>
+        <Dialog open={!!viewingVoucherUrl} onOpenChange={(isOpen) => !isOpen && setViewingVoucherUrl(null)}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                <DialogTitle>Mi Voucher de Pago</DialogTitle>
+                </DialogHeader>
+                <div className="py-4">
+                    {viewingVoucherUrl && (
+                        <Image src={viewingVoucherUrl} alt="Voucher de pago" width={400} height={600} className="w-full h-auto object-contain rounded-md" data-ai-hint="payment voucher"/>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+        </>
     );
 }

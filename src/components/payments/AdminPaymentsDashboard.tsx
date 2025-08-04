@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -17,6 +16,9 @@ import { Eye, Check, X, Info } from 'lucide-react';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
 import { Card } from '../ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import Image from 'next/image';
+
 
 interface AdminPaymentsDashboardProps {
     status: PaymentStatus;
@@ -31,13 +33,14 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [isApproveOpen, setIsApproveOpen] = useState(false);
     const [isRejectOpen, setIsRejectOpen] = useState(false);
-    
+    const [viewingVoucherUrl, setViewingVoucherUrl] = useState<string | null>(null);
+
     const fetchPayments = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
         try {
             const fetchedPayments = await getPaymentsByStatus(instituteId, status);
-            setPayments(fetchedPayments.sort((a,b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
+            setPayments(fetchedPayments);
         } catch (error) {
             console.error(`Error fetching ${status} payments:`, error);
             toast({ title: "Error", description: "No se pudieron cargar los pagos.", variant: "destructive" });
@@ -121,10 +124,8 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                              {status === 'Rechazado' && <TableCell className="text-destructive text-xs">{payment.rejectionReason}</TableCell>}
                             {status === 'Aprobado' && <TableCell className="font-mono">{payment.receiptNumber}</TableCell>}
                             <TableCell className="text-right">
-                                 <Button variant="outline" size="sm" asChild>
-                                    <a href={payment.voucherUrl} target="_blank" rel="noopener noreferrer">
-                                        <Eye className="mr-2 h-4 w-4"/> Ver
-                                    </a>
+                                 <Button variant="outline" size="sm" onClick={() => setViewingVoucherUrl(payment.voucherUrl)}>
+                                    <Eye className="mr-2 h-4 w-4"/> Ver
                                 </Button>
                             </TableCell>
                              {status === 'Pendiente' && (
@@ -151,6 +152,20 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                    {renderTable()}
                 </div>
             </Card>
+
+            <Dialog open={!!viewingVoucherUrl} onOpenChange={(isOpen) => !isOpen && setViewingVoucherUrl(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                    <DialogTitle>Voucher de Pago</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-4">
+                        {viewingVoucherUrl && (
+                             <Image src={viewingVoucherUrl} alt="Voucher de pago" width={400} height={600} className="w-full h-auto object-contain rounded-md" data-ai-hint="payment voucher" />
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             {selectedPayment && (
                 <>
                     <ApprovePaymentDialog
