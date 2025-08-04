@@ -10,8 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { format, formatDistanceToNow } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { format } from 'date-fns';
 import { Eye, Check, X, Info } from 'lucide-react';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
@@ -102,7 +101,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
              <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Fecha de Registro</TableHead>
+                        <TableHead>Fecha de Pago</TableHead>
                         <TableHead>Estudiante</TableHead>
                         <TableHead>Concepto</TableHead>
                         <TableHead>Monto</TableHead>
@@ -116,7 +115,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                 <TableBody>
                     {payments.map(payment => (
                         <TableRow key={payment.id}>
-                            <TableCell>{formatDistanceToNow(payment.createdAt.toDate(), { addSuffix: true, locale: es })}</TableCell>
+                            <TableCell>{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</TableCell>
                             <TableCell className="font-medium">{payment.studentName}</TableCell>
                             <TableCell>{payment.concept}</TableCell>
                             <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>

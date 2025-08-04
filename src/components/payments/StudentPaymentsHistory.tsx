@@ -66,7 +66,7 @@ export function StudentPaymentsHistory() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Fecha de Registro</TableHead>
+                        <TableHead>Fecha de Pago</TableHead>
                         <TableHead>Concepto</TableHead>
                         <TableHead>Monto</TableHead>
                         <TableHead>Estado</TableHead>
@@ -80,7 +80,7 @@ export function StudentPaymentsHistory() {
                             const config = statusConfig[payment.status] || { text: 'Desconocido', icon: AlertTriangle, color: 'bg-gray-100 text-gray-800' };
                             return (
                                 <TableRow key={payment.id}>
-                                    <TableCell>{format(payment.createdAt.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                    <TableCell>{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</TableCell>
                                     <TableCell className="font-medium">{payment.concept}</TableCell>
                                     <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>
                                     <TableCell>

@@ -25,7 +25,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
+          "fieldPath": "paymentDate",
           "order": "ASCENDING"
         }
       ]
@@ -39,7 +39,7 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
+          "fieldPath": "paymentDate",
           "order": "DESCENDING"
         }
       ]
@@ -93,6 +93,7 @@
   ],
   "fieldOverrides": []
 }
+
 
 
 
