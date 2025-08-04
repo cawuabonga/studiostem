@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -124,7 +125,7 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     try {
         if (isEditMode && initialData) {
             // Logic for updating existing content
-            await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, {
+            await updateContentInWeek(instituteId, unit.id, initialData.id, {
                 title: data.title,
                 value: data.value || initialData.value // Keep old value if not changed (e.g. for file)
             });

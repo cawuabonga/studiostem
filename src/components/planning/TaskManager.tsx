@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -89,7 +90,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
   const handleDelete = async (taskId: string, taskTitle: string) => {
     if (!instituteId) return;
     try {
-        await deleteTaskFromWeek(instituteId, unit.id, weekNumber, taskId);
+        await deleteTaskFromWeek(instituteId, unit.id, taskId);
         toast({ title: "Tarea Eliminada", description: `La tarea "${taskTitle}" ha sido eliminada.` });
         setVersion(v => v + 1);
     } catch (error) {

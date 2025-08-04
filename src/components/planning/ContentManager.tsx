@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -97,7 +98,7 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
   const handleDelete = async (contentToDelete: Content) => {
     if (!instituteId) return;
     try {
-        await deleteContentFromWeek(instituteId, unit.id, weekNumber, contentToDelete);
+        await deleteContentFromWeek(instituteId, unit.id, contentToDelete);
         toast({ title: "Contenido Eliminado", description: "El recurso ha sido eliminado correctamente." });
         setVersion(v => v + 1);
     } catch (error) {

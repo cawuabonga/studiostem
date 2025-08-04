@@ -78,7 +78,7 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
         };
         
         if (isEditMode && initialData) {
-            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskData);
+            await updateTaskInWeek(instituteId, unit.id, initialData.id, taskData);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido actualizada.' });
         } else {
             await addTaskToWeek(instituteId, unit.id, weekNumber, taskData);
