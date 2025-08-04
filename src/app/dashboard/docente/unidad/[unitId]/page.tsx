@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -48,7 +47,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         };
 
         fetchUnitDetails();
-    }, [instituteId, params]);
+    }, [instituteId, params.unitId]);
 
     if (loading) {
         return (

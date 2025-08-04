@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -24,8 +23,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
 
     useEffect(() => {
         const fetchUnitDetails = async () => {
-            const unitId = params.unitId;
-            if (!instituteId || !unitId) {
+            if (!instituteId || !params.unitId) {
                 setLoading(false);
                 setError("Faltan datos para cargar la unidad.");
                 return;
@@ -33,7 +31,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
 
             try {
                 setLoading(true);
-                const unitData = await getUnit(instituteId, unitId);
+                const unitData = await getUnit(instituteId, params.unitId);
                 if (unitData) {
                     setUnit(unitData);
                 } else {
@@ -48,7 +46,7 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
         };
         
         fetchUnitDetails();
-    }, [instituteId, params]);
+    }, [instituteId, params.unitId]);
 
     if (loading) {
         return (

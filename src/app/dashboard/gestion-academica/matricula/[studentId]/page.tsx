@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { StudentMatriculationSheet } from "@/components/matricula/StudentMatriculationSheet";
@@ -14,7 +13,6 @@ export default function StudentMatriculationPage({ params }: { params: { student
     const { instituteId } = useAuth();
     const router = useRouter();
     
-    // Access studentId only inside the component's render logic
     const studentId = params.studentId;
 
     if (!instituteId) {
