@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -21,32 +21,33 @@ export default function UnitManagementPage({ params }: { params: { unitId: strin
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        const fetchUnitDetails = async () => {
-            if (!instituteId || !params.unitId) {
-                setLoading(false);
-                setError("Faltan datos para cargar la unidad.");
-                return;
-            }
+    const fetchUnitDetails = useCallback(async () => {
+        const unitId = params.unitId;
+        if (!instituteId || !unitId) {
+            setLoading(false);
+            setError("Faltan datos para cargar la unidad.");
+            return;
+        }
 
-            try {
-                setLoading(true);
-                const unitData = await getUnit(instituteId, params.unitId);
-                if (unitData) {
-                    setUnit(unitData);
-                } else {
-                    setError("No se encontró la unidad didáctica.");
-                }
-            } catch (err) {
-                console.error("Error fetching unit details:", err);
-                setError("Ocurrió un error al cargar los detalles de la unidad.");
-            } finally {
-                setLoading(false);
+        try {
+            setLoading(true);
+            const unitData = await getUnit(instituteId, unitId);
+            if (unitData) {
+                setUnit(unitData);
+            } else {
+                setError("No se encontró la unidad didáctica.");
             }
-        };
-        
+        } catch (err) {
+            console.error("Error fetching unit details:", err);
+            setError("Ocurrió un error al cargar los detalles de la unidad.");
+        } finally {
+            setLoading(false);
+        }
+    }, [instituteId, params]);
+
+    useEffect(() => {
         fetchUnitDetails();
-    }, [instituteId, params.unitId]);
+    }, [fetchUnitDetails]);
 
     if (loading) {
         return (
