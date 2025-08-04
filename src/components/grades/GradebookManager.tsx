@@ -6,7 +6,7 @@ import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments, getTasksForUnit } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments, getTasksForWeek } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { Save, Loader2, ArrowLeft, Printer, ZoomIn, ZoomOut } from 'lucide-react';
@@ -59,7 +59,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             ]);
 
             // Fetch tasks for all weeks of the unit to have them available.
-            const taskPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getTasksForUnit(instituteId, unit.id, i + 1));
+            const taskPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getTasksForWeek(instituteId, unit.id, i + 1));
             const tasksByWeek = await Promise.all(taskPromises);
             const allTasks = tasksByWeek.flat();
             setTasks(allTasks);
