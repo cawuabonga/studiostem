@@ -19,7 +19,6 @@ interface SyllabusPrintLayoutProps {
 export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators }: SyllabusPrintLayoutProps) {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const yearName = `"${institute?.name || 'Año de la Excelencia Académica'}"`; 
 
     const renderHtml = (text?: string) => {
         if (!text) return null;
@@ -30,29 +29,32 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
             </React.Fragment>
         ));
     };
+    
+    const currentModule = program?.modules.find(m => m.code === unit.moduleId);
 
     return (
         <div className="printable-area space-y-2 text-xs">
-            {/* Página 1: Carátula */}
+            {/* Página 1: Carátula (ahora con la nueva cabecera) */}
             <div className="page-break flex flex-col h-[90vh]">
                  <header className="print-header flex items-center justify-between w-full px-4 py-2 border-b-2 border-black">
-                    <div className="flex items-center gap-4">
+                    <div className="flex-shrink-0">
                         {institute?.logoUrl && (
                             <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={80} height={80} className="object-contain" data-ai-hint="institute logo" />
                         )}
                     </div>
-                     <div className="text-center">
-                        <h1 className="text-lg font-bold">{institute?.name || 'INSTITUTO'}</h1>
-                        <p className="text-sm">Programa de Estudios: "{program?.name}"</p>
+                     <div className="text-center flex-grow">
+                        <h1 className="text-sm font-bold">INSTITUTO DE EDUCACIÓN SUPERIOR TECNOLÓGICA PÚBLICO</h1>
+                        <h2 className="text-sm font-bold">"{institute?.name || 'Nombre del Instituto'}"</h2>
+                        <p className="text-xs mt-2">PROGRAMA DE ESTUDIOS: {program?.name}</p>
+                        <p className="text-xs">MÓDULO I: {currentModule?.name}</p>
                     </div>
-                    <div className="w-20"> {/* Placeholder for spacing */}
+                     <div className="w-20 flex-shrink-0"> {/* Placeholder to balance the layout */}
                     </div>
                 </header>
                 
                 <div className="flex flex-col items-center gap-4 flex-grow justify-center text-center">
-                    <h2 className="text-xl font-semibold my-8">SÍLABO DE LA UNIDAD DIDÁCTICA</h2>
-                    <div className="border-2 border-black p-4 rounded-lg my-8 w-full max-w-md">
-                        <h3 className="text-3xl font-bold tracking-wider">{unit.name.toUpperCase()}</h3>
+                    <div className="border-2 border-black p-4 rounded-lg my-8 w-full max-w-lg">
+                        <h3 className="text-xl font-bold tracking-wider">SÍLABO DE {unit.name.toUpperCase()}</h3>
                     </div>
                 </div>
 
@@ -70,7 +72,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                  <table className="print-info-table w-full">
                      <tbody>
                         <tr><td className="label w-[30%]">Programa de Estudios</td><td>{program?.name}</td></tr>
-                        <tr><td className="label">Módulo Profesional</td><td>{program?.modules.find(m => m.code === unit.moduleId)?.name}</td></tr>
+                        <tr><td className="label">Módulo Profesional</td><td>{currentModule?.name}</td></tr>
                         <tr><td className="label">Unidad Didáctica</td><td>{unit.name}</td></tr>
                         <tr><td className="label">Créditos</td><td>{unit.credits}</td></tr>
                         <tr><td className="label">Semestre</td><td>{unit.semester}</td></tr>
