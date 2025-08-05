@@ -19,7 +19,7 @@ interface SyllabusPrintLayoutProps {
 export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators }: SyllabusPrintLayoutProps) {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const yearName = institute?.name || "Nombre del Instituto"; // Placeholder if institute name is not available
+    const yearName = `"${institute?.name || 'Año de la Excelencia Académica'}"`; 
 
     const renderHtml = (text?: string) => {
         if (!text) return null;
@@ -35,20 +35,26 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
         <div className="printable-area space-y-2 text-xs">
             {/* Página 1: Carátula */}
             <div className="page-break flex flex-col items-center justify-center text-center h-[90vh]">
-                 <div className="flex flex-col items-center gap-4 mb-8">
-                     {institute?.logoUrl && (
-                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={120} height={120} className="object-contain" data-ai-hint="institute logo" />
-                    )}
-                    <h1 className="text-2xl font-bold">{yearName.toUpperCase()}</h1>
-                </div>
-
-                <h2 className="text-xl font-semibold mb-12">PROGRAMA DE ESTUDIOS: "{program?.name}"</h2>
+                 <header className="print-header flex items-center justify-between w-full px-4">
+                    <div className="flex items-center gap-4">
+                        {institute?.logoUrl && (
+                            <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={80} height={80} className="object-contain" data-ai-hint="institute logo" />
+                        )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <Image src="https://istjaq.edu.pe/wp-content/uploads/2024/05/logo-minedu-2024.png" alt="Ministerio de Educación" width={140} height={50} className="object-contain" data-ai-hint="education ministry" />
+                    </div>
+                </header>
                 
-                <div className="border-2 border-black p-4 rounded-lg my-8">
-                    <h3 className="text-3xl font-bold tracking-wider">SÍLABO</h3>
+                <div className="flex flex-col items-center gap-4 mb-8 mt-8 flex-grow justify-center">
+                    <h1 className="text-2xl font-bold">{yearName.toUpperCase()}</h1>
+                    <h2 className="text-xl font-semibold mb-12">PROGRAMA DE ESTUDIOS: "{program?.name}"</h2>
+                    <div className="border-2 border-black p-4 rounded-lg my-8">
+                        <h3 className="text-3xl font-bold tracking-wider">SÍLABO</h3>
+                    </div>
                 </div>
 
-                <div className="mt-auto w-full text-left p-4 space-y-1">
+                <div className="w-full text-left p-4 space-y-1">
                     <p><strong>UNIDAD DIDÁCTICA:</strong> {unit.name.toUpperCase()}</p>
                     <p><strong>DOCENTE:</strong> {teacher?.fullName || 'No Asignado'}</p>
                     <p><strong>PERIODO ACADÉMICO:</strong> {currentYear}</p>
