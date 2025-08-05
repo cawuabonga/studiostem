@@ -150,8 +150,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
 
   return (
     <>
-      <div className="screen-only">
-        <Card>
+        <Card className="screen-only">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardHeader>
@@ -231,10 +230,9 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
             </form>
           </Form>
         </Card>
-      </div>
 
        {printableData && (
-          <div className="print-only">
+          <div className="printable-area">
                 <SyllabusPrintLayout
                     institute={institute}
                     unit={unit}
