@@ -60,20 +60,17 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Gestión de Indicadores de Logro</CardTitle>
-        <CardDescription>
-          Define los indicadores que los estudiantes deben alcanzar en esta unidad, y el rango de semanas que abarcan.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} />
-        
-        <Separator />
+    <div className="space-y-6">
+      <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} />
+      
+      <Separator />
 
-        <div>
-            <h3 className="text-lg font-medium mb-2">Indicadores Registrados</h3>
+      <Card>
+        <CardHeader>
+          <CardTitle>Indicadores Registrados</CardTitle>
+          <CardDescription>Lista de indicadores de logro para esta unidad didáctica.</CardDescription>
+        </CardHeader>
+        <CardContent>
             <div className="space-y-4">
                 {loading ? (
                     <>
@@ -96,8 +93,8 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
                     </p>
                 )}
             </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
