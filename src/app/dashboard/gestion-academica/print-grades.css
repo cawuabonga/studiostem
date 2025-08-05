@@ -30,7 +30,6 @@
   
   .screen-only, .no-print {
     display: none !important;
-    visibility: hidden !important;
   }
   
   /* Ensure table fits the page */

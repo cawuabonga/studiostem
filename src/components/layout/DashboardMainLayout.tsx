@@ -39,12 +39,12 @@ export default function DashboardMainLayout({
 
   return (
     <SidebarProvider defaultOpen={true} >
-      <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container">
+      <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container no-print">
         <AppSidebarContents />
       </Sidebar>
-      <SidebarRail className="sidebar-container" />
+      <SidebarRail className="sidebar-container no-print" />
       <SidebarInset className="main-content">
-        <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4">
+        <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 no-print">
             <SidebarTrigger className="md:hidden" />
             <div className="ml-auto flex items-center gap-2 md:ml-0">
                {institute?.logoUrl ? (
