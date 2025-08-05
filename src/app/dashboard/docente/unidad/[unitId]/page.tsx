@@ -9,12 +9,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
 import { usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+
+type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades';
+
+const moduleConfig = [
+    { id: 'syllabus', title: 'Sílabo', icon: FileText, description: 'Edita la información general del sílabo y genera el documento para imprimir.', component: SyllabusManager },
+    { id: 'indicators', title: 'Indicadores de Logro', icon: NotebookText, description: 'Define los indicadores de logro que los estudiantes deben alcanzar.', component: IndicatorsManager },
+    { id: 'planning', title: 'Planificación Semanal', icon: CalendarDays, description: 'Organiza contenidos, actividades y tareas para cada semana.', component: WeeklyPlanner },
+    { id: 'attendance', title: 'Registro de Asistencias', icon: CalendarCheck, description: 'Lleva el control de la asistencia de los estudiantes matriculados.', component: AttendanceManager },
+    { id: 'grades', title: 'Registro de Calificaciones', icon: Percent, description: 'Ingresa y gestiona las calificaciones de los estudiantes por indicador.', component: GradebookManager },
+] as const;
+
 
 export default function UnitManagementPage() {
     const { instituteId } = useAuth();
@@ -24,6 +35,7 @@ export default function UnitManagementPage() {
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeView, setActiveView] = useState<ActiveView>('menu');
 
     const fetchUnitDetails = useCallback(async (id: string) => {
         if (!instituteId || !id) {
@@ -71,6 +83,47 @@ export default function UnitManagementPage() {
     if (!unit) {
         return <p className="text-center">Unidad no encontrada.</p>;
     }
+    
+    const renderContent = () => {
+        if (activeView === 'menu') {
+            return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {moduleConfig.map((module) => (
+                        <Card 
+                            key={module.id} 
+                            onClick={() => setActiveView(module.id as ActiveView)}
+                            className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
+                        >
+                            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                <CardTitle className="text-lg font-medium">{module.title}</CardTitle>
+                                <module.icon className="h-6 w-6 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent className="flex-grow">
+                                <p className="text-sm text-muted-foreground">{module.description}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            );
+        }
+
+        const selectedModule = moduleConfig.find(m => m.id === activeView);
+        if (!selectedModule) return null;
+
+        const Component = selectedModule.component;
+        // The WeeklyPlanner component has a different prop structure
+        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: false } : { unit };
+
+        return (
+            <div>
+                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver al menú de la unidad
+                </Button>
+                <Component {...componentProps as any} />
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-6">
@@ -81,47 +134,14 @@ export default function UnitManagementPage() {
                         Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.totalWeeks} Semanas
                     </CardDescription>
                 </CardHeader>
+                 {activeView === 'menu' && (
+                    <CardContent>
+                        <p className="text-muted-foreground">Selecciona un módulo para empezar a gestionar la unidad didáctica.</p>
+                    </CardContent>
+                )}
             </Card>
 
-            <Tabs defaultValue="syllabus" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
-                    <TabsTrigger value="syllabus">
-                        <FileText className="mr-2 h-4 w-4" />
-                        Sílabo
-                    </TabsTrigger>
-                    <TabsTrigger value="indicators">
-                        <NotebookText className="mr-2 h-4 w-4" />
-                        Indicadores de Logro
-                    </TabsTrigger>
-                    <TabsTrigger value="planning">
-                        <CalendarDays className="mr-2 h-4 w-4" />
-                        Planificación Semanal
-                    </TabsTrigger>
-                    <TabsTrigger value="attendance">
-                        <CalendarCheck className="mr-2 h-4 w-4" />
-                        Registro de Asistencias
-                    </TabsTrigger>
-                    <TabsTrigger value="grades">
-                        <Percent className="mr-2 h-4 w-4" />
-                        Registro de Calificaciones
-                    </TabsTrigger>
-                </TabsList>
-                 <TabsContent value="syllabus">
-                    <SyllabusManager unit={unit} />
-                </TabsContent>
-                <TabsContent value="indicators">
-                    <IndicatorsManager unit={unit} />
-                </TabsContent>
-                <TabsContent value="planning">
-                    <WeeklyPlanner unit={unit} isStudentView={false}/>
-                </TabsContent>
-                <TabsContent value="attendance">
-                    <AttendanceManager unit={unit} />
-                </TabsContent>
-                <TabsContent value="grades">
-                    <GradebookManager unit={unit} />
-                </TabsContent>
-            </Tabs>
+            {renderContent()}
         </div>
     );
 }
