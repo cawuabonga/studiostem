@@ -1,40 +1,71 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Allow users to create their own profile, and read/update it.
-    match /users/{userId} {
-      allow create;
-      allow read, update: if request.auth.uid == userId;
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Allow SuperAdmins to read the entire user list.
-    match /users/{userId} {
-        allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    function isUser(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Institute Data Rules ---
-    match /institutes/{instituteId} {
-        // SuperAdmins can do anything.
-        allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && getRole() == 'SuperAdmin';
+    }
+
+    function isInstituteAdmin(instituteId) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId && (getRole() == 'Admin' || getRole() == 'Coordinator');
     }
     
-    // --- Config Rules (e.g., Login Design) ---
+    function belongsToInstitute(instituteId) {
+       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    }
+
+    // --- Rules ---
+
+    // Users can create their own document.
+    // They can only be read/updated by the user themselves or a SuperAdmin.
+    match /users/{userId} {
+      allow create: if isUser(userId);
+      allow list: if isSuperAdmin();
+      allow read, update: if isUser(userId) || isSuperAdmin();
+      allow delete: if false; // Nobody can delete a user document from the client
+    }
+
+    // Config is public read, but only SuperAdmin can write.
     match /config/{document=**} {
-        // Allow read for anyone (for login page styling)
-        allow read;
-        // Allow write only for SuperAdmins
-        allow write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // Institute list is public for any signed-in user, but only SuperAdmin can write.
+    match /institutes/{instituteId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Profiles can be read by any signed-in user of that institute
+    // but only written to by admins/coordinators of that institute.
+    match /institutes/{instituteId}/staffProfiles/{profileId} {
+      allow read: if belongsToInstitute(instituteId);
+      allow create, update, delete: if isInstituteAdmin(instituteId);
     }
     
-    // --- Rules for Subcollections within Institutes ---
-    match /institutes/{instituteId}/{collection}/{docId} {
-        // Users belonging to the institute with role Admin or Coordinator can read/write.
-        allow read, write: if request.auth.uid != null &&
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId &&
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['Admin', 'Coordinator'];
+    match /institutes/{instituteId}/studentProfiles/{profileId} {
+      allow read: if belongsToInstitute(instituteId);
+      allow create, update, delete: if isInstituteAdmin(instituteId);
+    }
+
+    // All other subcollections can only be accessed by users belonging to that institute.
+    match /institutes/{instituteId}/{document=**} {
+      allow read, write: if belongsToInstitute(instituteId);
     }
   }
 }
