@@ -382,6 +382,18 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffPro
 export const updateStaffProfile = async (instituteId: string, documentId: string, data: Partial<StaffProfile>) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', documentId);
     await updateDoc(staffRef, data);
+    
+    // After updating the profile, check if there's a linked user and update their role too.
+    const profileSnap = await getDoc(staffRef);
+    const profileData = profileSnap.data();
+
+    if (profileData && profileData.linkedUserUid && data.role) {
+        const userRef = doc(db, 'users', profileData.linkedUserUid);
+        await updateDoc(userRef, {
+            role: data.role,
+            displayName: data.displayName // Also update name for consistency
+        });
+    }
 }
 
 export const deleteStaffProfile = async (instituteId: string, documentId: string) => {

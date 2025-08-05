@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -85,16 +86,17 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
     }
     setIsSubmitting(true);
     try {
+      // The updateStaffProfile function now handles syncing the user role.
       await updateStaffProfile(instituteId, profile.documentId, data);
       toast({
         title: '¡Éxito!',
-        description: 'El perfil del personal ha sido actualizado.',
+        description: 'El perfil del personal ha sido actualizado. El cambio de rol se reflejará en el próximo inicio de sesión del usuario.',
       });
       onClose(true);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'No se pudo actualizar el perfil.',
+        description: error.message || 'No se pudo actualizar el perfil.',
         variant: 'destructive',
       });
     } finally {
