@@ -271,12 +271,14 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                     {/* Preview Panel */}
                     <div className="col-span-9 overflow-y-auto bg-gray-100 p-4 rounded-md">
                         {printableData ? (
-                            <SyllabusPrintLayout
-                                institute={institute}
-                                unit={unit}
-                                {...printableData}
-                                designOptions={designOptions}
-                            />
+                           <div style={{ transform: 'scale(0.8)', transformOrigin: 'top left' }}>
+                                <SyllabusPrintLayout
+                                    institute={institute}
+                                    unit={unit}
+                                    {...printableData}
+                                    designOptions={designOptions}
+                                />
+                            </div>
                         ) : (
                             <div className="flex items-center justify-center h-full">
                                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
