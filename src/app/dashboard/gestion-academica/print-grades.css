@@ -1,12 +1,7 @@
 
 
 @media print {
-  @page {
-    size: A4 portrait;
-    margin: 0.7in;
-  }
-
-  body * {
+  body.printing {
     visibility: hidden;
   }
   
@@ -14,25 +9,30 @@
     visibility: visible;
   }
 
-  /* Force images to be visible in print preview */
-  img {
-    visibility: visible !important;
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
   }
-  
+
+  .no-print {
+    display: none !important;
+  }
+
   .page-break {
     page-break-after: always;
   }
-
+  
   .print-only {
     display: block !important;
     visibility: visible !important;
   }
   
-  .screen-only, .no-print {
+  .screen-only {
     display: none !important;
   }
   
-  /* Ensure table fits the page */
   table {
     width: 100%;
     border-collapse: collapse;
@@ -40,7 +40,7 @@
   }
   
   th, td {
-    border: 1px solid #aaa; /* Lighter border for print */
+    border: 1px solid #aaa;
     padding: 4px 6px;
     text-align: left;
     word-wrap: break-word;
@@ -48,8 +48,10 @@
   }
   
   th {
-    background-color: #e9ecef; /* Light gray background for headers */
-    color: #212529; /* Dark text for headers */
+    background-color: #e9ecef !important;
+    color: #212529 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   
   /* Hide scrollbars in print */
@@ -58,8 +60,8 @@
   }
   
   .overflow-x-auto {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
     overflow-x: initial;
   }
   
@@ -93,19 +95,5 @@
   .print-info-table .label {
     font-weight: bold;
     width: 15%;
-  }
-}
-
-.printable-area {
-  display: none;
-}
-
-@media print {
-  .printable-area {
-    display: block;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
   }
 }

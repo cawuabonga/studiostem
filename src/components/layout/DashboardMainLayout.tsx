@@ -8,6 +8,8 @@ import { useAuthRedirect } from '@/hooks/useAuthRedirect';
 import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Building2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 export default function DashboardMainLayout({
   children,
@@ -44,8 +46,8 @@ export default function DashboardMainLayout({
             <AppSidebarContents />
         </Sidebar>
         <SidebarRail className="sidebar-container no-print" />
-        <main className="flex-1">
-            <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 no-print">
+         <main className="flex-1">
+            <header className={cn("page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4", "no-print")}>
                 <SidebarTrigger className="md:hidden" />
                 <div className="ml-auto flex items-center gap-2 md:ml-0">
                 {institute?.logoUrl ? (

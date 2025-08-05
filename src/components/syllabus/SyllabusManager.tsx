@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +37,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // State for printable data
   const [printableData, setPrintableData] = useState<{
@@ -90,6 +91,55 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     }
   };
 
+  const handlePrint = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    const printContent = printRef.current;
+    if (!printContent || !iframe.contentWindow) return;
+
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Imprimir Sílabo</title>
+          <link rel="stylesheet" href="/globals.css" media="all">
+          <link rel="stylesheet" href="/dashboard/gestion-academica/print-grades.css" media="all">
+          <style>
+            @page { 
+              size: A4 portrait; 
+              margin: 1.5cm;
+            }
+            body { 
+              font-family: sans-serif;
+              -webkit-print-color-adjust: exact !important; 
+              print-color-adjust: exact !important;
+            }
+            .printable-area { display: block !important; }
+            .page-break { page-break-after: always; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+          </style>
+        </head>
+        <body>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    iframe.contentWindow.focus();
+    
+    // Use a timeout to ensure styles are loaded before printing
+    setTimeout(() => {
+        iframe.contentWindow?.print();
+        document.body.removeChild(iframe);
+        setIsPrinting(false);
+    }, 1000); // 1-second delay
+  };
+
   const handlePreparePrint = async () => {
         if (!instituteId) return;
         setIsPrinting(true);
@@ -119,14 +169,12 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
 
             setPrintableData({ program, teacher, syllabus, weeklyData, indicators });
 
-            setTimeout(() => {
-                window.print();
-            }, 500);
+            // Defer the print action to allow React to render the printable data
+            setTimeout(handlePrint, 100);
 
         } catch (error) {
             console.error("Error preparing print data:", error);
             toast({ title: "Error", description: "No se pudieron cargar los datos para la impresión.", variant: "destructive" });
-        } finally {
             setIsPrinting(false);
         }
     };
@@ -231,15 +279,15 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
           </Form>
         </Card>
 
-       {printableData && (
-          <div className="printable-area">
+       <div ref={printRef} className="hidden print:block">
+            {printableData && (
                 <SyllabusPrintLayout
                     institute={institute}
                     unit={unit}
                     {...printableData}
                 />
-          </div>
-        )}
+            )}
+       </div>
     </>
   );
 }
