@@ -13,16 +13,12 @@
   .printable-area, .printable-area * {
     visibility: visible;
   }
-  
-  .printable-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    font-size: 10px; /* Base font size for printing */
-    transform-origin: top left;
-  }
 
+  /* Force images to be visible in print preview */
+  img {
+    visibility: visible !important;
+  }
+  
   .page-break {
     page-break-after: always;
   }
