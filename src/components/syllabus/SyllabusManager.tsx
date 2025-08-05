@@ -37,9 +37,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
-
-  // State for printable data
+  
   const [printableData, setPrintableData] = useState<{
       program: Program | null;
       teacher: Teacher | null;
@@ -90,94 +88,48 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
       setIsSaving(false);
     }
   };
+  
+  const handlePrint = async () => {
+    if (!instituteId) return;
+    setIsPrinting(true);
+    try {
+        const currentYear = new Date().getFullYear().toString();
+        const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
+        const [
+            allPrograms,
+            allTeachers,
+            syllabus,
+            weeklyResults,
+            indicators,
+        ] = await Promise.all([
+            getPrograms(instituteId),
+            getTeachers(instituteId),
+            getSyllabus(instituteId, unit.id),
+            Promise.all(weekPromises),
+            getAchievementIndicators(instituteId, unit.id)
+        ]);
 
-  const handlePrint = () => {
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    document.body.appendChild(iframe);
+        const program = allPrograms.find(p => p.id === unit.programId) || null;
+        const assignments = await getAssignments(instituteId, currentYear, unit.programId);
+        const teacherId = assignments[unit.period]?.[unit.id];
+        const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
+        
+        const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
 
-    const printContent = printRef.current;
-    if (!printContent || !iframe.contentWindow) return;
+        setPrintableData({ program, teacher, syllabus, weeklyData, indicators });
 
-    const doc = iframe.contentWindow.document;
-    doc.open();
-    doc.write(`
-      <html>
-        <head>
-          <title>Imprimir Sílabo</title>
-          <link rel="stylesheet" href="/globals.css" media="all">
-          <link rel="stylesheet" href="/dashboard/gestion-academica/print-grades.css" media="all">
-          <style>
-            @page { 
-              size: A4 portrait; 
-              margin: 1.5cm;
-            }
-            body { 
-              font-family: sans-serif;
-              -webkit-print-color-adjust: exact !important; 
-              print-color-adjust: exact !important;
-            }
-            .printable-area { display: block !important; }
-            .page-break { page-break-after: always; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ccc; padding: 4px; text-align: left; }
-          </style>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-    doc.close();
-
-    iframe.contentWindow.focus();
-    
-    // Use a timeout to ensure styles are loaded before printing
-    setTimeout(() => {
-        iframe.contentWindow?.print();
-        document.body.removeChild(iframe);
-        setIsPrinting(false);
-    }, 1000); // 1-second delay
-  };
-
-  const handlePreparePrint = async () => {
-        if (!instituteId) return;
-        setIsPrinting(true);
-        try {
-            const currentYear = new Date().getFullYear().toString();
-            const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
-            const [
-                allPrograms,
-                allTeachers,
-                syllabus,
-                weeklyResults,
-                indicators,
-            ] = await Promise.all([
-                getPrograms(instituteId),
-                getTeachers(instituteId),
-                getSyllabus(instituteId, unit.id),
-                Promise.all(weekPromises),
-                getAchievementIndicators(instituteId, unit.id)
-            ]);
-
-            const program = allPrograms.find(p => p.id === unit.programId) || null;
-            const assignments = await getAssignments(instituteId, currentYear, unit.programId);
-            const teacherId = assignments[unit.period]?.[unit.id];
-            const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
-            
-            const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
-
-            setPrintableData({ program, teacher, syllabus, weeklyData, indicators });
-
-            // Defer the print action to allow React to render the printable data
-            setTimeout(handlePrint, 100);
-
-        } catch (error) {
-            console.error("Error preparing print data:", error);
-            toast({ title: "Error", description: "No se pudieron cargar los datos para la impresión.", variant: "destructive" });
+        // Defer the print action to allow React to render the printable data
+        setTimeout(() => {
+            window.print();
             setIsPrinting(false);
-        }
-    };
+        }, 500);
+
+    } catch (error) {
+        console.error("Error preparing print data:", error);
+        toast({ title: "Error", description: "No se pudieron cargar los datos para la impresión.", variant: "destructive" });
+        setIsPrinting(false);
+    }
+  };
 
 
   if (loading) {
@@ -210,7 +162,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handlePreparePrint} disabled={isPrinting}>
+                        <Button type="button" variant="outline" onClick={handlePrint} disabled={isPrinting}>
                             {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                             Generar Sílabo para Imprimir
                         </Button>
@@ -279,7 +231,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
           </Form>
         </Card>
 
-       <div ref={printRef} className="hidden print:block">
+       <div className="print-only">
             {printableData && (
                 <SyllabusPrintLayout
                     institute={institute}
