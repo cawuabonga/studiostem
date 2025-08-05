@@ -42,14 +42,14 @@ interface TaskManagerProps {
   unit: Unit;
   weekNumber: number;
   isStudentView: boolean;
+  onDataChanged: () => void;
 }
 
-export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProps) {
+export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: TaskManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [version, setVersion] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -74,12 +74,13 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
 
   useEffect(() => {
     fetchTasks();
-  }, [fetchTasks, version]);
+  }, [fetchTasks]);
 
   const handleDataChange = () => {
-    setVersion(v => v + 1);
+    fetchTasks();
     setIsFormOpen(false);
     setEditingTask(null);
+    onDataChanged();
   };
   
   const handleOpenForm = (task: Task | null = null) => {
@@ -92,7 +93,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
     try {
         await deleteTaskFromWeek(instituteId, unit.id, weekNumber, taskId);
         toast({ title: "Tarea Eliminada", description: `La tarea "${taskTitle}" ha sido eliminada.` });
-        setVersion(v => v + 1);
+        handleDataChange();
     } catch (error) {
         console.error("Error deleting task:", error);
         toast({ title: "Error", description: "No se pudo eliminar la tarea.", variant: "destructive" });
@@ -103,7 +104,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
     <Card className="bg-muted/50">
         <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle className="text-lg">Tareas de la Semana</CardTitle>
+                <CardTitle className="text-lg">Tareas y Evaluaciones</CardTitle>
                 <CardDescription>Actividades calificables para esta semana.</CardDescription>
             </div>
              {!isStudentView && (

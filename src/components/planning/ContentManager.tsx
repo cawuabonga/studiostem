@@ -40,6 +40,7 @@ interface ContentManagerProps {
   unit: Unit;
   weekNumber: number;
   isStudentView: boolean;
+  onDataChanged: () => void;
 }
 
 const getIconForType = (type: Content['type']) => {
@@ -51,12 +52,11 @@ const getIconForType = (type: Content['type']) => {
     }
 }
 
-export function ContentManager({ unit, weekNumber, isStudentView }: ContentManagerProps) {
+export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged }: ContentManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [version, setVersion] = useState(0);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
 
@@ -80,12 +80,13 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
 
   useEffect(() => {
     fetchContents();
-  }, [fetchContents, version]);
+  }, [fetchContents]);
 
   const handleDataChange = () => {
-    setVersion(v => v + 1);
+    fetchContents();
     setIsFormOpen(false);
     setEditingContent(null);
+    onDataChanged();
   };
   
   const handleOpenForm = (content: Content | null = null) => {
@@ -98,7 +99,7 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
     try {
         await deleteContentFromWeek(instituteId, unit.id, weekNumber, contentToDelete);
         toast({ title: "Contenido Eliminado", description: "El recurso ha sido eliminado correctamente." });
-        setVersion(v => v + 1);
+        handleDataChange();
     } catch (error) {
         console.error("Error deleting content:", error);
         toast({ title: "Error", description: "No se pudo eliminar el contenido.", variant: "destructive" });
@@ -109,7 +110,7 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
     <Card className="bg-muted/50">
         <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle className="text-lg">Contenidos de la Semana</CardTitle>
+                <CardTitle className="text-lg">Contenidos de Apoyo</CardTitle>
                 <CardDescription>Recursos como archivos, enlaces o texto.</CardDescription>
             </div>
             {!isStudentView && (

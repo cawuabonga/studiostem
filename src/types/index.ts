@@ -208,6 +208,9 @@ export interface WeekData {
   isVisible: boolean;
   contents: Content[];
   tasks: Task[];
+  capacityElement: string;
+  learningActivities: string;
+  basicContents: string;
 }
 
 
@@ -281,4 +284,3 @@ export interface Syllabus {
     methodology: string;
     bibliography?: string;
 }
-

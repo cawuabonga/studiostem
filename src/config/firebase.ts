@@ -954,8 +954,13 @@ export const deleteContentFromWeek = async (instituteId: string, unitId: string,
         }
     }
     
+    const weekData = await getWeekData(instituteId, unitId, weekNumber);
+    if (!weekData || !weekData.contents) return;
+    const contentToDelete = weekData.contents.find(c => c.id === content.id);
+    if (!contentToDelete) return;
+
     await updateDoc(weekDocRef, {
-        contents: arrayRemove(content)
+        contents: arrayRemove(contentToDelete)
     });
 };
 
@@ -1016,3 +1021,7 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
     return visibilityMap;
 };
 
+export const saveWeekSyllabusData = async (instituteId: string, unitId: string, weekNumber: number, data: Partial<WeekData>) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    await setDoc(weekDocRef, data, { merge: true });
+};
