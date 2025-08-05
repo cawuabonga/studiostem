@@ -41,9 +41,6 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                             <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={80} height={80} className="object-contain" data-ai-hint="institute logo" />
                         )}
                     </div>
-                    <div className="flex items-center gap-4">
-                        <Image src="https://istjaq.edu.pe/wp-content/uploads/2024/05/logo-minedu-2024.png" alt="Ministerio de Educación" width={140} height={50} className="object-contain" data-ai-hint="education ministry" />
-                    </div>
                 </header>
                 
                 <div className="flex flex-col items-center gap-4 mb-8 mt-8 flex-grow justify-center">
