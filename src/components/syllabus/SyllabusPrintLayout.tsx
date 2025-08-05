@@ -33,9 +33,9 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
     const currentModule = program?.modules.find(m => m.code === unit.moduleId);
 
     return (
-        <div className="printable-area space-y-2 text-xs">
+        <div className="printable-area space-y-2 text-xs bg-white">
             {/* Página 1: Carátula */}
-            <div className="page-break flex flex-col h-[90vh] items-center justify-between text-center py-10">
+            <div className="page-break flex flex-col h-[95vh] items-center justify-center text-center py-10">
                 <div className="space-y-4">
                     {institute?.logoUrl && (
                         <div className="flex justify-center">

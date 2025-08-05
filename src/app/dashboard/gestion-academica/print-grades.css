@@ -1,25 +1,13 @@
 
-
 @media print {
-  body.printing {
-    visibility: hidden;
-  }
-  
-  .printable-area, .printable-area * {
-    visibility: visible;
-  }
-
-  .printable-area {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-  }
-
-  .no-print {
+  body.printing, .no-print {
     display: none !important;
   }
-
+  
+  .printable-area {
+    display: block !important;
+  }
+  
   .page-break {
     page-break-after: always;
   }

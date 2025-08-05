@@ -60,7 +60,7 @@ export default function DashboardMainLayout({
                 </h1>
                 </div>
             </header>
-            <div className="p-4 md:p-6">
+            <div className="p-4 md:p-6 printable-content">
                 {children}
             </div>
         </main>

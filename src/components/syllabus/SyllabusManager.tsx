@@ -11,11 +11,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSyllabus, saveSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher } from '@/types';
+import { getSyllabus, saveSyllabus } from '@/config/firebase';
+import type { Unit, Syllabus } from '@/types';
 import { Loader2, Save, Printer } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import { SyllabusPrintLayout } from './SyllabusPrintLayout';
+import { useRouter } from 'next/navigation';
 import '@/app/dashboard/gestion-academica/print-grades.css';
 
 const syllabusSchema = z.object({
@@ -32,20 +32,12 @@ interface SyllabusManagerProps {
 }
 
 export function SyllabusManager({ unit }: SyllabusManagerProps) {
-  const { instituteId, institute } = useAuth();
+  const { instituteId } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
   
-  const [printableData, setPrintableData] = useState<{
-      program: Program | null;
-      teacher: Teacher | null;
-      syllabus: Syllabus | null;
-      weeklyData: WeekData[];
-      indicators: AchievementIndicator[];
-  } | null>(null);
-
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
     defaultValues: {
@@ -89,46 +81,9 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     }
   };
   
-  const handlePrint = async () => {
-    if (!instituteId) return;
-    setIsPrinting(true);
-    try {
-        const currentYear = new Date().getFullYear().toString();
-        const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
-        const [
-            allPrograms,
-            allTeachers,
-            syllabus,
-            weeklyResults,
-            indicators,
-        ] = await Promise.all([
-            getPrograms(instituteId),
-            getTeachers(instituteId),
-            getSyllabus(instituteId, unit.id),
-            Promise.all(weekPromises),
-            getAchievementIndicators(instituteId, unit.id)
-        ]);
-
-        const program = allPrograms.find(p => p.id === unit.programId) || null;
-        const assignments = await getAssignments(instituteId, currentYear, unit.programId);
-        const teacherId = assignments[unit.period]?.[unit.id];
-        const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
-        
-        const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
-
-        setPrintableData({ program, teacher, syllabus, weeklyData, indicators });
-
-        // Defer the print action to allow React to render the printable data
-        setTimeout(() => {
-            window.print();
-            setIsPrinting(false);
-        }, 500);
-
-    } catch (error) {
-        console.error("Error preparing print data:", error);
-        toast({ title: "Error", description: "No se pudieron cargar los datos para la impresión.", variant: "destructive" });
-        setIsPrinting(false);
-    }
+  const handlePrint = () => {
+    const printUrl = `/dashboard/docente/unidad/${unit.id}/print`;
+    window.open(printUrl, '_blank');
   };
 
 
@@ -162,8 +117,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handlePrint} disabled={isPrinting}>
-                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                        <Button type="button" variant="outline" onClick={handlePrint}>
+                            <Printer className="mr-2 h-4 w-4" />
                             Generar Sílabo para Imprimir
                         </Button>
                         <Button type="submit" disabled={isSaving}>
@@ -230,16 +185,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
             </form>
           </Form>
         </Card>
-
-       <div className="print-only">
-            {printableData && (
-                <SyllabusPrintLayout
-                    institute={institute}
-                    unit={unit}
-                    {...printableData}
-                />
-            )}
-       </div>
     </>
   );
 }
