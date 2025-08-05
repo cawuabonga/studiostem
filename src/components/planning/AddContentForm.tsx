@@ -48,8 +48,6 @@ const addContentSchema = z.object({
     if (data.type === 'text') {
         return !!data.value && data.value.length > 0;
     }
-    // For link, value is checked by URL validation.
-    // For file, we check the file input itself, not `value`.
     if (data.type === 'link') {
         return !!data.value;
     }
@@ -98,7 +96,7 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     defaultValues: {
         title: initialData?.title || '',
         type: initialData?.type || 'text',
-        value: initialData?.type !== 'file' ? initialData?.value : '',
+        value: (initialData?.type !== 'file' && initialData?.value) ? initialData.value : '',
         file: undefined
     },
   });
@@ -108,7 +106,7 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
         form.reset({
             title: initialData.title,
             type: initialData.type,
-            value: initialData.type !== 'file' ? initialData.value : '',
+            value: (initialData.type !== 'file' && initialData.value) ? initialData.value : '',
             file: undefined,
         })
     } else {
@@ -123,19 +121,14 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     setLoading(true);
 
     try {
+        const file = data.file?.[0];
+        const contentData: Partial<Content> = { title: data.title, type: data.type, value: data.value || '' };
+        
         if (isEditMode && initialData) {
-            // Logic for updating existing content
-            await updateContentInWeek(instituteId, unit.id, initialData.id, {
-                title: data.title,
-                value: data.value || initialData.value // Keep old value if not changed (e.g. for file)
-            });
-            toast({ title: '¡Éxito!', description: 'El contenido ha sido actualizado.' });
-
+             await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, contentData, file);
+             toast({ title: '¡Éxito!', description: 'El contenido ha sido actualizado.' });
         } else {
-            // Logic for adding new content
-            const file = data.file?.[0];
-            const contentData = { title: data.title, type: data.type, value: data.value || '' };
-            await addContentToWeek(instituteId, unit.id, weekNumber, contentData, file);
+            await addContentToWeek(instituteId, unit.id, weekNumber, contentData as Omit<Content, 'id'>, file);
             toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
         }
         
@@ -232,9 +225,9 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
                 <FormItem>
                     <FormLabel>Subir Archivo</FormLabel>
                     <FormControl>
-                        <Input type="file" {...form.register('file')} disabled={isEditMode} />
+                        <Input type="file" {...form.register('file')} />
                     </FormControl>
-                    {isEditMode && <p className="text-xs text-muted-foreground">La subida de un nuevo archivo no está permitida en la edición. Para cambiar el archivo, elimine este contenido y cree uno nuevo.</p>}
+                    {isEditMode && <p className="text-xs text-muted-foreground">Deje este campo vacío para conservar el archivo existente. Seleccione uno nuevo para reemplazarlo.</p>}
                      <FormMessage />
                 </FormItem>
                 )}
@@ -252,3 +245,4 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     </Form>
   );
 }
+

@@ -2,9 +2,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -255,9 +255,6 @@ export const getUnit = async (instituteId: string, unitId: string): Promise<Unit
     const docSnap = await getDoc(unitRef);
     if (docSnap.exists()) {
         const data = docSnap.data();
-        // Convert Timestamps to Dates if they exist
-        // This is a common requirement when fetching data that will be serialized
-        // for client components, but for this component, we can probably leave them.
         return { id: docSnap.id, ...data } as Unit;
     }
     return null;
@@ -452,14 +449,11 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
     
 // --- Profile Linking ---
 export const linkUserToProfile = async (uid: string, documentId: string, email: string) => {
-    // 1. Get all institutes
     const institutes = await getInstitutes();
     let foundProfile: (StaffProfile | StudentProfile) & { type: 'staff' | 'student' } | null = null;
     let foundInstituteId: string | null = null;
 
-    // 2. Search for a matching profile in all institutes
     for (const institute of institutes) {
-        // Search in staffProfiles
         const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', documentId);
         const staffDoc = await getDoc(staffProfileRef);
         if (staffDoc.exists() && staffDoc.data().email === email) {
@@ -468,7 +462,6 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
             break;
         }
 
-        // Search in studentProfiles
         const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', documentId);
         const studentDoc = await getDoc(studentProfileRef);
         if (studentDoc.exists() && studentDoc.data().email === email) {
@@ -486,14 +479,12 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
         throw new Error("This profile has already been linked to another account.");
     }
     
-    // 3. Update the AppUser document
     const userDocRef = doc(db, 'users', uid);
     const userUpdateData: Partial<AppUser> = {
         documentId: foundProfile.documentId,
         instituteId: foundInstituteId,
         displayName: (foundProfile as StaffProfile).displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
     };
-    // Only update the role if the found profile is not a student
     if (foundProfile.role) {
         userUpdateData.role = foundProfile.role;
     }
@@ -506,7 +497,6 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
 
     await updateDoc(userDocRef, userUpdateData);
 
-    // 4. Update the profile document with the linked UID
     const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
     const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, documentId);
     await updateDoc(profileDocRef, {
@@ -530,7 +520,6 @@ export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentC
 export const getPaymentConcepts = async (instituteId: string, activeOnly = false): Promise<PaymentConcept[]> => {
     const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
     let q;
-    // We only filter, not sort, to avoid composite indexes if not needed
     if (activeOnly) {
         q = query(conceptsCol, where("isActive", "==", true));
     } else {
@@ -539,7 +528,6 @@ export const getPaymentConcepts = async (instituteId: string, activeOnly = false
     const snapshot = await getDocs(q);
     const concepts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));
     
-    // Sort manually in the code
     return concepts.sort((a,b) => a.name.localeCompare(b.name));
 };
 
@@ -653,7 +641,6 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
 
     const unitIds = matriculationSnapshot.docs.map(doc => doc.data().unitId);
     
-    // Fetch all programs and units in parallel to create maps for efficient lookup
     const [programs, allUnits] = await Promise.all([
         getPrograms(instituteId),
         getUnits(instituteId)
@@ -678,17 +665,15 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
 
 export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
-    // Simple query by studentId only
     const q = query(matriculationsCol, where("studentId", "==", studentId));
     const snapshot = await getDocs(q);
     const matriculations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Matriculation));
 
-    // Manual sorting in code to avoid composite index
     matriculations.sort((a, b) => {
         if (a.year !== b.year) {
-            return b.year.localeCompare(a.year); // Sort by year descending
+            return b.year.localeCompare(a.year); 
         }
-        return b.period.localeCompare(a.period); // Then by period descending
+        return b.period.localeCompare(a.period); 
     });
     
     return matriculations;
@@ -842,14 +827,12 @@ export const deleteManualEvaluationFromRecord = async (
     snapshot.docs.forEach(docSnap => {
         const record = docSnap.data() as AcademicRecord;
         if (record.evaluations && record.evaluations[indicatorId]) {
-            // Filter out the evaluation to delete
             const updatedEvalsForIndicator = record.evaluations[indicatorId].filter(e => e.id !== evaluationId);
             const updatedEvaluations = {
                 ...record.evaluations,
                 [indicatorId]: updatedEvalsForIndicator
             };
 
-            // Also remove associated grades
             const updatedGrades = record.grades || {};
             if (updatedGrades[indicatorId]) {
                 const updatedGradesForIndicator = updatedGrades[indicatorId].filter(g => g.refId !== evaluationId);
@@ -875,96 +858,144 @@ export const getAttendanceForUnit = async (instituteId: string, unitId: string, 
 
 export const saveAttendance = async (instituteId: string, attendanceData: AttendanceRecord): Promise<void> => {
     const attendanceRef = doc(db, 'institutes', instituteId, 'attendance', attendanceData.id);
-    // Use set with merge to create the document if it doesn't exist or update it if it does.
     await setDoc(attendanceRef, attendanceData, { merge: true });
 };
 
-// --- PLANNING: CONTENT & TASKS ---
-export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id' | 'createdAt' | 'order' | 'value'> & { value: string }, file?: File) => {
-    const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents');
-    
-    // Get current content to determine next order number
-    const q = query(contentCol, where("weekNumber", "==", weekNumber));
-    const snapshot = await getDocs(q);
-    const nextOrder = snapshot.size + 1;
+// --- PLANNING: REFACTORED ---
+const getWeekDocRef = (instituteId: string, unitId: string, weekNumber: number) => {
+    const plannerCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner');
+    return doc(plannerCol, `week_${weekNumber}`);
+};
 
-    const contentDocRef = doc(contentCol);
-    let finalValue = data.value;
+export const getWeekData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    const docSnap = await getDoc(weekDocRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as WeekData;
+    }
+    return null;
+};
+
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    
+    const newContent: Content = {
+        ...data,
+        id: doc(collection(db, 'idGenerator')).id, // Generate a unique ID client-side
+        createdAt: Timestamp.now(),
+    };
+
     if (data.type === 'file' && file) {
-        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${contentDocRef.id}_${file.name}`);
+        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`);
         await uploadBytes(storageRef, file);
-        finalValue = await getDownloadURL(storageRef);
+        newContent.value = await getDownloadURL(storageRef);
     }
     
-    await setDoc(contentDocRef, { ...data, value: finalValue, weekNumber, order: nextOrder, createdAt: Timestamp.now() });
+    await setDoc(weekDocRef, {
+        contents: arrayUnion(newContent)
+    }, { merge: true });
+};
+
+export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    const weekData = await getWeekData(instituteId, unitId, weekNumber);
+    if (!weekData || !weekData.contents) return;
+
+    const contentIndex = weekData.contents.findIndex(c => c.id === contentId);
+    if (contentIndex === -1) throw new Error("Content not found");
+
+    const updatedContent = { ...weekData.contents[contentIndex], ...data };
+
+    if (data.type === 'file' && file) {
+         // Delete old file if it exists
+        if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
+             try {
+                const oldFileRef = ref(firebaseStorage, weekData.contents[contentIndex].value);
+                await deleteObject(oldFileRef);
+            } catch(e) { console.error("Could not delete old file, it might not exist.", e)}
+        }
+        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${contentId}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        updatedContent.value = await getDownloadURL(storageRef);
+    }
+
+    weekData.contents[contentIndex] = updatedContent;
+    await updateDoc(weekDocRef, { contents: weekData.contents });
 }
 
-export const getContentsForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Content[]> => {
-    const contentCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents');
-    const q = query(contentCol, where("weekNumber", "==", weekNumber), orderBy("order"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Content));
-}
 
-export const updateContentInWeek = async (instituteId: string, unitId: string, contentId: string, data: Partial<Content>) => {
-    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents', contentId);
-    await updateDoc(contentRef, data);
-}
-
-export const deleteContentFromWeek = async (instituteId: string, unitId: string, content: Content) => {
-    const contentRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'contents', content.id);
-    await deleteDoc(contentRef);
-    if (content.type === 'file') {
+export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    
+    if (content.type === 'file' && content.value) {
         try {
             const fileRef = ref(firebaseStorage, content.value);
             await deleteObject(fileRef);
-        } catch(error: any) {
-            // Ignore if file doesn't exist, might have been cleaned up already.
+        } catch (error: any) {
             if (error.code !== 'storage/object-not-found') {
                 console.error("Error deleting file from storage:", error);
             }
         }
     }
-}
-
-
-export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'weekNumber' | 'order'>) => {
-    const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
     
-    const q = query(taskCol, where("weekNumber", "==", weekNumber));
-    const snapshot = await getDocs(q);
-    const nextOrder = snapshot.size + 1;
+    await updateDoc(weekDocRef, {
+        contents: arrayRemove(content)
+    });
+};
 
-    await addDoc(taskCol, { ...data, weekNumber, order: nextOrder, createdAt: Timestamp.now() });
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt'>) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    
+    const newTask: Task = {
+        ...data,
+        id: doc(collection(db, 'idGenerator')).id,
+        createdAt: Timestamp.now(),
+    };
+    
+    await setDoc(weekDocRef, {
+        tasks: arrayUnion(newTask)
+    }, { merge: true });
+};
+
+export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    const weekData = await getWeekData(instituteId, unitId, weekNumber);
+    if (!weekData || !weekData.tasks) return;
+
+    const taskIndex = weekData.tasks.findIndex(t => t.id === taskId);
+    if (taskIndex === -1) throw new Error("Task not found");
+
+    const updatedTask = { ...weekData.tasks[taskIndex], ...data };
+    weekData.tasks[taskIndex] = updatedTask;
+
+    await updateDoc(weekDocRef, { tasks: weekData.tasks });
 }
 
-export const getTasksForWeek = async (instituteId: string, unitId: string, weekNumber: number): Promise<Task[]> => {
-    const taskCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks');
-    const q = query(taskCol, where("weekNumber", "==", weekNumber), orderBy("order"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-}
 
-export const updateTaskInWeek = async (instituteId: string, unitId: string, taskId: string, data: Partial<Task>) => {
-    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks', taskId);
-    await updateDoc(taskRef, data);
-}
-
-export const deleteTaskFromWeek = async (instituteId: string, unitId: string, taskId: string) => {
-    const taskRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'tasks', taskId);
-    await deleteDoc(taskRef);
-}
+export const deleteTaskFromWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    const weekData = await getWeekData(instituteId, unitId, weekNumber);
+    if (!weekData || !weekData.tasks) return;
+    
+    const taskToDelete = weekData.tasks.find(t => t.id === taskId);
+    if (!taskToDelete) return;
+    
+    await updateDoc(weekDocRef, {
+        tasks: arrayRemove(taskToDelete)
+    });
+};
 
 export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
-    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', 'visibility');
-    await setDoc(visibilityRef, { [`week_${weekNumber}`]: isVisible }, { merge: true });
-}
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    await setDoc(weekDocRef, { isVisible, weekNumber }, { merge: true });
+};
 
 export const getWeeksVisibility = async (instituteId: string, unitId: string): Promise<Record<string, boolean>> => {
-    const visibilityRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', 'visibility');
-    const docSnap = await getDoc(visibilityRef);
-    if (docSnap.exists()) {
-        return docSnap.data() as Record<string, boolean>;
-    }
-    return {};
-}
+    const plannerCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner');
+    const snapshot = await getDocs(plannerCol);
+    const visibilityMap: Record<string, boolean> = {};
+    snapshot.forEach(doc => {
+        visibilityMap[doc.id] = doc.data().isVisible || false;
+    });
+    return visibilityMap;
+};

@@ -57,7 +57,7 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
         form.reset({
             title: initialData.title,
             description: initialData.description,
-            dueDate: initialData.dueDate.toDate(),
+            dueDate: initialData.dueDate instanceof Timestamp ? initialData.dueDate.toDate() : initialData.dueDate,
         });
     } else {
         form.reset({
@@ -72,16 +72,17 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
     if (!instituteId) return;
     setLoading(true);
     try {
-        const taskData = {
-            ...data,
+        const taskData: Partial<Task> = {
+            title: data.title,
+            description: data.description,
             dueDate: Timestamp.fromDate(data.dueDate),
         };
         
         if (isEditMode && initialData) {
-            await updateTaskInWeek(instituteId, unit.id, initialData.id, taskData);
+            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskData);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido actualizada.' });
         } else {
-            await addTaskToWeek(instituteId, unit.id, weekNumber, taskData);
+            await addTaskToWeek(instituteId, unit.id, weekNumber, taskData as Omit<Task, 'id'>);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido añadida a la semana.' });
         }
         

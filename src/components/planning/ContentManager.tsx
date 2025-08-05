@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getContentsForWeek, deleteContentFromWeek, updateContentInWeek } from '@/config/firebase';
+import { getWeekData, deleteContentFromWeek } from '@/config/firebase';
 import type { Content, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -52,7 +51,6 @@ const getIconForType = (type: Content['type']) => {
     }
 }
 
-
 export function ContentManager({ unit, weekNumber, isStudentView }: ContentManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
@@ -66,8 +64,8 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
     if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedContents = await getContentsForWeek(instituteId, unit.id, weekNumber);
-      setContents(fetchedContents);
+      const weekData = await getWeekData(instituteId, unit.id, weekNumber);
+      setContents(weekData?.contents || []);
     } catch (error) {
       console.error(`Error fetching contents for week ${weekNumber}:`, error);
       toast({
@@ -98,7 +96,7 @@ export function ContentManager({ unit, weekNumber, isStudentView }: ContentManag
   const handleDelete = async (contentToDelete: Content) => {
     if (!instituteId) return;
     try {
-        await deleteContentFromWeek(instituteId, unit.id, contentToDelete);
+        await deleteContentFromWeek(instituteId, unit.id, weekNumber, contentToDelete);
         toast({ title: "Contenido Eliminado", description: "El recurso ha sido eliminado correctamente." });
         setVersion(v => v + 1);
     } catch (error) {

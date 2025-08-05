@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTasksForWeek, deleteTaskFromWeek, updateTaskInWeek } from '@/config/firebase';
+import { getWeekData, deleteTaskFromWeek } from '@/config/firebase';
 import type { Task, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,7 +17,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -37,6 +36,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from '../ui/button';
+import { Timestamp } from 'firebase/firestore';
 
 interface TaskManagerProps {
   unit: Unit;
@@ -58,8 +58,8 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
     if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedTasks = await getTasksForWeek(instituteId, unit.id, weekNumber);
-      setTasks(fetchedTasks);
+      const weekData = await getWeekData(instituteId, unit.id, weekNumber);
+      setTasks(weekData?.tasks || []);
     } catch (error) {
       console.error(`Error fetching tasks for week ${weekNumber}:`, error);
       toast({
@@ -90,7 +90,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
   const handleDelete = async (taskId: string, taskTitle: string) => {
     if (!instituteId) return;
     try {
-        await deleteTaskFromWeek(instituteId, unit.id, taskId);
+        await deleteTaskFromWeek(instituteId, unit.id, weekNumber, taskId);
         toast({ title: "Tarea Eliminada", description: `La tarea "${taskTitle}" ha sido eliminada.` });
         setVersion(v => v + 1);
     } catch (error) {
@@ -129,7 +129,7 @@ export function TaskManager({ unit, weekNumber, isStudentView }: TaskManagerProp
                            </div>
                            <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 ml-8 sm:ml-0">
                                 <CalendarClock className="h-4 w-4" />
-                                <span>Vence: {format(task.dueDate.toDate(), "dd/MM/yyyy 'a las' HH:mm")}</span>
+                                <span>Vence: {task.dueDate instanceof Timestamp ? format(task.dueDate.toDate(), "dd/MM/yyyy 'a las' HH:mm") : 'Fecha inválida'}</span>
                            </div>
                             {!isStudentView && (
                              <AlertDialog>

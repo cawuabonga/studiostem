@@ -6,7 +6,7 @@ import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments, getTasksForWeek } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { Save, Loader2, ArrowLeft, Printer, ZoomIn, ZoomOut } from 'lucide-react';
@@ -30,7 +30,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
-    const [tasks, setTasks] = useState<Task[]>([]);
     const [records, setRecords] = useState<Record<string, AcademicRecord>>({});
     const [initialRecords, setInitialRecords] = useState<Record<string, AcademicRecord>>({});
     const [program, setProgram] = useState<Program | null>(null);
@@ -57,12 +56,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 getPrograms(instituteId),
                 getTeachers(instituteId),
             ]);
-
-            // Fetch tasks for all weeks of the unit to have them available.
-            const taskPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getTasksForWeek(instituteId, unit.id, i + 1));
-            const tasksByWeek = await Promise.all(taskPromises);
-            const allTasks = tasksByWeek.flat();
-            setTasks(allTasks);
 
             const currentProgram = allPrograms.find(p => p.id === unit.programId) || null;
             setProgram(currentProgram);
@@ -352,7 +345,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                              <IndicatorGradebook 
                                 students={students}
                                 indicator={selectedIndicator}
-                                tasks={tasks}
                                 records={records}
                                 unit={unit}
                                 onGradeChange={handleGradeChange}
@@ -374,7 +366,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         <IndicatorGradebook 
                             students={students}
                             indicator={selectedIndicator}
-                            tasks={tasks}
                             records={records}
                             unit={unit}
                             onGradeChange={handleGradeChange}

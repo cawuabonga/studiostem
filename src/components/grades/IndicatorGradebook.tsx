@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, Unit } from '@/types';
+import type { StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, Unit, GradeEntry } from '@/types';
 import { PlusCircle, MoreVertical, Trash2 } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import {
@@ -34,15 +34,12 @@ import { Timestamp } from 'firebase/firestore';
 interface IndicatorGradebookProps {
     students: StudentProfile[];
     indicator: AchievementIndicator;
-    tasks: Task[];
     records: Record<string, AcademicRecord>;
     unit: Unit;
     onGradeChange: (studentId: string, indicatorId: string, refId: string, grade: number | null, type: 'task' | 'manual', label: string, weekNumber: number) => void;
     onManualEvaluationAdded: (indicatorId: string, label: string, weekNumber: number) => void;
     onManualEvaluationDeleted: (indicatorId: string, evaluationId: string) => void;
 }
-
-type EvaluationItem = (Task & { evalType: 'task' }) | (ManualEvaluation & { evalType: 'manual' });
 
 const calculateAverage = (grades: (number | null)[]): number | null => {
     const validGrades = grades.filter(g => g !== null && g !== undefined && !isNaN(g)) as number[];
@@ -51,32 +48,35 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
     return Math.round(sum / validGrades.length);
 };
 
-export function IndicatorGradebook({ students, indicator, tasks, records, unit, onGradeChange, onManualEvaluationAdded, onManualEvaluationDeleted }: IndicatorGradebookProps) {
+export function IndicatorGradebook({ students, indicator, records, unit, onGradeChange, onManualEvaluationAdded, onManualEvaluationDeleted }: IndicatorGradebookProps) {
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState<number>(0);
     
-    // Group evaluations by week
+    // Get all unique evaluations for this indicator from the first student's record
     const allEvaluations = useMemo(() => {
-        const evals: EvaluationItem[] = [];
-        const indicatorTasks = tasks.filter(task => 
-            task.weekNumber >= indicator.startWeek && task.weekNumber <= indicator.endWeek
-        );
-        
-        indicatorTasks.forEach(task => {
-            evals.push({ ...task, evalType: 'task' });
-        });
-        
         const firstRecord = Object.values(records)[0];
-        if (firstRecord?.evaluations?.[indicator.id]) {
-            firstRecord.evaluations[indicator.id].forEach(manualEval => {
-                evals.push({ ...manualEval, evalType: 'manual' });
-            });
+        if (!firstRecord?.grades?.[indicator.id] && !firstRecord?.evaluations?.[indicator.id]) {
+            return [];
+        }
+
+        const evalsMap = new Map<string, GradeEntry | ManualEvaluation>();
+
+        if(firstRecord.grades[indicator.id]){
+            firstRecord.grades[indicator.id].forEach(g => evalsMap.set(g.refId, g))
+        }
+
+        if(firstRecord.evaluations[indicator.id]){
+            firstRecord.evaluations[indicator.id].forEach(e => {
+                if(!evalsMap.has(e.id)){
+                    evalsMap.set(e.id, e);
+                }
+            })
         }
         
-        return evals.sort((a, b) => a.weekNumber - b.weekNumber);
+        return Array.from(evalsMap.values()).sort((a, b) => a.weekNumber - b.weekNumber);
 
-    }, [indicator, tasks, records]);
+    }, [records, indicator.id]);
     
     const handleOpenDialog = (week: number) => {
         setSelectedWeek(week);
@@ -137,10 +137,14 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                             </TableHeader>
                                             <TableBody>
                                                 {allEvaluations.length > 0 ? allEvaluations.map(ev => {
-                                                    const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
+                                                    const refId = 'refId' in ev ? ev.refId : ev.id;
+                                                    const label = 'label' in ev ? ev.label : ev.title;
+                                                    const type = 'type' in ev && ev.type === 'task' ? 'task' : 'manual';
+
+                                                    const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === refId);
                                                     return (
-                                                        <TableRow key={ev.id}>
-                                                            <TableCell className="font-medium">{ev.evalType === 'task' ? ev.title : ev.label}</TableCell>
+                                                        <TableRow key={refId}>
+                                                            <TableCell className="font-medium">{label}</TableCell>
                                                             <TableCell>{ev.weekNumber}</TableCell>
                                                             <TableCell className="text-right">
                                                                 <Input 
@@ -151,7 +155,7 @@ export function IndicatorGradebook({ students, indicator, tasks, records, unit, 
                                                                         const val = e.target.value;
                                                                         const num = val === '' ? null : Number(val);
                                                                         if (num === null || (num >= 0 && num <= 20)) {
-                                                                            onGradeChange(student.documentId, indicator.id, ev.id, num, ev.evalType, ev.evalType === 'task' ? ev.title : ev.label, ev.weekNumber);
+                                                                            onGradeChange(student.documentId, indicator.id, refId, num, type, label, ev.weekNumber);
                                                                         }
                                                                     }}
                                                                     min="0"

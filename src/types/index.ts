@@ -198,12 +198,20 @@ export interface Task {
   id: string;
   title: string;
   description: string;
-  dueDate: Timestamp;
+  dueDate: Timestamp | Date;
   fileUrl?: string; // URL to an attached file from the teacher
   order: number;
   createdAt: Timestamp;
-  weekNumber: number; // The week this task belongs to
 }
+
+// New type for the weekly document in Firestore
+export interface WeekData {
+  weekNumber: number;
+  isVisible: boolean;
+  contents: Content[];
+  tasks: Task[];
+}
+
 
 export interface Submission {
   id: string;
