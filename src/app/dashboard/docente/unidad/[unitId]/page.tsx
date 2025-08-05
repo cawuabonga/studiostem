@@ -10,9 +10,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotebookText, CalendarDays, Percent, CalendarCheck } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
+import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
 import { usePathname } from 'next/navigation';
 
 export default function UnitManagementPage() {
@@ -82,8 +83,12 @@ export default function UnitManagementPage() {
                 </CardHeader>
             </Card>
 
-            <Tabs defaultValue="indicators" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+            <Tabs defaultValue="syllabus" className="w-full">
+                <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="syllabus">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Sílabo
+                    </TabsTrigger>
                     <TabsTrigger value="indicators">
                         <NotebookText className="mr-2 h-4 w-4" />
                         Indicadores de Logro
@@ -101,6 +106,9 @@ export default function UnitManagementPage() {
                         Registro de Calificaciones
                     </TabsTrigger>
                 </TabsList>
+                 <TabsContent value="syllabus">
+                    <SyllabusManager unit={unit} />
+                </TabsContent>
                 <TabsContent value="indicators">
                     <IndicatorsManager unit={unit} />
                 </TabsContent>

@@ -190,7 +190,6 @@ export interface Content {
   title: string;
   type: ContentType;
   value: string; // URL for file/link, or markdown text
-  order: number;
   createdAt: Timestamp;
 }
 
@@ -200,7 +199,6 @@ export interface Task {
   description: string;
   dueDate: Timestamp | Date;
   fileUrl?: string; // URL to an attached file from the teacher
-  order: number;
   createdAt: Timestamp;
 }
 
@@ -275,3 +273,12 @@ export interface AttendanceRecord {
         };
     };
 }
+
+// --- SYLLABUS ---
+export interface Syllabus {
+    summary: string;
+    competence: string;
+    methodology: string;
+    bibliography?: string;
+}
+

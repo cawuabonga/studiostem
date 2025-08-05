@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
@@ -861,6 +861,22 @@ export const saveAttendance = async (instituteId: string, attendanceData: Attend
     await setDoc(attendanceRef, attendanceData, { merge: true });
 };
 
+// --- SYLLABUS ---
+export const saveSyllabus = async (instituteId: string, unitId: string, data: Syllabus): Promise<void> => {
+    const syllabusRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'data', 'syllabus');
+    await setDoc(syllabusRef, data, { merge: true });
+}
+
+export const getSyllabus = async (instituteId: string, unitId: string): Promise<Syllabus | null> => {
+    const syllabusRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'data', 'syllabus');
+    const docSnap = await getDoc(syllabusRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as Syllabus;
+    }
+    return null;
+}
+
+
 // --- PLANNING: REFACTORED ---
 const getWeekDocRef = (instituteId: string, unitId: string, weekNumber: number) => {
     const plannerCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner');
@@ -999,3 +1015,4 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
     });
     return visibilityMap;
 };
+
