@@ -8,64 +8,75 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isUser(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
     function isSuperAdmin() {
-      return isSignedIn() && getRole() == 'SuperAdmin';
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    function isInstituteMember(instituteId) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
     }
 
     function isInstituteAdmin(instituteId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId && (getRole() == 'Admin' || getRole() == 'Coordinator');
+      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      return isInstituteMember(instituteId) && (userRole == 'Admin' || userRole == 'Coordinator');
     }
     
-    function belongsToInstitute(instituteId) {
-       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    function isTeacher(instituteId) {
+       let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+       return isInstituteMember(instituteId) && userRole == 'Teacher';
     }
 
-    // --- Rules ---
+    // --- Collection Rules ---
 
-    // Users can create their own document.
-    // They can only be read/updated by the user themselves or a SuperAdmin.
+    // Users: Can be created by the user themselves. Can be read/updated by the user OR a SuperAdmin.
     match /users/{userId} {
-      allow create: if isUser(userId);
+      allow create: if request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId || isSuperAdmin();
       allow list: if isSuperAdmin();
-      allow read, update: if isUser(userId) || isSuperAdmin();
-      allow delete: if false; // Nobody can delete a user document from the client
+      allow delete: if false; 
     }
 
-    // Config is public read, but only SuperAdmin can write.
+    // Config: Publicly readable for login page, but only SuperAdmins can write.
     match /config/{document=**} {
       allow read: if true;
       allow write: if isSuperAdmin();
     }
 
-    // Institute list is public for any signed-in user, but only SuperAdmin can write.
+    // Institutes: List is readable by any signed-in user. Writable only by SuperAdmins.
     match /institutes/{instituteId} {
-      allow get, list: if isSignedIn();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
       allow create, update, delete: if isSuperAdmin();
     }
 
-    // Profiles can be read by any signed-in user of that institute
-    // but only written to by admins/coordinators of that institute.
+    // Staff/Student Profiles: Readable by any institute member. Writable by institute admins.
     match /institutes/{instituteId}/staffProfiles/{profileId} {
-      allow read: if belongsToInstitute(instituteId);
+      allow read: if isInstituteMember(instituteId);
       allow create, update, delete: if isInstituteAdmin(instituteId);
     }
     
     match /institutes/{instituteId}/studentProfiles/{profileId} {
-      allow read: if belongsToInstitute(instituteId);
+      allow read: if isInstituteMember(instituteId);
       allow create, update, delete: if isInstituteAdmin(instituteId);
     }
+    
+    // Payments: Can be created by institute members. Can only be read/updated by institute admins or the student who owns it.
+     match /institutes/{instituteId}/payments/{paymentId} {
+      allow create: if isInstituteMember(instituteId);
+      allow read: if isInstituteAdmin(instituteId) || request.auth.uid == resource.data.studentId;
+      allow update: if isInstituteAdmin(instituteId);
+      allow delete: if false;
+    }
+    
+    // Academic Records, Syllabus, Planning: Writable by teachers/admins, readable by any institute member.
+    match /institutes/{instituteId}/unidadesDidacticas/{unitId}/{collection}/{docId} {
+       allow read: if isInstituteMember(instituteId);
+       allow write: if isInstituteAdmin(instituteId) || isTeacher(instituteId);
+    }
 
-    // All other subcollections can only be accessed by users belonging to that institute.
+    // Default deny for any other subcollections or paths not explicitly defined.
     match /institutes/{instituteId}/{document=**} {
-      allow read, write: if belongsToInstitute(instituteId);
+      allow read, write: if isInstituteMember(instituteId);
     }
   }
 }
