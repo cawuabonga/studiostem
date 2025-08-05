@@ -19,7 +19,7 @@ interface SyllabusPrintLayoutProps {
 export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators }: SyllabusPrintLayoutProps) {
     const today = new Date();
     const currentYear = today.getFullYear();
-    const yearName = `"AÑO DEL BICENTENARIO, DE LA CONSOLIDACIÓN DE NUESTRA INDEPENDENCIA, Y DE LA CONMEMORACIÓN DE LAS HEROICAS BATALLAS DE JUNÍN Y AYACUCHO"`; // Example, can be dynamic later
+    const yearName = institute?.name || "Nombre del Instituto"; // Placeholder if institute name is not available
 
     const renderHtml = (text?: string) => {
         if (!text) return null;
@@ -37,10 +37,9 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
             <div className="page-break flex flex-col items-center justify-center text-center h-[90vh]">
                  <div className="flex flex-col items-center gap-4 mb-8">
                      {institute?.logoUrl && (
-                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={120} height={120} className="object-contain" />
+                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={120} height={120} className="object-contain" data-ai-hint="institute logo" />
                     )}
-                    <h1 className="text-2xl font-bold">{institute?.name}</h1>
-                    <p className="text-sm italic">{yearName}</p>
+                    <h1 className="text-2xl font-bold">{yearName.toUpperCase()}</h1>
                 </div>
 
                 <h2 className="text-xl font-semibold mb-12">PROGRAMA DE ESTUDIOS: "{program?.name}"</h2>
