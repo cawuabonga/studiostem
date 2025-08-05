@@ -35,23 +35,28 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
     return (
         <div className="printable-area space-y-2 text-xs">
             {/* Página 1: Carátula */}
-            <div className="page-break flex flex-col h-[90vh] items-center justify-center text-center">
-                <div className="flex-grow flex flex-col items-center justify-center gap-6">
-                    
-                    <div className="space-y-2">
-                        <h1 className="text-xl font-bold tracking-wider">{institute?.name.toUpperCase()}</h1>
-                        <p className="text-base font-semibold">PROGRAMA DE ESTUDIOS: "{program?.name.toUpperCase()}"</p>
-                    </div>
-                    <div className="border-2 border-black p-4 mt-8">
-                        <h2 className="text-2xl font-bold tracking-widest">SÍLABO</h2>
-                    </div>
+            <div className="page-break flex flex-col h-[90vh] items-center justify-between text-center py-10">
+                <div className="space-y-4">
+                    {institute?.logoUrl && (
+                        <div className="flex justify-center">
+                            <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={100} height={100} className="object-contain" />
+                        </div>
+                    )}
+                    <h1 className="text-xl font-bold tracking-wider">{institute?.name.toUpperCase()}</h1>
+                    <p className="text-base font-semibold">PROGRAMA DE ESTUDIOS: "{program?.name.toUpperCase()}"</p>
                 </div>
-                <div className="w-full text-left p-4 text-base">
+                
+                <div className="border-2 border-black p-4 my-8">
+                    <h2 className="text-2xl font-bold tracking-widest">SÍLABO</h2>
+                </div>
+
+                <div className="w-full text-left px-4 text-base space-y-1">
                      <p><strong>UNIDAD DIDÁCTICA:</strong> {unit.name.toUpperCase()}</p>
                     <p><strong>DOCENTE:</strong> {teacher?.fullName || 'No Asignado'}</p>
                     <p><strong>PERIODO ACADÉMICO:</strong> {currentYear}</p>
                 </div>
             </div>
+
 
              {/* Página 2: Información General */}
              <div className="page-break space-y-4">
