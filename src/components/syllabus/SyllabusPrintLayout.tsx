@@ -19,6 +19,7 @@ interface SyllabusPrintLayoutProps {
 export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators }: SyllabusPrintLayoutProps) {
     const today = new Date();
     const currentYear = today.getFullYear();
+    const yearName = `"AÑO DEL BICENTENARIO, DE LA CONSOLIDACIÓN DE NUESTRA INDEPENDENCIA, Y DE LA CONMEMORACIÓN DE LAS HEROICAS BATALLAS DE JUNÍN Y AYACUCHO"`; // Example, can be dynamic later
 
     const renderHtml = (text?: string) => {
         if (!text) return null;
@@ -34,20 +35,21 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
         <div className="printable-area space-y-2 text-xs">
             {/* Página 1: Carátula */}
             <div className="page-break flex flex-col items-center justify-center text-center h-[90vh]">
-                <div className="flex items-center gap-6 mb-8">
+                 <div className="flex flex-col items-center gap-4 mb-8">
                      {institute?.logoUrl && (
                         <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={120} height={120} className="object-contain" />
                     )}
-                     <Image src="https://istjaq.edu.pe/wp-content/uploads/2024/05/logo-minedu-2024.png" alt="Ministerio de Educación" width={220} height={80} className="object-contain" data-ai-hint="education ministry" />
+                    <h1 className="text-2xl font-bold">{institute?.name}</h1>
+                    <p className="text-sm italic">{yearName}</p>
                 </div>
-                <h1 className="text-2xl font-bold mb-4">{institute?.name}</h1>
-                <h2 className="text-xl font-semibold mb-12">"{program?.name}"</h2>
+
+                <h2 className="text-xl font-semibold mb-12">PROGRAMA DE ESTUDIOS: "{program?.name}"</h2>
                 
-                <div className="border-2 border-black p-4 rounded-lg">
+                <div className="border-2 border-black p-4 rounded-lg my-8">
                     <h3 className="text-3xl font-bold tracking-wider">SÍLABO</h3>
                 </div>
 
-                <div className="mt-auto w-full text-left p-4">
+                <div className="mt-auto w-full text-left p-4 space-y-1">
                     <p><strong>UNIDAD DIDÁCTICA:</strong> {unit.name.toUpperCase()}</p>
                     <p><strong>DOCENTE:</strong> {teacher?.fullName || 'No Asignado'}</p>
                     <p><strong>PERIODO ACADÉMICO:</strong> {currentYear}</p>
@@ -66,7 +68,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                         <tr><td className="label">Unidad Didáctica</td><td>{unit.name}</td></tr>
                         <tr><td className="label">Créditos</td><td>{unit.credits}</td></tr>
                         <tr><td className="label">Semestre</td><td>{unit.semester}</td></tr>
-                        <tr><td className="label">Horas Semanales</td><td>{unit.totalHours / unit.totalWeeks}</td></tr>
+                        <tr><td className="label">Horas Semanales</td><td>{unit.totalHours > 0 && unit.totalWeeks > 0 ? (unit.totalHours / unit.totalWeeks).toFixed(0) : 0}</td></tr>
                         <tr><td className="label">Horas Semestrales</td><td>{unit.totalHours}</td></tr>
                         <tr><td className="label">Docente</td><td>{teacher?.fullName || 'No Asignado'}</td></tr>
                         <tr><td className="label">Email Institucional</td><td>{teacher?.email || 'No Asignado'}</td></tr>
