@@ -578,8 +578,7 @@ export const getStudentPaymentsByStatus = async (instituteId: string, studentId:
     const q = query(
         paymentsCol,
         where("studentId", "==", studentId),
-        where("status", "==", status),
-        orderBy("paymentDate", "desc")
+        where("status", "==", status)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
@@ -589,8 +588,7 @@ export const getPaymentsByStatus = async (instituteId: string, status: PaymentSt
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const q = query(
         paymentsCol,
-        where("status", "==", status),
-        orderBy("paymentDate", "asc")
+        where("status", "==", status)
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
