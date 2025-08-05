@@ -17,6 +17,8 @@ import { Loader2, Save, Printer } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 import '@/app/dashboard/gestion-academica/print-grades.css';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { SyllabusPrintLayout } from './SyllabusPrintLayout';
 
 const syllabusSchema = z.object({
   summary: z.string().min(10, "La sumilla debe tener al menos 10 caracteres."),
@@ -37,6 +39,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
@@ -86,6 +89,11 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     window.open(printUrl, '_blank');
   };
 
+  const handleOpenPreview = () => {
+    // We could pre-fetch all data for the preview here if needed
+    setIsPreviewOpen(true);
+  }
+
 
   if (loading) {
     return (
@@ -117,9 +125,9 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handlePrint}>
+                        <Button type="button" variant="outline" onClick={handleOpenPreview}>
                             <Printer className="mr-2 h-4 w-4" />
-                            Generar Sílabo para Imprimir
+                            Visualizar Sílabo
                         </Button>
                         <Button type="submit" disabled={isSaving}>
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -185,6 +193,27 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
             </form>
           </Form>
         </Card>
+
+        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                <DialogHeader>
+                    <DialogTitle>Previsualización del Sílabo</DialogTitle>
+                    <DialogDescription>
+                       Así se verá el sílabo al imprimirse. Desde aquí puedes proceder a la impresión final.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto bg-gray-100 p-4 rounded-md">
+                     <p className="text-center text-muted-foreground">La previsualización del sílabo completo se generará en la página de impresión. Haz clic en "Proceder a Imprimir".</p>
+                </div>
+                 <div className="flex justify-end gap-2 mt-4">
+                    <Button variant="ghost" onClick={() => setIsPreviewOpen(false)}>Cerrar</Button>
+                    <Button onClick={handlePrint}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Proceder a Imprimir
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
