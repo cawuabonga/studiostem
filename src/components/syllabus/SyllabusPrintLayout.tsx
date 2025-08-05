@@ -34,25 +34,29 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
     return (
         <div className="printable-area space-y-2 text-xs">
             {/* Página 1: Carátula */}
-            <div className="page-break flex flex-col items-center justify-center text-center h-[90vh]">
-                 <header className="print-header flex items-center justify-between w-full px-4">
+            <div className="page-break flex flex-col h-[90vh]">
+                 <header className="print-header flex items-center justify-between w-full px-4 py-2 border-b-2 border-black">
                     <div className="flex items-center gap-4">
                         {institute?.logoUrl && (
                             <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={80} height={80} className="object-contain" data-ai-hint="institute logo" />
                         )}
                     </div>
+                     <div className="text-center">
+                        <h1 className="text-lg font-bold">{institute?.name || 'INSTITUTO'}</h1>
+                        <p className="text-sm">Programa de Estudios: "{program?.name}"</p>
+                    </div>
+                    <div className="w-20"> {/* Placeholder for spacing */}
+                    </div>
                 </header>
                 
-                <div className="flex flex-col items-center gap-4 mb-8 mt-8 flex-grow justify-center">
-                    <h1 className="text-2xl font-bold">{yearName.toUpperCase()}</h1>
-                    <h2 className="text-xl font-semibold mb-12">PROGRAMA DE ESTUDIOS: "{program?.name}"</h2>
-                    <div className="border-2 border-black p-4 rounded-lg my-8">
-                        <h3 className="text-3xl font-bold tracking-wider">SÍLABO</h3>
+                <div className="flex flex-col items-center gap-4 flex-grow justify-center text-center">
+                    <h2 className="text-xl font-semibold my-8">SÍLABO DE LA UNIDAD DIDÁCTICA</h2>
+                    <div className="border-2 border-black p-4 rounded-lg my-8 w-full max-w-md">
+                        <h3 className="text-3xl font-bold tracking-wider">{unit.name.toUpperCase()}</h3>
                     </div>
                 </div>
 
                 <div className="w-full text-left p-4 space-y-1">
-                    <p><strong>UNIDAD DIDÁCTICA:</strong> {unit.name.toUpperCase()}</p>
                     <p><strong>DOCENTE:</strong> {teacher?.fullName || 'No Asignado'}</p>
                     <p><strong>PERIODO ACADÉMICO:</strong> {currentYear}</p>
                 </div>
