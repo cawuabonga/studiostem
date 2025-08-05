@@ -37,9 +37,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
             {/* Página 1: Carátula */}
             <div className="page-break flex flex-col h-[90vh] items-center justify-center text-center">
                 <div className="flex-grow flex flex-col items-center justify-center gap-6">
-                    {institute?.logoUrl && (
-                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={120} height={120} className="object-contain" data-ai-hint="institute logo" />
-                    )}
+                    
                     <div className="space-y-2">
                         <h1 className="text-xl font-bold tracking-wider">{institute?.name.toUpperCase()}</h1>
                         <p className="text-base font-semibold">PROGRAMA DE ESTUDIOS: "{program?.name.toUpperCase()}"</p>
