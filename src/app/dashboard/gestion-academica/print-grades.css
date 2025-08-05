@@ -1,8 +1,9 @@
 
+
 @media print {
   @page {
-    size: landscape;
-    margin: 0.5in;
+    size: A4 portrait;
+    margin: 0.7in;
   }
 
   body * {
@@ -22,6 +23,10 @@
     transform-origin: top left;
   }
 
+  .page-break {
+    page-break-after: always;
+  }
+
   .print-only {
     display: block !important;
     visibility: visible !important;
@@ -36,7 +41,7 @@
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed; /* Important for column widths */
   }
   
   th, td {
@@ -44,6 +49,7 @@
     padding: 4px 6px;
     text-align: left;
     word-wrap: break-word;
+    vertical-align: top;
   }
   
   th {
