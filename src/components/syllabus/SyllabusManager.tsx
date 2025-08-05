@@ -11,8 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSyllabus, saveSyllabus } from '@/config/firebase';
-import type { Unit, Syllabus } from '@/types';
+import { getSyllabus, saveSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
+import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher } from '@/types';
 import { Loader2, Save, Printer } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
@@ -34,13 +34,20 @@ interface SyllabusManagerProps {
 }
 
 export function SyllabusManager({ unit }: SyllabusManagerProps) {
-  const { instituteId } = useAuth();
+  const { instituteId, institute } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  
+  const [printableData, setPrintableData] = useState<{
+        program: Program | null;
+        teacher: Teacher | null;
+        syllabus: Syllabus | null;
+        weeklyData: WeekData[];
+        indicators: AchievementIndicator[];
+    } | null>(null);
+
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
     defaultValues: {
@@ -55,17 +62,42 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     if (!instituteId) return;
     setLoading(true);
     try {
-      const syllabusData = await getSyllabus(instituteId, unit.id);
-      if (syllabusData) {
-        form.reset(syllabusData);
-      }
+        const currentYear = new Date().getFullYear().toString();
+        const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
+
+        const [
+            syllabusData,
+            allPrograms,
+            allTeachers,
+            weeklyResults,
+            indicators
+        ] = await Promise.all([
+            getSyllabus(instituteId, unit.id),
+            getPrograms(instituteId),
+            getTeachers(instituteId),
+            Promise.all(weekPromises),
+            getAchievementIndicators(instituteId, unit.id)
+        ]);
+      
+        if (syllabusData) {
+            form.reset(syllabusData);
+        }
+
+        const program = allPrograms.find(p => p.id === unit.programId) || null;
+        const assignments = await getAssignments(instituteId, currentYear, unit.programId);
+        const teacherId = assignments[unit.period]?.[unit.id];
+        const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
+        
+        const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
+
+        setPrintableData({ program, teacher, syllabus: syllabusData, weeklyData, indicators });
     } catch (error) {
       console.error("Error fetching syllabus data:", error);
       toast({ title: "Error", description: "No se pudo cargar la información del sílabo.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit.id, form, toast]);
+  }, [instituteId, unit, form, toast]);
 
   useEffect(() => {
     fetchSyllabusData();
@@ -77,6 +109,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     try {
       await saveSyllabus(instituteId, unit.id, data);
       toast({ title: "¡Éxito!", description: "La información del sílabo ha sido guardada." });
+      // Refresh printable data with new changes
+      setPrintableData(prev => prev ? { ...prev, syllabus: data } : null);
     } catch (error: any) {
       toast({ title: "Error", description: "No se pudo guardar la información del sílabo.", variant: "destructive" });
     } finally {
@@ -90,8 +124,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   };
 
   const handleOpenPreview = () => {
-    // We could pre-fetch all data for the preview here if needed
-    setIsPreviewOpen(true);
+    // Re-fetch data just in case something changed in weekly planning
+    fetchSyllabusData().then(() => setIsPreviewOpen(true));
   }
 
 
@@ -125,8 +159,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handleOpenPreview}>
-                            <Printer className="mr-2 h-4 w-4" />
+                        <Button type="button" variant="outline" onClick={handleOpenPreview} disabled={loading}>
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Printer className="mr-2 h-4 w-4" />}
                             Visualizar Sílabo
                         </Button>
                         <Button type="submit" disabled={isSaving}>
@@ -203,7 +237,17 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex-1 overflow-y-auto bg-gray-100 p-4 rounded-md">
-                     <p className="text-center text-muted-foreground">La previsualización del sílabo completo se generará en la página de impresión. Haz clic en "Proceder a Imprimir".</p>
+                     {printableData ? (
+                        <SyllabusPrintLayout
+                            institute={institute}
+                            unit={unit}
+                            {...printableData}
+                        />
+                     ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                     )}
                 </div>
                  <div className="flex justify-end gap-2 mt-4">
                     <Button variant="ghost" onClick={() => setIsPreviewOpen(false)}>Cerrar</Button>
