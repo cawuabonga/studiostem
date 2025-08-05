@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Image from 'next/image';
-import type { Institute, Program, Unit, Teacher, Syllabus, WeekData, AchievementIndicator } from '@/types';
+import type { Institute, Program, Unit, Teacher, Syllabus, WeekData, AchievementIndicator, SyllabusDesignOptions } from '@/types';
 import { format } from 'date-fns';
 
 interface SyllabusPrintLayoutProps {
@@ -14,9 +14,17 @@ interface SyllabusPrintLayoutProps {
     syllabus: Syllabus | null;
     weeklyData: WeekData[];
     indicators: AchievementIndicator[];
+    designOptions?: SyllabusDesignOptions;
 }
 
-export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators }: SyllabusPrintLayoutProps) {
+const defaultOptions: SyllabusDesignOptions = {
+    showLogo: true,
+    showInfoTable: true,
+    showSignature: true,
+};
+
+
+export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabus, weeklyData, indicators, designOptions = defaultOptions }: SyllabusPrintLayoutProps) {
     const today = new Date();
     const currentYear = today.getFullYear();
 
@@ -37,7 +45,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
             {/* Página 1: Carátula */}
             <div className="page-break flex flex-col h-[95vh] items-center justify-center text-center py-10">
                 <div className="space-y-4">
-                    {institute?.logoUrl && (
+                    {designOptions.showLogo && institute?.logoUrl && (
                         <div className="flex justify-center">
                             <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={100} height={100} className="object-contain" />
                         </div>
@@ -62,20 +70,24 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
              <div className="page-break space-y-4">
                  <h2 className="text-center font-bold text-base underline">SÍLABO DE LA UNIDAD DIDÁCTICA "{unit.name.toUpperCase()}"</h2>
                  
-                 <h3 className="font-bold">I. INFORMACIÓN GENERAL</h3>
-                 <table className="print-info-table w-full">
-                     <tbody>
-                        <tr><td className="label w-[30%]">Programa de Estudios</td><td>{program?.name}</td></tr>
-                        <tr><td className="label">Módulo Profesional</td><td>{currentModule?.name}</td></tr>
-                        <tr><td className="label">Unidad Didáctica</td><td>{unit.name}</td></tr>
-                        <tr><td className="label">Créditos</td><td>{unit.credits}</td></tr>
-                        <tr><td className="label">Semestre</td><td>{unit.semester}</td></tr>
-                        <tr><td className="label">Horas Semanales</td><td>{unit.totalHours > 0 && unit.totalWeeks > 0 ? (unit.totalHours / unit.totalWeeks).toFixed(0) : 0}</td></tr>
-                        <tr><td className="label">Horas Semestrales</td><td>{unit.totalHours}</td></tr>
-                        <tr><td className="label">Docente</td><td>{teacher?.fullName || 'No Asignado'}</td></tr>
-                        <tr><td className="label">Email Institucional</td><td>{teacher?.email || 'No Asignado'}</td></tr>
-                     </tbody>
-                 </table>
+                 {designOptions.showInfoTable && (
+                     <>
+                        <h3 className="font-bold">I. INFORMACIÓN GENERAL</h3>
+                        <table className="print-info-table w-full">
+                            <tbody>
+                                <tr><td className="label w-[30%]">Programa de Estudios</td><td>{program?.name}</td></tr>
+                                <tr><td className="label">Módulo Profesional</td><td>{currentModule?.name}</td></tr>
+                                <tr><td className="label">Unidad Didáctica</td><td>{unit.name}</td></tr>
+                                <tr><td className="label">Créditos</td><td>{unit.credits}</td></tr>
+                                <tr><td className="label">Semestre</td><td>{unit.semester}</td></tr>
+                                <tr><td className="label">Horas Semanales</td><td>{unit.totalHours > 0 && unit.totalWeeks > 0 ? (unit.totalHours / unit.totalWeeks).toFixed(0) : 0}</td></tr>
+                                <tr><td className="label">Horas Semestrales</td><td>{unit.totalHours}</td></tr>
+                                <tr><td className="label">Docente</td><td>{teacher?.fullName || 'No Asignado'}</td></tr>
+                                <tr><td className="label">Email Institucional</td><td>{teacher?.email || 'No Asignado'}</td></tr>
+                            </tbody>
+                        </table>
+                    </>
+                 )}
 
                  <h3 className="font-bold">II. SUMILLA</h3>
                  <p className="text-justify text-xs pl-4">{renderHtml(syllabus?.summary)}</p>
@@ -145,12 +157,14 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                 <h3 className="font-bold">VII. FUENTES DE INFORMACIÓN Y REFERENCIAS BIBLIOGRÁFICAS</h3>
                 <div className="pl-4">{renderHtml(syllabus?.bibliography)}</div>
 
-                <div className="text-center pt-20">
-                    <div className="inline-block border-t border-black px-12 py-2">
-                        <p>{teacher?.fullName || '____________________________'}</p>
-                        <p>Docente</p>
+                {designOptions.showSignature && (
+                    <div className="text-center pt-20">
+                        <div className="inline-block border-t border-black px-12 py-2">
+                            <p>{teacher?.fullName || '____________________________'}</p>
+                            <p>Docente</p>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
 
         </div>

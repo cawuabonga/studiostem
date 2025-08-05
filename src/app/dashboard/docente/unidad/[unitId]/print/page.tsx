@@ -1,22 +1,22 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, Institute } from '@/types';
+import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
 import { getUnit, getSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SyllabusPrintLayout } from '@/components/syllabus/SyllabusPrintLayout';
 import '@/app/dashboard/gestion-academica/print-grades.css';
 
-export default function PrintSyllabusPage() {
+function PrintSyllabusContent() {
     const { instituteId, institute } = useAuth();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
     
-    // Extract unitId from a path like /dashboard/docente/unidad/[unitId]/print
     const pathSegments = pathname.split('/');
     const unitId = pathSegments[pathSegments.length - 2] || '';
 
@@ -29,6 +29,12 @@ export default function PrintSyllabusPage() {
         weeklyData: WeekData[];
         indicators: AchievementIndicator[];
     } | null>(null);
+
+    const designOptions: SyllabusDesignOptions = {
+        showLogo: searchParams.get('showLogo') !== 'false',
+        showInfoTable: searchParams.get('showInfoTable') !== 'false',
+        showSignature: searchParams.get('showSignature') !== 'false',
+    };
 
     const fetchDataForPrint = useCallback(async () => {
         if (!instituteId || !unitId) {
@@ -69,7 +75,6 @@ export default function PrintSyllabusPage() {
 
             setPrintableData({ unit, program, teacher, syllabus, weeklyData, indicators });
 
-            // Automatically trigger print dialog
              setTimeout(() => {
                 window.print();
             }, 500);
@@ -106,7 +111,17 @@ export default function PrintSyllabusPage() {
             <SyllabusPrintLayout
                 institute={institute}
                 {...printableData}
+                designOptions={designOptions}
             />
         </div>
     );
+}
+
+
+export default function PrintSyllabusPage() {
+    return (
+        <Suspense fallback={<p>Cargando...</p>}>
+            <PrintSyllabusContent />
+        </Suspense>
+    )
 }

@@ -284,3 +284,9 @@ export interface Syllabus {
     methodology: string;
     bibliography?: string;
 }
+
+export interface SyllabusDesignOptions {
+    showLogo: boolean;
+    showInfoTable: boolean;
+    showSignature: boolean;
+}
