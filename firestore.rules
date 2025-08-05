@@ -1,109 +1,123 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to check user roles
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    // Helper functions to get user data and roles
+    function getUserData(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data;
     }
 
-    function isSuperAdmin(userId) {
-      return getUserData(userId).role == 'SuperAdmin';
+    function isSuperAdmin(uid) {
+      return getUserData(uid).role == 'SuperAdmin';
     }
 
-    function isMemberOfInstitute(userId, instituteId) {
-      return getUserData(userId).instituteId == instituteId;
+    function isInstituteMember(instituteId, uid) {
+      return getUserData(uid).instituteId == instituteId;
     }
 
-    function isInstituteAdmin(userId, instituteId) {
-        let userRole = getUserData(userId).role;
-        return isMemberOfInstitute(userId, instituteId) && (userRole == 'Admin' || userRole == 'Coordinator');
+    function isInstituteAdmin(instituteId, uid) {
+      let role = getUserData(uid).role;
+      return isInstituteMember(instituteId, uid) && (role == 'Admin' || role == 'Coordinator');
+    }
+    
+    function isTeacher(instituteId, uid) {
+       let role = getUserData(uid).role;
+       return isInstituteMember(instituteId, uid) && role == 'Teacher';
+    }
+    
+    function isStudent(instituteId, uid) {
+       let role = getUserData(uid).role;
+       return isInstituteMember(instituteId, uid) && role == 'Student';
     }
 
-    function isTeacher(userId, instituteId) {
-        return isMemberOfInstitute(userId, instituteId) && getUserData(userId).role == 'Teacher';
-    }
-
-    function isStudent(userId, instituteId) {
-        return isMemberOfInstitute(userId, instituteId) && getUserData(userId).role == 'Student';
-    }
-
-    // Rules for top-level collections
+    // Rules for the 'users' collection
     match /users/{userId} {
-      // Allow read/write for the user themselves, or for a SuperAdmin
-      allow read, write: if request.auth.uid == userId || isSuperAdmin(request.auth.uid);
-      // Allow list read only for SuperAdmins
-      allow list: if isSuperAdmin(request.auth.uid);
+      // SuperAdmins can read/write any user document
+      // Any authenticated user can read their own data
+      // Any authenticated user can update their own data
+      allow read, update: if request.auth != null && (request.auth.uid == userId || isSuperAdmin(request.auth.uid));
+      allow write: if isSuperAdmin(request.auth.uid);
+      allow list: if request.auth != null && isSuperAdmin(request.auth.uid);
     }
-
-    match /config/{docId=**} {
-        // Allow read for authenticated users (for login page design)
+    
+     match /config/{docId} {
         allow read: if request.auth != null;
-        // Allow write only for SuperAdmins
-        allow write: if isSuperAdmin(request.auth.uid);
-    }
-    
-    // Rules for institute-specific subcollections
-    match /institutes/{instituteId}/{document=**} {
-        // SuperAdmins have full access to all institute data
-        allow read, write: if isSuperAdmin(request.auth.uid);
-    }
-
-    match /institutes/{instituteId} {
-        // Any authenticated user can read the list of institutes
-        allow get, list: if request.auth != null;
-    }
-
-    match /institutes/{instituteId}/staffProfiles/{staffId} {
-        allow read, list, write: if isInstituteAdmin(request.auth.uid, instituteId);
-    }
-
-    match /institutes/{instituteId}/studentProfiles/{studentId} {
-        allow read, list, write: if isInstituteAdmin(request.auth.uid, instituteId);
-    }
-    
-    match /institutes/{instituteId}/programs/{programId} {
-        allow read, list, write: if isInstituteAdmin(request.auth.uid, instituteId);
-    }
-
-    match /institutes/{instituteId}/unidadesDidacticas/{unitId} {
-        allow read, list, write: if isInstituteAdmin(request.auth.uid, instituteId);
-        // Teachers can read units they are assigned to (more specific rules needed for writes)
-        allow get: if isTeacher(request.auth.uid, instituteId) || isStudent(request.auth.uid, instituteId);
-    }
-
-    match /institutes/{instituteId}/unidadesDidacticas/{unitId}/{subcollection}/{docId} {
-        allow read, write: if isInstituteAdmin(request.auth.uid, instituteId) || isTeacher(request.auth.uid, instituteId);
-        allow read: if isStudent(request.auth.uid, instituteId);
-    }
-
-    match /institutes/{instituteId}/assignments/{assignmentId} {
-        allow read, write: if isInstituteAdmin(request.auth.uid, instituteId);
-    }
-    
-    match /institutes/{instituteId}/payments/{paymentId} {
-        allow read, list: if isInstituteAdmin(request.auth.uid, instituteId);
-        allow create: if isStudent(request.auth.uid, instituteId) && request.resource.data.studentId == getUserData(request.auth.uid).documentId;
-        allow update: if isInstituteAdmin(request.auth.uid, instituteId);
-    }
-
-     match /institutes/{instituteId}/paymentConcepts/{conceptId} {
-        allow read, list: if request.auth != null;
-        allow write: if isInstituteAdmin(request.auth.uid, instituteId);
+        allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
+        
+        match /{subcollection}/{imageId} {
+           allow read: if request.auth != null;
+           allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
+        }
      }
 
-    match /institutes/{instituteId}/matriculations/{matriculationId} {
-        allow read, list, write: if isInstituteAdmin(request.auth.uid, instituteId);
-        allow get, list: if isStudent(request.auth.uid, instituteId) && getUserData(request.auth.uid).documentId == resource.data.studentId;
-    }
+    // Rules for the 'institutes' collection and its subcollections
+    match /institutes/{instituteId} {
+      // Any authenticated user can read institute details (name, logo, etc.)
+      // SuperAdmins can create, update, delete institutes
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
 
-    match /institutes/{instituteId}/academicRecords/{recordId} {
-        allow read, write: if isInstituteAdmin(request.auth.uid, instituteId) || isTeacher(request.auth.uid, instituteId);
-        allow get: if isStudent(request.auth.uid, instituteId) && getUserData(request.auth.uid).documentId == resource.data.studentId;
-    }
+      // --- Staff and Student Profiles ---
+      match /staffProfiles/{profileId} {
+        allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+        allow write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
 
-    match /institutes/{instituteId}/attendance/{attendanceId} {
-       allow read, write: if isInstituteAdmin(request.auth.uid, instituteId) || isTeacher(request.auth.uid, instituteId);
+      match /studentProfiles/{profileId} {
+        allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+        allow write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
+      
+      // --- Academic Management ---
+      match /programs/{programId} {
+         allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+         allow write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
+      
+      match /unidadesDidacticas/{unitId} {
+         allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+         allow write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+
+         // Subcollections of a unit
+         match /{subcollection}/{docId} {
+           allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+           allow write: if request.auth != null && (isTeacher(instituteId, request.auth.uid) || isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+         }
+      }
+      
+      match /assignments/{assignmentId} {
+          allow read, write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
+      
+      match /matriculations/{matriculationId} {
+          allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+          allow write: if request.auth != null && (isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
+
+      match /academicRecords/{recordId} {
+          allow read: if request.auth != null && (isInstituteMember(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+          allow write: if request.auth != null && (isTeacher(instituteId, request.auth.uid) || isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
+      
+      // --- Administrative Management ---
+      match /paymentConcepts/{conceptId} {
+          allow read: if request.auth != null && isInstituteMember(instituteId, request.auth.uid);
+          allow write: if request.auth != null && isInstituteAdmin(instituteId, request.auth.uid);
+      }
+
+      match /payments/{paymentId} {
+          allow read: if request.auth != null && isInstituteMember(instituteId, request.auth.uid);
+          // Students can create their own payments
+          allow create: if request.auth != null && isStudent(instituteId, request.auth.uid) && request.resource.data.studentId == getUserData(request.auth.uid).documentId;
+          // Admins can update (approve/reject)
+          allow update: if request.auth != null && isInstituteAdmin(instituteId, request.auth.uid);
+      }
+      
+      match /attendance/{attendanceId} {
+        allow read, write: if request.auth != null && (isTeacher(instituteId, request.auth.uid) || isInstituteAdmin(instituteId, request.auth.uid) || isSuperAdmin(request.auth.uid));
+      }
     }
   }
 }
