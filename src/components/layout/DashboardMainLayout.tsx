@@ -39,28 +39,30 @@ export default function DashboardMainLayout({
 
   return (
     <SidebarProvider defaultOpen={true} >
-      <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container no-print">
-        <AppSidebarContents />
-      </Sidebar>
-      <SidebarRail className="sidebar-container no-print" />
-      <SidebarInset className="main-content">
-        <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 no-print">
-            <SidebarTrigger className="md:hidden" />
-            <div className="ml-auto flex items-center gap-2 md:ml-0">
-               {institute?.logoUrl ? (
-                <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={24} height={24} className="rounded-sm object-contain"/>
-              ) : (
-                <Building2 className="h-6 w-6" />
-              )}
-              <h1 className="text-xl font-semibold font-headline">
-                {getHeaderTitle()}
-              </h1>
+      <div className="flex">
+        <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container no-print">
+            <AppSidebarContents />
+        </Sidebar>
+        <SidebarRail className="sidebar-container no-print" />
+        <main className="flex-1">
+            <header className="page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4 no-print">
+                <SidebarTrigger className="md:hidden" />
+                <div className="ml-auto flex items-center gap-2 md:ml-0">
+                {institute?.logoUrl ? (
+                    <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={24} height={24} className="rounded-sm object-contain"/>
+                ) : (
+                    <Building2 className="h-6 w-6" />
+                )}
+                <h1 className="text-xl font-semibold font-headline">
+                    {getHeaderTitle()}
+                </h1>
+                </div>
+            </header>
+            <div className="p-4 md:p-6">
+                {children}
             </div>
-        </header>
-        <main className="flex-1 p-4 md:p-6">
-            {children}
         </main>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
