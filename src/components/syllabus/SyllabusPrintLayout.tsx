@@ -55,7 +55,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                 </div>
             </div>
 
-            {/* Página 2: Información General */}
+             {/* Página 2: Información General */}
              <div className="page-break space-y-4">
                  <h2 className="text-center font-bold text-base underline">SÍLABO DE LA UNIDAD DIDÁCTICA "{unit.name.toUpperCase()}"</h2>
                  
