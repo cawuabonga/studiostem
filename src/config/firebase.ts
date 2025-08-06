@@ -315,6 +315,20 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
     await batch.commit();
 }
 
+export const duplicateUnit = async (instituteId: string, unitId: string): Promise<void> => {
+    const originalUnit = await getUnit(instituteId, unitId);
+    if (!originalUnit) {
+        throw new Error("La unidad original no fue encontrada.");
+    }
+    const { id, name, code, ...restOfUnit } = originalUnit;
+    const newUnitData = {
+        ...restOfUnit,
+        name: `${name} (Copia)`,
+        code: `${code}-COPY`,
+    };
+    await addUnit(instituteId, newUnitData);
+};
+
 
 // Teachers (derived from StaffProfiles)
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {

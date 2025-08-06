@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms, updateUnitImage } from '@/config/firebase';
+import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
 import type { Unit, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -94,6 +94,17 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     }
   }
 
+  const handleDuplicate = async (unitId: string) => {
+    if (!instituteId) return;
+    try {
+        await duplicateUnit(instituteId, unitId);
+        toast({ title: 'Unidad Duplicada', description: 'La unidad didáctica se ha duplicado correctamente.' });
+        fetchUnitsAndPrograms(instituteId);
+    } catch (error: any) {
+        toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
+    }
+  };
+
   const filteredUnits = useMemo(() => 
     units.filter(unit => 
         unit.name.toLowerCase().includes(filter.toLowerCase()) ||
@@ -166,16 +177,20 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                    <TableCell className="text-right space-x-1">
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
                             {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
                             <span className="sr-only">Generar Imagen</span>
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                         <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleDuplicate(unit.id)}>
+                            <Copy className="h-4 w-4" />
+                            <span className="sr-only">Duplicar</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
                             <Edit2 className="h-4 w-4" />
                             <span className="sr-only">Editar</span>
                         </Button>
-                        <Button variant="destructive" size="icon" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
+                        <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Eliminar</span>
                         </Button>
