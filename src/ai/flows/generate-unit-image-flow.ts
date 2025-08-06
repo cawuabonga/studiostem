@@ -10,7 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateUnitImageInputSchema = z.object({
+const GenerateUnitImageInputSchema = z.object({
   unitName: z.string().describe('The name of the didactic unit.'),
 });
 export type GenerateUnitImageInput = z.infer<
