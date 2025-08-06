@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyllabus, saveSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
 import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
-import { Loader2, Save, Printer } from 'lucide-react';
+import { Loader2, Save, Printer, Wand2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { useRouter } from 'next/navigation';
 import '@/app/dashboard/gestion-academica/print-grades.css';
@@ -22,6 +22,7 @@ import { SyllabusPrintLayout } from './SyllabusPrintLayout';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
+import { generateSyllabusSummary } from '@/ai/flows/generate-syllabus-summary-flow';
 
 const syllabusSchema = z.object({
   summary: z.string().min(10, "La sumilla debe tener al menos 10 caracteres."),
@@ -42,6 +43,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [printableData, setPrintableData] = useState<{
         program: Program | null;
@@ -126,6 +128,20 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     }
   };
   
+  const handleGenerateSummary = async () => {
+    setIsGenerating(true);
+    try {
+        const summary = await generateSyllabusSummary({ unitName: unit.name });
+        form.setValue('summary', summary, { shouldValidate: true });
+        toast({ title: "Sumilla Generada", description: "La IA ha creado una propuesta para la sumilla." });
+    } catch (error) {
+        toast({ title: "Error", description: "No se pudo generar la sumilla.", variant: "destructive"});
+        console.error("Error generating summary:", error);
+    } finally {
+        setIsGenerating(false);
+    }
+  };
+
   const handlePrint = () => {
     const optionsQuery = new URLSearchParams(designOptions as any).toString();
     const printUrl = `/dashboard/docente/unidad/${unit.id}/print?${optionsQuery}`;
@@ -188,7 +204,13 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                   name="summary"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-lg font-semibold">Sumilla</FormLabel>
+                       <div className="flex items-center justify-between">
+                            <FormLabel className="text-lg font-semibold">Sumilla</FormLabel>
+                            <Button type="button" variant="outline" size="sm" onClick={handleGenerateSummary} disabled={isGenerating}>
+                                {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Wand2 className="mr-2 h-4 w-4" />}
+                                Generar con IA
+                            </Button>
+                        </div>
                       <FormControl>
                         <Textarea rows={4} placeholder="Describe brevemente la naturaleza de la unidad didáctica, su propósito y contenido." {...field} />
                       </FormControl>
