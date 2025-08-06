@@ -6,7 +6,7 @@ import { getPrograms } from '@/config/firebase';
 import type { Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EditProgramDialog } from './EditProgramDialog';
@@ -131,24 +131,15 @@ export function ProgramsList({ instituteId, onDataChange }: ProgramsListProps) {
                 <TableCell>{program.abbreviation}</TableCell>
                 <TableCell>{program.duration}</TableCell>
                 <TableCell className="text-center">{program.moduleCount}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menú</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => {setSelectedProgram(program); setIsEditDialogOpen(true);}}>
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {setSelectedProgram(program); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right space-x-2">
+                    <Button variant="outline" size="icon" onClick={() => {setSelectedProgram(program); setIsEditDialogOpen(true);}}>
+                        <Edit2 className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                    </Button>
+                    <Button variant="destructive" size="icon" onClick={() => {setSelectedProgram(program); setIsDeleteDialogOpen(true);}}>
+                        <Trash2 className="h-4 w-4" />
+                         <span className="sr-only">Eliminar</span>
+                    </Button>
                 </TableCell>
               </TableRow>
             ))}
