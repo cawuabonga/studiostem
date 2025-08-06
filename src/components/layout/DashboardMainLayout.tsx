@@ -41,7 +41,7 @@ export default function DashboardMainLayout({
 
   return (
     <SidebarProvider defaultOpen={true} >
-      <div className="flex">
+      <div className="flex w-full">
         <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container no-print">
             <AppSidebarContents />
         </Sidebar>
