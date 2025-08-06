@@ -2,17 +2,25 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms, addUnit } from '@/config/firebase';
+import { getUnits, getPrograms, updateUnitImage } from '@/config/firebase';
 import type { Unit, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, Copy } from 'lucide-react';
+import { Edit2, Trash2, Copy, MoreHorizontal, ImageIcon, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EditUnitDialog } from './EditUnitDialog';
 import { DeleteUnitDialog } from './DeleteUnitDialog';
 import { Input } from '../ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UnitsListProps {
     onDataChange: () => void;
@@ -29,6 +37,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const { toast } = useToast();
   const { instituteId } = useAuth();
 
@@ -71,33 +80,19 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     }
   };
 
-  const handleDuplicate = async (unitToDuplicate: Unit) => {
-    if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
-        return;
-    }
+  const handleRegenerateImage = async (unit: Unit) => {
+    if (!instituteId) return;
+    setImageLoadingId(unit.id);
     try {
-        const { id, ...unitData } = unitToDuplicate;
-        const newUnitData = {
-            ...unitData,
-            name: `${unitData.name} (Copia)`,
-            code: `${unitData.code}-copia`
-        };
-        await addUnit(instituteId, newUnitData);
-        toast({
-            title: '¡Unidad Duplicada!',
-            description: `Se creó una copia de "${unitToDuplicate.name}".`,
-        });
-        fetchUnitsAndPrograms(instituteId);
-        onDataChange();
+        await updateUnitImage(instituteId, unit.id, unit.name);
+        toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
+        fetchUnitsAndPrograms(instituteId); // Refetch to get the new URL
     } catch (error) {
-        toast({
-            title: 'Error',
-            description: 'No se pudo duplicar la unidad.',
-            variant: 'destructive',
-        });
+        toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
+    } finally {
+        setImageLoadingId(null);
     }
-  };
+  }
 
   const filteredUnits = useMemo(() => 
     units.filter(unit => 
@@ -171,19 +166,33 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                       <Button variant="outline" size="icon" onClick={() => handleDuplicate(unit)}>
-                        <Copy className="h-4 w-4" />
-                        <span className="sr-only">Duplicar</span>
-                      </Button>
-                      <Button variant="outline" size="icon" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                        <Edit2 className="h-4 w-4" />
-                        <span className="sr-only">Editar</span>
-                      </Button>
-                      <Button variant="destructive" size="icon" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Eliminar</span>
-                      </Button>
+                    <TableCell className="text-right">
+                       <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menú</span>
+                            {imageLoadingId === unit.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <MoreHorizontal className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleRegenerateImage(unit)}>
+                            <ImageIcon className="mr-2 h-4 w-4" /> Generar Imagen
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )

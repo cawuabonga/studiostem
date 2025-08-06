@@ -282,6 +282,12 @@ export const updateUnit = async (instituteId: string, unitId: string, data: Part
     await updateDoc(unitRef, data);
 }
 
+export const updateUnitImage = async (instituteId: string, unitId: string, unitName: string): Promise<void> => {
+    const imageUrl = await generateUnitImage({ unitName });
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    await updateDoc(unitRef, { imageUrl: imageUrl });
+};
+
 export const deleteUnit = async (instituteId: string, unitId: string) => {
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await deleteDoc(unitRef);
