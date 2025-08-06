@@ -166,33 +166,19 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
                     <TableCell>{unit.totalHours}</TableCell>
-                    <TableCell className="text-right">
-                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Abrir menú</span>
-                            {imageLoadingId === unit.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                                <MoreHorizontal className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => handleRegenerateImage(unit)}>
-                            <ImageIcon className="mr-2 h-4 w-4" /> Generar Imagen
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                            <Edit2 className="mr-2 h-4 w-4" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="text-right space-x-2">
+                        <Button variant="outline" size="icon" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                            {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                            <span className="sr-only">Generar Imagen</span>
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                            <Edit2 className="h-4 w-4" />
+                            <span className="sr-only">Editar</span>
+                        </Button>
+                        <Button variant="destructive" size="icon" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Eliminar</span>
+                        </Button>
                     </TableCell>
                   </TableRow>
                 )
