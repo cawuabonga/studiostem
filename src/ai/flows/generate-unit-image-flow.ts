@@ -36,6 +36,24 @@ const generateUnitImageFlow = ai.defineFlow(
       prompt: `Generate a minimalist, conceptual, and educational-themed image for a course titled "${unitName}". The style should be modern, clean, and abstract. Use a professional and inspiring color palette.`,
       config: {
         responseModalities: ['TEXT', 'IMAGE'],
+        safetySettings: [
+            {
+                category: 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                threshold: 'BLOCK_NONE',
+            },
+            {
+                category: 'HARM_CATEGORY_HARASSMENT',
+                threshold: 'BLOCK_NONE',
+            },
+            {
+                category: 'HARM_CATEGORY_HATE_SPEECH',
+                threshold: 'BLOCK_ONLY_HIGH',
+            },
+             {
+                category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                threshold: 'BLOCK_ONLY_HIGH',
+            }
+        ]
       },
     });
 
