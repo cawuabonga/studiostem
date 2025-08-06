@@ -105,6 +105,7 @@ export interface Unit {
   programId: string;
   moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
   semester: number;
+  imageUrl?: string;
 }
 
 // This type is now based on StaffProfile for consistency.
