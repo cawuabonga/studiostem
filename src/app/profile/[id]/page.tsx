@@ -8,10 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Building, BookOpen, Briefcase, GraduationCap } from 'lucide-react';
+import { Building, BookOpen, Briefcase, GraduationCap, Share2 } from 'lucide-react';
 import { CareerProgressTimeline } from '@/components/student/CareerProgressTimeline';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 
 interface ProfileData {
@@ -98,11 +100,29 @@ export default function PublicProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   
   const pathname = usePathname();
   const { setInstitute, instituteId } = useAuth();
   
   const id = pathname.split('/').pop();
+
+  const handleCopyLink = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+        toast({
+            title: "¡Enlace copiado!",
+            description: "El enlace al perfil ha sido copiado al portapapeles.",
+        })
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        toast({
+            title: "Error",
+            description: "No se pudo copiar el enlace.",
+            variant: "destructive"
+        })
+    });
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -193,7 +213,17 @@ export default function PublicProfilePage() {
   return (
     <div className="bg-muted min-h-screen">
         <div className="container mx-auto p-4 md:p-8">
-            <div className="bg-card p-8 rounded-lg shadow-lg flex flex-col items-center">
+            <div className="bg-card p-8 rounded-lg shadow-lg flex flex-col items-center relative">
+                 <Button 
+                    variant="outline"
+                    size="sm"
+                    className="absolute top-4 right-4"
+                    onClick={handleCopyLink}
+                 >
+                    <Share2 className="mr-2 h-4 w-4" />
+                    Compartir Perfil
+                 </Button>
+
                  <Avatar className="w-32 h-32 mb-4 border-4 border-primary">
                     <AvatarImage src={photoURL} alt={`Foto de ${displayName}`} data-ai-hint="profile avatar" />
                     <AvatarFallback className="text-5xl">{displayName ? displayName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
