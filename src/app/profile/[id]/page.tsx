@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments } from '@/config/firebase';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms } from '@/config/firebase';
 import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Building, BookOpen, Briefcase, GraduationCap } from 'lucide-react';
 import { CareerProgressTimeline } from '@/components/student/CareerProgressTimeline';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePathname } from 'next/navigation';
 
 
 interface ProfileData {
@@ -93,17 +94,18 @@ const StudentProfileView = ({ profile, instituteName, programName }: { profile: 
 };
 
 
-export default function PublicProfilePage({ params }: { params: { id: string } }) {
+export default function PublicProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  // Use a part of the auth context to provide instituteId to child components
+  const pathname = usePathname();
   const { setInstitute, instituteId } = useAuth();
+  
+  const id = pathname.split('/').pop();
 
   useEffect(() => {
     const fetchProfile = async () => {
-      const { id } = params;
       if (!id) {
         setError("No se ha especificado un perfil.");
         setLoading(false);
@@ -169,7 +171,7 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
     };
 
     fetchProfile();
-  }, [params, setInstitute]);
+  }, [id, setInstitute]);
 
   if (loading) {
     return <LoadingState />;
@@ -210,4 +212,3 @@ export default function PublicProfilePage({ params }: { params: { id: string } }
     </div>
   );
 }
-
