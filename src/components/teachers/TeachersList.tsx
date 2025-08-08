@@ -7,7 +7,7 @@ import type { Teacher, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit2, Trash2, MoreHorizontal, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EditTeacherDialog } from './EditTeacherDialog';
@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
+import Link from 'next/link';
 
 interface TeachersListProps {
     instituteId: string;
@@ -139,24 +140,13 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
                     {teacher.active ? 'Activo' : 'Inactivo'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <span className="sr-only">Abrir menú</span>
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => {setSelectedTeacher(teacher); setIsEditDialogOpen(true);}}>
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {setSelectedTeacher(teacher); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <TableCell className="text-right space-x-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/profile/${teacher.documentId}`} target="_blank">
+                        <Eye className="mr-2 h-4 w-4"/>
+                        Perfil Público
+                      </Link>
+                    </Button>
                 </TableCell>
               </TableRow>
             ))}

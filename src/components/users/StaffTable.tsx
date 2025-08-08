@@ -7,7 +7,7 @@ import type { StaffProfile, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit2, Trash2, MoreHorizontal, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,6 +21,7 @@ import {
 import { Input } from '../ui/input';
 import { EditStaffProfileDialog } from './EditStaffProfileDialog';
 import { DeleteStaffProfileDialog } from './DeleteStaffProfileDialog';
+import Link from 'next/link';
 
 
 interface StaffTableProps {
@@ -159,6 +160,11 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                       <DropdownMenuItem asChild>
+                          <Link href={`/profile/${profile.documentId}`} target="_blank">
+                              <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
+                          </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
                         <Edit2 className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>

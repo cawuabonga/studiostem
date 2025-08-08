@@ -1,0 +1,213 @@
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments } from '@/config/firebase';
+import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit } from '@/types';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Building, BookOpen, Briefcase, GraduationCap } from 'lucide-react';
+import { CareerProgressTimeline } from '@/components/student/CareerProgressTimeline';
+import { useAuth } from '@/contexts/AuthContext';
+
+
+interface ProfileData {
+    type: 'staff' | 'student';
+    profile: StaffProfile | StudentProfile;
+    instituteName: string;
+    programName: string;
+    assignedUnits?: Unit[];
+}
+
+const LoadingState = () => (
+    <div className="container mx-auto p-4 md:p-8">
+        <div className="flex flex-col items-center space-y-4">
+            <Skeleton className="h-32 w-32 rounded-full" />
+            <Skeleton className="h-8 w-1/2" />
+            <Skeleton className="h-6 w-1/3" />
+        </div>
+        <div className="mt-8 space-y-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+        </div>
+    </div>
+);
+
+const StaffProfileView = ({ profile, instituteName, programName, assignedUnits }: { profile: StaffProfile; instituteName: string; programName: string; assignedUnits?: Unit[] }) => (
+    <>
+        <div className="flex items-center space-x-2">
+            <Briefcase className="h-5 w-5 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground">{profile.role}</span>
+        </div>
+        <div className="flex items-center space-x-2">
+            <GraduationCap className="h-5 w-5 text-muted-foreground" />
+            <span className="text-lg text-muted-foreground">{programName}</span>
+        </div>
+        <div className="mt-8 w-full max-w-4xl">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Unidades Didácticas Asignadas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {assignedUnits && assignedUnits.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {assignedUnits.map(unit => (
+                                <div key={unit.id} className="p-4 border rounded-lg bg-background">
+                                    <h3 className="font-semibold">{unit.name}</h3>
+                                    <p className="text-sm text-muted-foreground">{unit.period} - {unit.totalHours} horas</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-muted-foreground text-center">Este docente no tiene unidades asignadas actualmente.</p>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    </>
+);
+
+const StudentProfileView = ({ profile, instituteName, programName }: { profile: StudentProfile; instituteName: string; programName: string; }) => {
+    // We need to provide a mock user object to CareerProgressTimeline
+    const mockUser = {
+        uid: profile.linkedUserUid || '',
+        displayName: profile.fullName,
+        email: profile.email,
+        photoURL: profile.photoURL || null,
+        role: 'Student',
+        documentId: profile.documentId,
+        instituteId: '', // instituteId will be taken from AuthContext
+    };
+
+    return (
+        <div className="w-full max-w-4xl mt-8">
+            <div className="flex items-center space-x-2 mb-4 justify-center">
+                <GraduationCap className="h-5 w-5 text-muted-foreground" />
+                <span className="text-lg text-muted-foreground">{programName}</span>
+            </div>
+            <CareerProgressTimeline />
+        </div>
+    );
+};
+
+
+export default function PublicProfilePage({ params }: { params: { id: string } }) {
+  const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Use a part of the auth context to provide instituteId to child components
+  const { setInstitute, instituteId } = useAuth();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { id } = params;
+      if (!id) {
+        setError("No se ha especificado un perfil.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const institutes = await getInstitutes();
+        let foundProfile: ProfileData | null = null;
+
+        for (const institute of institutes) {
+          const staffProfile = await getStaffProfileByDocumentId(institute.id, id);
+          if (staffProfile) {
+            const programs = await getPrograms(institute.id);
+            const program = programs.find(p => p.id === staffProfile.programId);
+            
+            // Fetch assigned units for the staff
+            const allUnits = await getUnits(institute.id);
+            const currentYear = new Date().getFullYear().toString();
+            const assignments = await getAssignments(institute.id, currentYear, staffProfile.programId);
+            
+            const assignedUnits = allUnits.filter(unit => 
+                (assignments['MAR-JUL']?.[unit.id] === id || assignments['AGO-DIC']?.[unit.id] === id)
+            );
+
+            foundProfile = {
+              type: 'staff',
+              profile: staffProfile,
+              instituteName: institute.name,
+              programName: program?.name || 'N/A',
+              assignedUnits: assignedUnits,
+            };
+            await setInstitute(institute.id);
+            break;
+          }
+
+          const studentProfile = await getStudentProfile(institute.id, id);
+          if (studentProfile) {
+            const programs = await getPrograms(institute.id);
+            const program = programs.find(p => p.id === studentProfile.programId);
+            foundProfile = {
+              type: 'student',
+              profile: studentProfile,
+              instituteName: institute.name,
+              programName: program?.name || 'N/A',
+            };
+            await setInstitute(institute.id);
+            break;
+          }
+        }
+
+        if (foundProfile) {
+          setProfileData(foundProfile);
+        } else {
+          setError("Perfil no encontrado.");
+        }
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+        setError("Ocurrió un error al cargar el perfil.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [params, setInstitute]);
+
+  if (loading) {
+    return <LoadingState />;
+  }
+
+  if (error) {
+    return <div className="text-center text-destructive p-8">{error}</div>;
+  }
+
+  if (!profileData) {
+    return <div className="text-center p-8">Perfil no disponible.</div>;
+  }
+  
+  const { profile, type, instituteName, programName, assignedUnits } = profileData;
+  const displayName = 'displayName' in profile ? profile.displayName : profile.fullName;
+  const photoURL = profile.photoURL || `https://placehold.co/128x128.png?text=${displayName[0]}`;
+
+
+  return (
+    <div className="bg-muted min-h-screen">
+        <div className="container mx-auto p-4 md:p-8">
+            <div className="bg-card p-8 rounded-lg shadow-lg flex flex-col items-center">
+                 <Avatar className="w-32 h-32 mb-4 border-4 border-primary">
+                    <AvatarImage src={photoURL} alt={`Foto de ${displayName}`} data-ai-hint="profile avatar" />
+                    <AvatarFallback className="text-5xl">{displayName ? displayName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
+                </Avatar>
+                <h1 className="text-4xl font-bold font-headline">{displayName}</h1>
+                <div className="flex items-center space-x-2 mt-2">
+                    <Building className="h-5 w-5 text-muted-foreground" />
+                    <h2 className="text-xl text-muted-foreground">{instituteName}</h2>
+                </div>
+                
+                 {type === 'staff' && <StaffProfileView profile={profile as StaffProfile} instituteName={instituteName} programName={programName} assignedUnits={assignedUnits} />}
+                 {type === 'student' && instituteId && <StudentProfileView profile={profile as StudentProfile} instituteName={instituteName} programName={programName} />}
+
+            </div>
+        </div>
+    </div>
+  );
+}
+

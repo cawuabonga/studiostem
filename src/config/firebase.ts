@@ -404,6 +404,15 @@ export const getStaffProfiles = async (instituteId: string): Promise<StaffProfil
     return snapshot.docs.map(doc => ({ ...doc.data() } as StaffProfile));
 };
 
+export const getStaffProfileByDocumentId = async (instituteId: string, documentId: string): Promise<StaffProfile | null> => {
+    const profileRef = doc(getSubCollectionRef(instituteId, 'staffProfiles'), documentId);
+    const docSnap = await getDoc(profileRef);
+    if (docSnap.exists()) {
+        return docSnap.data() as StaffProfile;
+    }
+    return null;
+}
+
 
 export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffProfile, 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);

@@ -7,7 +7,7 @@ import type { StudentProfile, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, ArrowRight, Edit2 } from 'lucide-react';
+import { MoreHorizontal, ArrowRight, Edit2, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -178,10 +178,24 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                             </Link>
                         </Button>
                     ) : (
-                        <Button variant="outline" size="icon" onClick={() => { setSelectedProfile(profile); setIsEditDialogOpen(true); }}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                        </Button>
+                       <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                    <Link href={`/profile/${profile.documentId}`} target="_blank">
+                                        <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
+                                    </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => { setSelectedProfile(profile); setIsEditDialogOpen(true); }}>
+                                    <Edit2 className="mr-2 h-4 w-4" /> Editar Perfil
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     )}
                 </TableCell>
               </TableRow>
