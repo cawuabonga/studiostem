@@ -8,6 +8,7 @@ import { Button } from '../ui/button';
 import { EditProfileDialog } from '../profile/EditProfileDialog';
 import { useState } from 'react';
 import { LinkProfileDialog } from '../profile/LinkProfileDialog';
+import Link from 'next/link';
 
 export default function WelcomeMessage() {
   const { user, reloadUser } = useAuth();
@@ -56,7 +57,16 @@ export default function WelcomeMessage() {
             {isUnlinked ? (
                  <Button onClick={() => setIsLinkProfileOpen(true)} size="lg">Vincular mi Perfil</Button>
             ) : (
+              <>
                 <Button onClick={() => setIsEditOpen(true)}>Editar Perfil</Button>
+                {user.documentId && (
+                  <Button variant="outline" asChild>
+                    <Link href={`/profile/${user.documentId}`} target="_blank">
+                      Ver mi Perfil Público
+                    </Link>
+                  </Button>
+                )}
+              </>
             )}
         </CardFooter>
       </Card>
