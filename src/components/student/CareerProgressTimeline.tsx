@@ -156,10 +156,10 @@ export function CareerProgressTimeline() {
             <CardContent>
                 <TooltipProvider>
                     <div className="relative w-full py-4">
-                        {/* Timeline bar */}
-                        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full -translate-y-1/2" />
+                        {/* Timeline bar for desktop */}
+                        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full -translate-y-1/2 hidden md:block" />
                         
-                        <div className="relative flex justify-between">
+                        <div className="relative grid grid-cols-3 md:flex md:justify-between gap-y-8">
                             {timelineData.map((item, index) => (
                                 <Tooltip key={item.semester}>
                                     <TooltipTrigger asChild>
@@ -169,9 +169,12 @@ export function CareerProgressTimeline() {
                                                  {getStatusIcon(item.status)}
                                             </div>
                                             {/* Semester Label */}
-                                            <p className="mt-2 text-sm font-medium">Semestre {item.semester}</p>
-                                            {/* Connector line from main bar to icon */}
-                                            <div className={cn("absolute top-1/2 w-0.5 h-4 -translate-y-[calc(50%+1.25rem)]", getStatusColor(item.status))}></div>
+                                            <p className="mt-2 text-sm font-medium text-center">Semestre {item.semester}</p>
+                                            {/* Connector line from main bar to icon - only for desktop */}
+                                            <div className={cn(
+                                                "absolute top-1/2 w-0.5 h-4 -translate-y-[calc(50%+1.25rem)] hidden md:block", 
+                                                getStatusColor(item.status)
+                                            )}></div>
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
