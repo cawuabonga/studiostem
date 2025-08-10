@@ -288,6 +288,15 @@ export const updateUnitImage = async (instituteId: string, unitId: string, unitN
     await updateDoc(unitRef, { imageUrl: imageUrl });
 };
 
+export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
+    const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/coverImage`);
+    await uploadBytes(storageRef, file);
+    const imageUrl = await getDownloadURL(storageRef);
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    await updateDoc(unitRef, { imageUrl });
+};
+
+
 export const deleteUnit = async (instituteId: string, unitId: string) => {
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await deleteDoc(unitRef);

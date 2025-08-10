@@ -1,7 +1,8 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating a conceptual image for a didactic unit.
- *
+ * This flow is currently disabled to prevent costs.
  * - generateUnitImage - A function that takes a unit name and returns an image data URI.
  */
 
@@ -22,6 +23,14 @@ export const generateUnitImage = ai.defineFlow(
     outputSchema: z.string(),
   },
   async ({unitName}) => {
+    // AI image generation is currently disabled to control costs.
+    // Return a placeholder image URL instead.
+    console.log(`Image generation for "${unitName}" skipped due to cost control.`);
+    const placeholderUrl = `https://placehold.co/600x400.png?text=${encodeURIComponent(unitName)}`;
+    return placeholderUrl;
+
+    /*
+    // Original AI generation code - UNCOMMENT TO RE-ENABLE
     const {media} = await ai.generate({
       model: 'googleai/gemini-2.0-flash-preview-image-generation',
       prompt: `Generate a minimalist, conceptual, and educational-themed image for a course titled "${unitName}". The style should be modern, clean, and abstract. Use a professional and inspiring color palette.`,
@@ -53,5 +62,6 @@ export const generateUnitImage = ai.defineFlow(
     }
 
     return media.url;
+    */
   }
 );

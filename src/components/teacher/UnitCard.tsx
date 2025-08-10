@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Unit } from "@/types";
-import { ArrowRight, BookOpen, Clock, ImageIcon, Loader2 } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, Upload, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -15,11 +15,10 @@ interface AssignedUnit extends Unit {
 
 interface UnitCardProps {
     unit: AssignedUnit;
-    onRegenerateImage: (unit: Unit) => void;
-    isImageLoading: boolean;
+    onUploadImageClick: (unit: Unit) => void;
 }
 
-export function UnitCard({ unit, onRegenerateImage, isImageLoading }: UnitCardProps) {
+export function UnitCard({ unit, onUploadImageClick }: UnitCardProps) {
     return (
         <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300 group">
              <div className="relative w-full h-40">
@@ -40,10 +39,9 @@ export function UnitCard({ unit, onRegenerateImage, isImageLoading }: UnitCardPr
                     size="sm"
                     variant="secondary"
                     className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => onRegenerateImage(unit)}
-                    disabled={isImageLoading}
+                    onClick={() => onUploadImageClick(unit)}
                 >
-                    {isImageLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImageIcon className="h-4 w-4" />}
+                    <Upload className="h-4 w-4" />
                 </Button>
             </div>
             <CardHeader>
