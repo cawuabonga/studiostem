@@ -1,12 +1,11 @@
 
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Unit } from "@/types";
-import { ArrowRight, BookOpen, Clock } from "lucide-react";
+import { ArrowRight, BookOpen, Clock, ImageIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -16,13 +15,15 @@ interface AssignedUnit extends Unit {
 
 interface UnitCardProps {
     unit: AssignedUnit;
+    onRegenerateImage: (unit: Unit) => void;
+    isImageLoading: boolean;
 }
 
-export function UnitCard({ unit }: UnitCardProps) {
+export function UnitCard({ unit, onRegenerateImage, isImageLoading }: UnitCardProps) {
     return (
-        <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300">
-             {unit.imageUrl ? (
-                <div className="relative w-full h-40">
+        <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300 group">
+             <div className="relative w-full h-40">
+                {unit.imageUrl ? (
                     <Image
                         src={unit.imageUrl}
                         alt={`Imagen para ${unit.name}`}
@@ -30,12 +31,21 @@ export function UnitCard({ unit }: UnitCardProps) {
                         className="object-cover rounded-t-lg"
                         data-ai-hint="course image"
                     />
-                </div>
-            ) : (
-                <div className="w-full h-40 bg-muted rounded-t-lg flex items-center justify-center">
-                    <BookOpen className="h-12 w-12 text-muted-foreground" />
-                </div>
-            )}
+                ) : (
+                    <div className="w-full h-40 bg-muted rounded-t-lg flex items-center justify-center">
+                        <BookOpen className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                )}
+                 <Button 
+                    size="sm"
+                    variant="secondary"
+                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => onRegenerateImage(unit)}
+                    disabled={isImageLoading}
+                >
+                    {isImageLoading ? <Loader2 className="h-4 w-4 animate-spin"/> : <ImageIcon className="h-4 w-4" />}
+                </Button>
+            </div>
             <CardHeader>
                 <Badge variant="secondary" className="w-fit mb-2">{unit.programName}</Badge>
                 <CardTitle>{unit.name}</CardTitle>
