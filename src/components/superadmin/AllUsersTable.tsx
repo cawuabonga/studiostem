@@ -106,11 +106,11 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
           <TableBody>
             {filteredUsers.map((user) => (
               <TableRow key={user.uid}>
-                <TableCell className="font-medium">{user.displayName || 'N/A'}</TableCell>
-                <TableCell>{user.email || 'N/A'}</TableCell>
-                <TableCell><Badge variant="secondary">{user.role}</Badge></TableCell>
-                <TableCell className="font-mono text-xs">{user.instituteId || 'No Asignado'}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="font-medium py-2">{user.displayName || 'N/A'}</TableCell>
+                <TableCell className="py-2">{user.email || 'N/A'}</TableCell>
+                <TableCell className="py-2"><Badge variant="secondary">{user.role}</Badge></TableCell>
+                <TableCell className="font-mono text-xs py-2">{user.instituteId || 'No Asignado'}</TableCell>
+                <TableCell className="text-right py-2">
                   <Button variant="ghost" size="icon" onClick={() => handleEditUser(user)}>
                     <Edit2 className="h-4 w-4" />
                     <span className="sr-only">Editar Usuario</span>
