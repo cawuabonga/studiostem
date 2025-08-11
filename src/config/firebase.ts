@@ -9,12 +9,12 @@ import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDrtLhQIGsfH9RHl02Gs6fOX_honSi610I",
-  authDomain: "app-iestp.firebaseapp.com",
-  projectId: "app-iestp",
-  storageBucket: "app-iestp.appspot.com", 
-  messagingSenderId: "599711250596",
-  appId: "1:599711250596:web:a570b99c0db17039540e31"
+  apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
+  authDomain: "stem-v2-4y6a0.firebaseapp.com",
+  projectId: "stem-v2-4y6a0",
+  storageBucket: "stem-v2-4y6a0.appspot.com",
+  messagingSenderId: "865497414457",
+  appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
 };
 
 let app;
@@ -1090,3 +1090,6 @@ export const saveWeekSyllabusData = async (instituteId: string, unitId: string, 
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     await setDoc(weekDocRef, data, { merge: true });
 };
+
+
+    
