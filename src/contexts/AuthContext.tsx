@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import type { AppUser, UserRole, Institute } from '@/types';
+import type { AppUser, UserRole, Institute, Permission } from '@/types';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   auth, 
@@ -9,7 +10,8 @@ import {
   GoogleAuthProvider, 
   saveUserAdditionalData,
   getInstitute,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  getRolePermissions
 } from '@/config/firebase'; 
 import { 
   onAuthStateChanged, 
@@ -34,6 +36,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOutUser: () => Promise<void>;
   reloadUser: () => Promise<void>;
+  hasPermission: (permission: Permission) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,11 +100,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let appUser: AppUser;
 
           if (userDocSnap.exists()) {
-            appUser = userDocSnap.data() as AppUser;
-            appUser.displayName = appUser.displayName || firebaseUser.displayName;
-            appUser.photoURL = appUser.photoURL || firebaseUser.photoURL;
+            const userData = userDocSnap.data() as AppUser;
+            
+            // Fetch permissions if roleId and instituteId exist
+            if (userData.roleId && userData.instituteId) {
+                const permissions = await getRolePermissions(userData.instituteId, userData.roleId);
+                userData.permissions = permissions || [];
+            } else {
+                 userData.permissions = [];
+            }
+            
+            appUser = {
+                ...userData,
+                displayName: userData.displayName || firebaseUser.displayName,
+                photoURL: userData.photoURL || firebaseUser.photoURL,
+            };
+
           } else {
-             // Define the complete user object from the start
              appUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
@@ -109,9 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 photoURL: firebaseUser.photoURL,
                 role: 'Student',
                 instituteId: null, 
-                documentId: '', // Initialize as empty string
+                documentId: '',
+                permissions: [],
              };
-             // Save this complete object to the database
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
               appUser.role,
@@ -121,11 +136,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           setUser(appUser);
           
-          // If the user's instituteId is different from what's in state, update it.
           if (appUser.instituteId && appUser.instituteId !== instituteId) {
             await setInstitute(appUser.instituteId);
           } else if (!appUser.instituteId && instituteId) {
-            // User has no institute but state has one, clear it.
             await setInstitute(null);
           }
 
@@ -151,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [setInstitute, toast]); // Removed `instituteId` from deps to prevent loops
+  }, [setInstitute, toast]);
   
   const reloadUser = async () => {
     const firebaseUser = auth.currentUser;
@@ -219,8 +232,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const hasPermission = useCallback((permission: Permission): boolean => {
+    // SuperAdmins always have all permissions.
+    if (user?.role === 'SuperAdmin') return true;
+
+    return user?.permissions?.includes(permission) ?? false;
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser }}>
+    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

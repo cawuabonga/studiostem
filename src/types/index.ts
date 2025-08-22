@@ -14,6 +14,8 @@ export interface AppUser {
   instituteId: string | null;
   // This will hold the dynamic role ID, e.g., "admin_custom", "contador"
   roleId?: string; 
+  // Will hold the specific permissions for the user's role
+  permissions?: Permission[];
 }
 
 // Represents a pre-created profile for a staff member, identified by Document ID.

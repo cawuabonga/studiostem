@@ -19,42 +19,52 @@ import { SignOutButton } from '@/components/auth/SignOutButton';
 import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import type { Permission } from '@/types';
+
+interface NavItem {
+    href: string;
+    label: string;
+    icon: React.ElementType;
+    permission?: Permission; // Now using a single permission
+    isDefault?: boolean; // For items always visible like Dashboard
+}
+
+const allNavItems: NavItem[] = [
+    // SuperAdmin
+    { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, permission: 'superadmin:institute:manage' },
+    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, permission: 'superadmin:users:manage' },
+    { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheck, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: ImageIcon, permission: 'superadmin:design:manage' },
+
+    // Institute Admin/Coordinator
+    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' }, // Example permission, adjust as needed
+    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: 'academic:program:manage' }, // Broad permission
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: 'admin:fees:manage' }, // Broad permission
+    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: 'users:staff:manage' },
+    
+    // Teacher
+    { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
+
+    // Student
+    { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, permission: 'student:unit:view' },
+    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, permission: 'student:grades:view' },
+    { href: '/dashboard/gestion-administrativa/mis-pagos', label: 'Mis Pagos', icon: History, permission: 'student:payments:manage' },
+];
+
 
 export function AppSidebarContents() {
-  const { user, institute } = useAuth();
+  const { user, institute, hasPermission } = useAuth();
   const pathname = usePathname();
-
-  const superAdminItems = [
-    { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, roles: ['SuperAdmin'] },
-    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, roles: ['SuperAdmin'] },
-    { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheck, roles: ['SuperAdmin'] },
-    { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: ImageIcon, roles: ['SuperAdmin'] },
-  ];
-
-  const instituteAdminItems = [
-    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, roles: ['Admin', 'Coordinator'] },
-    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, roles: ['Admin', 'Coordinator'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, roles: ['Admin', 'Coordinator', 'Student'] },
-    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, roles: ['Admin', 'Coordinator'] },
-  ];
   
-  const teacherItems = [
-      { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, roles: ['Teacher', 'Coordinator'] },
-  ];
-
-  const studentItems = [
-    { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, roles: ['Student'] },
-    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, roles: ['Student'] },
-  ];
-
-  const allNavItems = [...superAdminItems, ...instituteAdminItems, ...teacherItems, ...studentItems].filter(item => {
-    if (!user?.role) return false;
-    const isRoleMatch = item.roles.includes(user.role);
-    // Basic deduplication by href
-    return isRoleMatch;
-  }).filter((item, index, self) => index === self.findIndex((t) => t.href === item.href));
-
-
+  const accessibleNavItems = allNavItems.filter(item => {
+      // The dashboard link is always visible for logged-in users.
+      if (item.isDefault) return true;
+      // If no permission is required, show the item (should be rare).
+      if (!item.permission) return true;
+      // Otherwise, check if the user has the required permission.
+      return hasPermission(item.permission);
+  });
+  
   const getSidebarTitle = () => {
     if (user?.role === 'SuperAdmin' && !institute) {
         return "STEM";
@@ -109,7 +119,7 @@ export function AppSidebarContents() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-          {allNavItems.map((item) => (
+          {accessibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton 
