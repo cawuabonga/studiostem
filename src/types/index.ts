@@ -324,8 +324,66 @@ export type Permission =
 
 
 export interface Role {
-  id: string; // e.g., "admin", "contador_jr"
-  name: string; // e.g., "Administrador", "Contador Junior"
+  id: string; // e.g., "admin_custom", "contador_jr"
+  name: string; // e.g., "Administrador Custom", "Contador Junior"
   description: string;
   permissions: Permission[];
 }
+
+export const PERMISSIONS_CONFIG: { category: string; description: string; permissions: { id: Permission; label: string }[] }[] = [
+    {
+        category: 'Gestión Académica',
+        description: 'Permisos relacionados con la administración de programas, unidades, asignaciones y matrículas.',
+        permissions: [
+            { id: 'academic:program:manage', label: 'Gestionar Programas de Estudio' },
+            { id: 'academic:unit:manage', label: 'Gestionar Unidades Didácticas' },
+            { id: 'academic:assignment:manage', label: 'Gestionar Asignaciones de Docentes' },
+            { id: 'academic:teacher:view', label: 'Ver Lista de Docentes' },
+            { id: 'academic:workload:view', label: 'Ver Carga Horaria' },
+            { id: 'academic:enrollment:manage', label: 'Gestionar Matrículas' },
+        ],
+    },
+    {
+        category: 'Gestión Administrativa',
+        description: 'Permisos para la gestión de tasas educativas y validación de pagos.',
+        permissions: [
+            { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
+            { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
+        ],
+    },
+    {
+        category: 'Gestión de Usuarios',
+        description: 'Permisos para la creación y gestión de perfiles de personal y estudiantes.',
+        permissions: [
+            { id: 'users:staff:manage', label: 'Gestionar Personal (Docentes, etc.)' },
+            { id: 'users:student:manage', label: 'Gestionar Estudiantes' },
+        ],
+    },
+    {
+        category: 'Docente',
+        description: 'Permisos básicos para el rol de docente.',
+        permissions: [
+            { id: 'teacher:unit:view', label: 'Ver y Gestionar sus Unidades Asignadas' },
+        ],
+    },
+    {
+        category: 'Estudiante',
+        description: 'Permisos básicos para el rol de estudiante.',
+        permissions: [
+            { id: 'student:unit:view', label: 'Ver sus Unidades Matriculadas' },
+            { id: 'student:grades:view', label: 'Ver sus Calificaciones' },
+            { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
+        ],
+    },
+     {
+        category: 'Super Administrador',
+        description: 'Permisos de nivel superior para la gestión de toda la plataforma.',
+        permissions: [
+            { id: 'superadmin:institute:manage', label: 'Gestionar Institutos' },
+            { id: 'superadmin:users:manage', label: 'Gestionar Todos los Usuarios' },
+            { id: 'superadmin:design:manage', label: 'Gestionar Diseño del Login' },
+            { id: 'superadmin:roles:manage', label: 'Gestionar Roles y Permisos' },
+        ],
+    },
+];
+
