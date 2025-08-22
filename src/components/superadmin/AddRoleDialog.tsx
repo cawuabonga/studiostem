@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addRole, updateRole } from '@/config/firebase';
 import type { Role, Permission } from '@/types';
 import { PERMISSIONS_CONFIG } from '@/types';
-import { Loader2 } from 'lucide-read';
+import { Loader2 } from 'lucide-react';
 
 const addRoleSchema = z.object({
   id: z.string().optional(),
@@ -89,7 +89,7 @@ export function AddRoleDialog({ isOpen, onClose, instituteId, existingRole }: Ad
         toast({ title: 'Éxito', description: 'El rol ha sido actualizado.' });
       } else {
         const roleId = data.name.toLowerCase().replace(/\s+/g, '_');
-        await addRole(instituteId, roleId, {
+        await addRole(instituteId, {
             name: data.name,
             description: data.description,
             permissions: data.permissions as Permission[]
