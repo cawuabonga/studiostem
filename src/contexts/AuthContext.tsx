@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { AppUser, UserRole, Institute, Permission } from '@/types';
@@ -103,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = userDocSnap.data() as AppUser;
             
             // Fetch permissions if roleId and instituteId exist
+            // This is now the final step, so loading can be set to false after this.
             if (userData.roleId && userData.instituteId) {
                 const permissions = await getRolePermissions(userData.instituteId, userData.roleId);
                 userData.permissions = permissions || [];
@@ -147,19 +147,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
         } finally {
+            // This is the single point where loading becomes false after all user data (including permissions) is fetched.
             setLoading(false);
         }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      // Set loading to true immediately on any auth state change
+      setLoading(true);
       if (firebaseUser) {
-        setLoading(true);
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
         await setInstitute(null); // Clear institute on sign out
-        setLoading(false);
+        setLoading(false); // Set loading to false if no user
       }
     });
 
