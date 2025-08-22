@@ -12,6 +12,8 @@ export interface AppUser {
   role: UserRole;
   documentId?: string;
   instituteId: string | null;
+  // This will hold the dynamic role ID, e.g., "admin_custom", "contador"
+  roleId?: string; 
 }
 
 // Represents a pre-created profile for a staff member, identified by Document ID.
@@ -21,7 +23,8 @@ export interface StaffProfile {
   displayName: string;
   email: string;
   phone?: string;
-  role: UserRole;
+  role: UserRole; // This can be deprecated in favor of roleId over time
+  roleId: string; // ID of the role document from the 'roles' collection
   condition: 'NOMBRADO' | 'CONTRATADO';
   programId: string;
   // This will be null until a user account is linked
@@ -290,4 +293,39 @@ export interface SyllabusDesignOptions {
     showLogo: boolean;
     showInfoTable: boolean;
     showSignature: boolean;
+}
+
+// --- PERMISSIONS AND ROLES ---
+export type Permission = 
+  // Academic Management
+  | 'academic:program:manage'
+  | 'academic:unit:manage'
+  | 'academic:assignment:manage'
+  | 'academic:teacher:view'
+  | 'academic:workload:view'
+  | 'academic:enrollment:manage'
+  // Administrative Management
+  | 'admin:fees:manage'
+  | 'admin:payments:validate'
+  // User Management
+  | 'users:staff:manage'
+  | 'users:student:manage'
+  // SuperAdmin
+  | 'superadmin:institute:manage'
+  | 'superadmin:users:manage'
+  | 'superadmin:design:manage'
+  | 'superadmin:roles:manage'
+  // Teacher
+  | 'teacher:unit:view'
+  // Student
+  | 'student:unit:view'
+  | 'student:grades:view'
+  | 'student:payments:manage';
+
+
+export interface Role {
+  id: string; // e.g., "admin", "contador_jr"
+  name: string; // e.g., "Administrador", "Contador Junior"
+  description: string;
+  permissions: Permission[];
 }

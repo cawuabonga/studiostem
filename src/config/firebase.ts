@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role } from '@/types';
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 
@@ -1092,4 +1092,40 @@ export const saveWeekSyllabusData = async (instituteId: string, unitId: string, 
 };
 
 
+// --- ROLES & PERMISSIONS ---
+
+export const getRoles = async (instituteId: string): Promise<Role[]> => {
+    const rolesCol = getSubCollectionRef(instituteId, 'roles');
+    const snapshot = await getDocs(rolesCol);
+    if (snapshot.empty) {
+        // Here you could seed default roles if they don't exist
+        return [];
+    }
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
+};
+
+export const addRole = async (instituteId: string, role: Omit<Role, 'id'>): Promise<string> => {
+    const rolesCol = getSubCollectionRef(instituteId, 'roles');
+    const newDocRef = await addDoc(rolesCol, role);
+    return newDocRef.id;
+}
+
+export const updateRole = async (instituteId: string, roleId: string, data: Partial<Role>): Promise<void> => {
+    const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
+    await updateDoc(roleRef, data);
+}
+
+export const deleteRole = async (instituteId: string, roleId: string): Promise<void> => {
+    const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
+    await deleteDoc(roleRef);
+};
+
+export const getRolePermissions = async (instituteId: string, roleId: string): Promise<string[] | null> => {
+    const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
+    const docSnap = await getDoc(roleRef);
+    if (docSnap.exists()) {
+        return (docSnap.data() as Role).permissions;
+    }
+    return null;
+}
     
