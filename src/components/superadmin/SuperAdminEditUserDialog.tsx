@@ -19,15 +19,13 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { AppUser, UserRole, Institute } from '@/types';
-import { updateUserBySuperAdmin, getInstitutes } from '@/config/firebase';
-
-const allRoles: UserRole[] = ['SuperAdmin', 'Student', 'Teacher', 'Coordinator', 'Admin'];
+import type { AppUser, Role, Institute } from '@/types';
+import { updateUserBySuperAdmin, getInstitutes, getRoles } from '@/config/firebase';
 
 const editUserSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
-  role: z.enum(allRoles, { errorMap: () => ({ message: "Por favor selecciona un rol válido."}) }),
-  instituteId: z.string({ required_error: "Debe seleccionar un instituto." }),
+  roleId: z.string({ required_error: "Debe seleccionar un rol." }),
+  instituteId: z.string().optional().or(z.literal('')),
 });
 
 type EditUserFormValues = z.infer<typeof editUserSchema>;
@@ -42,39 +40,61 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [institutes, setInstitutes] = useState<Institute[]>([]);
-  const [loadingInstitutes, setLoadingInstitutes] = useState(true);
-
-  useEffect(() => {
-    if (isOpen) {
-        const fetchInstitutes = async () => {
-            setLoadingInstitutes(true);
-            try {
-                const fetchedInstitutes = await getInstitutes();
-                setInstitutes(fetchedInstitutes);
-            } catch (error) {
-                toast({ title: "Error", description: "No se pudieron cargar los institutos.", variant: "destructive" });
-            } finally {
-                setLoadingInstitutes(false);
-            }
-        };
-        fetchInstitutes();
-    }
-  }, [isOpen, toast]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   const form = useForm<EditUserFormValues>({
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       displayName: user.displayName || '',
-      role: user.role,
+      roleId: user.roleId || '',
       instituteId: user.instituteId || '',
     },
   });
+
+  const selectedInstituteId = form.watch('instituteId');
+
+  useEffect(() => {
+    if (isOpen) {
+        const fetchInitialData = async () => {
+            setLoadingData(true);
+            try {
+                const fetchedInstitutes = await getInstitutes();
+                setInstitutes(fetchedInstitutes);
+                 if (user.instituteId) {
+                    const fetchedRoles = await getRoles(user.instituteId);
+                    setRoles(fetchedRoles);
+                } else {
+                    setRoles([]);
+                }
+            } catch (error) {
+                toast({ title: "Error", description: "No se pudieron cargar los institutos y roles.", variant: "destructive" });
+            } finally {
+                setLoadingData(false);
+            }
+        };
+        fetchInitialData();
+    }
+  }, [isOpen, user.instituteId, toast]);
+
+   useEffect(() => {
+    if (selectedInstituteId) {
+        getRoles(selectedInstituteId).then(setRoles).catch(console.error);
+        // Do not reset role if it's the initial load
+        if(selectedInstituteId !== user.instituteId) {
+           form.setValue('roleId', '');
+        }
+    } else {
+        setRoles([]);
+    }
+  }, [selectedInstituteId, form, user.instituteId]);
+
 
   useEffect(() => {
     if (user) {
       form.reset({
         displayName: user.displayName || '',
-        role: user.role,
+        roleId: user.roleId || '',
         instituteId: user.instituteId || '',
       });
     }
@@ -83,10 +103,22 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
 
   const onSubmit = async (data: EditUserFormValues) => {
     setIsSubmitting(true);
+    const selectedRole = roles.find(r => r.id === data.roleId);
+    
+    if (!selectedRole && data.roleId !== 'SuperAdmin') {
+        toast({ title: "Error", description: "El rol seleccionado no es válido.", variant: 'destructive'});
+        setIsSubmitting(false);
+        return;
+    }
+    
+    // Handle the special case for SuperAdmin, which is not a dynamic role
+    const finalRoleName = data.roleId === 'SuperAdmin' ? 'SuperAdmin' : selectedRole!.name;
+
     try {
       await updateUserBySuperAdmin(user.uid, {
         displayName: data.displayName,
-        role: data.role,
+        roleId: data.roleId,
+        role: finalRoleName, // Update legacy role field for compatibility
         instituteId: data.instituteId,
       });
       toast({
@@ -132,44 +164,47 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
             />
              <FormField
               control={form.control}
-              name="role"
+              name="instituteId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Rol</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel>Instituto</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={loadingData}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecciona un rol" />
+                        <SelectValue placeholder={loadingData ? "Cargando..." : "Selecciona un instituto"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {allRoles.map((roleValue) => (
-                        <SelectItem key={roleValue} value={roleValue}>
-                          {roleValue}
-                        </SelectItem>
-                      ))}
+                        <SelectItem value="">Sin Instituto</SelectItem>
+                        {institutes.map((institute) => (
+                            <SelectItem key={institute.id} value={institute.id}>
+                            {institute.name}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
-              name="instituteId"
+              name="roleId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Instituto</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={loadingInstitutes}>
+                  <FormLabel>Rol</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={loadingData || !selectedInstituteId}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingInstitutes ? "Cargando..." : "Selecciona un instituto"} />
+                        <SelectValue placeholder="Selecciona un rol" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {institutes.map((institute) => (
-                        <SelectItem key={institute.id} value={institute.id}>
-                          {institute.name}
+                      <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
+                      <SelectItem value="" disabled>--- Roles del Instituto ---</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role.id} value={role.id}>
+                          {role.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -184,7 +219,7 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
                   Cancelar
                 </Button>
               </DialogClose>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || loadingData}>
                 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
               </Button>
             </DialogFooter>
@@ -194,3 +229,4 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
     </Dialog>
   );
 }
+
