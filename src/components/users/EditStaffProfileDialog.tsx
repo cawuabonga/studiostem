@@ -20,16 +20,9 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { StaffProfile, UserRole, Program } from '@/types';
-import { updateStaffProfile, getPrograms } from '@/config/firebase';
+import type { StaffProfile, Role, Program } from '@/types';
+import { updateStaffProfile, getPrograms, getRoles } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-
-const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
-const roleDisplayMap: Record<string, string> = {
-    Teacher: 'Docente',
-    Coordinator: 'Coordinador',
-    Admin: 'Administrador',
-};
 
 const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
@@ -37,7 +30,7 @@ const editStaffProfileSchema = z.object({
   displayName: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
-  role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
+  roleId: z.string({ required_error: 'Debe seleccionar un rol.' }),
   condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
 });
@@ -55,10 +48,12 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
   const { instituteId } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   useEffect(() => {
     if (instituteId) {
       getPrograms(instituteId).then(setPrograms).catch(console.error);
+      getRoles(instituteId).then(setRoles).catch(console.error);
     }
   }, [instituteId]);
 
@@ -72,7 +67,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
         displayName: profile.displayName,
         email: profile.email,
         phone: profile.phone,
-        role: profile.role,
+        roleId: profile.roleId,
         condition: profile.condition,
         programId: profile.programId,
       });
@@ -84,10 +79,26 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
       toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive' });
       return;
     }
+     const selectedRole = roles.find(r => r.id === data.roleId);
+    if (!selectedRole) {
+      toast({ title: "Error", description: "Rol seleccionado no es válido.", variant: "destructive"});
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      // The updateStaffProfile function now handles syncing the user role.
-      await updateStaffProfile(instituteId, profile.documentId, data);
+      const updateData: Partial<StaffProfile> = {
+        displayName: data.displayName,
+        email: data.email,
+        phone: data.phone,
+        roleId: data.roleId,
+        role: selectedRole.name as any, // for legacy compatibility
+        condition: data.condition,
+        programId: data.programId,
+      };
+
+      await updateStaffProfile(instituteId, profile.documentId, updateData);
       toast({
         title: '¡Éxito!',
         description: 'El perfil del personal ha sido actualizado. El cambio de rol se reflejará en el próximo inicio de sesión del usuario.',
@@ -185,20 +196,20 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                     control={form.control}
-                    name="role"
+                    name="roleId"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Rol</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecciona un rol" />
                             </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                            {assignableRoles.map((roleValue) => (
-                                <SelectItem key={roleValue} value={roleValue}>
-                                {roleDisplayMap[roleValue]}
+                            {roles.map((role) => (
+                                <SelectItem key={role.id} value={role.id}>
+                                {role.name}
                                 </SelectItem>
                             ))}
                             </SelectContent>

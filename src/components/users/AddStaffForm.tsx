@@ -11,15 +11,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addStaffProfile, getPrograms } from '@/config/firebase';
-import type { Program, UserRole } from '@/types';
+import { addStaffProfile, getPrograms, getRoles } from '@/config/firebase';
+import type { Program, Role } from '@/types';
 
-const assignableRoles: UserRole[] = ['Teacher', 'Coordinator', 'Admin'];
-const roleDisplayMap: Record<string, string> = {
-    Teacher: 'Docente',
-    Coordinator: 'Coordinador',
-    Admin: 'Administrador',
-};
 const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
 const addStaffSchema = z.object({
@@ -27,7 +21,7 @@ const addStaffSchema = z.object({
   documentId: z.string().min(8, { message: 'El documento debe tener al menos 8 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El celular debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
-  role: z.enum(assignableRoles, { required_error: 'Debe seleccionar un rol.' }),
+  roleId: z.string({ required_error: 'Debe seleccionar un rol.' }),
   condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
 });
@@ -43,10 +37,12 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
 
   useEffect(() => {
     if (instituteId) {
       getPrograms(instituteId).then(setPrograms).catch(console.error);
+      getRoles(instituteId).then(setRoles).catch(console.error);
     }
   }, [instituteId]);
 
@@ -62,8 +58,18 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
 
   const onSubmit = async (data: AddStaffFormValues) => {
     setLoading(true);
+    const selectedRole = roles.find(r => r.id === data.roleId);
+    if (!selectedRole) {
+      toast({ title: "Error", description: "Rol seleccionado no es válido.", variant: "destructive"});
+      setLoading(false);
+      return;
+    }
+
     try {
-      await addStaffProfile(instituteId, data);
+      await addStaffProfile(instituteId, { 
+        ...data, 
+        role: selectedRole.name as any, // Legacy role name for now
+      });
       toast({
         title: '¡Éxito!',
         description: 'El perfil del personal ha sido creado. El usuario podrá reclamarlo desde su dashboard.',
@@ -169,7 +175,7 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
                 />
             <FormField
                 control={form.control}
-                name="role"
+                name="roleId"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Rol</FormLabel>
@@ -180,9 +186,9 @@ export function AddStaffForm({ instituteId, onProfileCreated }: AddStaffFormProp
                         </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                        {assignableRoles.map((roleValue) => (
-                            <SelectItem key={roleValue} value={roleValue}>
-                            {roleDisplayMap[roleValue]}
+                        {roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                            {role.name}
                             </SelectItem>
                         ))}
                         </SelectContent>
