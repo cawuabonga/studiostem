@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission } from '@/types';
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 
@@ -1096,7 +1096,8 @@ export const saveWeekSyllabusData = async (instituteId: string, unitId: string, 
 
 export const getRoles = async (instituteId: string): Promise<Role[]> => {
     const rolesCol = getSubCollectionRef(instituteId, 'roles');
-    const snapshot = await getDocs(rolesCol);
+    const q = query(rolesCol, orderBy("name"));
+    const snapshot = await getDocs(q);
     if (snapshot.empty) {
         // Here you could seed default roles if they don't exist
         return [];
@@ -1120,7 +1121,7 @@ export const deleteRole = async (instituteId: string, roleId: string): Promise<v
     await deleteDoc(roleRef);
 };
 
-export const getRolePermissions = async (instituteId: string, roleId: string): Promise<string[] | null> => {
+export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Permission[] | null> => {
     const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
     const docSnap = await getDoc(roleRef);
     if (docSnap.exists()) {
