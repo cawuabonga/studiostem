@@ -1105,11 +1105,20 @@ export const getRoles = async (instituteId: string): Promise<Role[]> => {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
 };
 
-export const addRole = async (instituteId: string, role: Omit<Role, 'id'>): Promise<string> => {
+export const addRole = async (instituteId: string, roleData: Omit<Role, 'id'>): Promise<string> => {
     const rolesCol = getSubCollectionRef(instituteId, 'roles');
-    const newDocRef = await addDoc(rolesCol, role);
-    return newDocRef.id;
+    const roleId = roleData.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const roleRef = doc(rolesCol, roleId);
+    
+    const docSnap = await getDoc(roleRef);
+    if (docSnap.exists()) {
+        throw new Error(`Un rol con el nombre "${roleData.name}" ya existe.`);
+    }
+
+    await setDoc(roleRef, roleData);
+    return roleId;
 }
+
 
 export const updateRole = async (instituteId: string, roleId: string, data: Partial<Role>): Promise<void> => {
     const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
@@ -1129,4 +1138,6 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
     }
     return null;
 }
+    
+
     

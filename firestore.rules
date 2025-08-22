@@ -1,69 +1,71 @@
-rules_version = '2';
 
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if a user is signed in
-    function isSignedIn() {
-      return request.auth != null;
+
+    // Helper function to get user role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    // Helper function to get the user's role data
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Helper function to check if the user is a SuperAdmin
-    function isSuperAdmin() {
-      return isSignedIn() && getUserData().role == 'SuperAdmin';
-    }
-
-    // Helper function to check if the user is an admin of a specific institute
-    function isInstituteAdmin(instituteId) {
-      return isSignedIn() && getUserData().instituteId == instituteId && (getUserData().role == 'Admin' || getUserData().role == 'Coordinator');
-    }
-    
-    // Helper function to check if the user belongs to a specific institute
-    function belongsToInstitute(instituteId) {
-        return isSignedIn() && getUserData().instituteId == instituteId;
-    }
-
-    // --- Rules for collections ---
-
-    // Users can create and manage their own document. SuperAdmins can list/get any user.
-    match /users/{userId} {
-      allow create: if request.auth.uid == userId;
-      allow read, update: if request.auth.uid == userId || isSuperAdmin();
-      allow list: if isSuperAdmin();
-      allow delete: if false; // Nobody can delete a user document from the client
-    }
-
-    // Config is public read, but only SuperAdmin can write.
+    // Open read access for general configuration
     match /config/{document=**} {
       allow read: if true;
-      allow write: if isSuperAdmin();
     }
 
-    // Institute list is public for any authenticated user, but only SuperAdmin can write.
+    // Allow only superadmins to write to config
+    match /config/{document=**} {
+        allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+    }
+    
+    // Allow users to read their own data and superadmins to read any user data
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'SuperAdmin';
+      allow update: if request.auth.uid == userId; // Allow users to update their own profile
+      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin'; // Superadmins can write to any user doc
+    }
+
+    // Rules for institutes and their subcollections
     match /institutes/{instituteId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isSuperAdmin();
-    }
-    
-    // Specific rules for institute subcollections
-    match /institutes/{instituteId}/{collectionId}/{document=**} {
-        allow read, write: if belongsToInstitute(instituteId);
-    }
+      // Allow authenticated users to read institute data
+      allow read: if request.auth != null;
+      // Allow only superadmins to create, update, delete institutes
+      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
 
-    // More granular rules for specific subcollections if needed
-    match /institutes/{instituteId}/staffProfiles/{profileId} {
-      allow read: if belongsToInstitute(instituteId);
-      allow create, update, delete: if isInstituteAdmin(instituteId);
-    }
-    
-    match /institutes/{instituteId}/studentProfiles/{profileId} {
-      allow read: if belongsToInstitute(instituteId);
-      allow create, update, delete: if isInstituteAdmin(instituteId);
+      // Rules for roles subcollection
+      match /roles/{roleId} {
+        allow read, write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+      }
+
+      // Allow any authenticated user in the same institute to read staff/student profiles
+      // But only admins/coordinators of that institute can write
+      function isStaffOfInstitute(userId, instituteId) {
+          let userDoc = get(/databases/$(database)/documents/users/$(userId)).data;
+          return userDoc.instituteId == instituteId && (userDoc.role == 'Admin' || userDoc.role == 'Coordinator' || userDoc.role == 'SuperAdmin');
+      }
+
+      match /staffProfiles/{staffId} {
+        allow read: if request.auth != null;
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
+      match /studentProfiles/{studentId} {
+         allow read: if request.auth != null;
+         allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+
+      // Rules for academic records, attendance, etc.
+      // Teachers of a unit can write, students can read their own.
+       match /{collection}/{docId} {
+          allow read, write: if isStaffOfInstitute(request.auth.uid, instituteId);
+       }
     }
   }
 }
+
+    
