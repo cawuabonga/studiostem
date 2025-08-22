@@ -78,10 +78,13 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
   }, [isOpen, user.instituteId, toast]);
 
    useEffect(() => {
-    if (selectedInstituteId) {
-        getRoles(selectedInstituteId).then(setRoles).catch(console.error);
+    // Treat 'none' as an empty string for logic, but use 'none' in the UI
+    const effectiveInstituteId = selectedInstituteId === 'none' ? '' : selectedInstituteId;
+
+    if (effectiveInstituteId) {
+        getRoles(effectiveInstituteId).then(setRoles).catch(console.error);
         // Do not reset role if it's the initial load
-        if(selectedInstituteId !== user.instituteId) {
+        if(effectiveInstituteId !== user.instituteId) {
            form.setValue('roleId', '');
         }
     } else {
@@ -95,7 +98,7 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
       form.reset({
         displayName: user.displayName || '',
         roleId: user.roleId || '',
-        instituteId: user.instituteId || '',
+        instituteId: user.instituteId || 'none', // Use 'none' for empty value
       });
     }
   }, [user, form, isOpen]);
@@ -113,13 +116,14 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
     
     // Handle the special case for SuperAdmin, which is not a dynamic role
     const finalRoleName = data.roleId === 'SuperAdmin' ? 'SuperAdmin' : selectedRole!.name;
+    const finalInstituteId = data.instituteId === 'none' ? '' : data.instituteId;
 
     try {
       await updateUserBySuperAdmin(user.uid, {
         displayName: data.displayName,
         roleId: data.roleId,
         role: finalRoleName, // Update legacy role field for compatibility
-        instituteId: data.instituteId,
+        instituteId: finalInstituteId,
       });
       toast({
         title: '¡Éxito!',
@@ -168,14 +172,14 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Instituto</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={loadingData}>
+                  <Select onValueChange={field.onChange} value={field.value || 'none'} disabled={loadingData}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={loadingData ? "Cargando..." : "Selecciona un instituto"} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                        <SelectItem value="">Sin Instituto</SelectItem>
+                        <SelectItem value="none">Sin Instituto</SelectItem>
                         {institutes.map((institute) => (
                             <SelectItem key={institute.id} value={institute.id}>
                             {institute.name}
@@ -193,7 +197,7 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Rol</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={loadingData || !selectedInstituteId}>
+                  <Select onValueChange={field.onChange} value={field.value || ''} disabled={loadingData || !selectedInstituteId || selectedInstituteId === 'none'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona un rol" />
@@ -201,7 +205,7 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="SuperAdmin">SuperAdmin</SelectItem>
-                      <SelectItem value="" disabled>--- Roles del Instituto ---</SelectItem>
+                      <SelectItem value="separator" disabled>--- Roles del Instituto ---</SelectItem>
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.id}>
                           {role.name}
@@ -229,4 +233,3 @@ export function SuperAdminEditUserDialog({ user, isOpen, onClose }: SuperAdminEd
     </Dialog>
   );
 }
-
