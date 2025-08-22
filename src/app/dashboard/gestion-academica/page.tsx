@@ -14,58 +14,58 @@ const academicModules = [
     description: "Crear, editar y organizar los programas académicos del instituto.",
     href: "/dashboard/gestion-academica/programas",
     icon: BookOpen,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:program:manage",
   },
   {
     title: "Gestionar Unidades Didácticas",
     description: "Administrar los cursos o materias de cada programa de estudio.",
     href: "/dashboard/gestion-academica/unidades",
     icon: Library,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:program:manage",
   },
   {
     title: "Lista de Docentes",
     description: "Aquí solamente se muestra la lista de los docentes.",
     href: "/dashboard/gestion-academica/docentes",
     icon: Users,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:teacher:view",
   },
   {
     title: "Asignar Unidades Didácticas",
     description: "Asignar docentes a las unidades didácticas por período académico.",
     href: "/dashboard/gestion-academica/asignaciones",
     icon: ListPlus,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:assignment:manage",
   },
   {
     title: "Carga Horaria Docente",
     description: "Visualizar la carga horaria de docentes y coordinadores por programa.",
     href: "/dashboard/gestion-academica/carga-horaria",
     icon: Hourglass,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:workload:view",
   },
   {
     title: "Matricular Estudiantes",
     description: "Inscribir estudiantes en las unidades didácticas por período académico.",
     href: "/dashboard/gestion-academica/matricula",
     icon: ClipboardList,
-    roles: ["Admin", "Coordinator"],
+    permission: "academic:enrollment:manage",
   },
 ];
 
 export default function GestionAcademicaPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
+    if (!loading && !hasPermission('academic:program:manage')) { // Example broad permission check
       router.push("/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loading, hasPermission, router]);
   
-  const accessibleModules = academicModules.filter(module => user?.role && module.roles.includes(user.role));
+  const accessibleModules = academicModules.filter(module => hasPermission(module.permission as any));
 
-  if (loading || !user || !["Admin", "Coordinator"].includes(user.role)) {
+  if (loading || !user || !hasPermission('academic:program:manage')) {
     return <p>Cargando...</p>;
   }
 

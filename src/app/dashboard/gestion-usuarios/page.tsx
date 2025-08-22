@@ -7,47 +7,54 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Permission } from "@/types";
 
-const userModules = [
+const userModules: {title: string; description: string; href: string; icon: React.ElementType; permission: Permission}[] = [
   {
     title: "Listado de Personal",
     description: "Ver y gestionar los perfiles del personal (docentes, administrativos, etc.).",
     href: "/dashboard/gestion-usuarios/listado-personal",
     icon: Users,
+    permission: "users:staff:manage",
   },
   {
     title: "Registrar Personal",
     description: "Crear nuevos perfiles para el personal del instituto.",
     href: "/dashboard/gestion-usuarios/registrar-personal",
     icon: UserPlus,
+    permission: "users:staff:manage",
   },
    {
     title: "Listado de Estudiantes",
     description: "Ver y gestionar los perfiles de los estudiantes.",
     href: "/dashboard/gestion-usuarios/listado-estudiantes",
     icon: Users,
+    permission: "users:student:manage",
   },
   {
     title: "Registrar Estudiante",
     description: "Crear nuevos perfiles para los estudiantes.",
     href: "/dashboard/gestion-usuarios/registrar-estudiante",
     icon: UserPlus,
+    permission: "users:student:manage",
   },
 ];
 
 export default function GestionUsuariosPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
+    if (!loading && !hasPermission('users:staff:manage') && !hasPermission('users:student:manage')) {
       router.push("/dashboard");
     }
-  }, [user, loading, router]);
+  }, [user, loading, hasPermission, router]);
   
   if (loading || !user) {
     return <p>Cargando...</p>;
   }
+
+  const accessibleModules = userModules.filter(module => hasPermission(module.permission));
 
   return (
     <div className="space-y-6">
@@ -60,7 +67,7 @@ export default function GestionUsuariosPage() {
         </CardHeader>
       </Card>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
-        {userModules.map((module) => (
+        {accessibleModules.map((module) => (
           <Link href={module.href} key={module.title} className="flex">
             <Card className="flex flex-col w-full hover:bg-muted/50 transition-colors">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -77,6 +84,9 @@ export default function GestionUsuariosPage() {
             </Card>
           </Link>
         ))}
+         {accessibleModules.length === 0 && (
+          <p className="text-center md:col-span-2 text-muted-foreground">No tienes permisos para gestionar usuarios.</p>
+        )}
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,21 +7,30 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Permission } from "@/types";
 
-const adminModules = [
+interface AdminModule {
+    title: string;
+    description: string;
+    href: string;
+    icon: React.ElementType;
+    permission: Permission;
+}
+
+const adminModules: AdminModule[] = [
    {
     title: "Gestionar Tasas Educativas",
     description: "Crear y administrar los conceptos de pago y sus costos (ej. matrícula, constancias).",
     href: "/dashboard/gestion-administrativa/tasas",
     icon: Banknote,
-    roles: ["Admin", "Coordinator"],
+    permission: "admin:fees:manage",
   },
   {
     title: "Validación de Pagos",
     description: "Revisar, aprobar o rechazar los vouchers de pago registrados por los estudiantes.",
     href: "/dashboard/gestion-administrativa/validar-pagos",
     icon: CheckSquare,
-    roles: ["Admin", "Coordinator"],
+    permission: "admin:payments:validate",
   },
 ];
 
@@ -30,33 +40,41 @@ const studentModules = [
     description: "Sube tu voucher del banco para registrar un nuevo pago en el sistema.",
     href: "/dashboard/gestion-administrativa/registrar-pago",
     icon: CreditCard,
-    roles: ["Student"],
+    permission: "student:payments:manage",
   },
   {
     title: "Historial de Pagos",
     description: "Consulta el estado de todos los pagos que has registrado.",
     href: "/dashboard/gestion-administrativa/mis-pagos",
     icon: History,
-    roles: ["Student"],
+    permission: "student:payments:manage",
   },
 ];
 
 
 export default function GestionAdministrativaPage() {
-    const { user, loading } = useAuth();
+    const { user, loading, hasPermission } = useAuth();
     const router = useRouter();
 
+    const canViewPage = hasPermission('admin:fees:manage') || hasPermission('admin:payments:validate') || hasPermission('student:payments:manage');
+
     useEffect(() => {
-        if (!loading && (!user || !["Admin", "Coordinator", "Student"].includes(user.role))) {
+        if (!loading && !canViewPage) {
             router.push("/dashboard");
         }
-    }, [user, loading, router]);
+    }, [user, loading, canViewPage, router]);
     
     if (loading || !user) {
         return <p>Cargando...</p>;
     }
   
-    const accessibleModules = user.role === 'Student' ? studentModules : adminModules.filter(module => module.roles.includes(user.role));
+    const accessibleModules = user.role === 'Student' 
+        ? studentModules.filter(m => hasPermission(m.permission as Permission))
+        : adminModules.filter(m => hasPermission(m.permission as Permission));
+
+    if (accessibleModules.length === 0 && !loading) {
+        return <p>No tienes permisos para ver este módulo.</p>;
+    }
 
     return (
         <div className="space-y-6">
