@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             // Fetch permissions based on role
             const roleIdToFetch = combinedData.roleId;
-            if (roleIdToFetch && combinedData.instituteId) {
+             if (roleIdToFetch && combinedData.instituteId) {
                 const permissions = await getRolePermissions(combinedData.instituteId, roleIdToFetch);
                 combinedData.permissions = permissions || [];
             } else {
@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
              await saveUserAdditionalData(
               { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
               appUser.role,
-              appUser.instituteId
+              null
             );
           }
           
@@ -169,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+      setLoading(true);
       if (firebaseUser) {
         await fetchAndSetUser(firebaseUser);
       } else {
@@ -209,8 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      // onAuthStateChanged will now pick this up and call fetchAndSetUser
-      // which will then call saveUserAdditionalData if the user doc doesn't exist.
+      // Explicitly save additional data to Firestore after registration
       await saveUserAdditionalData(
         { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: null },
         'Student',
