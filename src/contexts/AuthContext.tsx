@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AppUser, UserRole, Institute, Permission } from '@/types';
+import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile } from '@/types';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   auth, 
@@ -10,7 +10,9 @@ import {
   saveUserAdditionalData,
   getInstitute,
   createUserWithEmailAndPassword,
-  getRolePermissions
+  getRolePermissions,
+  getStaffProfileByDocumentId,
+  getStudentProfile
 } from '@/config/firebase'; 
 import { 
   onAuthStateChanged, 
@@ -101,9 +103,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
             
-            // Fetch permissions if roleId and instituteId exist OR if the role is Student
+            // If the user has a document ID, fetch their full profile to get latest data
+            if (userData.documentId && userData.instituteId) {
+                if (userData.role === 'Student') {
+                    const studentProfile = await getStudentProfile(userData.instituteId, userData.documentId);
+                    if (studentProfile) (userData as any).programId = studentProfile.programId;
+                } else {
+                    const staffProfile = await getStaffProfileByDocumentId(userData.instituteId, userData.documentId);
+                    if (staffProfile) (userData as any).programId = staffProfile.programId;
+                }
+            }
+            
+            // Fetch permissions based on role
             const roleIdToFetch = userData.roleId || (userData.role === 'Student' ? 'student' : '');
-
             if (roleIdToFetch && userData.instituteId) {
                 const permissions = await getRolePermissions(userData.instituteId, roleIdToFetch);
                 userData.permissions = permissions || [];
@@ -148,22 +160,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
-        } finally {
-          // setLoading(false); // This is handled by the onAuthStateChanged listener
         }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
-      // Set loading to true immediately on any auth state change
       setLoading(true);
       if (firebaseUser) {
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
-        await setInstitute(null); // Clear institute on sign out
+        await setInstitute(null);
       }
-      // Set loading to false after user processing is complete
       setLoading(false);
     });
 
