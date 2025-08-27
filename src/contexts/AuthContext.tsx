@@ -101,36 +101,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           let appUser: AppUser;
 
           if (userDocSnap.exists()) {
-            const userData = userDocSnap.data() as AppUser;
+            let userDataFromDb = userDocSnap.data() as AppUser;
+            let profileData: Partial<StudentProfile | StaffProfile> = {};
             
             // If the user has a document ID, fetch their full profile to get latest data
-            if (userData.documentId && userData.instituteId) {
-                if (userData.role === 'Student') {
-                    const studentProfile = await getStudentProfile(userData.instituteId, userData.documentId);
-                    if (studentProfile) {
-                        (userData as any).programId = studentProfile.programId;
-                    }
+            if (userDataFromDb.documentId && userDataFromDb.instituteId) {
+                if (userDataFromDb.role === 'Student') {
+                    profileData = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
                 } else {
-                    const staffProfile = await getStaffProfileByDocumentId(userData.instituteId, userData.documentId);
-                    if (staffProfile) {
-                       (userData as any).programId = staffProfile.programId;
-                    }
+                    profileData = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
                 }
             }
             
+            // Combine data: Firestore profile data takes precedence
+            let combinedData = { ...userDataFromDb, ...profileData };
+
             // Fetch permissions based on role
-            const roleIdToFetch = userData.roleId;
-            if (roleIdToFetch && userData.instituteId) {
-                const permissions = await getRolePermissions(userData.instituteId, roleIdToFetch);
-                userData.permissions = permissions || [];
+            const roleIdToFetch = combinedData.roleId;
+            if (roleIdToFetch && combinedData.instituteId) {
+                const permissions = await getRolePermissions(combinedData.instituteId, roleIdToFetch);
+                combinedData.permissions = permissions || [];
             } else {
-                 userData.permissions = [];
+                 combinedData.permissions = [];
             }
             
             appUser = {
-                ...userData,
-                displayName: userData.displayName || firebaseUser.displayName,
-                photoURL: userData.photoURL || firebaseUser.photoURL,
+                ...combinedData,
+                uid: firebaseUser.uid, // Ensure UID from auth is authoritative
+                displayName: combinedData.displayName || firebaseUser.displayName,
+                photoURL: combinedData.photoURL || firebaseUser.photoURL,
+                email: firebaseUser.email,
             };
 
           } else {
@@ -195,18 +195,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       console.error("Sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión', description: 'Por favor, verifica tus credenciales.', variant: 'destructive' });
-      setLoading(false);
     }
   };
 
   const signUpWithEmail = async (name: string, email: string, password: string) => {
-    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
@@ -214,16 +211,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // onAuthStateChanged will now pick this up and call fetchAndSetUser
       // which will then call saveUserAdditionalData if the user doc doesn't exist.
+      await saveUserAdditionalData(
+        { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: null },
+        'Student',
+        null
+      );
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
-    } finally {
-        setLoading(false);
     }
   };
 
   const signInWithGoogle = async () => {
-    setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -231,7 +230,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
-       setLoading(false);
     }
   };
 
@@ -265,5 +263,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
