@@ -146,6 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
+        } finally {
+          setLoading(false);
         }
   };
 
@@ -155,7 +157,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       if (firebaseUser) {
         await fetchAndSetUser(firebaseUser);
-        // Loading is set to false inside fetchAndSetUser
       } else {
         setUser(null);
         await setInstitute(null); // Clear institute on sign out
@@ -180,43 +181,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
       console.error("Sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión', description: 'Por favor, verifica tus credenciales.', variant: 'destructive' });
-      setUser(null);
-      setLoading(false);
     }
   };
 
   const signUpWithEmail = async (name: string, email: string, password: string) => {
-    setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      // Save the user's additional data to Firestore immediately after creation.
       await saveUserAdditionalData(
           { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: firebaseUser.photoURL },
           'Student', // Default role for new sign-ups
           null
       );
-
-      // No need to call fetchAndSetUser here, onAuthStateChanged will handle it.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
-      setUser(null);
-    } finally {
-        setLoading(false);
     }
   };
 
   const signInWithGoogle = async () => {
-    setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -224,31 +214,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
-      setUser(null);
-      setLoading(false);
     }
   };
 
   const signOutUser = async () => {
-    setLoading(true);
     try {
       await firebaseSignOut(auth);
-      // Hard redirect to clear all state and force a full refresh.
       window.location.href = '/';
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
-      // Still attempt to redirect even if there's a toast error
       window.location.href = '/';
-    } finally {
-        setLoading(false);
     }
   };
 
   const hasPermission = useCallback((permission: Permission): boolean => {
-    // SuperAdmins always have all permissions.
     if (user?.role === 'SuperAdmin') return true;
-
     return user?.permissions?.includes(permission) ?? false;
   }, [user]);
 
