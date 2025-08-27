@@ -101,9 +101,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userDocSnap.exists()) {
             const userData = userDocSnap.data() as AppUser;
             
-            // Fetch permissions if roleId and instituteId exist
-            if (userData.roleId && userData.instituteId) {
-                const permissions = await getRolePermissions(userData.instituteId, userData.roleId);
+            // Fetch permissions if roleId and instituteId exist OR if the role is Student
+            const roleIdToFetch = userData.roleId || (userData.role === 'Student' ? 'student' : '');
+
+            if (roleIdToFetch && userData.instituteId) {
+                const permissions = await getRolePermissions(userData.instituteId, roleIdToFetch);
                 userData.permissions = permissions || [];
             } else {
                  userData.permissions = [];
@@ -147,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
         } finally {
-          setLoading(false);
+          // setLoading(false); // This is handled by the onAuthStateChanged listener
         }
   };
 
@@ -160,8 +162,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         setUser(null);
         await setInstitute(null); // Clear institute on sign out
-        setLoading(false); // Set loading to false if no user
       }
+      // Set loading to false after user processing is complete
+      setLoading(false);
     });
 
     return () => unsubscribe();
