@@ -1,82 +1,68 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
+    // Helper function to get user role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
     }
 
-    function isSuperAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-
-    function isInstituteMember(instituteId) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-    }
-
-    function isInstituteAdmin(instituteId) {
-      let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-      return isInstituteMember(instituteId) && (userRole == 'Admin' || userRole == 'Coordinator');
-    }
-    
-    function isTeacher(instituteId) {
-       let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-       return isInstituteMember(instituteId) && userRole == 'Teacher';
-    }
-
-    // --- Collection Rules ---
-
-    // Users: Can be created by the user themselves. Can be read/updated by the user OR a SuperAdmin.
+    // A user can create their own user document if the doc ID matches their UID
     match /users/{userId} {
       allow create: if request.auth.uid == userId;
-      allow read, update: if request.auth.uid == userId || isSuperAdmin();
-      allow list: if isSuperAdmin();
-      allow delete: if false; 
+      allow read, update: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'SuperAdmin';
+      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
     }
 
-    // Config: Publicly readable for login page, but only SuperAdmins can write.
+    // Open read access for general configuration
     match /config/{document=**} {
       allow read: if true;
-      allow write: if isSuperAdmin();
     }
 
-    // Institutes: List is readable by any signed-in user. Writable only by SuperAdmins.
+    // Allow only superadmins to write to config
+    match /config/{document=**} {
+        allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+    }
+
+    // Rules for institutes and their subcollections
     match /institutes/{instituteId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create, update, delete: if isSuperAdmin();
-    }
+      // Allow authenticated users to read institute data
+      allow read: if request.auth != null;
+      // Allow only superadmins to create, update, delete institutes
+      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
 
-    // Staff/Student Profiles: Readable by any institute member. Writable by institute admins.
-    match /institutes/{instituteId}/staffProfiles/{profileId} {
-      allow read: if isInstituteMember(instituteId);
-      allow create, update, delete: if isInstituteAdmin(instituteId);
-    }
-    
-    match /institutes/{instituteId}/studentProfiles/{profileId} {
-      allow read: if isInstituteMember(instituteId);
-      allow create, update, delete: if isInstituteAdmin(instituteId);
-    }
-    
-    // Payments: Can be created by institute members. Can only be read/updated by institute admins or the student who owns it.
-     match /institutes/{instituteId}/payments/{paymentId} {
-      allow create: if isInstituteMember(instituteId);
-      allow read: if isInstituteAdmin(instituteId) || request.auth.uid == resource.data.studentId;
-      allow update: if isInstituteAdmin(instituteId);
-      allow delete: if false;
-    }
-    
-    // Academic Records, Syllabus, Planning: Writable by teachers/admins, readable by any institute member.
-    match /institutes/{instituteId}/unidadesDidacticas/{unitId}/{collection}/{docId} {
-       allow read: if isInstituteMember(instituteId);
-       allow write: if isInstituteAdmin(instituteId) || isTeacher(instituteId);
-    }
+      // Rules for roles subcollection
+      match /roles/{roleId} {
+        allow read, write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+      }
 
-    // Default deny for any other subcollections or paths not explicitly defined.
-    match /institutes/{instituteId}/{document=**} {
-      allow read, write: if isInstituteMember(instituteId);
+      function isStaffOfInstitute(userId, instituteId) {
+          let userDoc = get(/databases/$(database)/documents/users/$(userId)).data;
+          return userDoc.instituteId == instituteId && (userDoc.role == 'Admin' || userDoc.role == 'Coordinator' || userDoc.role == 'SuperAdmin');
+      }
+
+      // Allow authenticated users to read profiles
+      // Allow staff to write to profiles
+      // OR allow a user to link themselves to an unlinked profile
+      match /staffProfiles/{staffId} {
+        allow read: if request.auth != null;
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId) || 
+                      (request.auth.uid == request.resource.data.linkedUserUid && resource.data.linkedUserUid == null);
+      }
+      
+      match /studentProfiles/{studentId} {
+         allow read: if request.auth != null;
+         allow write: if isStaffOfInstitute(request.auth.uid, instituteId) ||
+                       (request.auth.uid == request.resource.data.linkedUserUid && resource.data.linkedUserUid == null);
+      }
+
+      // Rules for academic records, attendance, etc.
+      // Teachers of a unit can write, students can read their own.
+       match /{collection}/{docId} {
+          allow read, write: if isStaffOfInstitute(request.auth.uid, instituteId);
+       }
     }
   }
 }
