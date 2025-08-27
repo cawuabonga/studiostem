@@ -235,11 +235,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     try {
       await firebaseSignOut(auth);
-      router.push('/');
+      // No navigation here. The onAuthStateChanged listener will handle it.
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
-      router.push('/');
     }
   };
 
