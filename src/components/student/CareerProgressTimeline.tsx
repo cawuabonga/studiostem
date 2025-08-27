@@ -32,39 +32,40 @@ export function CareerProgressTimeline() {
 
     useEffect(() => {
         const fetchData = async () => {
-            // Wait until both institute and user's documentId are available
+            // Wait until all necessary data is available
             if (!instituteId || !user?.documentId) {
-                // If we are not in a loading state but these are missing, it's likely an issue.
-                // For now, we just wait. If loading is false and they are still null, we'll show an error state.
-                if (!loading) setLoading(false);
+                setLoading(false);
                 return;
             }
-
+            
             setLoading(true);
             try {
-                // Fetch all necessary data in parallel
-                const [allPrograms, studentMatriculations, studentProfile] = await Promise.all([
+                // The user object from context should now have the programId if the user is a student.
+                const studentProfile = await getStudentProfile(instituteId, user.documentId);
+                if (!studentProfile?.programId) {
+                     throw new Error("Student profile does not have a programId.");
+                }
+
+                const [allPrograms, studentMatriculations] = await Promise.all([
                     getPrograms(instituteId),
                     getMatriculationsForStudent(instituteId, user.documentId),
-                    getStudentProfile(instituteId, user.documentId)
                 ]);
                 
-                // Find the student's specific program using the programId from their profile
-                const studentProgram = allPrograms.find(p => p.id === studentProfile?.programId);
+                const studentProgram = allPrograms.find(p => p.id === studentProfile.programId);
                 
                 setProgram(studentProgram || null);
                 setMatriculations(studentMatriculations);
 
             } catch (error) {
                 console.error("Error fetching career progress data:", error);
-                setProgram(null); // Ensure program is null on error
+                setProgram(null);
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [instituteId, user, loading]); // Depend on user object to re-trigger fetch on user change
+    }, [instituteId, user]); 
 
     const timelineData = useMemo(() => {
         if (!program) return [];
