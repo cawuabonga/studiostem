@@ -102,7 +102,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const userData = userDocSnap.data() as AppUser;
             
             // Fetch permissions if roleId and instituteId exist
-            // This is now the final step, so loading can be set to false after this.
             if (userData.roleId && userData.instituteId) {
                 const permissions = await getRolePermissions(userData.instituteId, userData.roleId);
                 userData.permissions = permissions || [];
@@ -117,12 +116,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
 
           } else {
+             // This case is now primarily for Google Sign-In users or if the doc was manually deleted.
              appUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
                 photoURL: firebaseUser.photoURL,
-                role: 'Student',
+                role: 'Student', // Default role for new users
                 instituteId: null, 
                 documentId: '',
                 permissions: [],
@@ -146,9 +146,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
           setUser(null); 
-        } finally {
-            // This is the single point where loading becomes false after all user data (including permissions) is fetched.
-            setLoading(false);
         }
   };
 
@@ -158,6 +155,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(true);
       if (firebaseUser) {
         await fetchAndSetUser(firebaseUser);
+        // Loading is set to false inside fetchAndSetUser
       } else {
         setUser(null);
         await setInstitute(null); // Clear institute on sign out
@@ -177,6 +175,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if(refreshedFirebaseUser) {
             await fetchAndSetUser(refreshedFirebaseUser);
         }
+        setLoading(false);
     }
   };
 
@@ -196,12 +195,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
+      const firebaseUser = userCredential.user;
+      await updateProfile(firebaseUser, { displayName: name });
+      
+      // Save the user's additional data to Firestore immediately after creation.
+      await saveUserAdditionalData(
+          { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: firebaseUser.photoURL },
+          'Student', // Default role for new sign-ups
+          null
+      );
+
+      // No need to call fetchAndSetUser here, onAuthStateChanged will handle it.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
       setUser(null);
-      setLoading(false);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -210,6 +220,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
