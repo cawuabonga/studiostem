@@ -98,13 +98,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userDocRef = doc(db, 'users', firebaseUser.uid);
           const userDocSnap = await getDoc(userDocRef);
           
-          let appUser: AppUser;
-
           if (userDocSnap.exists()) {
-            let userDataFromDb = userDocSnap.data() as AppUser;
-            let profileData: Partial<StudentProfile | StaffProfile> = {};
+            const userDataFromDb = userDocSnap.data() as AppUser;
             
-            // If the user has a document ID, fetch their full profile to get latest data
+            // Fetch permissions first, this is the critical part
+            let permissions: Permission[] = [];
+            if (userDataFromDb.roleId && userDataFromDb.instituteId) {
+                permissions = await getRolePermissions(userDataFromDb.instituteId, userDataFromDb.roleId) || [];
+            } else if (userDataFromDb.role === 'SuperAdmin') {
+                permissions = []; // SuperAdmin has implicit access
+            }
+
+            // Fetch profile data (if any)
+            let profileData: Partial<StudentProfile | StaffProfile> = {};
             if (userDataFromDb.documentId && userDataFromDb.instituteId) {
                 if (userDataFromDb.role === 'Student') {
                     profileData = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
@@ -113,29 +119,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
             
-            let combinedData = { ...userDataFromDb, ...profileData };
-
-            const roleIdToFetch = combinedData.roleId;
-             if (roleIdToFetch && combinedData.instituteId) {
-                const permissions = await getRolePermissions(combinedData.instituteId, roleIdToFetch);
-                combinedData.permissions = permissions || [];
-            } else if (combinedData.role === 'SuperAdmin') {
-                combinedData.permissions = []; // SuperAdmin doesn't use the permissions array
-            }
-             else {
-                 combinedData.permissions = [];
-            }
-            
-            appUser = {
-                ...combinedData,
+            // Combine all data sources to build the final user object
+            const appUser: AppUser = {
+                ...userDataFromDb, // Base data from /users/{uid}
+                ...profileData,    // Detailed profile data
                 uid: firebaseUser.uid, 
-                displayName: combinedData.displayName || firebaseUser.displayName,
-                photoURL: combinedData.photoURL || firebaseUser.photoURL,
+                displayName: profileData.displayName || userDataFromDb.displayName || firebaseUser.displayName,
+                photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
                 email: firebaseUser.email,
+                permissions: permissions, // Add the fetched permissions
             };
+            
+            setUser(appUser);
+            if (appUser.instituteId && appUser.instituteId !== instituteId) {
+                await setInstitute(appUser.instituteId);
+            } else if (!appUser.instituteId && instituteId) {
+                await setInstitute(null);
+            }
 
           } else {
-             appUser = {
+             // This is a brand new user who just signed up
+             const appUser: AppUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
@@ -143,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: 'Student', 
                 instituteId: null, 
                 documentId: '',
-                roleId: 'student',
+                roleId: 'student', // Default roleId for new signups
                 permissions: [],
              };
              await saveUserAdditionalData(
@@ -151,16 +155,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               appUser.role,
               null
             );
+            setUser(appUser);
           }
-          
-          setUser(appUser);
-          
-          if (appUser.instituteId && appUser.instituteId !== instituteId) {
-            await setInstitute(appUser.instituteId);
-          } else if (!appUser.instituteId && instituteId) {
-            await setInstitute(null);
-          }
-
         } catch (error) {
           console.error("Error fetching user data from Firestore:", error);
           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
@@ -175,13 +171,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
-        await setInstitute(null);
+        // Do not clear instituteId here, as it may be needed for re-login
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [setInstitute, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   
   const reloadUser = async () => {
     const firebaseUser = auth.currentUser;
@@ -211,11 +208,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      await saveUserAdditionalData(
-        { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: null },
-        'Student',
-        null
-      );
+      // The onAuthStateChanged listener will handle saving the user data.
+      // No need to call saveUserAdditionalData here as it would be redundant.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
@@ -235,7 +229,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     try {
       await firebaseSignOut(auth);
-      // No navigation here. The onAuthStateChanged listener will handle it.
+      // The onAuthStateChanged listener will handle the state update and redirection.
+      // Explicitly redirect to clear state and ensure user lands on login page.
+      router.push('/');
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
