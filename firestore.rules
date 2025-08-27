@@ -1,128 +1,104 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Funciones de Ayuda ---
-
-    // Obtiene los datos del documento de usuario a partir de su UID
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
+    
+    // --- Helper Functions ---
+    function isSuperAdmin(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role == 'SuperAdmin';
     }
 
-    // Verifica si un usuario pertenece a un instituto y tiene un rol de personal
     function isStaffOfInstitute(userId, instituteId) {
-      let userData = getUserData(userId);
-      return userData.instituteId == instituteId && (
-        userData.role == 'Admin' || 
-        userData.role == 'Coordinator' || 
-        userData.role == 'Teacher' ||
-        userData.role == 'SuperAdmin'
-      );
+      let user = get(/databases/$(database)/documents/users/$(userId)).data;
+      let staffRoles = ['Admin', 'Coordinator', 'Teacher', 'SuperAdmin'];
+      return user.instituteId == instituteId && user.role in staffRoles;
     }
     
-    // Verifica si un usuario es el "propietario" de un recurso (ej: un registro de notas)
-    // comparando el documentId del usuario con el studentId del recurso.
-    function isOwner(userId, resourceStudentId) {
-      return getUserData(userId).documentId == resourceStudentId;
+    function isUserOfInstitute(userId, instituteId) {
+        let user = get(/databases/$(database)/documents/users/$(userId)).data;
+        return user.instituteId == instituteId;
     }
 
-    // Verifica si un usuario autenticado pertenece a un instituto específico
-    function isMemberOfInstitute(userId, instituteId) {
-        return getUserData(userId).instituteId == instituteId;
+    function isOwnerByDocId(userId, docId) {
+        return get(/databases/$(database)/documents/users/$(userId)).data.documentId == docId;
     }
 
-
-    // --- Reglas Globales y de Configuración ---
-
-    // Por defecto, denegar todo. Las reglas específicas más abajo darán acceso.
-    match /{document=**} {
-      allow read, write: if false;
+    // --- Global Collections ---
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isSuperAdmin(request.auth.uid);
+      allow update: if request.auth.uid == userId || isSuperAdmin(request.auth.uid);
+      allow create, delete: if isSuperAdmin(request.auth.uid);
     }
-
-    // La configuración de diseño del login debe ser pública para que la página cargue
+    
     match /config/{document=**} {
       allow read: if true;
-      allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
+      allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
     }
 
-    // --- Reglas para Usuarios ---
-    match /users/{userId} {
-      // Un usuario puede leer y actualizar su propio documento.
-      allow read, update: if request.auth.uid == userId;
-      // Solo SuperAdmins pueden crear o eliminar documentos de usuario.
-      allow create, delete: if getUserData(request.auth.uid).role == 'SuperAdmin';
-    }
-
-
-    // --- Reglas para Institutos y sus Subcolecciones ---
+    // --- Institute Subcollections ---
     match /institutes/{instituteId} {
-      // Cualquier usuario autenticado puede leer la información básica de un instituto.
-      allow read: if request.auth != null;
-      // Solo SuperAdmins pueden modificar institutos.
-      allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
+      allow read: if true;
+      allow write: if request.auth != null && isSuperAdmin(request.auth.uid);
 
-      // --- Perfiles de Personal y Estudiantes ---
-      // Cualquiera puede leer los perfiles (para perfiles públicos).
-      // Solo el personal del instituto puede escribir/modificar.
       match /staffProfiles/{staffId} {
-        allow read: if true;
-        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      match /studentProfiles/{studentId} {
-        allow read: if true;
+        // Allow authenticated users to search for their profile to link it.
+        // Allow any user of the institute to view staff profiles (for directories etc).
+        allow read: if request.auth != null; 
         allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
 
-      // --- Colecciones Académicas ---
-      // Cualquiera puede leer la estructura académica (programas, unidades).
-      // Solo el personal del instituto puede escribir.
+      match /studentProfiles/{studentId} {
+         // Allow authenticated users to search for their profile to link it.
+         // Allow any user of the institute to view student profiles.
+        allow read: if request.auth != null;
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
       match /programs/{programId} {
         allow read: if true;
         allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
+      
       match /unidadesDidacticas/{unitId}/{document=**} {
-        allow read: if true;
-        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-       match /assignments/{assignmentId} {
-        allow read: if true;
-        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      
-      // --- Datos Específicos de Estudiantes (Matrículas, Notas) ---
-      // La lectura es permitida si eres el dueño del registro O si eres personal.
-      // La escritura solo es para personal.
-      match /matriculations/{matriculationId} {
-        allow read: if isOwner(request.auth.uid, resource.data.studentId) || isStaffOfInstitute(request.auth.uid, instituteId);
-        allow create, update, delete: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      match /academicRecords/{recordId} {
-         allow read: if isOwner(request.auth.uid, resource.data.studentId) || isStaffOfInstitute(request.auth.uid, instituteId);
-         allow create, update, delete: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      match /attendance/{attendanceId} {
-         allow read: if isOwner(request.auth.uid, get(/databases/$(database)/documents/institutes/$(instituteId)/attendance/$(attendanceId)).data.studentId) || isStaffOfInstitute(request.auth.uid, instituteId);
-         allow create, update, delete: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      
-       // --- Colecciones Administrativas ---
-      match /paymentConcepts/{conceptId} {
-        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
-        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
-      }
-      match /payments/{paymentId} {
-        allow read: if isOwner(request.auth.uid, resource.data.studentId) || isStaffOfInstitute(request.auth.uid, instituteId);
-        allow create: if request.auth != null; // Any authenticated user can create (register) a payment
-        allow update: if isStaffOfInstitute(request.auth.uid, instituteId); // Only staff can approve/reject
-        allow delete: if false; // Nobody can delete payment records
+          allow read: if true;
+          allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
 
-      // --- Roles y Permisos ---
-      // Solo usuarios que pertenecen al instituto pueden leer los roles.
-      // Solo SuperAdmins pueden escribir en los roles.
       match /roles/{roleId} {
-        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
-        allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
+        allow read: if request.auth != null && isUserOfInstitute(request.auth.uid, instituteId);
+        allow write: if isSuperAdmin(request.auth.uid);
+      }
+
+      match /matriculations/{matriculationId} {
+        allow read: if (request.auth != null && isOwnerByDocId(request.auth.uid, resource.data.studentId)) || isStaffOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+
+      match /academicRecords/{recordId} {
+        allow read: if (request.auth != null && isOwnerByDocId(request.auth.uid, resource.data.studentId)) || isStaffOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+
+      match /attendance/{attendanceId} {
+        allow read: if (request.auth != null && isUserOfInstitute(request.auth.uid, instituteId));
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
+      match /payments/{paymentId} {
+        allow create: if request.auth != null;
+        allow read: if (request.auth != null && isOwnerByDocId(request.auth.uid, resource.data.studentId)) || isStaffOfInstitute(request.auth.uid, instituteId);
+        allow update: if isStaffOfInstitute(request.auth.uid, instituteId);
+        allow delete: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
+       match /paymentConcepts/{conceptId} {
+        allow read: if request.auth != null;
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+
+      // Default deny for any other collections within an institute
+      match /{collection}/{docId} {
+        allow read, write: if false;
       }
     }
   }
