@@ -4,7 +4,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // --- Funciones de Ayuda ---
     function getUserData(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data;
     }
@@ -13,113 +13,115 @@ service cloud.firestore {
       return getUserData(userId).role == 'SuperAdmin';
     }
 
-    function isUserRequestingOwnData(userId) {
-        return request.auth.uid == userId;
-    }
-
-    function isAuthenticated() {
-        return request.auth != null;
+    function isMemberOfInstitute(userId, instituteId) {
+      return getUserData(userId).instituteId == instituteId;
     }
     
-    function getRolePermissions(instituteId, roleId) {
-        return get(/databases/$(database)/documents/institutes/$(instituteId)/roles/$(roleId)).data.permissions;
+    function isStaffOfInstitute(userId, instituteId) {
+      let user = getUserData(userId);
+      return user.instituteId == instituteId && (user.role == 'Admin' || user.role == 'Coordinator' || user.role == 'Teacher');
     }
 
-    function hasPermission(permission) {
-        let userData = getUserData(request.auth.uid);
-        let instituteId = userData.instituteId;
-        let roleId = userData.roleId;
-
-        // SuperAdmin has all permissions
-        if (isSuperAdmin(request.auth.uid)) {
-            return true;
-        }
-
-        // Check for role-based permissions
-        if (instituteId != null && roleId != null) {
-            let userPermissions = getRolePermissions(instituteId, roleId);
-            return permission in userPermissions;
-        }
-
-        return false;
+    function isStudentOfInstitute(userId, instituteId) {
+      let user = getUserData(userId);
+      return user.instituteId == instituteId && user.role == 'Student';
     }
 
-    // --- Default Security Rule ---
+    function hasPermission(userId, permission) {
+      let user = getUserData(userId);
+      let roleDoc = get(/databases/$(database)/documents/institutes/$(user.instituteId)/roles/$(user.roleId)).data;
+      return isSuperAdmin(userId) || (permission in roleDoc.permissions);
+    }
+    
+    // --- Reglas Globales ---
+
+    // Denegar todo por defecto
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // --- Public Configuration ---
-    // Anyone can read the login design, only SuperAdmins can change it.
-    match /config/{path=**} {
+    // Permitir lectura pública de la configuración de login
+    match /config/{document=**} {
       allow read: if true;
       allow write: if isSuperAdmin(request.auth.uid);
     }
     
-    // --- User Profiles ---
+    // Los usuarios pueden crear su propio documento y leerlo/actualizarlo
     match /users/{userId} {
-      allow read: if isUserRequestingOwnData(userId) || isSuperAdmin(request.auth.uid);
-      allow create: if isUserRequestingOwnData(userId); // A user can create their own doc
-      allow update: if isUserRequestingOwnData(userId) || isSuperAdmin(request.auth.uid);
-      allow delete: if isSuperAdmin(request.auth.uid);
+      allow create: if request.auth.uid == userId;
+      allow read, update: if request.auth.uid == userId;
+      allow write: if isSuperAdmin(request.auth.uid);
     }
-    
-    // --- Institute Data ---
+
+    // --- Reglas por Instituto ---
     match /institutes/{instituteId} {
-      allow read: if isAuthenticated();
-      allow write: if isSuperAdmin(request.auth.uid); // Create, Update, Delete institutes
+      allow read: if isMemberOfInstitute(request.auth.uid, instituteId) || isSuperAdmin(request.auth.uid);
+      allow write: if isSuperAdmin(request.auth.uid);
 
-      function isStaffOfInstitute(userId) {
-          let userData = getUserData(userId);
-          let userInstituteId = userData.instituteId;
-          return userInstituteId == instituteId && (
-              hasPermission('academic:program:manage') ||
-              hasPermission('users:staff:manage') ||
-              hasPermission('admin:fees:manage')
-          );
+      // Roles: Solo los SuperAdmins pueden escribir. Cualquier miembro del instituto puede leerlos.
+      match /roles/{roleId} {
+        allow read: if isMemberOfInstitute(request.auth.uid, instituteId) || isSuperAdmin(request.auth.uid);
+        allow write: if isSuperAdmin(request.auth.uid);
       }
-
-      // --- Subcollections ---
       
-      // Profiles are readable by any authenticated user for profile pages, writable by staff.
+      // Perfiles: Solo el personal del instituto puede escribirlos, pero cualquier miembro puede leerlos.
       match /staffProfiles/{staffId} {
-        allow read: if isAuthenticated();
-        allow write: if isStaffOfInstitute(request.auth.uid);
+        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
       
       match /studentProfiles/{studentId} {
-         allow read: if isAuthenticated();
-         allow write: if isStaffOfInstitute(request.auth.uid);
+         allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+         allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
+      
+      // Unidades: Cualquier miembro del instituto puede leer, solo personal escribe.
+      match /unidadesDidacticas/{unitId} {
+        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
 
-      // Permissions and Roles managed by SuperAdmins
-      match /roles/{roleId} {
-        allow read, write: if isSuperAdmin(request.auth.uid);
+        // Subcolecciones de Unidades (indicadores, planner, etc.)
+         match /{subcollection}/{docId=**} {
+            allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+            allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+         }
       }
-
-      // Student can read their own academic records, staff can read/write any.
-      match /academicRecords/{recordId} {
-        allow read: if isStaffOfInstitute(request.auth.uid) || request.auth.uid == resource.data.studentId;
-        allow write: if isStaffOfInstitute(request.auth.uid);
+      
+      // Asignaciones: Solo el personal del instituto puede gestionar.
+      match /assignments/{assignmentId} {
+        allow read, write: if isStaffOfInstitute(request.auth.uid, instituteId);
       }
-
-      // Student can read their own matriculations, staff can read/write any.
+      
+      // Matrículas: Personal puede leer/escribir. Estudiantes solo pueden leer las suyas.
       match /matriculations/{matriculationId} {
-        allow read: if isStaffOfInstitute(request.auth.uid) || request.auth.uid == resource.data.studentId;
-        allow write: if isStaffOfInstitute(request.auth.uid);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+        allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || resource.data.studentId == getUserData(request.auth.uid).documentId;
       }
-
-      // Student can read their own payments, staff can validate.
+      
+      // Registros Académicos: Personal puede leer/escribir. Estudiantes solo los suyos.
+      match /academicRecords/{recordId} {
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+        allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || resource.data.studentId == getUserData(request.auth.uid).documentId;
+      }
+      
+      // Asistencias: Personal puede leer/escribir. Estudiantes pueden leerlo (se filtra en cliente).
+      match /attendance/{attendanceId} {
+        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
+      // Pagos: Personal puede leer todos. Estudiantes leen/escriben los suyos.
       match /payments/{paymentId} {
-        allow read: if isStaffOfInstitute(request.auth.uid) || request.auth.uid == resource.data.studentId;
-        allow create: if request.auth.uid == request.resource.data.studentId; // Student can create their own payment
-        allow update: if hasPermission('admin:payments:validate'); // Only users with validation perm can update
+        allow create: if isStudentOfInstitute(request.auth.uid, instituteId) && request.resource.data.studentId == getUserData(request.auth.uid).documentId;
+        allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || resource.data.studentId == getUserData(request.auth.uid).documentId;
+        allow update: if isStaffOfInstitute(request.auth.uid, instituteId); // Solo staff puede aprobar/rechazar
       }
-
-      // Remaining collections are managed by staff
-       match /{collection}/{docId} {
-          allow read, write: if isStaffOfInstitute(request.auth.uid);
-       }
+      
+      // Conceptos de Pago: Personal puede leer/escribir. Estudiantes solo leer.
+      match /paymentConcepts/{conceptId} {
+        allow read: if isMemberOfInstitute(request.auth.uid, instituteId);
+        allow write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
     }
   }
 }
