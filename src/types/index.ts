@@ -48,8 +48,9 @@ export interface StudentProfile {
   programId: string;
   admissionYear: string;
   admissionPeriod: UnitPeriod;
+  role: 'Student';
+  roleId: 'student';
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
-  role?: UserRole; // Will always be 'Student' implicitly
   linkedUserUid?: string | null;
 }
 
@@ -389,3 +390,5 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
     },
 ];
 
+
+    

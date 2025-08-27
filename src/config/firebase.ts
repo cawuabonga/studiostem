@@ -555,6 +555,9 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     if (foundProfile.role) {
         userUpdateData.role = foundProfile.role;
     }
+     if (foundProfile.roleId) {
+        userUpdateData.roleId = foundProfile.roleId;
+    }
     if ((foundProfile as StudentProfile).programId) {
         (userUpdateData as any).programId = (foundProfile as StudentProfile).programId;
     }
@@ -1138,6 +1141,8 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
     }
     return null;
 }
+    
+
     
 
     

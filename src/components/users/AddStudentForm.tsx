@@ -101,6 +101,9 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
       await addStudentProfile(instituteId, {
         ...studentData,
         photoURL: photoDataUri,
+        // Asignar el roleId por defecto para estudiantes
+        roleId: 'student', 
+        role: 'Student',
       });
 
       toast({
@@ -334,3 +337,5 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
     </Form>
   );
 }
+
+    
