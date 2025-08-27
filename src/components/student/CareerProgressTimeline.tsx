@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPrograms, getMatriculationsForStudent } from '@/config/firebase';
-import type { Program, Matriculation } from '@/types';
+import { getPrograms, getMatriculationsForStudent, getStudentProfile } from '@/config/firebase';
+import type { Program, Matriculation, StudentProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle, CircleDot, Circle, Milestone } from 'lucide-react';
@@ -32,31 +32,39 @@ export function CareerProgressTimeline() {
 
     useEffect(() => {
         const fetchData = async () => {
+            // Wait until both institute and user's documentId are available
             if (!instituteId || !user?.documentId) {
-                setLoading(false);
+                // If we are not in a loading state but these are missing, it's likely an issue.
+                // For now, we just wait. If loading is false and they are still null, we'll show an error state.
+                if (!loading) setLoading(false);
                 return;
             }
+
+            setLoading(true);
             try {
-                const [allPrograms, studentMatriculations] = await Promise.all([
+                // Fetch all necessary data in parallel
+                const [allPrograms, studentMatriculations, studentProfile] = await Promise.all([
                     getPrograms(instituteId),
-                    getMatriculationsForStudent(instituteId, user.documentId)
+                    getMatriculationsForStudent(instituteId, user.documentId),
+                    getStudentProfile(instituteId, user.documentId)
                 ]);
                 
-                const studentProfile = user as any; // Assuming user object might have programId
-                const studentProgram = allPrograms.find(p => p.id === studentProfile.programId);
+                // Find the student's specific program using the programId from their profile
+                const studentProgram = allPrograms.find(p => p.id === studentProfile?.programId);
                 
                 setProgram(studentProgram || null);
                 setMatriculations(studentMatriculations);
 
             } catch (error) {
                 console.error("Error fetching career progress data:", error);
+                setProgram(null); // Ensure program is null on error
             } finally {
                 setLoading(false);
             }
         };
 
         fetchData();
-    }, [instituteId, user]);
+    }, [instituteId, user, loading]); // Depend on user object to re-trigger fetch on user change
 
     const timelineData = useMemo(() => {
         if (!program) return [];
@@ -66,7 +74,6 @@ export function CareerProgressTimeline() {
         matriculations.forEach(m => {
             const current = semesterMap.get(m.semester) || { status: 'aprobado', unitsTaken: 0 };
             current.unitsTaken++;
-            // If any unit is still 'cursando', the whole semester is 'en curso'
             if (m.status === 'cursando') {
                 current.status = 'cursando';
             }
@@ -91,10 +98,9 @@ export function CareerProgressTimeline() {
             }
         }
         
-        // Ensure only the highest semester with 'cursando' units is marked as 'En Curso'
         return semesters.map(s => {
             if (s.status === 'En Curso' && s.semester < highestInProgress) {
-                return { ...s, status: 'Completado' }; // Assume completed if a higher semester is in progress
+                return { ...s, status: 'Completado' };
             }
             return s;
         });
@@ -123,7 +129,7 @@ export function CareerProgressTimeline() {
                 </CardHeader>
                 <CardContent>
                     <p className="text-muted-foreground text-center py-4">
-                        No se encontró información de tu programa de estudios.
+                        No se encontró información de tu programa de estudios. Asegúrate de que tu perfil esté correctamente vinculado.
                     </p>
                 </CardContent>
             </Card>
