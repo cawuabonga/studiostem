@@ -1,68 +1,92 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to get user role
-    function getUserRole(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    // Helper functions
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+    
+    function isStaffOfInstitute(userId, instituteId) {
+        let userData = getUserData(userId);
+        return userData.instituteId == instituteId && (userData.role == 'Admin' || userData.role == 'Coordinator' || userData.role == 'SuperAdmin');
     }
 
-    // A user can create their own user document if the doc ID matches their UID
-    match /users/{userId} {
-      allow create: if request.auth.uid == userId;
-      allow read, update: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'SuperAdmin';
-      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
     }
 
+    // --- GLOBAL CONFIG ---
     // Open read access for general configuration
     match /config/{document=**} {
       allow read: if true;
+      allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
     }
 
-    // Allow only superadmins to write to config
-    match /config/{document=**} {
-        allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+    // --- USERS ---
+    match /users/{userId} {
+      // Allow users to read their own data
+      allow read: if request.auth.uid == userId;
+      // Allow users to create their own user document upon signup
+      allow create: if request.auth.uid == userId;
+      // Allow users to update their own profile (e.g., link it)
+      allow update: if request.auth.uid == userId;
+       // Allow SuperAdmins to manage any user document
+      allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
     }
 
-    // Rules for institutes and their subcollections
+    // --- INSTITUTES ---
     match /institutes/{instituteId} {
       // Allow authenticated users to read institute data
       allow read: if request.auth != null;
       // Allow only superadmins to create, update, delete institutes
-      allow write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+      allow write: if getUserData(request.auth.uid).role == 'SuperAdmin';
 
-      // Rules for roles subcollection
+      // --- ROLES SUBCOLLECTION ---
       match /roles/{roleId} {
-        allow read, write: if getUserRole(request.auth.uid) == 'SuperAdmin';
+        allow read, write: if getUserData(request.auth.uid).role == 'SuperAdmin';
       }
 
-      function isStaffOfInstitute(userId, instituteId) {
-          let userDoc = get(/databases/$(database)/documents/users/$(userId)).data;
-          return userDoc.instituteId == instituteId && (userDoc.role == 'Admin' || userDoc.role == 'Coordinator' || userDoc.role == 'SuperAdmin');
-      }
-
-      // Allow authenticated users to read profiles
-      // Allow staff to write to profiles
-      // OR allow a user to link themselves to an unlinked profile
+      // --- STAFF & STUDENT PROFILES SUBCOLLECTIONS ---
       match /staffProfiles/{staffId} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null; // Anyone can read public profile info
+        // Only staff can write, or a user can link their UID to an unlinked profile
         allow write: if isStaffOfInstitute(request.auth.uid, instituteId) || 
-                      (request.auth.uid == request.resource.data.linkedUserUid && resource.data.linkedUserUid == null);
+                      (request.resource.data.linkedUserUid == request.auth.uid && resource.data.linkedUserUid == null);
       }
       
       match /studentProfiles/{studentId} {
-         allow read: if request.auth != null;
-         allow write: if isStaffOfInstitute(request.auth.uid, instituteId) ||
-                       (request.auth.uid == request.resource.data.linkedUserUid && resource.data.linkedUserUid == null);
+         allow read: if request.auth != null; // Anyone can read public profile info
+         allow write: if isStaffOfInstitute(request.auth.uid, instituteId) || 
+                       (request.resource.data.linkedUserUid == request.auth.uid && resource.data.linkedUserUid == null);
       }
 
-      // Rules for academic records, attendance, etc.
-      // Teachers of a unit can write, students can read their own.
-       match /{collection}/{docId} {
-          allow read, write: if isStaffOfInstitute(request.auth.uid, instituteId);
-       }
+      // --- ACADEMIC & ADMINISTRATIVE SUBCOLLECTIONS ---
+      // General rule for most subcollections
+      match /{collection}/{docId} {
+        // Staff can read/write everything in their institute.
+        allow read, write: if isStaffOfInstitute(request.auth.uid, instituteId);
+      }
+      
+      // Specific rule for MATRICULATIONS
+      match /matriculations/{matriculationId} {
+        // Allow read if user is staff OR if the studentId on the document matches the user's documentId
+        allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || 
+                      resource.data.studentId == getUserData(request.auth.uid).documentId;
+      }
+      
+      // Specific rule for PAYMENTS
+      match /payments/{paymentId} {
+         allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || 
+                      resource.data.studentId == getUserData(request.auth.uid).documentId;
+      }
+      
+      // Specific rule for ACADEMIC RECORDS (grades)
+      match /academicRecords/{recordId} {
+         allow read: if isStaffOfInstitute(request.auth.uid, instituteId) || 
+                      resource.data.studentId == getUserData(request.auth.uid).documentId;
+      }
     }
   }
 }
