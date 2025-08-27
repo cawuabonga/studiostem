@@ -8,20 +8,25 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ManageTeachersPage() {
-  const { user, instituteId, loading } = useAuth();
+  const { user, instituteId, loading, hasPermission } = useAuth();
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (!loading && (!user || !["Admin", "Coordinator"].includes(user.role))) {
+    // Check for specific permission instead of role
+    if (!loading && !hasPermission('academic:teacher:view')) {
       router.push('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, hasPermission]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
 
+  if (loading || !hasPermission('academic:teacher:view')) {
+      return <p>Cargando o no autorizado...</p>
+  }
+  
   if (!instituteId) {
     return <p>Cargando instituto...</p>;
   }

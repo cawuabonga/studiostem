@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from 'date-fns';
 
 export default function TasasPage() {
-  const { user, instituteId, loading: authLoading } = useAuth();
+  const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   
@@ -31,13 +31,13 @@ export default function TasasPage() {
 
   useEffect(() => {
     if (!authLoading) {
-      if (!user || !["Admin", "Coordinator"].includes(user.role)) {
+      if (!user || !hasPermission('admin:fees:manage')) {
         router.push('/dashboard');
       } else if (instituteId) {
         fetchConcepts();
       }
     }
-  }, [user, authLoading, instituteId, router]);
+  }, [user, authLoading, instituteId, router, hasPermission]);
 
   const fetchConcepts = async () => {
     if (!instituteId) return;
@@ -93,6 +93,10 @@ export default function TasasPage() {
         toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
     }
   };
+  
+  if (authLoading || !hasPermission('admin:fees:manage')) {
+    return <p>Cargando o no autorizado...</p>
+  }
 
   return (
     <div className="space-y-6">
