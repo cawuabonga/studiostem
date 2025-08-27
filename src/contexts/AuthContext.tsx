@@ -94,84 +94,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser) => {
-      try {
-          const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
-          
-          if (userDocSnap.exists()) {
-            const userDataFromDb = userDocSnap.data() as AppUser;
-            
-            // Fetch permissions first, this is the critical part
-            let permissions: Permission[] = [];
-            if (userDataFromDb.roleId && userDataFromDb.instituteId) {
-                permissions = await getRolePermissions(userDataFromDb.instituteId, userDataFromDb.roleId) || [];
-            } else if (userDataFromDb.role === 'SuperAdmin') {
-                permissions = []; // SuperAdmin has implicit access
-            }
+    const userDocRef = doc(db, 'users', firebaseUser.uid);
+    const userDocSnap = await getDoc(userDocRef);
 
-            // Fetch profile data (if any)
-            let profileData: Partial<StudentProfile | StaffProfile> = {};
-            if (userDataFromDb.documentId && userDataFromDb.instituteId) {
-                if (userDataFromDb.role === 'Student') {
-                    profileData = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
-                } else {
-                    profileData = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
-                }
-            }
-            
-            // Combine all data sources to build the final user object
-            const appUser: AppUser = {
-                ...userDataFromDb, // Base data from /users/{uid}
-                ...profileData,    // Detailed profile data
-                uid: firebaseUser.uid, 
-                displayName: profileData.displayName || userDataFromDb.displayName || firebaseUser.displayName,
-                photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
-                email: firebaseUser.email,
-                permissions: permissions, // Add the fetched permissions
-            };
-            
-            setUser(appUser);
-            if (appUser.instituteId && appUser.instituteId !== instituteId) {
-                await setInstitute(appUser.instituteId);
-            } else if (!appUser.instituteId && instituteId) {
-                await setInstitute(null);
-            }
+    if (userDocSnap.exists()) {
+      const userDataFromDb = userDocSnap.data() as AppUser;
 
-          } else {
-             // This is a brand new user who just signed up
-             const appUser: AppUser = {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-                role: 'Student', 
-                instituteId: null, 
-                documentId: '',
-                roleId: 'student', // Default roleId for new signups
-                permissions: [],
-             };
-             await saveUserAdditionalData(
-              { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
-              appUser.role,
-              null
-            );
-            setUser(appUser);
-          }
+      let permissions: Permission[] = [];
+      if (userDataFromDb.roleId && userDataFromDb.instituteId) {
+        try {
+          permissions = await getRolePermissions(userDataFromDb.instituteId, userDataFromDb.roleId) || [];
         } catch (error) {
-          console.error("Error fetching user data from Firestore:", error);
-          toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
-          setUser(null); 
+          console.error("Error fetching permissions, defaulting to empty:", error);
+          permissions = [];
         }
+      } else if (userDataFromDb.role === 'SuperAdmin') {
+        permissions = []; // SuperAdmin has implicit global access
+      }
+      
+      let profileData: Partial<StudentProfile | StaffProfile> = {};
+      if (userDataFromDb.documentId && userDataFromDb.instituteId) {
+        if (userDataFromDb.role === 'Student') {
+          profileData = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
+        } else {
+          profileData = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
+        }
+      }
+
+      const appUser: AppUser = {
+        ...userDataFromDb,
+        ...profileData,
+        uid: firebaseUser.uid,
+        displayName: profileData.displayName || userDataFromDb.displayName || firebaseUser.displayName,
+        photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
+        email: firebaseUser.email,
+        permissions: permissions,
+      };
+
+      setUser(appUser);
+      if (appUser.instituteId && appUser.instituteId !== instituteId) {
+        await setInstitute(appUser.instituteId);
+      } else if (!appUser.instituteId && instituteId) {
+        await setInstitute(null);
+      }
+    } else {
+      // This is a brand new user who has just signed up but has not created a user document yet.
+      // This is a valid state.
+      const appUser: AppUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        role: 'Student', 
+        instituteId: null, 
+        documentId: '',
+        roleId: 'student', // Default roleId for new signups
+        permissions: [],
+      };
+      // Let's create their user document now.
+      await saveUserAdditionalData(
+        { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
+        appUser.role,
+        null
+      );
+      setUser(appUser);
+    }
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       setLoading(true);
       if (firebaseUser) {
-        await fetchAndSetUser(firebaseUser);
+        try {
+          await fetchAndSetUser(firebaseUser);
+        } catch (error) {
+           console.error("Error fetching user data from Firestore:", error);
+           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
+           // Signing out to prevent being stuck in a broken state
+           await firebaseSignOut(auth);
+           setUser(null);
+        }
       } else {
         setUser(null);
-        // Do not clear instituteId here, as it may be needed for re-login
       }
       setLoading(false);
     });
@@ -208,8 +212,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      // The onAuthStateChanged listener will handle saving the user data.
-      // No need to call saveUserAdditionalData here as it would be redundant.
+      await saveUserAdditionalData(
+          { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: firebaseUser.photoURL },
+          'Student',
+          null
+      );
+      // The onAuthStateChanged listener will then pick up this new user and set the state.
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
@@ -230,8 +238,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await firebaseSignOut(auth);
       // The onAuthStateChanged listener will handle the state update and redirection.
-      // Explicitly redirect to clear state and ensure user lands on login page.
-      router.push('/');
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
