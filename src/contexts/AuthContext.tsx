@@ -113,36 +113,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             }
             
-            // Combine data: Firestore profile data takes precedence
             let combinedData = { ...userDataFromDb, ...profileData };
 
-            // Fetch permissions based on role
             const roleIdToFetch = combinedData.roleId;
              if (roleIdToFetch && combinedData.instituteId) {
                 const permissions = await getRolePermissions(combinedData.instituteId, roleIdToFetch);
                 combinedData.permissions = permissions || [];
-            } else {
+            } else if (combinedData.role === 'SuperAdmin') {
+                combinedData.permissions = []; // SuperAdmin doesn't use the permissions array
+            }
+             else {
                  combinedData.permissions = [];
             }
             
             appUser = {
                 ...combinedData,
-                uid: firebaseUser.uid, // Ensure UID from auth is authoritative
+                uid: firebaseUser.uid, 
                 displayName: combinedData.displayName || firebaseUser.displayName,
                 photoURL: combinedData.photoURL || firebaseUser.photoURL,
                 email: firebaseUser.email,
             };
 
           } else {
-             // This case is now primarily for Google Sign-In users or if the doc was manually deleted.
              appUser = {
                 uid: firebaseUser.uid,
                 email: firebaseUser.email,
                 displayName: firebaseUser.displayName,
                 photoURL: firebaseUser.photoURL,
-                role: 'Student', // Default role for new users
+                role: 'Student', 
                 instituteId: null, 
                 documentId: '',
+                roleId: 'student',
                 permissions: [],
              };
              await saveUserAdditionalData(
@@ -210,7 +211,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      // Explicitly save additional data to Firestore after registration
       await saveUserAdditionalData(
         { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: null },
         'Student',
@@ -226,7 +226,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -236,11 +235,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     try {
       await firebaseSignOut(auth);
-      window.location.href = '/';
+      router.push('/');
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
-      window.location.href = '/';
+      router.push('/');
     }
   };
 
