@@ -40,6 +40,7 @@ export default function AsignarHorasNoLectivasPage() {
         getPrograms(instituteId),
       ]);
       setPrograms(fetchedPrograms);
+      // Pre-filter staff to only include Teachers and Coordinators
       setAllStaff(fetchedStaff.filter(s => s.role === 'Teacher' || s.role === 'Coordinator'));
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
@@ -51,19 +52,23 @@ export default function AsignarHorasNoLectivasPage() {
   useEffect(() => {
     if (canManage) {
         fetchData();
+    } else {
+        setLoading(false);
     }
   }, [canManage, fetchData]);
 
+  // Use useMemo for direct filtering, this is more reliable
   const filteredTeachers = useMemo(() => {
     if (!selectedProgramId) return [];
     return allStaff.filter(staff => staff.programId === selectedProgramId);
   }, [selectedProgramId, allStaff]);
 
+  // Effect to reset teacher selection when program changes
   useEffect(() => {
     setSelectedTeacherId('');
   }, [selectedProgramId]);
 
-  if (!canManage) {
+  if (!canManage && !loading) {
       return <p>No tienes permiso para acceder a este módulo.</p>
   }
 
