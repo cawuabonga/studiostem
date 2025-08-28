@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStaffProfiles, getPrograms } from "@/config/firebase";
-import type { Teacher, UnitPeriod, Program, StaffProfile } from "@/types";
+import type { StaffProfile, UnitPeriod, Program } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -40,7 +40,6 @@ export default function AsignarHorasNoLectivasPage() {
         getPrograms(instituteId),
       ]);
       setPrograms(fetchedPrograms);
-      // Pre-filter staff to only include Teachers and Coordinators
       setAllStaff(fetchedStaff.filter(s => s.role === 'Teacher' || s.role === 'Coordinator'));
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
@@ -57,13 +56,11 @@ export default function AsignarHorasNoLectivasPage() {
     }
   }, [canManage, fetchData]);
 
-  // Use useMemo for direct filtering, this is more reliable
   const filteredTeachers = useMemo(() => {
     if (!selectedProgramId) return [];
     return allStaff.filter(staff => staff.programId === selectedProgramId);
   }, [selectedProgramId, allStaff]);
 
-  // Effect to reset teacher selection when program changes
   useEffect(() => {
     setSelectedTeacherId('');
   }, [selectedProgramId]);
