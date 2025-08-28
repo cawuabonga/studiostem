@@ -49,7 +49,7 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
                 getNonTeachingActivities(instituteId)
             ]);
             setAssignments(fetchedAssignments);
-            setActivities(fetchedActivities);
+            setActivities(fetchedActivities.filter(a => a.isActive));
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar las asignaciones.", variant: "destructive" });
         } finally {
