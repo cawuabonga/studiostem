@@ -174,7 +174,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Condición</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Selecciona una condición" />
@@ -245,9 +245,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
              </div>
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => onClose()}>
-                  Cancelar
-                </Button>
+                <Button type="button" variant="outline" onClick={() => onClose()}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}

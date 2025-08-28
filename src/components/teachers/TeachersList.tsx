@@ -2,16 +2,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getStaffProfiles, getPrograms } from '@/config/firebase';
-import type { Teacher, Program, StaffProfile } from '@/types';
+import { getStaffProfiles, getPrograms, getRoles } from '@/config/firebase';
+import type { Teacher, Program, StaffProfile, Role } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit2, Trash2, MoreHorizontal, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { EditTeacherDialog } from './EditTeacherDialog';
-import { DeleteTeacherDialog } from './DeleteTeacherDialog';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
 import Link from 'next/link';
+// Assuming these dialogs are compatible or will be adapted for StaffProfile
+import { EditStaffProfileDialog } from '../users/EditStaffProfileDialog';
+import { DeleteStaffProfileDialog } from '../users/DeleteStaffProfileDialog';
 
 interface TeachersListProps {
     instituteId: string;
@@ -32,27 +34,30 @@ const PAGE_SIZE = 10;
 export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<StaffProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  const fetchStaffAndPrograms = useCallback(async (id: string) => {
+  const fetchData = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const [fetchedStaff, fetchedPrograms] = await Promise.all([
+      const [fetchedStaff, fetchedPrograms, fetchedRoles] = await Promise.all([
         getStaffProfiles(id),
         getPrograms(id),
+        getRoles(id),
       ]);
       setStaff(fetchedStaff);
       setPrograms(new Map(fetchedPrograms.map(p => [p.id, p])));
+      setRoles(fetchedRoles);
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar los perfiles de personal.",
+        description: "No se pudieron cargar los datos.",
         variant: "destructive",
       });
     } finally {
@@ -62,51 +67,49 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
 
   useEffect(() => {
     if (instituteId) {
-      fetchStaffAndPrograms(instituteId);
+      fetchData(instituteId);
     }
-  }, [instituteId, fetchStaffAndPrograms]);
+  }, [instituteId, fetchData]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
-    setSelectedTeacher(null);
+    setSelectedProfile(null);
     if (updated && instituteId) {
-      fetchStaffAndPrograms(instituteId);
+      fetchData(instituteId);
       onDataChange();
     }
   };
 
-  const teachers = useMemo(() => {
-    return staff
-      .filter(s => s.role === 'Teacher' || s.role === 'Coordinator')
-      .map(s => ({
-            id: s.documentId,
-            documentId: s.documentId,
-            fullName: s.displayName,
-            email: s.email,
-            phone: s.phone || '',
-            specialty: 'N/A', 
-            active: !!s.linkedUserUid,
-            condition: s.condition,
-            programId: s.programId,
-            programName: programs.get(s.programId)?.name || 'N/A'
-      } as Teacher));
-  }, [staff, programs]);
+  const teachersAndCoordinators = useMemo(() => {
+    // Dynamically find the IDs for roles named "Docente" or "Coordinador"
+    const targetRoleIds = roles
+        .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
+        .map(role => role.id);
 
-  const filteredTeachers = useMemo(() => 
-    teachers.filter(teacher => 
-        teacher.fullName.toLowerCase().includes(filter.toLowerCase()) ||
-        teacher.documentId.toLowerCase().includes(filter.toLowerCase()) ||
-        teacher.email.toLowerCase().includes(filter.toLowerCase())
-    ), [teachers, filter]);
+    return staff
+      .filter(s => targetRoleIds.includes(s.roleId) || s.role === 'Teacher' || s.role === 'Coordinator')
+      .map(s => ({
+            ...s,
+            id: s.documentId,
+            programName: programs.get(s.programId)?.name || 'N/A'
+      } as StaffProfile & { programName: string }));
+  }, [staff, programs, roles]);
+
+  const filteredData = useMemo(() => 
+    teachersAndCoordinators.filter(profile => 
+        profile.displayName.toLowerCase().includes(filter.toLowerCase()) ||
+        profile.documentId.toLowerCase().includes(filter.toLowerCase()) ||
+        profile.email.toLowerCase().includes(filter.toLowerCase())
+    ), [teachersAndCoordinators, filter]);
   
-  const paginatedTeachers = useMemo(() => {
+  const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return filteredTeachers.slice(start, end);
-  }, [filteredTeachers, currentPage]);
+    return filteredData.slice(start, end);
+  }, [filteredData, currentPage]);
 
-  const totalPages = Math.ceil(filteredTeachers.length / PAGE_SIZE);
+  const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
 
   if (loading) {
     return (
@@ -119,7 +122,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
     );
   }
   
-  if (!teachers.length) {
+  if (!teachersAndCoordinators.length) {
     return <p className="text-center text-muted-foreground">No hay docentes o coordinadores registrados.</p>;
   }
 
@@ -145,30 +148,46 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
               <TableHead>Email</TableHead>
               <TableHead>Programa</TableHead>
               <TableHead>Condición</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Vinculado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedTeachers.map((teacher) => (
-              <TableRow key={teacher.documentId}>
-                <TableCell className="font-medium">{teacher.fullName}</TableCell>
-                <TableCell>{teacher.documentId}</TableCell>
-                <TableCell>{teacher.email}</TableCell>
-                <TableCell>{teacher.programName || 'N/A'}</TableCell>
-                <TableCell><Badge variant="outline">{teacher.condition || 'N/A'}</Badge></TableCell>
+            {paginatedData.map((profile) => (
+              <TableRow key={profile.documentId}>
+                <TableCell className="font-medium">{profile.displayName}</TableCell>
+                <TableCell>{profile.documentId}</TableCell>
+                <TableCell>{profile.email}</TableCell>
+                <TableCell>{profile.programName || 'N/A'}</TableCell>
+                <TableCell><Badge variant="outline">{profile.condition || 'N/A'}</Badge></TableCell>
                 <TableCell>
-                  <Badge variant={teacher.active ? 'default' : 'secondary'}>
-                    {teacher.active ? 'Activo' : 'Inactivo'}
+                  <Badge variant={profile.linkedUserUid ? 'default' : 'secondary'}>
+                    {profile.linkedUserUid ? 'Sí' : 'No'}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right space-x-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/profile/${teacher.documentId}`} target="_blank">
-                        <Eye className="mr-2 h-4 w-4"/>
-                        Perfil Público
-                      </Link>
-                    </Button>
+                <TableCell className="text-right">
+                     <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Abrir menú</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                       <DropdownMenuItem asChild>
+                          <Link href={`/profile/${profile.documentId}`} target="_blank">
+                              <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
+                          </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
+                        <Edit2 className="mr-2 h-4 w-4" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </TableCell>
               </TableRow>
             ))}
@@ -198,18 +217,16 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
         </Button>
       </div>
 
-      {selectedTeacher && isEditDialogOpen && (
-        <EditTeacherDialog 
-          teacher={selectedTeacher}
-          instituteId={instituteId}
+      {selectedProfile && isEditDialogOpen && (
+        <EditStaffProfileDialog 
+          profile={selectedProfile}
           isOpen={isEditDialogOpen}
           onClose={handleDialogClose}
         />
       )}
-       {selectedTeacher && isDeleteDialogOpen && (
-        <DeleteTeacherDialog 
-          teacher={selectedTeacher}
-          instituteId={instituteId}
+       {selectedProfile && isDeleteDialogOpen && (
+        <DeleteStaffProfileDialog
+          profile={selectedProfile}
           isOpen={isDeleteDialogOpen}
           onClose={handleDialogClose}
         />
