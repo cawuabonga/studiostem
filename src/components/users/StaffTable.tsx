@@ -1,9 +1,10 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getStaffProfiles, getPrograms } from '@/config/firebase';
-import type { StaffProfile, Program } from '@/types';
+import { getTeachers, getPrograms } from '@/config/firebase';
+import type { Teacher, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,10 +33,9 @@ interface StaffTableProps {
 const PAGE_SIZE = 10;
 
 export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
-  const [profiles, setProfiles] = useState<StaffProfile[]>([]);
-  const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
+  const [profiles, setProfiles] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedProfile, setSelectedProfile] = useState<StaffProfile | null>(null);
+  const [selectedProfile, setSelectedProfile] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [filter, setFilter] = useState('');
@@ -45,13 +45,9 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
   const fetchData = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const [fetchedProfiles, fetchedPrograms] = await Promise.all([
-        getStaffProfiles(id),
-        getPrograms(id),
-      ]);
-      const programMap = new Map(fetchedPrograms.map(p => [p.id, p]));
+      // Use getTeachers as it now correctly formats the data needed by the table
+      const fetchedProfiles = await getTeachers(id);
       setProfiles(fetchedProfiles);
-      setPrograms(programMap);
     } catch (error) {
       toast({
         title: "Error",
@@ -81,7 +77,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
 
   const filteredProfiles = useMemo(() =>
     profiles.filter(profile =>
-        profile.displayName.toLowerCase().includes(filter.toLowerCase()) ||
+        profile.fullName.toLowerCase().includes(filter.toLowerCase()) ||
         profile.documentId.toLowerCase().includes(filter.toLowerCase()) ||
         profile.email.toLowerCase().includes(filter.toLowerCase())
     ), [profiles, filter]);
@@ -139,15 +135,15 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
             {paginatedProfiles.map((profile) => (
               <TableRow key={`${profile.documentId}-${profile.email}`}>
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
-                <TableCell className="font-medium">{profile.displayName}</TableCell>
-                <TableCell>{programs.get(profile.programId)?.name || 'N/A'}</TableCell>
+                <TableCell className="font-medium">{profile.fullName}</TableCell>
+                <TableCell>{profile.programName || 'N/A'}</TableCell>
                 <TableCell>
-                    <Badge variant="outline">{profile.condition}</Badge>
+                    <Badge variant="outline">{profile.condition || 'N/A'}</Badge>
                 </TableCell>
-                <TableCell>{profile.role}</TableCell>
+                <TableCell>{(profile as any).role || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge variant={profile.linkedUserUid ? 'default' : 'secondary'}>
-                    {profile.linkedUserUid ? 'Sí' : 'No'}
+                  <Badge variant={profile.active ? 'default' : 'secondary'}>
+                    {profile.active ? 'Sí' : 'No'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -165,6 +161,10 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
                               <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
                           </Link>
                       </DropdownMenuItem>
+                      {/* 
+                        The Edit and Delete dialogs expect a StaffProfile object, but our Teacher object
+                        is compatible enough for now. This might need refactoring later if they diverge.
+                      */}
                       <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
                         <Edit2 className="mr-2 h-4 w-4" /> Editar
                       </DropdownMenuItem>
@@ -203,14 +203,14 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
 
       {selectedProfile && isEditDialogOpen && (
         <EditStaffProfileDialog 
-          profile={selectedProfile}
+          profile={selectedProfile as any}
           isOpen={isEditDialogOpen}
           onClose={handleDialogClose}
         />
       )}
       {selectedProfile && isDeleteDialogOpen && (
         <DeleteStaffProfileDialog
-          profile={selectedProfile}
+          profile={selectedProfile as any}
           isOpen={isDeleteDialogOpen}
           onClose={handleDialogClose}
         />

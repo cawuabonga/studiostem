@@ -359,6 +359,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
             specialty: (data as any).specialty || 'N/A',
             active: !!data.linkedUserUid,
             condition: data.condition,
+            programId: data.programId,
             programName: programMap.get(data.programId) || 'N/A'
         } as Teacher;
     });
