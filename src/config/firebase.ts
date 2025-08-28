@@ -346,19 +346,29 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
         .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
         .map(role => role.id);
     
-    if (targetRoleIds.length === 0) return [];
+    // Also include legacy roles for backwards compatibility
+    const legacyRoles = ['Teacher', 'Coordinator'];
 
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const q = query(staffCol, where("roleId", "in", targetRoleIds));
-    const snapshot = await getDocs(q);
+    const roleIdQuery = query(staffCol, where("roleId", "in", targetRoleIds.length > 0 ? targetRoleIds : ['dummy-value']));
+    const legacyRoleQuery = query(staffCol, where("role", "in", legacyRoles));
+    
+    const [roleIdSnapshot, legacyRoleSnapshot] = await Promise.all([
+        getDocs(roleIdQuery),
+        getDocs(legacyRoleQuery)
+    ]);
+    
+    const combinedDocs = new Map<string, StaffProfile>();
+    roleIdSnapshot.docs.forEach(docSnap => combinedDocs.set(docSnap.id, { documentId: docSnap.id, ...docSnap.data() } as StaffProfile));
+    legacyRoleSnapshot.docs.forEach(docSnap => combinedDocs.set(docSnap.id, { documentId: docSnap.id, ...docSnap.data() } as StaffProfile));
+    
     const programs = await getPrograms(instituteId);
     const programMap = new Map(programs.map(p => [p.id, p.name]));
     
-    return snapshot.docs.map(docSnap => {
-        const data = docSnap.data() as StaffProfile;
+    return Array.from(combinedDocs.values()).map(data => {
         return {
-            id: docSnap.id,
-            documentId: docSnap.id,
+            id: data.documentId,
+            documentId: data.documentId,
             fullName: data.displayName,
             email: data.email,
             phone: data.phone || '',
@@ -1211,3 +1221,5 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
     }
     return null;
 }
+
+    
