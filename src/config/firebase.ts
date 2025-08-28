@@ -342,16 +342,16 @@ export const duplicateUnit = async (instituteId: string, unitId: string): Promis
 // Teachers (derived from StaffProfiles)
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const q = query(staffCol, where("roleId", "in", ["teacher", "coordinator"]));
+     const q = query(staffCol, where("role", "in", ["Teacher", "Coordinator"]));
     const snapshot = await getDocs(q);
     const programs = await getPrograms(instituteId);
     const programMap = new Map(programs.map(p => [p.id, p.name]));
     
-    return snapshot.docs.map(doc => {
-        const data = doc.data() as StaffProfile;
+    return snapshot.docs.map(docSnap => {
+        const data = docSnap.data() as StaffProfile;
         return {
-            id: doc.id,
-            documentId: doc.id,
+            id: docSnap.id,
+            documentId: docSnap.id,
             fullName: data.displayName,
             email: data.email,
             phone: data.phone || '',

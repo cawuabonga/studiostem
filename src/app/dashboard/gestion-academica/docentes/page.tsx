@@ -36,7 +36,7 @@ export default function ManageTeachersPage() {
         <CardHeader>
         <CardTitle>Docentes Registrados</CardTitle>
         <CardDescription>
-            Lista de todo el personal con el rol de 'Docente'. La gestión y registro de perfiles se realiza desde el módulo de 'Gestión de Usuarios'.
+            Lista de todo el personal con el rol de 'Docente' o 'Coordinador'. La gestión y registro de perfiles se realiza desde el módulo de 'Gestión de Usuarios'.
         </CardDescription>
         </CardHeader>
         <CardContent>
