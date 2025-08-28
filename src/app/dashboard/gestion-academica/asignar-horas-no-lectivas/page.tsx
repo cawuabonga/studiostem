@@ -4,8 +4,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTeachers } from "@/config/firebase";
-import type { Teacher, UnitPeriod } from "@/types";
+import { getStaffProfiles, getPrograms } from "@/config/firebase";
+import type { Teacher, UnitPeriod, Program, StaffProfile } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -20,22 +20,30 @@ export default function AsignarHorasNoLectivasPage() {
   const { instituteId, hasPermission } = useAuth();
   const { toast } = useToast();
   
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [allStaff, setAllStaff] = useState<StaffProfile[]>([]);
+  const [filteredTeachers, setFilteredTeachers] = useState<StaffProfile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [selectedPeriod, setSelectedPeriod] = useState<UnitPeriod | ''>('');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
   
   const canManage = hasPermission('academic:assignment:manage');
 
-  const fetchTeachersData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedTeachers = await getTeachers(instituteId);
-      setTeachers(fetchedTeachers);
+      const [fetchedStaff, fetchedPrograms] = await Promise.all([
+        getStaffProfiles(instituteId),
+        getPrograms(instituteId),
+      ]);
+      setPrograms(fetchedPrograms);
+      setAllStaff(fetchedStaff.filter(s => s.role === 'Teacher' || s.role === 'Coordinator'));
     } catch (error) {
-      toast({ title: "Error", description: "No se pudieron cargar los docentes.", variant: "destructive" });
+      toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -43,13 +51,19 @@ export default function AsignarHorasNoLectivasPage() {
   
   useEffect(() => {
     if (canManage) {
-        fetchTeachersData();
+        fetchData();
     }
-  }, [canManage, fetchTeachersData]);
+  }, [canManage, fetchData]);
 
-  const handleSelectionChange = () => {
-    // This could be used to reset views if needed when a selector changes
-  };
+  useEffect(() => {
+    if (selectedProgramId) {
+      const teachersInProgram = allStaff.filter(staff => staff.programId === selectedProgramId);
+      setFilteredTeachers(teachersInProgram);
+      setSelectedTeacherId(''); // Reset teacher selection when program changes
+    } else {
+      setFilteredTeachers([]);
+    }
+  }, [selectedProgramId, allStaff]);
 
   if (!canManage) {
       return <p>No tienes permiso para acceder a este módulo.</p>
@@ -61,24 +75,34 @@ export default function AsignarHorasNoLectivasPage() {
         <CardHeader>
           <CardTitle>Asignar Horas No Lectivas</CardTitle>
           <CardDescription>
-            Selecciona un docente, año y período para asignar o gestionar sus actividades y horas no lectivas.
+            Selecciona un programa, docente, año y período para asignar o gestionar sus actividades y horas no lectivas.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {loading ? (
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
              </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+               <div className="space-y-2">
+                <Label htmlFor="program-select">Programa de Estudios</Label>
+                <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                  <SelectTrigger id="program-select"><SelectValue placeholder="Seleccione un programa" /></SelectTrigger>
+                  <SelectContent>
+                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="teacher-select">Docente</Label>
-                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
+                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId} disabled={!selectedProgramId}>
                   <SelectTrigger id="teacher-select"><SelectValue placeholder="Seleccione un docente" /></SelectTrigger>
                   <SelectContent>
-                    {teachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.fullName}</SelectItem>)}
+                    {filteredTeachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.displayName}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
