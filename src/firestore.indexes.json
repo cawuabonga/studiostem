@@ -39,26 +39,8 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "paymentDate",
+          "fieldPath": "createdAt",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "payments",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "paymentDate",
-          "order": "DESCENDING"
         }
       ]
     },
@@ -93,19 +75,8 @@
           "order": "DESCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "roles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []
 }
-
 

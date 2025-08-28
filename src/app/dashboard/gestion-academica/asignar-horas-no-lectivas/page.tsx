@@ -100,7 +100,11 @@ export default function AsignarHorasNoLectivasPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="teacher-select">Docente</Label>
-                <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId} disabled={!selectedProgramId}>
+                <Select 
+                    value={selectedTeacherId} 
+                    onValueChange={setSelectedTeacherId} 
+                    disabled={!selectedProgramId}
+                >
                   <SelectTrigger id="teacher-select"><SelectValue placeholder="Seleccione un docente" /></SelectTrigger>
                   <SelectContent>
                     {filteredTeachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.displayName}</SelectItem>)}
