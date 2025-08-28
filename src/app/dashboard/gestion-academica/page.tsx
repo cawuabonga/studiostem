@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -32,10 +32,17 @@ const academicModules = [
   },
   {
     title: "Gestionar Actividades No Lectivas",
-    description: "Crear y administrar el catálogo de actividades no lectivas (investigación, etc.).",
+    description: "Crear y administrar el catálogo de actividades (investigación, tutoría, etc.).",
     href: "/dashboard/gestion-academica/actividades-no-lectivas",
     icon: ClipboardEdit,
-    permission: "academic:program:manage", // Re-using permission, can be more specific later
+    permission: "academic:program:manage", 
+  },
+  {
+    title: "Asignar Horas No Lectivas",
+    description: "Asignar actividades no lectivas y sus horas al personal docente por período.",
+    href: "/dashboard/gestion-academica/asignar-horas-no-lectivas",
+    icon: CalendarPlus,
+    permission: "academic:assignment:manage",
   },
   {
     title: "Asignar Unidades Didácticas",

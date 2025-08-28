@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment } from '@/types';
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 
@@ -604,6 +604,34 @@ export const deleteNonTeachingActivity = async (instituteId: string, activityId:
     await deleteDoc(activityRef);
 };
 
+
+// --- NON-TEACHING ASSIGNMENTS ---
+export const addNonTeachingAssignment = async (instituteId: string, data: Omit<NonTeachingAssignment, 'id'>): Promise<void> => {
+    const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
+    await addDoc(assignmentsCol, data);
+};
+
+export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
+    const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
+    const q = query(
+        assignmentsCol,
+        where("teacherId", "==", teacherId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
+};
+
+export const updateNonTeachingAssignment = async (instituteId: string, assignmentId: string, data: Partial<NonTeachingAssignment>): Promise<void> => {
+    const assignmentRef = doc(db, 'institutes', instituteId, 'nonTeachingAssignments', assignmentId);
+    await updateDoc(assignmentRef, data);
+};
+
+export const deleteNonTeachingAssignment = async (instituteId: string, assignmentId: string): Promise<void> => {
+    const assignmentRef = doc(db, 'institutes', instituteId, 'nonTeachingAssignments', assignmentId);
+    await deleteDoc(assignmentRef);
+};
 
 
 // --- PAYMENTS ---
