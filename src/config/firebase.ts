@@ -341,23 +341,27 @@ export const duplicateUnit = async (instituteId: string, unitId: string): Promis
 
 // Teachers (derived from StaffProfiles)
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
-    const staffProfiles = await getStaffProfiles(instituteId);
-    const teachersAndCoordinators = staffProfiles.filter(
-        p => p.role === 'Teacher' || p.role === 'Coordinator'
-    );
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    const q = query(staffCol, where("roleId", "in", ["teacher", "coordinator"]));
+    const snapshot = await getDocs(q);
+    const programs = await getPrograms(instituteId);
+    const programMap = new Map(programs.map(p => [p.id, p.name]));
     
-    return teachersAndCoordinators.map(p => ({
-        id: p.documentId, // Use documentId as the main ID for consistency
-        documentId: p.documentId,
-        fullName: p.displayName,
-        email: p.email,
-        phone: p.phone || '',
-        specialty: 'N/A', // This field is not in StaffProfile, using placeholder
-        active: !!p.linkedUserUid,
-        condition: p.condition,
-        programId: p.programId,
-        programName: (p as any).programName || 'N/A' // programName is added by getStaffProfiles
-    }));
+    return snapshot.docs.map(doc => {
+        const data = doc.data() as StaffProfile;
+        return {
+            id: doc.id,
+            documentId: doc.id,
+            fullName: data.displayName,
+            email: data.email,
+            phone: data.phone || '',
+            specialty: 'N/A', 
+            active: !!data.linkedUserUid,
+            condition: data.condition,
+            programId: data.programId,
+            programName: programMap.get(data.programId) || 'N/A'
+        } as Teacher;
+    });
 };
 
 

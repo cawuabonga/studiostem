@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getStaffProfiles } from '@/config/firebase';
+import { getTeachers } from '@/config/firebase';
 import type { StaffProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -212,4 +212,5 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
     </>
   );
 }
+
 
