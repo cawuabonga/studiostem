@@ -367,6 +367,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     return teachers.sort((a, b) => a.fullName.localeCompare(b.fullName));
 };
 
+
 // Assignments
 export const getAssignments = async (
   instituteId: string,
@@ -411,8 +412,19 @@ export const getStaffProfiles = async (instituteId: string): Promise<StaffProfil
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     const q = query(staffCol, orderBy("displayName"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ ...doc.data(), documentId: doc.id } as StaffProfile));
+    const programs = await getPrograms(instituteId);
+    const programMap = new Map(programs.map(p => [p.id, p.name]));
+    
+    return snapshot.docs.map(doc => {
+        const data = doc.data() as StaffProfile;
+        return {
+            ...data,
+            documentId: doc.id,
+            programName: programMap.get(data.programId) || 'N/A'
+        } as StaffProfile;
+    });
 };
+
 
 export const getStaffProfileByDocumentId = async (instituteId: string, documentId: string): Promise<StaffProfile | null> => {
     const profileRef = doc(getSubCollectionRef(instituteId, 'staffProfiles'), documentId);
