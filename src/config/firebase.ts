@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity } from '@/types';
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 
@@ -581,6 +581,31 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     };
 };
 
+// --- NON-TEACHING ACTIVITIES ---
+export const addNonTeachingActivity = async (instituteId: string, data: Omit<NonTeachingActivity, 'id'>): Promise<void> => {
+    const activitiesCol = getSubCollectionRef(instituteId, 'nonTeachingActivities');
+    await addDoc(activitiesCol, data);
+};
+
+export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
+    const activitiesCol = getSubCollectionRef(instituteId, 'nonTeachingActivities');
+    const q = query(activitiesCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingActivity));
+};
+
+export const updateNonTeachingActivity = async (instituteId: string, activityId: string, data: Partial<NonTeachingActivity>): Promise<void> => {
+    const activityRef = doc(db, 'institutes', instituteId, 'nonTeachingActivities', activityId);
+    await updateDoc(activityRef, data);
+};
+
+export const deleteNonTeachingActivity = async (instituteId: string, activityId: string): Promise<void> => {
+    const activityRef = doc(db, 'institutes', instituteId, 'nonTeachingActivities', activityId);
+    await deleteDoc(activityRef);
+};
+
+
+
 // --- PAYMENTS ---
 export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentConcept, 'id' | 'createdAt'>): Promise<void> => {
     const conceptsCol = getSubCollectionRef(instituteId, 'paymentConcepts');
@@ -1141,8 +1166,3 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
     }
     return null;
 }
-    
-
-    
-
-    

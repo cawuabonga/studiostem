@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -29,6 +29,13 @@ const academicModules = [
     href: "/dashboard/gestion-academica/docentes",
     icon: Users,
     permission: "academic:teacher:view",
+  },
+  {
+    title: "Gestionar Actividades No Lectivas",
+    description: "Crear y administrar el catálogo de actividades no lectivas (investigación, etc.).",
+    href: "/dashboard/gestion-academica/actividades-no-lectivas",
+    icon: ClipboardEdit,
+    permission: "academic:program:manage", // Re-using permission, can be more specific later
   },
   {
     title: "Asignar Unidades Didácticas",
@@ -79,7 +86,7 @@ export default function GestionAcademicaPage() {
           </CardDescription>
         </CardHeader>
       </Card>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {accessibleModules.map((module) => (
           <Link href={module.href} key={module.title} className="flex">
             <Card className="flex flex-col w-full hover:bg-muted/50 transition-colors">

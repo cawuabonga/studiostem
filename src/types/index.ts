@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -131,6 +130,26 @@ export interface Teacher {
 export interface Assignment {
   [unitId: string]: string; // unitId -> teacherId (Document ID)
 }
+
+// --- NON-TEACHING ACTIVITIES ---
+
+export interface NonTeachingActivity {
+    id: string;
+    name: string;
+    description: string;
+    isActive: boolean;
+}
+
+export interface NonTeachingAssignment {
+    id: string;
+    teacherId: string; // Document ID of the staff member
+    activityId: string;
+    activityName: string; // Denormalized for easy display
+    assignedHours: number;
+    year: string;
+    period: UnitPeriod;
+}
+
 
 // --- PAYMENTS ---
 export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
@@ -389,6 +408,3 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
-
-
-    
