@@ -411,7 +411,7 @@ export const getStaffProfiles = async (instituteId: string): Promise<StaffProfil
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     const q = query(staffCol, orderBy("displayName"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ ...doc.data() } as StaffProfile));
+    return snapshot.docs.map(doc => ({ ...doc.data(), documentId: doc.id } as StaffProfile));
 };
 
 export const getStaffProfileByDocumentId = async (instituteId: string, documentId: string): Promise<StaffProfile | null> => {
