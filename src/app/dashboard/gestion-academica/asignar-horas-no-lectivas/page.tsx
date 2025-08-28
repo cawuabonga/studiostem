@@ -5,8 +5,8 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getStaffProfiles, getPrograms } from "@/config/firebase";
-import type { StaffProfile, UnitPeriod, Program } from "@/types";
+import { getTeachers, getPrograms } from "@/config/firebase";
+import type { Teacher, UnitPeriod, Program } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,7 @@ export default function AsignarHorasNoLectivasPage() {
   const { toast } = useToast();
   
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [allStaff, setAllStaff] = useState<StaffProfile[]>([]);
+  const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
@@ -36,12 +36,12 @@ export default function AsignarHorasNoLectivasPage() {
     if (!instituteId) return;
     setLoading(true);
     try {
-      const [fetchedStaff, fetchedPrograms] = await Promise.all([
-        getStaffProfiles(instituteId),
+      const [fetchedTeachers, fetchedPrograms] = await Promise.all([
+        getTeachers(instituteId),
         getPrograms(instituteId),
       ]);
       setPrograms(fetchedPrograms);
-      setAllStaff(fetchedStaff.filter(s => s.role === 'Teacher' || s.role === 'Coordinator'));
+      setAllTeachers(fetchedTeachers);
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
     } finally {
@@ -59,8 +59,8 @@ export default function AsignarHorasNoLectivasPage() {
 
   const filteredTeachers = useMemo(() => {
     if (!selectedProgramId) return [];
-    return allStaff.filter(staff => staff.programId === selectedProgramId);
-  }, [selectedProgramId, allStaff]);
+    return allTeachers.filter(teacher => teacher.programId === selectedProgramId);
+  }, [selectedProgramId, allTeachers]);
 
   useEffect(() => {
     // Reset teacher selection when program changes
@@ -108,7 +108,7 @@ export default function AsignarHorasNoLectivasPage() {
                 >
                   <SelectTrigger id="teacher-select"><SelectValue placeholder="Seleccione un docente" /></SelectTrigger>
                   <SelectContent>
-                    {filteredTeachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.displayName}</SelectItem>)}
+                    {filteredTeachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.fullName}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
