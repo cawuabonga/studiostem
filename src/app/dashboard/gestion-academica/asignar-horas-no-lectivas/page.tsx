@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStaffProfiles, getPrograms } from "@/config/firebase";
@@ -22,7 +22,6 @@ export default function AsignarHorasNoLectivasPage() {
   
   const [programs, setPrograms] = useState<Program[]>([]);
   const [allStaff, setAllStaff] = useState<StaffProfile[]>([]);
-  const [filteredTeachers, setFilteredTeachers] = useState<StaffProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
@@ -55,15 +54,14 @@ export default function AsignarHorasNoLectivasPage() {
     }
   }, [canManage, fetchData]);
 
-  useEffect(() => {
-    if (selectedProgramId) {
-      const teachersInProgram = allStaff.filter(staff => staff.programId === selectedProgramId);
-      setFilteredTeachers(teachersInProgram);
-      setSelectedTeacherId(''); // Reset teacher selection when program changes
-    } else {
-      setFilteredTeachers([]);
-    }
+  const filteredTeachers = useMemo(() => {
+    if (!selectedProgramId) return [];
+    return allStaff.filter(staff => staff.programId === selectedProgramId);
   }, [selectedProgramId, allStaff]);
+
+  useEffect(() => {
+    setSelectedTeacherId('');
+  }, [selectedProgramId]);
 
   if (!canManage) {
       return <p>No tienes permiso para acceder a este módulo.</p>
