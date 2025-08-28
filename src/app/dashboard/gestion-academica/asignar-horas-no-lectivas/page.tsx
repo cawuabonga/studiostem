@@ -62,6 +62,7 @@ export default function AsignarHorasNoLectivasPage() {
   }, [selectedProgramId, allStaff]);
 
   useEffect(() => {
+    // Reset teacher selection when program changes
     setSelectedTeacherId('');
   }, [selectedProgramId]);
 
