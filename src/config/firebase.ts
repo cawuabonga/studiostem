@@ -351,9 +351,9 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const teachers = snapshot.docs.map(docSnap => {
         const data = docSnap.data() as StaffProfile;
         return { 
-            id: data.documentId,
+            id: docSnap.id, // Use the document's unique ID
             fullName: data.displayName,
-            documentId: data.documentId,
+            documentId: data.documentId, // Keep DNI as a separate field
             email: data.email,
             phone: data.phone || '',
             specialty: (data as any).specialty || 'N/A',
