@@ -59,8 +59,6 @@ export default function AsignarHorasNoLectivasPage() {
 
   const filteredTeachers = useMemo(() => {
     if (!selectedProgramId) return [];
-    // Ensure we are filtering by the correct property on the teacher object.
-    // The `getTeachers` function should return objects with a `programId`.
     return allTeachers.filter(teacher => teacher.programId === selectedProgramId);
   }, [selectedProgramId, allTeachers]);
 
