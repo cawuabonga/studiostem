@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getTeachers, getPrograms } from '@/config/firebase';
-import type { Teacher, Program } from '@/types';
+import { getStaffProfiles, getPrograms } from '@/config/firebase';
+import type { Teacher, Program, StaffProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +30,7 @@ interface TeachersListProps {
 const PAGE_SIZE = 10;
 
 export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
-  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [staff, setStaff] = useState<StaffProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -39,15 +39,15 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  const fetchTeachers = useCallback(async (id: string) => {
+  const fetchStaff = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const fetchedTeachers = await getTeachers(id);
-      setTeachers(fetchedTeachers);
+      const fetchedStaff = await getStaffProfiles(id);
+      setStaff(fetchedStaff);
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar los docentes.",
+        description: "No se pudieron cargar los perfiles de personal.",
         variant: "destructive",
       });
     } finally {
@@ -57,20 +57,37 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
 
   useEffect(() => {
     if (instituteId) {
-      fetchTeachers(instituteId);
+      fetchStaff(instituteId);
     }
-  }, [instituteId, fetchTeachers]);
+  }, [instituteId, fetchStaff]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedTeacher(null);
     if (updated && instituteId) {
-      fetchTeachers(instituteId);
+      fetchStaff(instituteId);
       onDataChange();
     }
   };
-  
+
+  const teachers = useMemo(() => {
+    return staff
+      .filter(s => s.role === 'Teacher' || s.role === 'Coordinator')
+      .map(s => ({
+            id: s.documentId,
+            documentId: s.documentId,
+            fullName: s.displayName,
+            email: s.email,
+            phone: s.phone || '',
+            specialty: 'N/A', 
+            active: !!s.linkedUserUid,
+            condition: s.condition,
+            programId: s.programId,
+            programName: s.programName || 'N/A'
+      } as Teacher));
+  }, [staff]);
+
   const filteredTeachers = useMemo(() => 
     teachers.filter(teacher => 
         teacher.fullName.toLowerCase().includes(filter.toLowerCase()) ||
@@ -98,7 +115,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   }
   
   if (!teachers.length) {
-    return <p className="text-center text-muted-foreground">No hay docentes registrados.</p>;
+    return <p className="text-center text-muted-foreground">No hay docentes o coordinadores registrados.</p>;
   }
 
   return (
