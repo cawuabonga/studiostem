@@ -78,7 +78,7 @@ export default function AsignarHorasNoLectivasPage() {
                 <Select value={selectedTeacherId} onValueChange={setSelectedTeacherId}>
                   <SelectTrigger id="teacher-select"><SelectValue placeholder="Seleccione un docente" /></SelectTrigger>
                   <SelectContent>
-                    {teachers.map(t => <SelectItem key={t.id} value={t.id}>{t.fullName}</SelectItem>)}
+                    {teachers.map(t => <SelectItem key={t.id} value={t.documentId}>{t.fullName}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

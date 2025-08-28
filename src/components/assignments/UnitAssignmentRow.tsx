@@ -40,7 +40,7 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, o
   };
   
   const selectedTeacherName = teachers.find(
-      (teacher) => teacher.id === selectedTeacherId
+      (teacher) => teacher.documentId === selectedTeacherId
     )?.fullName || "Sin asignar";
 
   return (
@@ -87,12 +87,12 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, o
                     <CommandItem
                       key={teacher.id}
                       value={teacher.fullName}
-                      onSelect={(currentValue) => handleSelect(teacher.id)}
+                      onSelect={(currentValue) => handleSelect(teacher.documentId)}
                     >
                       <Check
                         className={cn(
                           "mr-2 h-4 w-4",
-                          selectedTeacherId === teacher.id ? "opacity-100" : "opacity-0"
+                          selectedTeacherId === teacher.documentId ? "opacity-100" : "opacity-0"
                         )}
                       />
                       {teacher.fullName}
