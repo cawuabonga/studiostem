@@ -176,7 +176,7 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
                             <Label htmlFor="activity">Actividad</Label>
                             <Select
                                 value={currentAssignment?.activityId || ''}
-                                onValueChange={(val) => setCurrentAssignment(p => ({...p, activityId: val}))}
+                                onValueChange={(val) => setCurrentAssignment(p => ({...p!, activityId: val}))}
                             >
                                 <SelectTrigger id="activity"><SelectValue placeholder="Seleccione una actividad..." /></SelectTrigger>
                                 <SelectContent>
@@ -190,7 +190,7 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
                                 id="hours"
                                 type="number"
                                 value={currentAssignment?.assignedHours || ''}
-                                onChange={(e) => setCurrentAssignment(p => ({...p, assignedHours: parseInt(e.target.value) || 0}))}
+                                onChange={(e) => setCurrentAssignment(p => ({...p!, assignedHours: parseInt(e.target.value) || 0}))}
                                 placeholder="Ej: 4"
                             />
                         </div>
