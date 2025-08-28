@@ -31,6 +31,7 @@ const PAGE_SIZE = 10;
 
 export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [staff, setStaff] = useState<StaffProfile[]>([]);
+  const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -39,11 +40,15 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  const fetchStaff = useCallback(async (id: string) => {
+  const fetchStaffAndPrograms = useCallback(async (id: string) => {
     setLoading(true);
     try {
-      const fetchedStaff = await getStaffProfiles(id);
+      const [fetchedStaff, fetchedPrograms] = await Promise.all([
+        getStaffProfiles(id),
+        getPrograms(id),
+      ]);
       setStaff(fetchedStaff);
+      setPrograms(new Map(fetchedPrograms.map(p => [p.id, p])));
     } catch (error) {
       toast({
         title: "Error",
@@ -57,16 +62,16 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
 
   useEffect(() => {
     if (instituteId) {
-      fetchStaff(instituteId);
+      fetchStaffAndPrograms(instituteId);
     }
-  }, [instituteId, fetchStaff]);
+  }, [instituteId, fetchStaffAndPrograms]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedTeacher(null);
     if (updated && instituteId) {
-      fetchStaff(instituteId);
+      fetchStaffAndPrograms(instituteId);
       onDataChange();
     }
   };
@@ -84,9 +89,9 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
             active: !!s.linkedUserUid,
             condition: s.condition,
             programId: s.programId,
-            programName: s.programName || 'N/A'
+            programName: programs.get(s.programId)?.name || 'N/A'
       } as Teacher));
-  }, [staff]);
+  }, [staff, programs]);
 
   const filteredTeachers = useMemo(() => 
     teachers.filter(teacher => 
