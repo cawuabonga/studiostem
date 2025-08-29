@@ -212,12 +212,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
+      // Explicitly create the default user state, save it, and then set it.
+      const appUser: AppUser = {
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        photoURL: firebaseUser.photoURL,
+        role: 'Student', 
+        instituteId: null, 
+        documentId: '',
+        roleId: 'student',
+        permissions: [],
+      };
+      
       await saveUserAdditionalData(
           { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: firebaseUser.photoURL },
           'Student',
           null
       );
-      // The onAuthStateChanged listener will then pick up this new user and set the state.
+      
+      setUser(appUser);
+      // The onAuthStateChanged listener will also fire, but setting it here ensures a smooth UI transition.
+      
     } catch (error: any) {
       console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
@@ -227,7 +243,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const userDocRef = doc(db, 'users', result.user.uid);
+      const userDocSnap = await getDoc(userDocRef);
+
+      if (!userDocSnap.exists()) {
+        const appUser: AppUser = {
+            uid: result.user.uid,
+            email: result.user.email,
+            displayName: result.user.displayName,
+            photoURL: result.user.photoURL,
+            role: 'Student',
+            instituteId: null,
+            documentId: '',
+            roleId: 'student',
+            permissions: []
+        };
+        await saveUserAdditionalData({
+            uid: appUser.uid,
+            email: appUser.email,
+            displayName: appUser.displayName,
+            photoURL: appUser.photoURL
+        }, 'Student', null);
+        setUser(appUser);
+      }
+      // If user exists, onAuthStateChanged will handle fetching the data.
+
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -238,6 +279,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await firebaseSignOut(auth);
       // The onAuthStateChanged listener will handle the state update and redirection.
+      setUser(null);
+      setInstitute(null);
+      router.push('/');
+
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
@@ -263,3 +308,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    
