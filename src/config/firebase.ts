@@ -616,8 +616,7 @@ export const addNonTeachingActivity = async (instituteId: string, data: Omit<Non
 
 export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
     const activitiesCol = getSubCollectionRef(instituteId, 'nonTeachingActivities');
-    const q = query(activitiesCol, orderBy("name"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(activitiesCol);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingActivity));
 };
 

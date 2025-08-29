@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -49,7 +50,7 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
                 getNonTeachingActivities(instituteId)
             ]);
             setAssignments(fetchedAssignments);
-            setActivities(fetchedActivities.filter(a => a.isActive));
+            setActivities(fetchedActivities);
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar las asignaciones.", variant: "destructive" });
         } finally {
