@@ -649,6 +649,13 @@ export const getNonTeachingAssignments = async (instituteId: string, teacherId: 
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
 
+export const getAllNonTeachingAssignmentsForYear = async (instituteId: string, year: string): Promise<NonTeachingAssignment[]> => {
+    const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
+    const q = query(assignmentsCol, where("year", "==", year));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
+}
+
 export const updateNonTeachingAssignment = async (instituteId: string, assignmentId: string, data: Partial<NonTeachingAssignment>): Promise<void> => {
     const assignmentRef = doc(db, 'institutes', instituteId, 'nonTeachingAssignments', assignmentId);
     await updateDoc(assignmentRef, data);
