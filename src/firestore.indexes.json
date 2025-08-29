@@ -21,7 +21,7 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "role",
+          "fieldPath": "roleId",
           "order": "ASCENDING"
         },
         {
@@ -75,8 +75,27 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "nonTeachingAssignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "teacherId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "year",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "period",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
 }
+
 
