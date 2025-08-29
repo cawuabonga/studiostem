@@ -5,8 +5,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getStaffProfiles, getAssignments, getPrograms } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile, Program } from '@/types';
+import { getUnits, getStaffProfiles, getAssignments, getPrograms, getRoles } from '@/config/firebase';
+import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile, Program, Role } from '@/types';
 import { TeacherLoadCard } from './TeacherLoadCard';
 
 interface TeacherLoadDashboardProps {
@@ -30,18 +30,28 @@ export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLo
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [allUnits, allStaffProfiles, allPrograms] = await Promise.all([
+        const [allUnits, allStaffProfiles, allPrograms, allRoles] = await Promise.all([
           getUnits(instituteId),
           getStaffProfiles(instituteId),
           getPrograms(instituteId),
+          getRoles(instituteId),
         ]);
         
         const currentProgramMap = new Map(allPrograms.map(p => [p.id, p]));
         setProgramMap(currentProgramMap);
 
+        // Dynamically find the IDs for "Docente" and "Coordinador" roles
+        const targetRoleIds = allRoles
+            .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
+            .map(role => role.id);
+        
+        // Also include legacy roles for backwards compatibility
+        const legacyRoles = ['Teacher', 'Coordinator'];
+
         // Filter staff (teachers and coordinators) that belong to the selected program.
-        const staffInSelectedProgram = allStaffProfiles.filter(
-            staff => (staff.role === 'Teacher' || staff.role === 'Coordinator') && staff.programId === programId
+        const staffInSelectedProgram = allStaffProfiles.filter(staff => 
+            staff.programId === programId &&
+            (targetRoleIds.includes(staff.roleId) || legacyRoles.includes(staff.role))
         );
 
         // Then, fetch all assignments for the selected year to calculate their total load.
