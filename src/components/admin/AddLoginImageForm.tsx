@@ -35,7 +35,6 @@ interface AddLoginImageFormProps {
 export function AddLoginImageForm({ onImageUploaded }: AddLoginImageFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [statusMessage, setStatusMessage] = useState('Subir Imagen');
 
   const form = useForm<AddImageFormValues>({
     resolver: zodResolver(addImageSchema),
@@ -47,7 +46,6 @@ export function AddLoginImageForm({ onImageUploaded }: AddLoginImageFormProps) {
 
   const onSubmit = async (data: AddImageFormValues) => {
     setLoading(true);
-    setStatusMessage('Procesando imagen...');
     const imageFile = data.image[0];
     try {
       await uploadLoginImage(imageFile, data.name);
@@ -70,7 +68,6 @@ export function AddLoginImageForm({ onImageUploaded }: AddLoginImageFormProps) {
       });
     } finally {
       setLoading(false);
-      setStatusMessage('Subir Imagen');
     }
   };
 
@@ -110,7 +107,7 @@ export function AddLoginImageForm({ onImageUploaded }: AddLoginImageFormProps) {
         />
         <Button type="submit" disabled={loading} className="w-full">
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {statusMessage}
+          {loading ? 'Procesando imagen...' : 'Subir Imagen'}
         </Button>
       </form>
     </Form>

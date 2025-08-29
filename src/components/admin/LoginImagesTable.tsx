@@ -50,7 +50,11 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
 
   useEffect(() => {
     fetchImages();
-  }, [fetchImages, onDataChange]);
+  }, [fetchImages]);
+
+  useEffect(() => {
+      fetchImages();
+  },[onDataChange, fetchImages]);
 
   const handleSetActive = async (imageUrl: string) => {
     try {
