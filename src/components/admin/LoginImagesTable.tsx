@@ -89,7 +89,7 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
   }
 
   if (!images.length) {
-    return <p className="text-center text-muted-foreground py-4">No hay imágenes subidas.</p>;
+    return <p className="text-center text-muted-foreground py-4">mira aqui deberian aparecer la galeria de imagenes que aparecen el login para poder gestionarlas</p>;
   }
 
   return (
