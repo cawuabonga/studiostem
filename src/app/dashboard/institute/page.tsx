@@ -26,13 +26,14 @@ export default function InstituteSelectorPage() {
     }
 
     // If an institute is already selected, redirect to dashboard.
+    // This condition now correctly handles the redirection after the instituteId is set.
     if (instituteId) {
       router.replace('/dashboard');
       return;
     }
 
     // If no institute is selected, set the default one.
-    // The change in context will trigger a re-render and the condition above will redirect.
+    // The change in context will trigger a re-render, and the condition above will then redirect correctly.
     if (!instituteId) {
       console.log(`Setting default institute ID: ${DEFAULT_INSTITUTE_ID}`);
       setInstitute(DEFAULT_INSTITUTE_ID);

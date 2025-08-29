@@ -20,8 +20,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
 
     // Redirect to institute selection only for Admins who don't have an institute set yet.
-    // Teachers, Coordinators, etc., will have their institute loaded from their profile.
-    // New students are exempt as their linking flow handles this.
+    // Teachers, Coordinators, and Students will have their institute loaded from their profile.
     if (user && !instituteId && user.role === 'Admin') {
        router.push('/dashboard/institute');
     }
