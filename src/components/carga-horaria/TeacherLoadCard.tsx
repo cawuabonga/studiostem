@@ -38,7 +38,7 @@ const PeriodColumn = ({
     const totalPeriodHours = teachingHours + nonTeachingHours;
 
     return (
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-4 rounded-lg bg-background p-4 shadow-lg shadow-primary/10">
             <h3 className="font-bold text-center text-lg">{period}</h3>
             <div className="grid grid-cols-2 gap-4">
                 {/* Teaching Load */}
@@ -99,7 +99,7 @@ export function TeacherLoadCard({ teacher, units, nonTeachingAssignments, progra
 
 
     return (
-        <Card className="flex flex-col border-2">
+        <Card className="flex flex-col">
             <CardHeader>
                 <CardTitle className="text-xl">{teacher.fullName}</CardTitle>
                 <CardDescription>
@@ -107,7 +107,7 @@ export function TeacherLoadCard({ teacher, units, nonTeachingAssignments, progra
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
-                 <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+                 <div className="grid md:grid-cols-2 gap-6">
                     <PeriodColumn period="MAR-JUL" units={marJulUnits} nonTeaching={marJulNonTeaching} programMap={programMap} />
                     <PeriodColumn period="AGO-DIC" units={agoDicUnits} nonTeaching={agoDicNonTeaching} programMap={programMap} />
                  </div>
