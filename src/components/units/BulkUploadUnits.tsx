@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -6,11 +7,12 @@ import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { bulkAddUnits, getPrograms } from '@/config/firebase';
+import { bulkAddUnits, getPrograms, updateUnitImage } from '@/config/firebase';
 import type { Unit, Program, ProgramModule, UnitTurno } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 interface BulkUploadUnitsProps {
     instituteId: string;
@@ -92,12 +94,14 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet) as any[];
 
-                const unitsToUpload: Omit<Unit, 'id' | 'totalHours'>[] = json.map(row => ({
+                const unitsToUpload: Omit<Unit, 'id' | 'totalHours' | 'imageUrl'>[] = json.map(row => ({
                     programId: selectedProgramId,
                     moduleId: selectedModuleId,
                     name: String(row.name),
                     code: String(row.code),
                     credits: Number(row.credits),
+                    semester: Number(row.semester),
+                    totalWeeks: Number(row.totalWeeks),
                     theoreticalHours: Number(row.theoreticalHours),
                     practicalHours: Number(row.practicalHours),
                     period: String(row.period) as any,

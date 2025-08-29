@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -21,6 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 interface UnitsListProps {
     onDataChange: () => void;
@@ -84,7 +86,8 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     if (!instituteId) return;
     setImageLoadingId(unit.id);
     try {
-        await updateUnitImage(instituteId, unit.id, unit.name);
+        const imageUrl = await generateUnitImage({ unitName: unit.name });
+        await updateUnitImage(instituteId, unit.id, imageUrl);
         toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
         fetchUnitsAndPrograms(instituteId); // Refetch to get the new URL
     } catch (error) {

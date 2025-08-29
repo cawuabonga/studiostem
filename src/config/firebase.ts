@@ -5,8 +5,6 @@ import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, se
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment } from '@/types';
-import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
-
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -250,14 +248,7 @@ export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'imag
         totalHours: (data.theoreticalHours || 0) + (data.practicalHours || 0)
     };
     const newDocRef = await addDoc(unitsCol, unitData);
-
-    // Asynchronously generate and update the image URL without blocking the UI
-    generateUnitImage({ unitName: data.name }).then(imageUrl => {
-        const unitDocToUpdate = doc(db, 'institutes', instituteId, 'unidadesDidacticas', newDocRef.id);
-        updateDoc(unitDocToUpdate, { imageUrl: imageUrl });
-    }).catch(error => {
-        console.error("Error generating image for unit:", error);
-    });
+    return newDocRef.id;
 }
 
 export const getUnit = async (instituteId: string, unitId: string): Promise<Unit | null> => {
@@ -282,10 +273,9 @@ export const updateUnit = async (instituteId: string, unitId: string, data: Part
     await updateDoc(unitRef, data);
 }
 
-export const updateUnitImage = async (instituteId: string, unitId: string, unitName: string): Promise<void> => {
-    const imageUrl = await generateUnitImage({ unitName });
+export const updateUnitImage = async (instituteId: string, unitId: string, imageUrl: string): Promise<void> => {
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-    await updateDoc(unitRef, { imageUrl: imageUrl });
+    await updateDoc(unitRef, { imageUrl });
 };
 
 export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
@@ -305,7 +295,8 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
 export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'semester' | 'imageUrl'>[]) => {
     const batch = writeBatch(db);
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
-    units.forEach(unitData => {
+    
+    const imagePromises = units.map(unitData => {
         const docRef = doc(unitsCol); 
         const dataWithHours = {
             ...unitData,
@@ -313,15 +304,22 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
             semester: 0, // Default value, should be set properly
         };
         batch.set(docRef, dataWithHours);
-
-        // Asynchronously generate and update the image URL
-        generateUnitImage({ unitName: unitData.name }).then(imageUrl => {
-            updateDoc(docRef, { imageUrl: imageUrl });
-        }).catch(error => {
-            console.error(`Error generating image for bulk unit ${unitData.name}:`, error);
-        });
+        // This part needs to be handled outside or differently, as we can't await inside forEach
+        return {docRef, unitName: unitData.name};
     });
+
     await batch.commit();
+
+    // Now, generate and update images. This will not block the UI.
+    // NOTE: This will not be reflected immediately on the client side after bulkAddUnits returns.
+    // A refresh or re-fetch mechanism would be needed.
+    // imagePromises.forEach(({ docRef, unitName }) => {
+    //     generateUnitImage({ unitName }).then(imageUrl => {
+    //         updateDoc(docRef, { imageUrl: imageUrl });
+    //     }).catch(error => {
+    //         console.error(`Error generating image for bulk unit ${unitName}:`, error);
+    //     });
+    // })
 }
 
 export const duplicateUnit = async (instituteId: string, unitId: string): Promise<void> => {

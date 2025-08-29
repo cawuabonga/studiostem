@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -10,8 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { addUnit, getPrograms } from '@/config/firebase';
+import { addUnit, getPrograms, updateUnitImage } from '@/config/firebase';
 import type { Program, ProgramModule, UnitPeriod, UnitType, UnitTurno } from '@/types';
+import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const unitTypes: UnitType[] = ['Empleabilidad', 'Especifica'];
@@ -88,11 +90,19 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
   const onSubmit = async (data: AddUnitFormValues) => {
     setLoading(true);
     try {
-      await addUnit(instituteId, data);
+      const newUnitId = await addUnit(instituteId, data);
       toast({
         title: '¡Éxito!',
         description: 'La unidad didáctica ha sido registrada.',
       });
+      
+      // Asynchronously generate and update the image URL without blocking the UI
+      generateUnitImage({ unitName: data.name }).then(imageUrl => {
+          updateUnitImage(instituteId, newUnitId, imageUrl);
+      }).catch(error => {
+          console.error("Error generating image for unit:", error);
+      });
+
       form.reset();
       onUnitAdded();
     } catch (error: any) {
