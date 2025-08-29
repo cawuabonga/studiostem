@@ -19,10 +19,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         return;
     }
 
-    // If auth is loaded, user exists, but no institute is selected
-    // This logic is now more specific and should only apply to users who NEED an institute
-    // but don't have one, like Admins. New students are exempt from this check.
-    if (user && !instituteId && user.role !== 'Student' && user.role !== 'SuperAdmin') {
+    // Redirect to institute selection only for Admins who don't have an institute set yet.
+    // Teachers, Coordinators, etc., will have their institute loaded from their profile.
+    // New students are exempt as their linking flow handles this.
+    if (user && !instituteId && user.role === 'Admin') {
        router.push('/dashboard/institute');
     }
   }, [user, instituteId, loading, router]);
