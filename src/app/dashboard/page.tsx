@@ -11,29 +11,34 @@ export default function DashboardRedirectPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
-      // Redirect based on user role to the most relevant dashboard page.
-      switch (user.role) {
-        case 'SuperAdmin':
-          router.push('/dashboard/superadmin/manage-institutes');
-          break;
-        case 'Admin':
-        case 'Coordinator':
-          router.push('/dashboard/gestion-academica');
-          break;
-        case 'Teacher':
-          router.push('/dashboard/docente');
-          break;
-        case 'Student':
-           router.push('/dashboard/academic'); // TODO: Create student dashboard
-           break;
-        default:
-          // Fallback for any other roles or if role is not defined yet.
-          router.push('/dashboard/institute');
-          break;
-      }
-    } else if (!loading && !user) {
+    if (loading) {
+      return; // Don't do anything while loading.
+    }
+    
+    if (!user) {
         router.push('/');
+        return;
+    }
+
+    // Redirect based on user role to the most relevant dashboard page.
+    switch (user.role) {
+      case 'SuperAdmin':
+        router.replace('/dashboard/superadmin/manage-institutes');
+        break;
+      case 'Admin':
+      case 'Coordinator':
+        router.replace('/dashboard/gestion-academica');
+        break;
+      case 'Teacher':
+        router.replace('/dashboard/docente');
+        break;
+      case 'Student':
+          router.replace('/dashboard/academic');
+          break;
+      default:
+        // Fallback for any other roles or if role is not defined yet.
+        router.replace('/dashboard/institute');
+        break;
     }
   }, [user, loading, router]);
 
