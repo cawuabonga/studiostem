@@ -50,7 +50,7 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
 
   useEffect(() => {
     fetchImages();
-  }, [fetchImages]);
+  }, [fetchImages, onDataChange]);
 
   const handleSetActive = async (imageUrl: string) => {
     try {
@@ -74,7 +74,6 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
         description: "La imagen ha sido eliminada correctamente.",
       });
       onDataChange();
-      fetchImages(); // Refresh list after deletion
     } catch (error) {
       toast({ title: "Error", description: "No se pudo eliminar la imagen.", variant: "destructive" });
     }
