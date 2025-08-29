@@ -5,9 +5,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Permission } from "@/types";
+
+// Define a prioritized list of routes based on permissions.
+// The first match will be used for redirection.
+const roleRedirects: { permission: Permission; route: string }[] = [
+  { permission: 'superadmin:institute:manage', route: '/dashboard/superadmin/manage-institutes' },
+  { permission: 'academic:program:manage', route: '/dashboard/gestion-academica' }, // Admin, Coordinator
+  { permission: 'teacher:unit:view', route: '/dashboard/docente' },
+  { permission: 'student:unit:view', route: '/dashboard/academic' },
+];
 
 export default function DashboardRedirectPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -16,31 +26,25 @@ export default function DashboardRedirectPage() {
     }
     
     if (!user) {
-        router.push('/');
+        router.replace('/');
         return;
     }
 
-    // Redirect based on user role to the most relevant dashboard page.
-    switch (user.role) {
-      case 'SuperAdmin':
-        router.replace('/dashboard/superadmin/manage-institutes');
-        break;
-      case 'Admin':
-      case 'Coordinator':
-        router.replace('/dashboard/gestion-academica');
-        break;
-      case 'Teacher':
-        router.replace('/dashboard/docente');
-        break;
-      case 'Student':
-          router.replace('/dashboard/academic');
-          break;
-      default:
-        // Fallback for any other roles or if role is not defined yet.
-        router.replace('/dashboard/institute');
-        break;
+    // Find the first route the user has permission for.
+    for (const redirect of roleRedirects) {
+      if (hasPermission(redirect.permission)) {
+        router.replace(redirect.route);
+        return;
+      }
     }
-  }, [user, loading, router]);
+    
+    // Fallback for any other roles or if role is not defined yet,
+    // or if the user has a role with no specific dashboard permissions.
+    // SuperAdmin without permissions (edge case) will also be handled by the check above.
+    // The most common case for this default is a brand new user who needs to link their profile.
+    router.replace('/dashboard/academic');
+
+  }, [user, loading, router, hasPermission]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full">
