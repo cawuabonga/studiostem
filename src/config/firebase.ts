@@ -1227,3 +1227,5 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
 }
 
     
+
+    
