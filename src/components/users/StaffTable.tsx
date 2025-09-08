@@ -8,7 +8,7 @@ import type { StaffProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, MoreHorizontal, Eye } from 'lucide-react';
+import { Edit2, Trash2, MoreHorizontal, Eye, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -122,9 +122,8 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
             <TableRow>
               <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
-              <TableHead>Programa</TableHead>
-              <TableHead>Condición</TableHead>
               <TableHead>Rol</TableHead>
+              <TableHead>ID Tarjeta</TableHead>
               <TableHead>Vinculado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -134,11 +133,14 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
               <TableRow key={`${profile.documentId}-${profile.email}`}>
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.displayName}</TableCell>
-                <TableCell>{(profile as any).programName || 'N/A'}</TableCell>
-                <TableCell>
-                    <Badge variant="outline">{profile.condition || 'N/A'}</Badge>
-                </TableCell>
                 <TableCell>{profile.role || 'N/A'}</TableCell>
+                <TableCell>
+                  {profile.rfidCardId ? (
+                    <Badge variant="secondary"><KeyRound className="mr-2 h-3 w-3"/>{profile.rfidCardId}</Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sin Asignar</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant={profile.linkedUserUid ? 'default' : 'secondary'}>
                     {profile.linkedUserUid ? 'Sí' : 'No'}
@@ -212,5 +214,3 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
     </>
   );
 }
-
-

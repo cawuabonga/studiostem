@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -22,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { StudentProfile, Program, UnitPeriod } from '@/types';
 import { updateStudentProfile, getPrograms } from '@/config/firebase';
 import { Loader2 } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
@@ -39,6 +41,7 @@ const editStudentSchema = z.object({
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
   admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
   admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
+  rfidCardId: z.string().optional().or(z.literal('')),
 });
 
 type EditStudentFormValues = z.infer<typeof editStudentSchema>;
@@ -78,6 +81,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
         programId: profile.programId,
         admissionYear: profile.admissionYear,
         admissionPeriod: profile.admissionPeriod,
+        rfidCardId: profile.rfidCardId,
       });
     }
   }, [profile, form, isOpen]);
@@ -254,6 +258,24 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
                         </FormItem>
                     )}
                 />
+            </div>
+
+            <Separator />
+            <div className="space-y-2">
+              <h3 className="font-medium text-sm">Control de Acceso</h3>
+                <FormField
+                  control={form.control}
+                  name="rfidCardId"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel>ID de Tarjeta RFID</FormLabel>
+                      <FormControl>
+                      <Input placeholder="Escriba o escanee el ID de la tarjeta" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
             </div>
 
             <DialogFooter className="pt-4">

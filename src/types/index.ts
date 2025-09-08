@@ -29,6 +29,7 @@ export interface StaffProfile {
   roleId: string; // ID of the role document from the 'roles' collection
   condition: 'NOMBRADO' | 'CONTRATADO';
   programId: string;
+  rfidCardId?: string; // NEW: For Arduino/RFID integration
   // This will be null until a user account is linked
   linkedUserUid?: string | null;
 }
@@ -51,7 +52,20 @@ export interface StudentProfile {
   role: 'Student';
   roleId: 'student';
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
+  rfidCardId?: string; // NEW: For Arduino/RFID integration
   linkedUserUid?: string | null;
+}
+
+export interface AccessLog {
+    id: string;
+    timestamp: Timestamp;
+    type: 'Entrada' | 'Salida';
+    status: 'Permitido' | 'Denegado';
+    userDocumentId?: string;
+    userName?: string;
+    userRole?: string;
+    accessPointId: string;
+    accessPointName?: string;
 }
 
 

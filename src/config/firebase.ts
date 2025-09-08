@@ -1218,6 +1218,12 @@ export const deleteRole = async (instituteId: string, roleId: string): Promise<v
 };
 
 export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Permission[] | null> => {
+    if (roleId === 'student') {
+        return ['student:unit:view', 'student:grades:view', 'student:payments:manage'];
+    }
+    if (roleId === 'teacher') {
+        return ['teacher:unit:view'];
+    }
     const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
     const docSnap = await getDoc(roleRef);
     if (docSnap.exists()) {

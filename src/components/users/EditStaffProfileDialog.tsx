@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { StaffProfile, Role, Program } from '@/types';
 import { updateStaffProfile, getPrograms, getRoles } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Separator } from '../ui/separator';
 
 const conditions = ['NOMBRADO', 'CONTRATADO'] as const;
 
@@ -33,6 +34,7 @@ const editStaffProfileSchema = z.object({
   roleId: z.string({ required_error: 'Debe seleccionar un rol.' }),
   condition: z.enum(conditions, { required_error: 'Debe seleccionar una condición.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
+  rfidCardId: z.string().optional().or(z.literal('')),
 });
 
 type EditStaffProfileFormValues = z.infer<typeof editStaffProfileSchema>;
@@ -70,6 +72,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
         roleId: profile.roleId,
         condition: profile.condition,
         programId: profile.programId,
+        rfidCardId: profile.rfidCardId,
       });
     }
   }, [profile, form, isOpen]);
@@ -96,6 +99,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
         role: selectedRole.name as any, // for legacy compatibility
         condition: data.condition,
         programId: data.programId,
+        rfidCardId: data.rfidCardId,
       };
 
       await updateStaffProfile(instituteId, profile.documentId, updateData);
@@ -117,7 +121,7 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar Perfil de Personal</DialogTitle>
           <DialogDescription>
@@ -238,6 +242,23 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
                             ))}
                         </SelectContent>
                         </Select>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+             </div>
+             <Separator />
+             <div className="space-y-2">
+                <h3 className="font-medium text-sm">Control de Acceso</h3>
+                 <FormField
+                    control={form.control}
+                    name="rfidCardId"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>ID de Tarjeta RFID</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Escriba o escanee el ID de la tarjeta" {...field} />
+                        </FormControl>
                         <FormMessage />
                     </FormItem>
                     )}

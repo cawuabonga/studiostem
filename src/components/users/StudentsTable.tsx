@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -7,7 +8,7 @@ import type { StudentProfile, Program } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, ArrowRight, Edit2, Eye } from 'lucide-react';
+import { MoreHorizontal, ArrowRight, Edit2, Eye, KeyRound } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -145,6 +146,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
               <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
               <TableHead>Programa</TableHead>
+              <TableHead>ID Tarjeta</TableHead>
               <TableHead>Vinculado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
@@ -165,6 +167,13 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.fullName}</TableCell>
                 <TableCell>{programMap.get(profile.programId)?.name || 'N/A'}</TableCell>
+                <TableCell>
+                  {profile.rfidCardId ? (
+                    <Badge variant="secondary"><KeyRound className="mr-2 h-3 w-3"/>{profile.rfidCardId}</Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sin Asignar</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge variant={profile.linkedUserUid ? 'default' : 'secondary'}>
                     {profile.linkedUserUid ? 'Sí' : 'No'}
@@ -201,7 +210,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
               </TableRow>
             )) : (
                 <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
                         No se encontraron estudiantes con los filtros actuales.
                     </TableCell>
                 </TableRow>
