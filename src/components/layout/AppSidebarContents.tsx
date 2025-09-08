@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -40,6 +40,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' }, // Example permission, adjust as needed
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: 'academic:program:manage' }, // Broad permission
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: 'admin:fees:manage' }, // Broad permission
+    { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: 'users:staff:manage' },
     
     // Teacher

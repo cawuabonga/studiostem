@@ -93,6 +93,16 @@
           "order": "ASCENDING"
         }
       ]
+    },
+     {
+      "collectionGroup": "accessLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

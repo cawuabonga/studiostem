@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,13 @@ const adminModules: AdminModule[] = [
     icon: CheckSquare,
     permission: "admin:payments:validate",
   },
+  {
+    title: "Control de Acceso (RFID)",
+    description: "Monitorear y ver los registros de entrada y salida del personal y estudiantes.",
+    href: "/dashboard/control-de-acceso",
+    icon: Fingerprint,
+    permission: "admin:access-control:manage",
+  },
 ];
 
 const studentModules = [
@@ -56,7 +63,7 @@ export default function GestionAdministrativaPage() {
     const { user, loading, hasPermission } = useAuth();
     const router = useRouter();
 
-    const canViewPage = hasPermission('admin:fees:manage') || hasPermission('admin:payments:validate') || hasPermission('student:payments:manage');
+    const canViewPage = hasPermission('admin:fees:manage') || hasPermission('admin:payments:validate') || hasPermission('student:payments:manage') || hasPermission('admin:access-control:manage');
 
     useEffect(() => {
         if (!loading && !canViewPage) {

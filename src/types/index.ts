@@ -29,7 +29,7 @@ export interface StaffProfile {
   roleId: string; // ID of the role document from the 'roles' collection
   condition: 'NOMBRADO' | 'CONTRATADO';
   programId: string;
-  rfidCardId?: string; // NEW: For Arduino/RFID integration
+  rfidCardId?: string; // For Arduino/RFID integration
   // This will be null until a user account is linked
   linkedUserUid?: string | null;
 }
@@ -52,7 +52,7 @@ export interface StudentProfile {
   role: 'Student';
   roleId: 'student';
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
-  rfidCardId?: string; // NEW: For Arduino/RFID integration
+  rfidCardId?: string; // For Arduino/RFID integration
   linkedUserUid?: string | null;
 }
 
@@ -344,6 +344,7 @@ export type Permission =
   // Administrative Management
   | 'admin:fees:manage'
   | 'admin:payments:validate'
+  | 'admin:access-control:manage'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
@@ -382,10 +383,11 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
     },
     {
         category: 'Gestión Administrativa',
-        description: 'Permisos para la gestión de tasas educativas y validación de pagos.',
+        description: 'Permisos para la gestión de tasas educativas, validación de pagos y control de acceso.',
         permissions: [
             { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
             { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
+            { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
         ],
     },
     {
