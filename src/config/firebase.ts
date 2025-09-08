@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1233,6 +1233,29 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
 }
 
 // --- ACCESS CONTROL ---
+export const addAccessPoint = async (instituteId: string, data: Omit<AccessPoint, 'id'>): Promise<void> => {
+    const accessPointsCol = getSubCollectionRef(instituteId, 'accessPoints');
+    await addDoc(accessPointsCol, data);
+};
+
+export const getAccessPoints = async (instituteId: string): Promise<AccessPoint[]> => {
+    const accessPointsCol = getSubCollectionRef(instituteId, 'accessPoints');
+    const q = query(accessPointsCol, orderBy('name'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessPoint));
+};
+
+export const updateAccessPoint = async (instituteId: string, docId: string, data: Partial<AccessPoint>): Promise<void> => {
+    const accessPointRef = doc(db, 'institutes', instituteId, 'accessPoints', docId);
+    await updateDoc(accessPointRef, data);
+};
+
+export const deleteAccessPoint = async (instituteId: string, docId: string): Promise<void> => {
+    const accessPointRef = doc(db, 'institutes', instituteId, 'accessPoints', docId);
+    await deleteDoc(accessPointRef);
+};
+
+
 export const getAccessLogs = async (instituteId: string, limit: number = 50): Promise<AccessLog[]> => {
     const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
     const q = query(logsCol, orderBy('timestamp', 'desc'), where('timestamp', '!=', null));
@@ -1243,3 +1266,4 @@ export const getAccessLogs = async (instituteId: string, limit: number = 50): Pr
     
 
     
+

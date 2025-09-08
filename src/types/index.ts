@@ -56,6 +56,13 @@ export interface StudentProfile {
   linkedUserUid?: string | null;
 }
 
+export interface AccessPoint {
+    id: string; // Firestore Document ID
+    accessPointId: string; // User-defined ID (e.g., LAB-01)
+    name: string;
+    description?: string;
+}
+
 export interface AccessLog {
     id: string;
     timestamp: Timestamp;
