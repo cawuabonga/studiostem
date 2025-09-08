@@ -1258,7 +1258,7 @@ export const deleteAccessPoint = async (instituteId: string, docId: string): Pro
 
 export const getAccessLogs = async (instituteId: string, limit: number = 50): Promise<AccessLog[]> => {
     const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
-    const q = query(logsCol, orderBy('timestamp', 'desc'), where('timestamp', '!=', null));
+    const q = query(logsCol, orderBy('timestamp', 'desc'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
 };

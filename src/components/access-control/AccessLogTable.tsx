@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { AccessLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAccessLogs } from '@/config/firebase'; // Assuming this function will be created
+import { getAccessLogs } from '@/config/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,10 +23,7 @@ export function AccessLogTable() {
     if (!instituteId) return;
     setLoading(true);
     try {
-      // NOTE: This function needs to be created in firebase.ts
-      // For now, we will return an empty array.
-      // const fetchedLogs = await getAccessLogs(instituteId);
-      const fetchedLogs: AccessLog[] = [];
+      const fetchedLogs = await getAccessLogs(instituteId);
       setLogs(fetchedLogs);
     } catch (error) {
       console.error("Error fetching access logs:", error);
@@ -67,7 +64,7 @@ export function AccessLogTable() {
           {logs.length > 0 ? (
             logs.map(log => (
               <TableRow key={log.id}>
-                <TableCell>{format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss')}</TableCell>
+                <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
                 <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
                 <TableCell>{log.userRole || 'N/A'}</TableCell>
                 <TableCell>{log.accessPointName || log.accessPointId}</TableCell>
@@ -96,4 +93,3 @@ export function AccessLogTable() {
     </div>
   );
 }
-
