@@ -5,16 +5,16 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import type { AccessPoint } from '@/types';
+import type { AccessPoint, Role } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAccessPoints, addAccessPoint, updateAccessPoint, deleteAccessPoint } from '@/config/firebase';
+import { getAccessPoints, addAccessPoint, updateAccessPoint, deleteAccessPoint, getRoles } from '@/config/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
 import {
@@ -27,11 +27,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from '../ui/badge';
+import { Checkbox } from '../ui/checkbox';
 
 const accessPointSchema = z.object({
   accessPointId: z.string().min(1, 'El ID del dispositivo es requerido.'),
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   description: z.string().optional(),
+  allowedRoleIds: z.array(z.string()).optional(),
 });
 
 type FormValues = z.infer<typeof accessPointSchema>;
@@ -41,6 +44,7 @@ export function AccessPointManager() {
   const { toast } = useToast();
   
   const [points, setPoints] = useState<AccessPoint[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,27 +55,36 @@ export function AccessPointManager() {
     resolver: zodResolver(accessPointSchema),
   });
 
-  const fetchPoints = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!instituteId) return;
     setLoading(true);
     try {
-      const fetchedPoints = await getAccessPoints(instituteId);
+      const [fetchedPoints, fetchedRoles] = await Promise.all([
+        getAccessPoints(instituteId),
+        getRoles(instituteId),
+      ]);
       setPoints(fetchedPoints);
+      setRoles(fetchedRoles);
     } catch (error) {
-      console.error("Error fetching access points:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los puntos de acceso.", variant: "destructive" });
+      console.error("Error fetching access points/roles:", error);
+      toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }, [instituteId, toast]);
 
   useEffect(() => {
-    fetchPoints();
-  }, [fetchPoints]);
+    fetchData();
+  }, [fetchData]);
 
   const handleOpenDialog = (point?: AccessPoint) => {
     setEditingPoint(point || null);
-    form.reset(point || { accessPointId: '', name: '', description: '' });
+    form.reset({
+        accessPointId: point?.accessPointId || '', 
+        name: point?.name || '', 
+        description: point?.description || '',
+        allowedRoleIds: point?.allowedRoleIds || [],
+    });
     setIsDialogOpen(true);
   };
   
@@ -84,15 +97,20 @@ export function AccessPointManager() {
     if (!instituteId) return;
     
     setIsSubmitting(true);
+    const dataToSave = {
+        ...data,
+        allowedRoleIds: data.allowedRoleIds || []
+    }
+
     try {
       if (editingPoint) {
-        await updateAccessPoint(instituteId, editingPoint.id, data);
+        await updateAccessPoint(instituteId, editingPoint.id, dataToSave);
         toast({ title: "Punto de Acceso Actualizado", description: `"${data.name}" ha sido actualizado.` });
       } else {
-        await addAccessPoint(instituteId, data);
+        await addAccessPoint(instituteId, dataToSave);
         toast({ title: "Punto de Acceso Creado", description: `"${data.name}" ha sido creado.` });
       }
-      fetchPoints();
+      fetchData();
       handleDialogClose();
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -106,13 +124,15 @@ export function AccessPointManager() {
     try {
         await deleteAccessPoint(instituteId, deletingPoint.id);
         toast({ title: "Punto de Acceso Eliminado", description: "El punto de acceso ha sido eliminado." });
-        fetchPoints();
+        fetchData();
     } catch (error: any) {
         toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
     } finally {
         setDeletingPoint(null);
     }
   };
+
+  const getRoleName = (roleId: string) => roles.find(r => r.id === roleId)?.name || roleId;
 
   return (
     <div className="space-y-4">
@@ -128,20 +148,29 @@ export function AccessPointManager() {
             <TableHeader>
                 <TableRow>
                     <TableHead>Nombre del Punto de Acceso</TableHead>
-                    <TableHead>ID del Dispositivo</TableHead>
-                    <TableHead>Descripción</TableHead>
+                    <TableHead>Roles Permitidos</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {loading ? (
-                    <TableRow><TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={3}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                 ) : points.length > 0 ? (
                     points.map(point => (
                         <TableRow key={point.id}>
-                            <TableCell className="font-medium">{point.name}</TableCell>
-                            <TableCell className="font-mono text-xs">{point.accessPointId}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{point.description}</TableCell>
+                            <TableCell className="font-medium">
+                                {point.name}
+                                <p className="text-xs text-muted-foreground font-mono">{point.accessPointId}</p>
+                            </TableCell>
+                            <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                    {point.allowedRoleIds?.length > 0 ? point.allowedRoleIds.map(roleId => (
+                                        <Badge key={roleId} variant="secondary">{getRoleName(roleId)}</Badge>
+                                    )) : (
+                                        <span className="text-xs text-muted-foreground">Ninguno</span>
+                                    )}
+                                </div>
+                            </TableCell>
                             <TableCell className="text-right">
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(point)}>
                                     <Edit className="h-4 w-4" />
@@ -153,57 +182,72 @@ export function AccessPointManager() {
                         </TableRow>
                     ))
                 ) : (
-                     <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay puntos de acceso registrados.</TableCell></TableRow>
+                     <TableRow><TableCell colSpan={3} className="h-24 text-center">No hay puntos de acceso registrados.</TableCell></TableRow>
                 )}
             </TableBody>
         </Table>
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
+          <DialogContent className="max-w-2xl">
               <DialogHeader>
                   <DialogTitle>{editingPoint ? 'Editar' : 'Nuevo'} Punto de Acceso</DialogTitle>
                   <DialogDescription>
-                      Complete la información del dispositivo lector (Arduino, etc.).
+                      Complete la información del dispositivo y asigne los roles que tendrán acceso.
                   </DialogDescription>
               </DialogHeader>
                <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4 py-4">
-                        <FormField
-                            control={form.control}
-                            name="name"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <Label>Nombre Descriptivo</Label>
-                                    <FormControl>
-                                        <Input {...field} placeholder="Ej: Puerta Principal" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><Label>Nombre Descriptivo</Label><FormControl><Input {...field} placeholder="Ej: Puerta Principal" /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="accessPointId" render={({ field }) => (<FormItem><Label>ID del Dispositivo</Label><FormControl><Input {...field} placeholder="Ej: PUERTA-01" /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="description" render={({ field }) => (<FormItem><Label>Descripción (Opcional)</Label><FormControl><Input {...field} placeholder="Ubicación o detalle adicional" /></FormControl><FormMessage /></FormItem>)}/>
+                        
                          <FormField
                             control={form.control}
-                            name="accessPointId"
-                            render={({ field }) => (
+                            name="allowedRoleIds"
+                            render={() => (
                                 <FormItem>
-                                    <Label>ID del Dispositivo</Label>
-                                    <FormControl>
-                                        <Input {...field} placeholder="Ej: PUERTA-01" />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="description"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <Label>Descripción (Opcional)</Label>
-                                    <FormControl>
-                                        <Input {...field} placeholder="Ubicación o detalle adicional" />
-                                    </FormControl>
+                                    <div className="mb-4">
+                                        <FormLabel className="text-base">Roles Permitidos</FormLabel>
+                                        <p className="text-sm text-muted-foreground">
+                                        Selecciona los roles que podrán acceder a través de este punto.
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {roles.map((role) => (
+                                            <FormField
+                                            key={role.id}
+                                            control={form.control}
+                                            name="allowedRoleIds"
+                                            render={({ field }) => {
+                                                return (
+                                                <FormItem
+                                                    key={role.id}
+                                                    className="flex flex-row items-start space-x-3 space-y-0"
+                                                >
+                                                    <FormControl>
+                                                    <Checkbox
+                                                        checked={field.value?.includes(role.id)}
+                                                        onCheckedChange={(checked) => {
+                                                        return checked
+                                                            ? field.onChange([...(field.value || []), role.id])
+                                                            : field.onChange(
+                                                                field.value?.filter(
+                                                                (value) => value !== role.id
+                                                                )
+                                                            )
+                                                        }}
+                                                    />
+                                                    </FormControl>
+                                                    <FormLabel className="font-normal">
+                                                        {role.name}
+                                                    </FormLabel>
+                                                </FormItem>
+                                                )
+                                            }}
+                                            />
+                                        ))}
+                                    </div>
                                     <FormMessage />
                                 </FormItem>
                             )}

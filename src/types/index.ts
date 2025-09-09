@@ -61,6 +61,7 @@ export interface AccessPoint {
     accessPointId: string; // User-defined ID (e.g., LAB-01)
     name: string;
     description?: string;
+    allowedRoleIds?: string[];
 }
 
 export interface AccessLog {
