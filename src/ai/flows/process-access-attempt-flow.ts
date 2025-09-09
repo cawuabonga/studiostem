@@ -7,7 +7,7 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getStaffProfileByDocumentId, getStudentProfile, getAccessPoints, getRoles } from '@/config/firebase';
-import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 
 // Define the input schema for the flow
@@ -60,7 +60,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
         const staffQuery = await getDocs(query(staffCol, where('rfidCardId', '==', rfidCardId)));
         if (!staffQuery.empty) {
             const doc = staffQuery.docs[0];
-            userProfile = { ...doc.data(), type: 'staff' };
+            userProfile = { ...doc.data(), type: 'staff', documentId: doc.id };
             instituteId = id;
             break;
         }
@@ -69,7 +69,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
         const studentQuery = await getDocs(query(studentCol, where('rfidCardId', '==', rfidCardId)));
         if (!studentQuery.empty) {
             const doc = studentQuery.docs[0];
-            userProfile = { ...doc.data(), type: 'student' };
+            userProfile = { ...doc.data(), type: 'student', documentId: doc.id };
             instituteId = id;
             break;
         }
