@@ -71,17 +71,17 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
   useEffect(() => {
     if (profile) {
       form.reset({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        email: profile.email,
-        phone: profile.phone,
-        address: profile.address,
-        age: profile.age,
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        age: profile.age || 0,
         gender: profile.gender,
-        programId: profile.programId,
-        admissionYear: profile.admissionYear,
+        programId: profile.programId || '',
+        admissionYear: profile.admissionYear || '',
         admissionPeriod: profile.admissionPeriod,
-        rfidCardId: profile.rfidCardId,
+        rfidCardId: profile.rfidCardId || '',
       });
     }
   }, [profile, form, isOpen]);
@@ -280,7 +280,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
 
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => onClose()}>Cancelar</Button>
+                <Button type="button" variant="ghost" onClick={() => onClose()}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}

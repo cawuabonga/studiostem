@@ -66,13 +66,13 @@ export function EditStaffProfileDialog({ profile, isOpen, onClose }: EditStaffPr
   useEffect(() => {
     if (profile) {
       form.reset({
-        displayName: profile.displayName,
-        email: profile.email,
-        phone: profile.phone,
-        roleId: profile.roleId,
+        displayName: profile.displayName || '',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        roleId: profile.roleId || '',
         condition: profile.condition,
-        programId: profile.programId,
-        rfidCardId: profile.rfidCardId,
+        programId: profile.programId || '',
+        rfidCardId: profile.rfidCardId || '',
       });
     }
   }, [profile, form, isOpen]);
