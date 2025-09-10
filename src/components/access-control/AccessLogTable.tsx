@@ -36,7 +36,7 @@ export function AccessLogTable() {
     // Cleanup function to unsubscribe when the component unmounts
     return () => unsubscribe();
 
-  }, [instituteId, loading]);
+  }, [instituteId]);
   
   if (loading) {
     return (
