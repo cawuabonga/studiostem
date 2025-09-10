@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { AccessLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAccessLogs } from '@/config/firebase';
+import { listenToAccessLogs } from '@/config/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -19,23 +19,24 @@ export function AccessLogTable() {
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchLogs = useCallback(async () => {
-    if (!instituteId) return;
-    setLoading(true);
-    try {
-      const fetchedLogs = await getAccessLogs(instituteId);
-      setLogs(fetchedLogs);
-    } catch (error) {
-      console.error("Error fetching access logs:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los registros de acceso.", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  }, [instituteId, toast]);
-
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (!instituteId) {
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    
+    // Set up the real-time listener
+    const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
+      setLogs(newLogs);
+      if (loading) setLoading(false); // Set loading to false on first data fetch
+    });
+    
+    // Cleanup function to unsubscribe when the component unmounts
+    return () => unsubscribe();
+
+  }, [instituteId, loading]);
   
   if (loading) {
     return (
