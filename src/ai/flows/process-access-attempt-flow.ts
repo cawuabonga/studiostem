@@ -85,15 +85,21 @@ export const processAccessAttemptFlow = ai.defineFlow(
             // Log to a general "unknown_rfid" log if needed
             return;
         }
+        
         const accessPoints = await getAccessPoints(instituteId);
         const accessPoint = accessPoints.find(p => p.accessPointId === accessPointId);
+        
         if (!accessPoint) {
-            console.error(`Cannot log access: access point with ID ${accessPointId} not found in institute ${instituteId}.`);
+            console.error(`Access point with ID ${accessPointId} not found in institute ${instituteId}. Logging attempt anyway.`);
             // You might want to log this attempt in a special "unknown_points" collection
-            return;
+            // We will proceed to log with a generic access point name.
+            accessPointDocId = 'unknown_access_points'; // Log to a generic document
+        } else {
+            accessPointDocId = accessPoint.id; // Store the document ID
         }
-        accessPointDocId = accessPoint.id; // Store the document ID
 
+        // Ensure we have a valid accessPointDocId to proceed.
+        // It will be 'unknown_access_points' if not found, or the actual ID if found.
         const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
 
         await addDoc(logCollectionRef, {
@@ -107,7 +113,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
             accessPointId,
             accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
             rfidCardId,
-            instituteId: instituteId, // ** ADDED THIS FIELD FOR COLLECTION GROUP QUERY **
+            instituteId: instituteId,
         });
     };
 
