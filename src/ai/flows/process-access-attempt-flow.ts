@@ -51,6 +51,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
     let userName = '';
     let userDocumentId = '';
     let instituteId = '';
+    let accessPointDocId = ''; // To store the Firestore document ID of the access point
 
     // Ugly but necessary: search across all institutes for the card ID
     // In a real-world scenario with many institutes, this would be inefficient.
@@ -85,8 +86,15 @@ export const processAccessAttemptFlow = ai.defineFlow(
         }
         const accessPoints = await getAccessPoints(instituteId);
         const accessPoint = accessPoints.find(p => p.accessPointId === accessPointId);
+        if (!accessPoint) {
+            console.error(`Cannot log access: access point with ID ${accessPointId} not found in institute ${instituteId}.`);
+            return;
+        }
+        accessPointDocId = accessPoint.id; // Store the document ID
 
-        await addDoc(collection(db, 'institutes', instituteId, 'accessLogs'), {
+        const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+
+        await addDoc(logCollectionRef, {
             timestamp: Timestamp.now(),
             type: 'Entrada', // Assuming 'Entrada' for now
             status,

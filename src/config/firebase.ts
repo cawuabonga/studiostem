@@ -1268,21 +1268,15 @@ export const listenToAccessLogs = (
     callback: (logs: AccessLog[]) => void,
     accessPointId?: string
 ): Unsubscribe => {
-    const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
-    let q;
+    // Determine the correct collection reference based on whether an accessPointId is provided
+    const logsCollectionGroup = accessPointId 
+        ? collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'accessLogs')
+        : collection(db, 'institutes', instituteId, 'accessLogs'); // Fallback to old structure if needed
 
-    if (accessPointId) {
-        q = query(logsCol, 
-            where('accessPointId', '==', accessPointId),
-            orderBy('timestamp', 'desc'),
-            limit(50)
-        );
-    } else {
-        q = query(logsCol, 
-            orderBy('timestamp', 'desc'), 
-            limit(50)
-        );
-    }
+    const q = query(logsCollectionGroup, 
+        orderBy('timestamp', 'desc'), 
+        limit(50)
+    );
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const logs: AccessLog[] = [];
@@ -1299,6 +1293,7 @@ export const listenToAccessLogs = (
     
 
     
+
 
 
 
