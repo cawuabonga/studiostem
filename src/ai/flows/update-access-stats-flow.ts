@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onDocument } from '@genkit-ai/firebase';
+import { onDocument } from '@genkit-ai/firebase/firestore';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -31,10 +31,6 @@ export const updateAccessStatsFlow = ai.defineFlow(
     name: 'updateAccessStatsFlow',
     inputSchema: AccessLogEventSchema,
     outputSchema: z.void(),
-    trigger: onDocument({
-      collection: 'accessLogs',
-      instance: db,
-    })
   },
   async (eventData) => {
     // The data is now directly the content of the created document
