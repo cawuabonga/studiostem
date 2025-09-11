@@ -24,16 +24,17 @@ export const updateAccessStatsFlow = ai.defineFlow(
   async (eventData: any) => {
     // The data is now directly the content of the created document
     const logData = eventData as AccessLog;
-    const { instituteId, accessPointId, id: logId } = logData;
-
-    if (!instituteId || !accessPointId || !logId) {
-      console.error('Missing parameters from event trigger.');
-      return;
-    }
-
+    
     if (!logData.timestamp || !logData.status) {
         console.error('Missing required fields (timestamp, status) in log data.');
         return;
+    }
+
+    const { instituteId, accessPointId, id: logId } = logData.path.params;
+
+    if (!instituteId || !accessPointId || !logId) {
+      console.error('Missing parameters from event trigger path.');
+      return;
     }
 
     const statsCollectionRef = collection(
