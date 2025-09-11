@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -16,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, Edit, BarChart3, ChevronRight } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
+import Link from 'next/link';
 
 const accessPointSchema = z.object({
   accessPointId: z.string().min(1, 'El ID del dispositivo es requerido.'),
@@ -157,9 +159,12 @@ export function AccessPointManager() {
                     <TableRow><TableCell colSpan={3}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                 ) : points.length > 0 ? (
                     points.map(point => (
-                        <TableRow key={point.id}>
+                        <TableRow key={point.id} className="group">
                             <TableCell className="font-medium">
-                                {point.name}
+                                <Link href={`/dashboard/control-de-acceso/puntos-de-acceso/${point.id}`} className="hover:underline flex items-center">
+                                    {point.name}
+                                    <ChevronRight className="h-4 w-4 ml-2 opacity-0 group-hover:opacity-100 transition-opacity"/>
+                                </Link>
                                 <p className="text-xs text-muted-foreground font-mono">{point.accessPointId}</p>
                             </TableCell>
                             <TableCell>
@@ -172,6 +177,12 @@ export function AccessPointManager() {
                                 </div>
                             </TableCell>
                             <TableCell className="text-right">
+                                 <Button variant="outline" size="sm" asChild className="mr-2">
+                                    <Link href={`/dashboard/control-de-acceso/puntos-de-acceso/${point.id}`}>
+                                        <BarChart3 className="mr-2 h-4 w-4"/>
+                                        Estadísticas
+                                    </Link>
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(point)}>
                                     <Edit className="h-4 w-4" />
                                 </Button>
@@ -281,3 +292,5 @@ export function AccessPointManager() {
     </div>
   );
 }
+
+    

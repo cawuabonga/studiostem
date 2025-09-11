@@ -2,9 +2,9 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1238,6 +1238,15 @@ export const addAccessPoint = async (instituteId: string, data: Omit<AccessPoint
     await addDoc(accessPointsCol, data);
 };
 
+export const getAccessPoint = async (instituteId: string, accessPointId: string): Promise<AccessPoint | null> => {
+    const docRef = doc(db, 'institutes', instituteId, 'accessPoints', accessPointId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as AccessPoint;
+    }
+    return null;
+}
+
 export const getAccessPoints = async (instituteId: string): Promise<AccessPoint[]> => {
     const accessPointsCol = getSubCollectionRef(instituteId, 'accessPoints');
     const q = query(accessPointsCol, orderBy('name'));
@@ -1257,7 +1266,7 @@ export const deleteAccessPoint = async (instituteId: string, docId: string): Pro
 
 
 export const getAccessLogs = async (instituteId: string, limitCount: number = 50): Promise<AccessLog[]> => {
-    const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
+    const logsCol = collectionGroup(db, 'accessLogs');
     const q = query(logsCol, orderBy('timestamp', 'desc'), limit(limitCount));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
@@ -1268,15 +1277,20 @@ export const listenToAccessLogs = (
     callback: (logs: AccessLog[]) => void,
     accessPointId?: string
 ): Unsubscribe => {
-    // Determine the correct collection reference based on whether an accessPointId is provided
-    const logsCollectionGroup = accessPointId 
-        ? collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'accessLogs')
-        : collection(db, 'institutes', instituteId, 'accessLogs'); // Fallback to old structure if needed
-
-    const q = query(logsCollectionGroup, 
-        orderBy('timestamp', 'desc'), 
-        limit(50)
-    );
+    let q;
+    if (accessPointId) {
+        q = query(
+            collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'accessLogs'), 
+            orderBy('timestamp', 'desc'), 
+            limit(50)
+        );
+    } else {
+        q = query(
+            collectionGroup(db, 'accessLogs'), 
+            orderBy('timestamp', 'desc'),
+            limit(50)
+        );
+    }
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const logs: AccessLog[] = [];
@@ -1290,6 +1304,30 @@ export const listenToAccessLogs = (
 
     return unsubscribe;
 };
+
+export const getAccessPointStats = async (
+    instituteId: string,
+    accessPointId: string
+): Promise<{ daily: DailyStats | null; hourly: HourlyStats | null; overall: OverallStats | null }> => {
+    const statsCol = collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'statistics');
+    const today = new Date().toISOString().split('T')[0];
+
+    const dailyRef = doc(statsCol, `daily_${today}`);
+    const hourlyRef = doc(statsCol, 'hourly_summary');
+    const overallRef = doc(statsCol, 'overall');
+    
+    const [dailySnap, hourlySnap, overallSnap] = await Promise.all([
+        getDoc(dailyRef),
+        getDoc(hourlyRef),
+        getDoc(overallRef)
+    ]);
+    
+    return {
+        daily: dailySnap.exists() ? dailySnap.data() as DailyStats : null,
+        hourly: hourlySnap.exists() ? hourlySnap.data() as HourlyStats : null,
+        overall: overallSnap.exists() ? overallSnap.data() as OverallStats : null,
+    };
+};
     
 
     
@@ -1297,3 +1335,6 @@ export const listenToAccessLogs = (
 
 
 
+
+
+    
