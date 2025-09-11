@@ -71,9 +71,34 @@ export interface AccessLog {
     status: 'Permitido' | 'Denegado';
     userDocumentId?: string;
     userName?: string;
-    userRole?: string;
+    userRole?: string; // Human-readable role name, e.g., "Docente"
+    userRoleId?: string; // ID of the role, e.g., "teacher"
     accessPointId: string;
     accessPointName?: string;
+}
+
+// --- NEW STATISTICS TYPES ---
+export interface DailyStats {
+    id: string; // YYYY-MM-DD
+    total: number;
+    permitted: number;
+    denied: number;
+    byRole: Record<string, number>; // { "teacher": 50, "student": 100 }
+    byHour: Record<string, number>; // { "0": 0, ..., "8": 25, "9": 60, ... }
+}
+
+export interface HourlyStats {
+    id: 'summary';
+    byHour: Record<string, number>; // Lifetime average accesses per hour
+}
+
+export interface OverallStats {
+    id: 'summary';
+    total: number;
+    permitted: number;
+    denied: number;
+    firstAccess: Timestamp | null;
+    lastAccess: Timestamp | null;
 }
 
 

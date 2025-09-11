@@ -103,9 +103,24 @@
           "order": "DESCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "accessLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "accessPointId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []
 }
+
 
 

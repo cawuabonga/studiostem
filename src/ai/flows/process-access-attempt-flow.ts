@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for processing access attempts from RFID readers.
@@ -45,7 +46,8 @@ export const processAccessAttemptFlow = ai.defineFlow(
   },
   async ({ accessPointId, rfidCardId }) => {
     let userProfile: any = null;
-    let userRole = '';
+    let userRoleId = '';
+    let userRoleName = '';
     let userName = '';
     let userDocumentId = '';
     let instituteId = '';
@@ -90,7 +92,8 @@ export const processAccessAttemptFlow = ai.defineFlow(
             status,
             userDocumentId: userDocumentId || 'Desconocido',
             userName: userName || 'Tarjeta no registrada',
-            userRole: userRole || 'Desconocido',
+            userRole: userRoleName || 'Desconocido',
+            userRoleId: userRoleId || 'Desconocido',
             accessPointId,
             accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
             rfidCardId
@@ -104,13 +107,17 @@ export const processAccessAttemptFlow = ai.defineFlow(
     
     userDocumentId = userProfile.documentId;
     userName = userProfile.displayName || userProfile.fullName;
-    userRole = userProfile.roleId;
+    userRoleId = userProfile.roleId;
 
     if (!instituteId) {
         // This case should theoretically not be reached if userProfile is found
         await logAccess('Denegado');
         return { status: 'error', message: 'Could not determine institute for the user.', action: 'deny' };
     }
+    
+    const allRoles = await getRoles(instituteId);
+    const userRole = allRoles.find(r => r.id === userRoleId);
+    userRoleName = userRole?.name || userProfile.role; // Fallback to legacy role
 
     const allAccessPoints = await getAccessPoints(instituteId);
     const targetAccessPoint = allAccessPoints.find(p => p.accessPointId === accessPointId);
@@ -120,7 +127,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
         return { status: 'error', message: `Access point '${accessPointId}' not found.`, action: 'deny' };
     }
 
-    const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRole);
+    const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRoleId);
 
     if (hasPermission) {
         await logAccess('Permitido');

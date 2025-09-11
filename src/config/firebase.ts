@@ -2,7 +2,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint } from '@/types';
 
@@ -1256,19 +1256,33 @@ export const deleteAccessPoint = async (instituteId: string, docId: string): Pro
 };
 
 
-export const getAccessLogs = async (instituteId: string, limit: number = 50): Promise<AccessLog[]> => {
+export const getAccessLogs = async (instituteId: string, limitCount: number = 50): Promise<AccessLog[]> => {
     const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
-    const q = query(logsCol, orderBy('timestamp', 'desc'));
+    const q = query(logsCol, orderBy('timestamp', 'desc'), limit(limitCount));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
 };
 
 export const listenToAccessLogs = (
     instituteId: string,
-    callback: (logs: AccessLog[]) => void
+    callback: (logs: AccessLog[]) => void,
+    accessPointId?: string
 ): Unsubscribe => {
     const logsCol = getSubCollectionRef(instituteId, 'accessLogs');
-    const q = query(logsCol, orderBy('timestamp', 'desc'), where('timestamp', '!=', null));
+    let q;
+
+    if (accessPointId) {
+        q = query(logsCol, 
+            where('accessPointId', '==', accessPointId),
+            orderBy('timestamp', 'desc'),
+            limit(50)
+        );
+    } else {
+        q = query(logsCol, 
+            orderBy('timestamp', 'desc'), 
+            limit(50)
+        );
+    }
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const logs: AccessLog[] = [];
@@ -1278,7 +1292,6 @@ export const listenToAccessLogs = (
         callback(logs);
     }, (error) => {
         console.error("Error listening to access logs:", error);
-        // You might want to handle the error, e.g., show a toast to the user
     });
 
     return unsubscribe;
@@ -1286,5 +1299,6 @@ export const listenToAccessLogs = (
     
 
     
+
 
 
