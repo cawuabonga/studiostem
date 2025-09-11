@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onFirestoreDocumentCreate } from '@genkit-ai/firebase';
+import { firebase } from '@genkit-ai/firebase';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -16,34 +16,20 @@ export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
     // Correct way to define a Firestore trigger
-    trigger: {
-        connector: 'firebase',
-        options: {
-            // Replaces onFirestoreDocumentCreate()
-            type: 'document',
-            document: '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
-            location: 'us-central1'
-        }
-    }
+    trigger: firebase.onDocument({
+        collection: 'accessLogs',
+        instance: db,
+    })
   },
   async (eventData: any) => {
-    // Extract wildcards from the document path provided by the trigger event
-    const { instituteId, accessPointId, logId } =
-      eventData.eventTrigger.params;
+    // The data is now directly the content of the created document
+    const logData = eventData as AccessLog;
+    const { instituteId, accessPointId, id: logId } = logData;
 
     if (!instituteId || !accessPointId || !logId) {
       console.error('Missing parameters from event trigger.');
       return;
     }
-    
-    // Extract the actual log data from the event payload
-    // The Firestore trigger provides data in a specific format.
-    const fields = eventData.value.fields;
-    const logData: Partial<AccessLog> = {
-        timestamp: fields.timestamp ? new Timestamp((fields.timestamp as any).seconds, (fields.timestamp as any).nanoseconds) : Timestamp.now(),
-        userRole: (fields.userRole as any)?.stringValue || 'Desconocido',
-        status: (fields.status as any)?.stringValue as 'Permitido' | 'Denegado' || 'Denegado',
-    };
 
     if (!logData.timestamp || !logData.status) {
         console.error('Missing required fields (timestamp, status) in log data.');
@@ -61,7 +47,7 @@ export const updateAccessStatsFlow = ai.defineFlow(
 
     const today = format(logData.timestamp.toDate(), 'yyyy-MM-dd');
     const hourOfDay = format(logData.timestamp.toDate(), 'H'); // 0-23
-    const userRole = logData.userRole;
+    const userRole = logData.userRole || 'Desconocido';
 
     const dailyRef = doc(statsCollectionRef, `daily_${today}`);
     const hourlyRef = doc(statsCollectionRef, 'hourly_summary');
