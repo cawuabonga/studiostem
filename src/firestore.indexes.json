@@ -94,24 +94,10 @@
         }
       ]
     },
-     {
-      "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
     {
       "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION",
+      "queryScope": "COLLECTION_GROUP",
       "fields": [
-        {
-          "fieldPath": "accessPointId",
-          "order": "ASCENDING"
-        },
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
@@ -121,6 +107,7 @@
   ],
   "fieldOverrides": []
 }
+
 
 
 
