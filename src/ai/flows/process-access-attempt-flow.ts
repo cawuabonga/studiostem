@@ -32,17 +32,6 @@ export const processAccessAttemptFlow = ai.defineFlow(
     name: 'processAccessAttemptFlow',
     inputSchema: AccessAttemptInputSchema,
     outputSchema: AccessAttemptOutputSchema,
-    auth: (auth, input) => {
-        // IMPORTANT: This is a simple API key authentication for the device.
-        // In a production environment, you should use a more secure method like OAuth or service accounts.
-        const apiKey = process.env.DEVICE_API_KEY;
-        if (!apiKey) {
-            throw new Error('DEVICE_API_KEY is not configured on the server.');
-        }
-        if (auth.authHeader !== `Bearer ${apiKey}`) {
-            throw new Error('Unauthorized');
-        }
-    }
   },
   async ({ accessPointId, rfidCardId }) => {
     let userProfile: any = null;
@@ -157,6 +146,19 @@ export const processAccessAttemptFlow = ai.defineFlow(
     } else {
         await logAccess('Denegado');
         return { status: 'error', message: 'Access denied for this role.', action: 'deny' };
+    }
+  },
+  {
+    auth: (auth, input) => {
+        // IMPORTANT: This is a simple API key authentication for the device.
+        // In a production environment, you should use a more secure method like OAuth or service accounts.
+        const apiKey = process.env.DEVICE_API_KEY;
+        if (!apiKey) {
+            throw new Error('DEVICE_API_KEY is not configured on the server.');
+        }
+        if (auth.authHeader !== `Bearer ${apiKey}`) {
+            throw new Error('Unauthorized');
+        }
     }
   }
 );
