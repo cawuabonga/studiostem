@@ -40,9 +40,9 @@ export const updateAccessStatsFlow = ai.defineFlow(
     // The Firestore trigger provides data in a specific format.
     const fields = eventData.value.fields;
     const logData: Partial<AccessLog> = {
-        timestamp: fields.timestamp ? new Timestamp(fields.timestamp.seconds, fields.timestamp.nanoseconds) : Timestamp.now(),
-        userRole: fields.userRole?.stringValue || 'Desconocido',
-        status: fields.status?.stringValue as 'Permitido' | 'Denegado' || 'Denegado',
+        timestamp: fields.timestamp ? new Timestamp((fields.timestamp as any).seconds, (fields.timestamp as any).nanoseconds) : Timestamp.now(),
+        userRole: (fields.userRole as any)?.stringValue || 'Desconocido',
+        status: (fields.status as any)?.stringValue as 'Permitido' | 'Denegado' || 'Denegado',
     };
 
     if (!logData.timestamp || !logData.status) {
