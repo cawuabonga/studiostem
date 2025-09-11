@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onDocument } from '@genkit-ai/firebase/firestore';
+import { onDocument } from '@genkit-ai/firebase';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -26,15 +26,12 @@ const AccessLogEventSchema = z.object({
   data: z.any(), // We'll cast this to AccessLog inside the flow
 });
 
+// Define the flow without the trigger property
 export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
     inputSchema: AccessLogEventSchema,
     outputSchema: z.void(),
-    trigger: onDocument({
-        collectionGroup: 'accessLogs',
-        eventType: 'create',
-    }),
   },
   async (eventData) => {
     // The data is now directly the content of the created document
@@ -142,3 +139,9 @@ export const updateAccessStatsFlow = ai.defineFlow(
     }
   }
 );
+
+// Attach the trigger to the flow separately
+updateAccessStatsFlow.trigger = onDocument({
+  collectionGroup: 'accessLogs',
+  eventType: 'create',
+});
