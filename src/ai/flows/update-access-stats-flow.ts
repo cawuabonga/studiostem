@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onDocument } from '@genkit-ai/firebase/firestore';
+import { onDocument } from '@genkit-ai/firebase';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -143,6 +143,7 @@ export const updateAccessStatsFlow = ai.defineFlow(
 // Correct way to define a trigger for the flow
 export const updateAccessStatsTrigger = onDocument({
     name: 'updateAccessStatsTrigger',
+    // We listen to the collection group so any log in any access point triggers it
     collection: 'institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
     flow: updateAccessStatsFlow,
 });
