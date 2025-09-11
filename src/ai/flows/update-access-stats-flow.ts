@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onFirestoreDocumentCreate } from '@genkit-ai/firebase/firestore';
+import { onFirestoreDocumentCreate } from '@genkit-ai/firebase';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
