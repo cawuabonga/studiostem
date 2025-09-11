@@ -27,13 +27,12 @@ export function AccessLogTable() {
 
     setLoading(true);
     
-    // Set up the real-time listener
+    // Set up the real-time listener for ALL logs in the institute
     const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
       setLogs(newLogs);
-      if (loading) setLoading(false); // Set loading to false on first data fetch
+      if (loading) setLoading(false);
     });
     
-    // Cleanup function to unsubscribe when the component unmounts
     return () => unsubscribe();
 
   }, [instituteId]);
