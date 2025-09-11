@@ -15,11 +15,16 @@ import { format } from 'date-fns';
 export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
-    // This flow is triggered by a Firestore document creation event.
-    // It will run every time a new document is added to any 'accessLogs' subcollection.
-    trigger: onFirestoreDocumentCreate(
-        '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}'
-    ),
+    // Correct way to define a Firestore trigger
+    trigger: {
+        connector: 'firebase',
+        options: {
+            // Replaces onFirestoreDocumentCreate()
+            type: 'document',
+            document: '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
+            location: 'us-central1'
+        }
+    }
   },
   async (eventData: any) => {
     // Extract wildcards from the document path provided by the trigger event
