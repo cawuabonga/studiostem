@@ -17,14 +17,9 @@ export const updateAccessStatsFlow = ai.defineFlow(
     name: 'updateAccessStatsFlow',
     // This flow is triggered by a Firestore document creation event.
     // It will run every time a new document is added to any 'accessLogs' subcollection.
-    trigger: {
-      source: 'google-firebase-firestore',
-      event: 'document-create',
-      // We listen to any document creation within any accessLogs subcollection
-      // The {instituteId}, {accessPointId}, and {logId} are wildcards.
-      documentPath:
-        '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
-    },
+    trigger: onFirestoreDocumentCreate(
+        '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}'
+    ),
   },
   async (eventData: any) => {
     // Extract wildcards from the document path provided by the trigger event
