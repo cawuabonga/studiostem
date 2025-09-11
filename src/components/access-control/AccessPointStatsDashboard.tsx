@@ -12,6 +12,7 @@ import { BarChart, Clock, ShieldCheck, ShieldOff, Users } from 'lucide-react';
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { format } from 'date-fns';
 
 interface AccessPointStatsDashboardProps {
     accessPointId: string;
@@ -146,7 +147,7 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
                             {logs.length > 0 ? (
                                 logs.map(log => (
                                 <TableRow key={log.id}>
-                                    <TableCell>{log.timestamp ? new Date(log.timestamp.seconds * 1000).toLocaleString() : 'Fecha inválida'}</TableCell>
+                                    <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
                                     <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
                                     <TableCell>{log.userRole || 'N/A'}</TableCell>
                                     <TableCell>
