@@ -7,7 +7,7 @@
 
 import { ai } from '@/ai/genkit';
 import { onFirestoreDocumentCreate } from '@genkit-ai/firebase/firestore';
-import { getFirestore, doc, runTransaction, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
 import { format } from 'date-fns';
@@ -36,21 +36,22 @@ export const updateAccessStatsFlow = ai.defineFlow(
       return;
     }
 
-    const statsCollectionRef = doc(
+    const statsCollectionRef = collection(
       db,
       'institutes',
       instituteId,
       'accessPoints',
-      accessPointId
-    ).collection('statistics');
+      accessPointId,
+      'statistics'
+    );
 
     const today = format(logData.timestamp.toDate(), 'yyyy-MM-dd');
     const hourOfDay = format(logData.timestamp.toDate(), 'H'); // 0-23
     const userRole = logData.userRole || 'Desconocido';
 
-    const dailyRef = statsCollectionRef.doc(`daily_${today}`);
-    const hourlyRef = statsCollectionRef.doc('hourly_summary');
-    const overallRef = statsCollectionRef.doc('overall');
+    const dailyRef = doc(statsCollectionRef, `daily_${today}`);
+    const hourlyRef = doc(statsCollectionRef, 'hourly_summary');
+    const overallRef = doc(statsCollectionRef, 'overall');
 
     try {
       await runTransaction(db, async (transaction) => {
