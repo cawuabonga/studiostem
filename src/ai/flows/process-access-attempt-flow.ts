@@ -32,17 +32,6 @@ export const processAccessAttemptFlow = ai.defineFlow(
     name: 'processAccessAttemptFlow',
     inputSchema: AccessAttemptInputSchema,
     outputSchema: AccessAttemptOutputSchema,
-    auth: (auth, input) => {
-        // IMPORTANT: This is a simple API key authentication for the device.
-        // In a production environment, you should use a more secure method like OAuth or service accounts.
-        const apiKey = process.env.DEVICE_API_KEY;
-        if (!apiKey) {
-            throw new Error('DEVICE_API_KEY is not configured on the server.');
-        }
-        if (auth.authHeader !== `Bearer ${apiKey}`) {
-            throw new Error('Unauthorized');
-        }
-    }
   },
   async ({ accessPointId, rfidCardId }) => {
     let userProfile: any = null;
@@ -83,6 +72,15 @@ export const processAccessAttemptFlow = ai.defineFlow(
         if (!instituteId) {
             console.error("Cannot log access: instituteId not found for the given RFID card.");
             // Log to a general "unknown_rfid" log if needed
+            // For now, we will create a log in a generic location.
+            const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
+             await addDoc(unknownLogCollectionRef, {
+                timestamp: Timestamp.now(),
+                status,
+                rfidCardId,
+                accessPointId,
+                reason: "Institute not found for this RFID card."
+            });
             return;
         }
         
@@ -91,15 +89,11 @@ export const processAccessAttemptFlow = ai.defineFlow(
         
         if (!accessPoint) {
             console.error(`Access point with ID ${accessPointId} not found in institute ${instituteId}. Logging attempt anyway.`);
-            // You might want to log this attempt in a special "unknown_points" collection
-            // We will proceed to log with a generic access point name.
             accessPointDocId = 'unknown_access_points'; // Log to a generic document
         } else {
             accessPointDocId = accessPoint.id; // Store the document ID
         }
 
-        // Ensure we have a valid accessPointDocId to proceed.
-        // It will be 'unknown_access_points' if not found, or the actual ID if found.
         const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
 
         await addDoc(logCollectionRef, {
@@ -152,6 +146,19 @@ export const processAccessAttemptFlow = ai.defineFlow(
     } else {
         await logAccess('Denegado');
         return { status: 'error', message: 'Access denied for this role.', action: 'deny' };
+    }
+  },
+  {
+    auth: (auth, input) => {
+        // IMPORTANT: This is a simple API key authentication for the device.
+        // In a production environment, you should use a more secure method like OAuth or service accounts.
+        const apiKey = process.env.DEVICE_API_KEY;
+        if (!apiKey) {
+            throw new Error('DEVICE_API_KEY is not configured on the server.');
+        }
+        if (auth.authHeader !== `Bearer ${apiKey}`) {
+            throw new Error('Unauthorized');
+        }
     }
   }
 );
