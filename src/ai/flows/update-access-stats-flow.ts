@@ -15,7 +15,6 @@ import { format } from 'date-fns';
 export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
-    // Correct way to define a Firestore trigger for a collection group
     trigger: onDocument({
         collection: 'accessLogs',
         instance: db,
