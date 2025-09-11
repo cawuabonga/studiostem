@@ -31,6 +31,10 @@ export const updateAccessStatsFlow = ai.defineFlow(
     name: 'updateAccessStatsFlow',
     inputSchema: AccessLogEventSchema,
     outputSchema: z.void(),
+    trigger: onDocument({
+        collectionGroup: 'accessLogs',
+        eventType: 'create',
+    }),
   },
   async (eventData) => {
     // The data is now directly the content of the created document
