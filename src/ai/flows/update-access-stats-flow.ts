@@ -140,8 +140,10 @@ export const updateAccessStatsFlow = ai.defineFlow(
   }
 );
 
-// Attach the trigger to the flow separately
-updateAccessStatsFlow.trigger = onDocument({
-  collectionGroup: 'accessLogs',
-  eventType: 'create',
+// Correct way to define a trigger for the flow
+export const updateAccessStatsTrigger = onDocument({
+    name: 'updateAccessStatsTrigger',
+    collection: 'accessLogs',
+    collectionGroup: true,
+    flow: updateAccessStatsFlow,
 });
