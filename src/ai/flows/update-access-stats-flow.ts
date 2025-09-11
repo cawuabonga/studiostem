@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-// import { onFirestoreDocumentCreate } from '@genkit-ai/firebase/firestore';
+import { onFirestoreDocumentCreate } from '@genkit-ai/firebase/firestore';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -17,7 +17,6 @@ export const updateAccessStatsFlow = ai.defineFlow(
     name: 'updateAccessStatsFlow',
     // This flow is triggered by a Firestore document creation event.
     // It will run every time a new document is added to any 'accessLogs' subcollection.
-    /*
     trigger: {
       source: 'google-firebase-firestore',
       event: 'document-create',
@@ -26,7 +25,6 @@ export const updateAccessStatsFlow = ai.defineFlow(
       documentPath:
         '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
     },
-    */
   },
   async (eventData: any) => {
     // Extract wildcards from the document path provided by the trigger event
