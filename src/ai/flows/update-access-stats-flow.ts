@@ -6,30 +6,46 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { onDocument } from '@genkit-ai/firebase/firestore';
+import { onDocument } from '@genkit-ai/firebase';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
+import { z } from 'zod';
 import { format } from 'date-fns';
+
+// Define the schema for the data that the trigger will pass to the flow.
+// It includes the document data and the path parameters.
+const AccessLogEventSchema = z.object({
+  path: z.object({
+    params: z.object({
+      instituteId: z.string(),
+      accessPointId: z.string(),
+      logId: z.string(),
+    }),
+  }),
+  data: z.any(), // We'll cast this to AccessLog inside the flow
+});
 
 export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
+    inputSchema: AccessLogEventSchema,
+    outputSchema: z.void(),
     trigger: onDocument({
-        collection: 'accessLogs',
-        instance: db,
+      collection: 'accessLogs',
+      instance: db,
     })
   },
-  async (eventData: any) => {
+  async (eventData) => {
     // The data is now directly the content of the created document
-    const logData = eventData as AccessLog;
+    const logData = eventData.data as AccessLog;
     
     if (!logData.timestamp || !logData.status) {
         console.error('Missing required fields (timestamp, status) in log data.');
         return;
     }
 
-    const { instituteId, accessPointId, id: logId } = logData.path.params;
+    const { instituteId, accessPointId, logId } = eventData.path.params;
 
     if (!instituteId || !accessPointId || !logId) {
       console.error('Missing parameters from event trigger path.');
