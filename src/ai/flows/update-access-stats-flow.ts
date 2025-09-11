@@ -6,7 +6,7 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { firebase } from '@genkit-ai/firebase';
+import { onDocument } from '@genkit-ai/firebase/firestore';
 import { getFirestore, doc, runTransaction, Timestamp, collection } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import type { AccessLog, DailyStats, HourlyStats, OverallStats } from '@/types';
@@ -16,8 +16,8 @@ export const updateAccessStatsFlow = ai.defineFlow(
   {
     name: 'updateAccessStatsFlow',
     // Correct way to define a Firestore trigger for a collection group
-    trigger: firebase.onDocument({
-        collectionGroup: 'accessLogs',
+    trigger: onDocument({
+        collection: 'accessLogs',
         instance: db,
     })
   },
