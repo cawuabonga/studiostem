@@ -99,6 +99,10 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
         }
@@ -107,6 +111,7 @@
   ],
   "fieldOverrides": []
 }
+
 
 
 

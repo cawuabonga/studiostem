@@ -1280,8 +1280,9 @@ export const listenToAccessLogs = (
     let q;
     if (accessPointId) {
         // Specific listener for one access point
+        const accessPointDocRef = doc(db, 'institutes', instituteId, 'accessPoints', accessPointId);
         q = query(
-            collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'accessLogs'), 
+            collection(accessPointDocRef, 'accessLogs'), 
             orderBy('timestamp', 'desc'), 
             limit(50)
         );
@@ -1289,10 +1290,7 @@ export const listenToAccessLogs = (
         // Global listener for all access points in the institute
         q = query(
             collectionGroup(db, 'accessLogs'),
-            // Note: A collection group query requires a composite index on the fields used for filtering and ordering.
-            // For this to work, we need to add an `instituteId` field to each log document.
-            // Let's assume we'll add this field in the `processAccessAttemptFlow`.
-            // where('instituteId', '==', instituteId), // This line is required for security rules and performance.
+            where('instituteId', '==', instituteId),
             orderBy('timestamp', 'desc'),
             limit(50)
         );
@@ -1303,8 +1301,6 @@ export const listenToAccessLogs = (
         querySnapshot.forEach((doc) => {
             logs.push({ id: doc.id, ...doc.data() } as AccessLog);
         });
-        // This is a temporary fix as we cannot filter by instituteId on collectionGroup without adding it to the doc.
-        // The proper fix is to add instituteId to each log.
         callback(logs);
     }, (error) => {
         console.error("Error listening to access logs:", error);
@@ -1346,3 +1342,4 @@ export const getAccessPointStats = async (
 
 
     
+
