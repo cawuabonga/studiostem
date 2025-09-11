@@ -26,14 +26,28 @@ export const updateAccessStatsFlow = ai.defineFlow(
         '/institutes/{instituteId}/accessPoints/{accessPointId}/accessLogs/{logId}',
     },
   },
-  async (logData: AccessLog) => {
+  async (eventData) => {
     // Extract wildcards from the document path provided by the trigger event
     const { instituteId, accessPointId, logId } =
-      logData.eventTrigger.params;
+      eventData.eventTrigger.params;
 
     if (!instituteId || !accessPointId || !logId) {
       console.error('Missing parameters from event trigger.');
       return;
+    }
+    
+    // Extract the actual log data from the event payload
+    // The Firestore trigger provides data in a specific format.
+    const fields = eventData.value.fields;
+    const logData: Partial<AccessLog> = {
+        timestamp: fields.timestamp ? new Timestamp(fields.timestamp.seconds, fields.timestamp.nanoseconds) : Timestamp.now(),
+        userRole: fields.userRole?.stringValue || 'Desconocido',
+        status: fields.status?.stringValue as 'Permitido' | 'Denegado' || 'Denegado',
+    };
+
+    if (!logData.timestamp || !logData.status) {
+        console.error('Missing required fields (timestamp, status) in log data.');
+        return;
     }
 
     const statsCollectionRef = collection(
@@ -47,7 +61,7 @@ export const updateAccessStatsFlow = ai.defineFlow(
 
     const today = format(logData.timestamp.toDate(), 'yyyy-MM-dd');
     const hourOfDay = format(logData.timestamp.toDate(), 'H'); // 0-23
-    const userRole = logData.userRole || 'Desconocido';
+    const userRole = logData.userRole;
 
     const dailyRef = doc(statsCollectionRef, `daily_${today}`);
     const hourlyRef = doc(statsCollectionRef, 'hourly_summary');
@@ -110,9 +124,9 @@ export const updateAccessStatsFlow = ai.defineFlow(
           overallStats.denied += 1;
         }
         if (!overallStats.firstAccess) {
-          overallStats.firstAccess = logData.timestamp;
+          overallStats.firstAccess = logData.timestamp!;
         }
-        overallStats.lastAccess = logData.timestamp;
+        overallStats.lastAccess = logData.timestamp!;
         
         // 6. Write all updates back to Firestore in the transaction
         transaction.set(dailyRef, dailyStats);
