@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms } from '@/config/firebase';
-import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit } from '@/types';
+import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms, getAccessLogsForUser } from '@/config/firebase';
+import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit, AccessLog } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { ProfileAccessLogs } from '@/components/profile/ProfileAccessLogs';
 
 
 interface ProfileData {
@@ -98,6 +99,7 @@ const StudentProfileView = ({ profile, instituteName, programName }: { profile: 
 
 export default function PublicProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -135,14 +137,15 @@ export default function PublicProfilePage() {
       try {
         const institutes = await getInstitutes();
         let foundProfile: ProfileData | null = null;
+        let foundInstituteId: string | null = null;
 
         for (const institute of institutes) {
           const staffProfile = await getStaffProfileByDocumentId(institute.id, id);
           if (staffProfile) {
+            foundInstituteId = institute.id;
             const programs = await getPrograms(institute.id);
             const program = programs.find(p => p.id === staffProfile.programId);
             
-            // Fetch assigned units for the staff
             const allUnits = await getUnits(institute.id);
             const currentYear = new Date().getFullYear().toString();
             const assignments = await getAssignments(institute.id, currentYear, staffProfile.programId);
@@ -158,12 +161,12 @@ export default function PublicProfilePage() {
               programName: program?.name || 'N/A',
               assignedUnits: assignedUnits,
             };
-            await setInstitute(institute.id);
             break;
           }
 
           const studentProfile = await getStudentProfile(institute.id, id);
           if (studentProfile) {
+            foundInstituteId = institute.id;
             const programs = await getPrograms(institute.id);
             const program = programs.find(p => p.id === studentProfile.programId);
             foundProfile = {
@@ -172,13 +175,16 @@ export default function PublicProfilePage() {
               instituteName: institute.name,
               programName: program?.name || 'N/A',
             };
-            await setInstitute(institute.id);
             break;
           }
         }
 
-        if (foundProfile) {
+        if (foundProfile && foundInstituteId) {
           setProfileData(foundProfile);
+          await setInstitute(foundInstituteId);
+          // Fetch access logs after finding the profile
+          const logs = await getAccessLogsForUser(foundInstituteId, id);
+          setAccessLogs(logs);
         } else {
           setError("Perfil no encontrado.");
         }
@@ -238,6 +244,9 @@ export default function PublicProfilePage() {
                  {type === 'student' && instituteId && <StudentProfileView profile={profile as StudentProfile} instituteName={instituteName} programName={programName} />}
 
             </div>
+            
+            <ProfileAccessLogs logs={accessLogs} loading={loading} />
+
         </div>
     </div>
   );
