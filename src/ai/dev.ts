@@ -8,4 +8,3 @@ import 'dotenv/config';
 import './flows/generate-syllabus-summary-flow';
 import './flows/generate-unit-image-flow';
 import './flows/process-access-attempt-flow';
-import './flows/update-access-stats-flow';
