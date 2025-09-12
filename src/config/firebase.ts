@@ -1272,6 +1272,20 @@ export const getAccessLogs = async (instituteId: string, limitCount: number = 50
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
 };
 
+export const getAccessLogsForUser = async (instituteId: string, userDocumentId: string, limitCount: number = 20): Promise<AccessLog[]> => {
+    const logsCol = collectionGroup(db, 'accessLogs');
+    const q = query(
+        logsCol,
+        where('instituteId', '==', instituteId),
+        where('userDocumentId', '==', userDocumentId),
+        orderBy('timestamp', 'desc'),
+        limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
+};
+
+
 export const listenToAccessLogs = (
     instituteId: string,
     callback: (logs: AccessLog[]) => void,
@@ -1342,4 +1356,5 @@ export const getAccessPointStats = async (
 
 
     
+
 
