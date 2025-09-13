@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { processAccessAttemptFlow } from "@/ai/flows/process-access-attempt-flow";
-import { listenToAccessLogs } from "@/config/firebase";
+import { listenToAllAccessLogs } from "@/config/firebase";
 import type { AccessLog } from "@/types";
 
 function AccessSimulationForm() {
@@ -113,7 +113,7 @@ export default function ControlDeAccesoPage() {
 
     setLogsLoading(true);
     
-    const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
+    const unsubscribe = listenToAllAccessLogs(instituteId, (newLogs) => {
       setLogs(newLogs);
       if (logsLoading) setLogsLoading(false);
     });

@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AccessLog } from "@/types";
-import { listenToAccessLogs } from "@/config/firebase";
+import { listenToAccessLogsForUser } from "@/config/firebase";
 import { ProfileAccessLogs } from "@/components/profile/ProfileAccessLogs";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,18 +20,17 @@ export default function MyAccessHistoryPage() {
     }
 
     setLoading(true);
-    const unsubscribe = listenToAccessLogs(
+    const unsubscribe = listenToAccessLogsForUser(
       instituteId,
+      user.documentId,
       (newLogs) => {
         setLogs(newLogs);
         if (loading) setLoading(false);
-      },
-      undefined, // No specific access point
-      user.documentId // Filter by user
+      }
     );
 
     return () => unsubscribe();
-  }, [user, instituteId]);
+  }, [user?.documentId, instituteId]);
 
   return (
     <div className="space-y-6">

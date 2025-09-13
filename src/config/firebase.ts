@@ -1264,54 +1264,57 @@ export const deleteAccessPoint = async (instituteId: string, docId: string): Pro
     await deleteDoc(accessPointRef);
 };
 
+export const listenToAllAccessLogs = (
+    instituteId: string,
+    callback: (logs: AccessLog[]) => void
+): Unsubscribe => {
+    const logsCollection = collectionGroup(db, 'accessLogs');
+    const q = query(logsCollection, where('instituteId', '==', instituteId), orderBy('timestamp', 'desc'), limit(50));
+    
+    return onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
+        callback(logs);
+    }, (error) => {
+        console.error("Error listening to all access logs:", error);
+    });
+};
 
-export const getAccessLogsForUser = async (instituteId: string, userDocumentId: string, limitCount: number = 20): Promise<AccessLog[]> => {
-    const logsCol = collectionGroup(db, 'accessLogs');
+export const listenToAccessLogsForPoint = (
+    instituteId: string,
+    accessPointDocId: string,
+    callback: (logs: AccessLog[]) => void
+): Unsubscribe => {
+    const logsCollection = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+    const q = query(logsCollection, orderBy('timestamp', 'desc'), limit(50));
+    
+    return onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
+        callback(logs);
+    }, (error) => {
+        console.error(`Error listening to logs for access point ${accessPointDocId}:`, error);
+    });
+};
+
+export const listenToAccessLogsForUser = (
+    instituteId: string,
+    userDocumentId: string,
+    callback: (logs: AccessLog[]) => void
+): Unsubscribe => {
+    const logsCollection = collectionGroup(db, 'accessLogs');
     const q = query(
-        logsCol,
+        logsCollection,
         where('instituteId', '==', instituteId),
         where('userDocumentId', '==', userDocumentId),
         orderBy('timestamp', 'desc'),
-        limit(limitCount)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
-};
-
-
-export const listenToAccessLogs = (
-    instituteId: string,
-    callback: (logs: AccessLog[]) => void,
-    accessPointId?: string, // This parameter is now unused but kept for compatibility
-    userDocumentId?: string
-): Unsubscribe => {
-    const logsCollection = collectionGroup(db, 'accessLogs');
-    
-    // Base constraints
-    const constraints = [
-        where('instituteId', '==', instituteId),
-        orderBy('timestamp', 'desc'),
         limit(50)
-    ];
-
-    // Add user filter if provided
-    if (userDocumentId) {
-        constraints.push(where('userDocumentId', '==', userDocumentId));
-    }
+    );
     
-    const q = query(logsCollection, ...constraints);
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const logs: AccessLog[] = [];
-        querySnapshot.forEach((doc) => {
-            logs.push({ id: doc.id, ...doc.data() } as AccessLog);
-        });
+    return onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
         callback(logs);
     }, (error) => {
-        console.error("Error listening to access logs:", error);
+        console.error(`Error listening to logs for user ${userDocumentId}:`, error);
     });
-
-    return unsubscribe;
 };
 
 export const getAccessPointStats = async (
@@ -1347,6 +1350,7 @@ export const getAccessPointStats = async (
 
 
     
+
 
 
 

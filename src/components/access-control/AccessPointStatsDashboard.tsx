@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { DailyStats, HourlyStats, OverallStats, AccessPoint, AccessLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAccessPointStats, getAccessPoint, listenToAccessLogs } from '@/config/firebase';
+import { getAccessPointStats, getAccessPoint, listenToAccessLogsForPoint } from '@/config/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart as BarChartIcon, Clock, ShieldCheck, ShieldOff, Users } from 'lucide-react';
@@ -39,6 +39,7 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
     const [accessPoint, setAccessPoint] = useState<AccessPoint | null>(null);
     const [logs, setLogs] = useState<AccessLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [logsLoading, setLogsLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -59,13 +60,13 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
     useEffect(() => {
         fetchData();
 
-        // Setup real-time listener for logs for this specific point
-        const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
+        const unsubscribe = listenToAccessLogsForPoint(instituteId, accessPointId, (newLogs) => {
             setLogs(newLogs);
-        }, accessPointId);
+            if(logsLoading) setLogsLoading(false);
+        });
 
         return () => unsubscribe();
-    }, [fetchData, instituteId, accessPointId]);
+    }, [fetchData, instituteId, accessPointId, logsLoading]);
 
     const hourlyChartData = React.useMemo(() => {
         if (!stats.hourly) return [];
@@ -132,41 +133,42 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
                     <CardDescription>Últimos 50 eventos registrados para este punto de acceso.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     {/* The AccessLogTable component needs to be adapted or passed logs */}
-                     <div className="rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Fecha y Hora</TableHead>
-                                    <TableHead>Usuario</TableHead>
-                                    <TableHead>Rol</TableHead>
-                                    <TableHead>Estado</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                            {logs.length > 0 ? (
-                                logs.map(log => (
-                                <TableRow key={log.id}>
-                                    <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
-                                    <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
-                                    <TableCell>{log.userRole || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={log.status === 'Permitido' ? 'default' : 'destructive'}>
-                                            {log.status}
-                                        </Badge>
+                     {logsLoading ? <Skeleton className="h-48 w-full"/> : (
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Fecha y Hora</TableHead>
+                                        <TableHead>Usuario</TableHead>
+                                        <TableHead>Rol</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {logs.length > 0 ? (
+                                    logs.map(log => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
+                                        <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
+                                        <TableCell>{log.userRole || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={log.status === 'Permitido' ? 'default' : 'destructive'}>
+                                                {log.status}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        Aún no hay registros de acceso para este punto.
                                     </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                    Aún no hay registros de acceso para este punto.
-                                </TableCell>
-                                </TableRow>
-                            )}
-                            </TableBody>
-                        </Table>
-                    </div>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                     )}
                 </CardContent>
             </Card>
         </div>

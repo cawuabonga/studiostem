@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms, getAccessLogsForUser } from '@/config/firebase';
+import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms, listenToAccessLogsForUser } from '@/config/firebase';
 import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit, AccessLog } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -101,6 +101,7 @@ export default function PublicProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLogs, setLoadingLogs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -127,13 +128,17 @@ export default function PublicProfilePage() {
   };
 
   useEffect(() => {
+    let unsubscribe: () => void = () => {};
     const fetchProfile = async () => {
       if (!id) {
         setError("No se ha especificado un perfil.");
         setLoading(false);
+        setLoadingLogs(false);
         return;
       }
 
+      setLoading(true);
+      setLoadingLogs(true);
       try {
         const institutes = await getInstitutes();
         let foundProfile: ProfileData | null = null;
@@ -182,22 +187,27 @@ export default function PublicProfilePage() {
         if (foundProfile && foundInstituteId) {
           setProfileData(foundProfile);
           await setInstitute(foundInstituteId);
-          // Fetch access logs after finding the profile
-          const logs = await getAccessLogsForUser(foundInstituteId, id);
-          setAccessLogs(logs);
+          
+          unsubscribe = listenToAccessLogsForUser(foundInstituteId, id, (newLogs) => {
+              setAccessLogs(newLogs);
+              if(loadingLogs) setLoadingLogs(false);
+          });
         } else {
           setError("Perfil no encontrado.");
+          setLoadingLogs(false);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
         setError("Ocurrió un error al cargar el perfil.");
+        setLoadingLogs(false);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [id, setInstitute]);
+    return () => unsubscribe();
+  }, [id, setInstitute, loadingLogs]);
 
   if (loading) {
     return <LoadingState />;
@@ -245,7 +255,7 @@ export default function PublicProfilePage() {
 
             </div>
             
-            <ProfileAccessLogs logs={accessLogs} loading={loading} />
+            <ProfileAccessLogs logs={accessLogs} loading={loadingLogs} />
 
         </div>
     </div>
