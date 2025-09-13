@@ -2,19 +2,17 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms, listenToAccessLogsForUser } from '@/config/firebase';
-import type { StaffProfile, StudentProfile, Unit, Program, EnrolledUnit, AccessLog } from '@/types';
+import { getInstitutes, getStaffProfileByDocumentId, getStudentProfile, getUnits, getAssignments, getPrograms } from '@/config/firebase';
+import type { StaffProfile, StudentProfile, Unit, Program } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { Building, BookOpen, Briefcase, GraduationCap, Share2 } from 'lucide-react';
 import { CareerProgressTimeline } from '@/components/student/CareerProgressTimeline';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { ProfileAccessLogs } from '@/components/profile/ProfileAccessLogs';
 
 
 interface ProfileData {
@@ -99,9 +97,7 @@ const StudentProfileView = ({ profile, instituteName, programName }: { profile: 
 
 export default function PublicProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
-  const [accessLogs, setAccessLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingLogs, setLoadingLogs] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
@@ -128,17 +124,14 @@ export default function PublicProfilePage() {
   };
 
   useEffect(() => {
-    let unsubscribe: () => void = () => {};
     const fetchProfile = async () => {
       if (!id) {
         setError("No se ha especificado un perfil.");
         setLoading(false);
-        setLoadingLogs(false);
         return;
       }
 
       setLoading(true);
-      setLoadingLogs(true);
       try {
         const institutes = await getInstitutes();
         let foundProfile: ProfileData | null = null;
@@ -187,27 +180,19 @@ export default function PublicProfilePage() {
         if (foundProfile && foundInstituteId) {
           setProfileData(foundProfile);
           await setInstitute(foundInstituteId);
-          
-          unsubscribe = listenToAccessLogsForUser(foundInstituteId, id, (newLogs) => {
-              setAccessLogs(newLogs);
-              if(loadingLogs) setLoadingLogs(false);
-          });
         } else {
           setError("Perfil no encontrado.");
-          setLoadingLogs(false);
         }
       } catch (err) {
         console.error("Error fetching profile:", err);
         setError("Ocurrió un error al cargar el perfil.");
-        setLoadingLogs(false);
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-    return () => unsubscribe();
-  }, [id, setInstitute, loadingLogs]);
+  }, [id, setInstitute]);
 
   if (loading) {
     return <LoadingState />;
@@ -254,9 +239,6 @@ export default function PublicProfilePage() {
                  {type === 'student' && instituteId && <StudentProfileView profile={profile as StudentProfile} instituteName={instituteName} programName={programName} />}
 
             </div>
-            
-            <ProfileAccessLogs logs={accessLogs} loading={loadingLogs} />
-
         </div>
     </div>
   );
