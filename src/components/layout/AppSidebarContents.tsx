@@ -120,6 +120,22 @@ export function AppSidebarContents() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
+            {user?.documentId && (
+                 <SidebarMenuItem>
+                    <Link href="/dashboard/mis-accesos" legacyBehavior passHref>
+                        <SidebarMenuButton 
+                        asChild 
+                        isActive={pathname.startsWith('/dashboard/mis-accesos')}
+                        tooltip={{children: 'Mis Accesos', side: 'right', align: 'center'}}
+                        >
+                        <a>
+                            <Fingerprint />
+                            <span>Mis Accesos</span>
+                        </a>
+                        </SidebarMenuButton>
+                    </Link>
+                </SidebarMenuItem>
+            )}
           {accessibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
