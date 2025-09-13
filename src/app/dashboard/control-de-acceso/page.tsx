@@ -94,16 +94,16 @@ function AccessSimulationForm() {
 
 
 export default function ControlDeAccesoPage() {
-  const { hasPermission, loading, instituteId } = useAuth();
+  const { hasPermission, loading: authLoading, instituteId } = useAuth();
   const router = useRouter();
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
 
   useEffect(() => {
-    if (!loading && !hasPermission('admin:access-control:manage')) {
+    if (!authLoading && !hasPermission('admin:access-control:manage')) {
       router.push('/dashboard');
     }
-  }, [loading, hasPermission, router]);
+  }, [authLoading, hasPermission, router]);
 
   useEffect(() => {
     if (!instituteId) {
@@ -121,7 +121,7 @@ export default function ControlDeAccesoPage() {
     return () => unsubscribe();
   }, [instituteId]);
 
-  if (loading || !hasPermission('admin:access-control:manage')) {
+  if (authLoading || !hasPermission('admin:access-control:manage')) {
     return <p>Cargando o no autorizado...</p>
   }
 

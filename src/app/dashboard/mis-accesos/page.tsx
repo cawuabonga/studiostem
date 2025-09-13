@@ -31,7 +31,7 @@ export default function MyAccessHistoryPage() {
     );
 
     return () => unsubscribe();
-  }, [user, instituteId, loading]);
+  }, [user, instituteId]);
 
   return (
     <div className="space-y-6">
