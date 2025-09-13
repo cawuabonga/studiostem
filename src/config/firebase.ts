@@ -1285,9 +1285,8 @@ export const listenToAccessLogs = (
     accessPointId?: string,
     userDocumentId?: string
 ): Unsubscribe => {
-    let q;
     const logsCollection = collectionGroup(db, 'accessLogs');
-
+    
     const constraints = [
         where('instituteId', '==', instituteId),
         orderBy('timestamp', 'desc'),
@@ -1295,13 +1294,10 @@ export const listenToAccessLogs = (
     ];
 
     if (userDocumentId) {
-        constraints.unshift(where('userDocumentId', '==', userDocumentId));
+        constraints.push(where('userDocumentId', '==', userDocumentId));
     }
     
-    // Note: Firestore does not support collectionGroup queries with filters on parent document IDs.
-    // The accessPointId parameter is now unused for collectionGroup, but kept for potential future use with direct subcollection queries.
-    // The instituteId filter works because we are now saving it directly in the log document.
-    q = query(logsCollection, ...constraints);
+    const q = query(logsCollection, ...constraints);
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const logs: AccessLog[] = [];
@@ -1349,6 +1345,7 @@ export const getAccessPointStats = async (
 
 
     
+
 
 
 
