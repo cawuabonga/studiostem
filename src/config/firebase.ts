@@ -1306,7 +1306,7 @@ export const listenToAccessLogsForUser = (
         where('instituteId', '==', instituteId),
         where('userDocumentId', '==', userDocumentId),
         orderBy('timestamp', 'desc'),
-        limit(50)
+        limit(20)
     );
     
     return onSnapshot(q, (snapshot) => {
@@ -1350,6 +1350,7 @@ export const getAccessPointStats = async (
 
 
     
+
 
 
 
