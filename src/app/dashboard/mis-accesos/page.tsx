@@ -19,6 +19,7 @@ export default function MyAccessHistoryPage() {
     }
 
     setLoading(true);
+    // CORRECTED: Now calls the function that filters by user
     const unsubscribe = listenToAccessLogsForUser(
       instituteId,
       user.documentId,
@@ -29,7 +30,7 @@ export default function MyAccessHistoryPage() {
     );
 
     return () => unsubscribe();
-  }, [user?.documentId, instituteId]);
+  }, [user?.documentId, instituteId, loading]);
 
   return (
     <div className="space-y-6">
