@@ -1282,17 +1282,19 @@ export const getAccessLogsForUser = async (instituteId: string, userDocumentId: 
 export const listenToAccessLogs = (
     instituteId: string,
     callback: (logs: AccessLog[]) => void,
-    accessPointId?: string,
+    accessPointId?: string, // This parameter is now unused but kept for compatibility
     userDocumentId?: string
 ): Unsubscribe => {
     const logsCollection = collectionGroup(db, 'accessLogs');
     
+    // Base constraints
     const constraints = [
         where('instituteId', '==', instituteId),
         orderBy('timestamp', 'desc'),
         limit(50)
     ];
 
+    // Add user filter if provided
     if (userDocumentId) {
         constraints.push(where('userDocumentId', '==', userDocumentId));
     }
@@ -1345,6 +1347,7 @@ export const getAccessPointStats = async (
 
 
     
+
 
 
 
