@@ -1,11 +1,8 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import type { AccessLog } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { listenToAccessLogs } from '@/config/firebase';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,29 +10,12 @@ import { format } from 'date-fns';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export function AccessLogTable() {
-  const { instituteId } = useAuth();
-  const { toast } = useToast();
-  const [logs, setLogs] = useState<AccessLog[]>([]);
-  const [loading, setLoading] = useState(true);
+interface AccessLogTableProps {
+  logs: AccessLog[];
+  loading: boolean;
+}
 
-  useEffect(() => {
-    if (!instituteId) {
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    
-    // Set up the real-time listener for ALL logs in the institute
-    const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
-      setLogs(newLogs);
-      if (loading) setLoading(false);
-    });
-    
-    return () => unsubscribe();
-
-  }, [instituteId]);
+export function AccessLogTable({ logs, loading }: AccessLogTableProps) {
   
   if (loading) {
     return (

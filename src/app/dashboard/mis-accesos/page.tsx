@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import type { AccessLog } from "@/types";
-import { getAccessLogsForUser } from "@/config/firebase";
+import { listenToAccessLogs } from "@/config/firebase";
 import { ProfileAccessLogs } from "@/components/profile/ProfileAccessLogs";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -14,24 +14,24 @@ export default function MyAccessHistoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      if (user?.documentId && instituteId) {
-        setLoading(true);
-        try {
-          const userLogs = await getAccessLogsForUser(instituteId, user.documentId, 50); // Fetch up to 50 logs
-          setLogs(userLogs);
-        } catch (error) {
-          console.error("Error fetching user access logs:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
+    if (!user?.documentId || !instituteId) {
+      setLoading(false);
+      return;
+    }
 
-    fetchLogs();
-  }, [user, instituteId]);
+    setLoading(true);
+    const unsubscribe = listenToAccessLogs(
+      instituteId,
+      (newLogs) => {
+        setLogs(newLogs);
+        if (loading) setLoading(false);
+      },
+      undefined, // No specific access point
+      user.documentId // Filter by user
+    );
+
+    return () => unsubscribe();
+  }, [user, instituteId, loading]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +39,7 @@ export default function MyAccessHistoryPage() {
         <CardHeader>
           <CardTitle>Mi Historial de Accesos</CardTitle>
           <CardDescription>
-            Aquí puedes ver tus últimos registros de entrada y salida en la institución.
+            Aquí puedes ver tus últimos registros de entrada y salida en la institución, actualizados en tiempo real.
           </CardDescription>
         </CardHeader>
       </Card>

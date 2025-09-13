@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { processAccessAttemptFlow } from "@/ai/flows/process-access-attempt-flow";
+import { listenToAccessLogs } from "@/config/firebase";
+import type { AccessLog } from "@/types";
 
 function AccessSimulationForm() {
   const [accessPointId, setAccessPointId] = useState("PUERTA-01");
@@ -92,14 +94,32 @@ function AccessSimulationForm() {
 
 
 export default function ControlDeAccesoPage() {
-  const { hasPermission, loading } = useAuth();
+  const { hasPermission, loading, instituteId } = useAuth();
   const router = useRouter();
+  const [logs, setLogs] = useState<AccessLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
 
   useEffect(() => {
     if (!loading && !hasPermission('admin:access-control:manage')) {
       router.push('/dashboard');
     }
   }, [loading, hasPermission, router]);
+
+  useEffect(() => {
+    if (!instituteId) {
+      setLogsLoading(false);
+      return;
+    }
+
+    setLogsLoading(true);
+    
+    const unsubscribe = listenToAccessLogs(instituteId, (newLogs) => {
+      setLogs(newLogs);
+      if (logsLoading) setLogsLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [instituteId]);
 
   if (loading || !hasPermission('admin:access-control:manage')) {
     return <p>Cargando o no autorizado...</p>
@@ -133,11 +153,11 @@ export default function ControlDeAccesoPage() {
             <CardTitle className="text-xl">Historial de Eventos</CardTitle>
           </div>
           <CardDescription>
-            Registro de todos los eventos de acceso capturados por los lectores.
+            Registro de todos los eventos de acceso capturados por los lectores en tiempo real.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AccessLogTable />
+          <AccessLogTable logs={logs} loading={logsLoading} />
         </CardContent>
       </Card>
     </div>

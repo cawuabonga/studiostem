@@ -1265,13 +1265,6 @@ export const deleteAccessPoint = async (instituteId: string, docId: string): Pro
 };
 
 
-export const getAccessLogs = async (instituteId: string, limitCount: number = 50): Promise<AccessLog[]> => {
-    const logsCol = collectionGroup(db, 'accessLogs');
-    const q = query(logsCol, orderBy('timestamp', 'desc'), limit(limitCount));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
-};
-
 export const getAccessLogsForUser = async (instituteId: string, userDocumentId: string, limitCount: number = 20): Promise<AccessLog[]> => {
     const logsCol = collectionGroup(db, 'accessLogs');
     const q = query(
@@ -1289,26 +1282,26 @@ export const getAccessLogsForUser = async (instituteId: string, userDocumentId: 
 export const listenToAccessLogs = (
     instituteId: string,
     callback: (logs: AccessLog[]) => void,
-    accessPointId?: string
+    accessPointId?: string,
+    userDocumentId?: string
 ): Unsubscribe => {
     let q;
-    if (accessPointId) {
-        // Specific listener for one access point
-        const accessPointDocRef = doc(db, 'institutes', instituteId, 'accessPoints', accessPointId);
-        q = query(
-            collection(accessPointDocRef, 'accessLogs'), 
-            orderBy('timestamp', 'desc'), 
-            limit(50)
-        );
-    } else {
-        // Global listener for all access points in the institute
-        q = query(
-            collectionGroup(db, 'accessLogs'),
-            where('instituteId', '==', instituteId),
-            orderBy('timestamp', 'desc'),
-            limit(50)
-        );
+    const logsCollection = collectionGroup(db, 'accessLogs');
+
+    const constraints = [
+        where('instituteId', '==', instituteId),
+        orderBy('timestamp', 'desc'),
+        limit(50)
+    ];
+
+    if (userDocumentId) {
+        constraints.unshift(where('userDocumentId', '==', userDocumentId));
     }
+    
+    // Note: Firestore does not support collectionGroup queries with filters on parent document IDs.
+    // The accessPointId parameter is now unused for collectionGroup, but kept for potential future use with direct subcollection queries.
+    // The instituteId filter works because we are now saving it directly in the log document.
+    q = query(logsCollection, ...constraints);
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
         const logs: AccessLog[] = [];
@@ -1356,5 +1349,6 @@ export const getAccessPointStats = async (
 
 
     
+
 
 
