@@ -51,6 +51,8 @@ export function ProfileAccessLogs({ logs, loading }: ProfileAccessLogsProps) {
                         <TableHeader>
                         <TableRow>
                             <TableHead>Fecha y Hora</TableHead>
+                            <TableHead>DNI</TableHead>
+                            <TableHead>Nombre</TableHead>
                             <TableHead>Punto de Acceso</TableHead>
                             <TableHead>Tipo</TableHead>
                             <TableHead>Estado</TableHead>
@@ -61,6 +63,8 @@ export function ProfileAccessLogs({ logs, loading }: ProfileAccessLogsProps) {
                             logs.map(log => (
                             <TableRow key={log.id}>
                                 <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
+                                <TableCell>{log.userDocumentId || 'N/A'}</TableCell>
+                                <TableCell>{log.userName || 'N/A'}</TableCell>
                                 <TableCell>{log.accessPointName || log.accessPointId}</TableCell>
                                 <TableCell>
                                     <Badge variant="outline" className={cn(log.type === 'Entrada' ? "text-green-600" : "text-blue-600")}>
@@ -77,7 +81,7 @@ export function ProfileAccessLogs({ logs, loading }: ProfileAccessLogsProps) {
                             ))
                         ) : (
                             <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
+                            <TableCell colSpan={6} className="h-24 text-center">
                                 No se encontraron registros de acceso.
                             </TableCell>
                             </TableRow>
