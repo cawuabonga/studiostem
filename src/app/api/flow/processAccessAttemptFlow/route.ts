@@ -126,6 +126,9 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
     }
 }
 
+export async function GET() {
+  return NextResponse.json({ message: "Endpoint is active. Use POST for access attempts." });
+}
 
 export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('Authorization');
