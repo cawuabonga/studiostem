@@ -4,13 +4,6 @@
     "site": "stem-v2-4y6a0",
     "rewrites": [
       {
-        "source": "/api/flow/processAccessAttemptFlow",
-        "run": {
-          "serviceId": "stem-v2-4y6a0",
-          "region": "us-central1"
-        }
-      },
-      {
         "source": "**",
         "run": {
           "serviceId": "stem-v2-4y6a0",
