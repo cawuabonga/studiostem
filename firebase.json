@@ -1,4 +1,13 @@
+
 {
+  "hosting": {
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": "next-server"
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
