@@ -1,39 +1,23 @@
 
-'use server';
-/**
- * @fileOverview A Genkit flow for processing access attempts from RFID readers.
- * This function is designed to be called via an HTTP request from an ESP32 or similar device.
- */
-
-import { ai } from '@/ai/genkit';
+import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getStaffProfileByDocumentId, getStudentProfile, getAccessPoints, getRoles } from '@/config/firebase';
-import { getFirestore, collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/config/firebase';
+import { getStaffProfileByDocumentId, getStudentProfile, getAccessPoints, getRoles, db } from '@/config/firebase';
+import { collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
 
-// Define the input schema for the flow
+
 const AccessAttemptInputSchema = z.object({
   accessPointId: z.string().describe('The unique ID of the access point device making the request.'),
   rfidCardId: z.string().describe('The RFID card ID that was scanned.'),
 });
-export type AccessAttemptInput = z.infer<typeof AccessAttemptInputSchema>;
 
-// Define the output schema for the flow
 const AccessAttemptOutputSchema = z.object({
   status: z.enum(['success', 'error']),
   message: z.string(),
   action: z.enum(['open', 'deny']),
 });
-export type AccessAttemptOutput = z.infer<typeof AccessAttemptOutputSchema>;
 
-// The main flow function
-export const processAccessAttemptFlow = ai.defineFlow(
-  {
-    name: 'processAccessAttemptFlow',
-    inputSchema: AccessAttemptInputSchema,
-    outputSchema: AccessAttemptOutputSchema,
-  },
-  async ({ accessPointId, rfidCardId }) => {
+async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSchema>) {
+    const { accessPointId, rfidCardId } = input;
     let userProfile: any = null;
     let userRoleId = '';
     let userRoleName = '';
@@ -42,9 +26,6 @@ export const processAccessAttemptFlow = ai.defineFlow(
     let instituteId = '';
     let accessPointDocId = ''; // To store the Firestore document ID of the access point
 
-    // Ugly but necessary: search across all institutes for the card ID
-    // In a real-world scenario with many institutes, this would be inefficient.
-    // A better approach would be a top-level collection `rfidMappings` for direct lookups.
     const institutesSnap = await getDocs(collection(db, 'institutes'));
     for (const instituteDoc of institutesSnap.docs) {
         const id = instituteDoc.id;
@@ -67,12 +48,9 @@ export const processAccessAttemptFlow = ai.defineFlow(
         }
     }
     
-    // Log attempt details
     const logAccess = async (status: 'Permitido' | 'Denegado') => {
         if (!instituteId) {
             console.error("Cannot log access: instituteId not found for the given RFID card.");
-            // Log to a general "unknown_rfid" log if needed
-            // For now, we will create a log in a generic location.
             const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
              await addDoc(unknownLogCollectionRef, {
                 timestamp: Timestamp.now(),
@@ -98,7 +76,7 @@ export const processAccessAttemptFlow = ai.defineFlow(
 
         await addDoc(logCollectionRef, {
             timestamp: Timestamp.now(),
-            type: 'Entrada', // Assuming 'Entrada' for now
+            type: 'Entrada',
             status,
             userDocumentId: userDocumentId || 'Desconocido',
             userName: userName || 'Tarjeta no registrada',
@@ -121,14 +99,13 @@ export const processAccessAttemptFlow = ai.defineFlow(
     userRoleId = userProfile.roleId;
 
     if (!instituteId) {
-        // This case should theoretically not be reached if userProfile is found
         await logAccess('Denegado');
         return { status: 'error', message: 'Could not determine institute for the user.', action: 'deny' };
     }
     
     const allRoles = await getRoles(instituteId);
     const userRole = allRoles.find(r => r.id === userRoleId);
-    userRoleName = userRole?.name || userProfile.role; // Fallback to legacy role
+    userRoleName = userRole?.name || userProfile.role;
 
     const allAccessPoints = await getAccessPoints(instituteId);
     const targetAccessPoint = allAccessPoints.find(p => p.accessPointId === accessPointId);
@@ -147,18 +124,35 @@ export const processAccessAttemptFlow = ai.defineFlow(
         await logAccess('Denegado');
         return { status: 'error', message: 'Access denied for this role.', action: 'deny' };
     }
-  },
-  {
-    auth: (auth, input) => {
-        // IMPORTANT: This is a simple API key authentication for the device.
-        // In a production environment, you should use a more secure method like OAuth or service accounts.
-        const apiKey = process.env.DEVICE_API_KEY;
-        if (!apiKey) {
-            throw new Error('DEVICE_API_KEY is not configured on the server.');
-        }
-        if (auth.authHeader !== `Bearer ${apiKey}`) {
-            throw new Error('Unauthorized');
-        }
+}
+
+
+export async function POST(req: NextRequest) {
+    const authHeader = req.headers.get('Authorization');
+    const apiKey = process.env.DEVICE_API_KEY;
+
+    if (!apiKey) {
+        return NextResponse.json({ error: 'DEVICE_API_KEY is not configured on the server.' }, { status: 500 });
     }
-  }
-);
+    if (authHeader !== `Bearer ${apiKey}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+        const body = await req.json();
+        const validatedInput = AccessAttemptInputSchema.safeParse(body);
+
+        if (!validatedInput.success) {
+            return NextResponse.json({ error: 'Invalid input', details: validatedInput.error.format() }, { status: 400 });
+        }
+
+        const result = await processAccessAttempt(validatedInput.data);
+        const validatedOutput = AccessAttemptOutputSchema.parse(result);
+        
+        return NextResponse.json(validatedOutput);
+
+    } catch (error: any) {
+        console.error('[API_ERROR] processAccessAttemptFlow:', error);
+        return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
+    }
+}
