@@ -33,6 +33,7 @@ export function AccessLogTable({ logs, loading }: AccessLogTableProps) {
         <TableHeader>
           <TableRow>
             <TableHead>Fecha y Hora</TableHead>
+            <TableHead>DNI</TableHead>
             <TableHead>Usuario</TableHead>
             <TableHead>Rol</TableHead>
             <TableHead>Punto de Acceso</TableHead>
@@ -45,6 +46,7 @@ export function AccessLogTable({ logs, loading }: AccessLogTableProps) {
             logs.map(log => (
               <TableRow key={log.id}>
                 <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'dd/MM/yyyy HH:mm:ss') : 'Fecha inválida'}</TableCell>
+                <TableCell className="font-mono">{log.userDocumentId || 'N/A'}</TableCell>
                 <TableCell className="font-medium">{log.userName || 'N/A'}</TableCell>
                 <TableCell>{log.userRole || 'N/A'}</TableCell>
                 <TableCell>{log.accessPointName || log.accessPointId}</TableCell>
@@ -63,8 +65,8 @@ export function AccessLogTable({ logs, loading }: AccessLogTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
-                Aún no hay registros de acceso.
+              <TableCell colSpan={7} className="h-24 text-center">
+                Aún no hay registros de acceso que coincidan con los filtros.
               </TableCell>
             </TableRow>
           )}

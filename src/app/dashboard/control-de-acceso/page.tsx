@@ -4,121 +4,25 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { AccessLogTable } from "@/components/access-control/AccessLogTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Settings, History, Send } from "lucide-react";
+import { Settings, History } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
 import { listenToAllAccessLogs } from "@/config/firebase";
 import type { AccessLog } from "@/types";
-
-async function simulateAccess(accessPointId: string, rfidCardId: string) {
-    const response = await fetch('/api/flow/processAccessAttemptFlow', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            // In a real scenario, the API key would be securely handled,
-            // but for simulation from the browser, we omit it or use a session-based approach.
-            // For now, the endpoint is simplified to not require it from the browser.
-            // This assumes the API key is only enforced for external device calls.
-        },
-        body: JSON.stringify({ accessPointId, rfidCardId }),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
-}
-
-
-function AccessSimulationForm() {
-  const [accessPointId, setAccessPointId] = useState("PUERTA-01");
-  const [rfidCardId, setRfidCardId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!accessPointId || !rfidCardId) {
-      toast({
-        title: "Campos incompletos",
-        description: "Por favor, complete ambos campos.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setLoading(true);
-    try {
-      const result = await simulateAccess(accessPointId, rfidCardId);
-      toast({
-        title: `Simulación de Acceso: ${result.status === 'success' ? 'Éxito' : 'Error'}`,
-        description: `${result.message} (Acción: ${result.action})`,
-        variant: result.status === 'success' ? 'default' : 'destructive',
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error en la simulación",
-        description: error.message || "Ocurrió un error al procesar la solicitud.",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Simulador de Acceso RFID</CardTitle>
-        <CardDescription>
-          Esta herramienta permite probar el endpoint de acceso simulando el escaneo de una tarjeta RFID.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="accessPointId">ID Punto de Acceso</Label>
-              <Input
-                id="accessPointId"
-                value={accessPointId}
-                onChange={(e) => setAccessPointId(e.target.value)}
-                placeholder="Ej: PUERTA-01"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rfidCardId">ID Tarjeta RFID</Label>
-              <Input
-                id="rfidCardId"
-                value={rfidCardId}
-                onChange={(e) => setRfidCardId(e.target.value)}
-                placeholder="Escanee o ingrese un ID de tarjeta"
-              />
-            </div>
-          </div>
-          <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Enviar Intento de Acceso
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import type { DateRange } from "react-day-picker";
 
 export default function ControlDeAccesoPage() {
   const { hasPermission, loading: authLoading, instituteId } = useAuth();
   const router = useRouter();
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(true);
+  const [dniSearch, setDniSearch] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
 
   useEffect(() => {
     if (!authLoading && !hasPermission('admin:access-control:manage')) {
@@ -134,13 +38,26 @@ export default function ControlDeAccesoPage() {
 
     setLogsLoading(true);
     
+    // This listener fetches the last 50 logs initially. Filtering is done on the client.
+    // For larger datasets, a more complex querying strategy would be needed.
     const unsubscribe = listenToAllAccessLogs(instituteId, (newLogs) => {
       setLogs(newLogs);
       if (logsLoading) setLogsLoading(false);
     });
     
     return () => unsubscribe();
-  }, [instituteId]);
+  }, [instituteId, logsLoading]);
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const isDniMatch = dniSearch ? log.userDocumentId?.includes(dniSearch) : true;
+      const isDateMatch = dateRange?.from && dateRange?.to
+        ? log.timestamp.toDate() >= dateRange.from && log.timestamp.toDate() <= dateRange.to
+        : true;
+      return isDniMatch && isDateMatch;
+    });
+  }, [logs, dniSearch, dateRange]);
+
 
   if (authLoading || !hasPermission('admin:access-control:manage')) {
     return <p>Cargando o no autorizado...</p>
@@ -149,7 +66,7 @@ export default function ControlDeAccesoPage() {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
                 <CardTitle>Control de Acceso</CardTitle>
                 <CardDescription>
@@ -164,8 +81,6 @@ export default function ControlDeAccesoPage() {
             </Button>
         </CardHeader>
       </Card>
-
-      <AccessSimulationForm />
       
       <Card>
         <CardHeader>
@@ -177,8 +92,27 @@ export default function ControlDeAccesoPage() {
             Registro de todos los eventos de acceso capturados por los lectores en tiempo real.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <AccessLogTable logs={logs} loading={logsLoading} />
+        <CardContent className="space-y-4">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 w-full md:w-auto">
+              <Label htmlFor="dni-search">Buscar por DNI</Label>
+              <Input
+                id="dni-search"
+                placeholder="Ingrese un DNI para filtrar..."
+                value={dniSearch}
+                onChange={(e) => setDniSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 w-full md:w-auto">
+              <Label>Filtrar por Fecha</Label>
+               <DateRangePicker 
+                date={dateRange}
+                onDateChange={setDateRange}
+                className="w-full"
+              />
+            </div>
+          </div>
+          <AccessLogTable logs={filteredLogs} loading={logsLoading} />
         </CardContent>
       </Card>
     </div>
