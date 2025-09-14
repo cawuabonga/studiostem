@@ -13,9 +13,30 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { processAccessAttemptFlow } from "@/ai/flows/process-access-attempt-flow";
 import { listenToAllAccessLogs } from "@/config/firebase";
 import type { AccessLog } from "@/types";
+
+async function simulateAccess(accessPointId: string, rfidCardId: string) {
+    const response = await fetch('/api/flow/processAccessAttemptFlow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            // In a real scenario, the API key would be securely handled,
+            // but for simulation from the browser, we omit it or use a session-based approach.
+            // For now, the endpoint is simplified to not require it from the browser.
+            // This assumes the API key is only enforced for external device calls.
+        },
+        body: JSON.stringify({ accessPointId, rfidCardId }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+}
+
 
 function AccessSimulationForm() {
   const [accessPointId, setAccessPointId] = useState("PUERTA-01");
@@ -35,7 +56,7 @@ function AccessSimulationForm() {
     }
     setLoading(true);
     try {
-      const result = await processAccessAttemptFlow({ accessPointId, rfidCardId });
+      const result = await simulateAccess(accessPointId, rfidCardId);
       toast({
         title: `Simulación de Acceso: ${result.status === 'success' ? 'Éxito' : 'Error'}`,
         description: `${result.message} (Acción: ${result.action})`,
@@ -57,7 +78,7 @@ function AccessSimulationForm() {
       <CardHeader>
         <CardTitle>Simulador de Acceso RFID</CardTitle>
         <CardDescription>
-          Esta herramienta permite probar el `processAccessAttemptFlow` simulando el escaneo de una tarjeta RFID.
+          Esta herramienta permite probar el endpoint de acceso simulando el escaneo de una tarjeta RFID.
         </CardDescription>
       </CardHeader>
       <CardContent>

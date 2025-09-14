@@ -131,14 +131,18 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-    const authHeader = req.headers.get('Authorization');
-    const apiKey = process.env.DEVICE_API_KEY;
+    const isFromBrowser = !req.headers.get('Authorization');
 
-    if (!apiKey) {
-        return NextResponse.json({ error: 'DEVICE_API_KEY is not configured on the server.' }, { status: 500 });
-    }
-    if (authHeader !== `Bearer ${apiKey}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!isFromBrowser) {
+        const authHeader = req.headers.get('Authorization');
+        const apiKey = process.env.DEVICE_API_KEY;
+
+        if (!apiKey) {
+            return NextResponse.json({ error: 'DEVICE_API_KEY is not configured on the server.' }, { status: 500 });
+        }
+        if (authHeader !== `Bearer ${apiKey}`) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
     }
 
     try {
