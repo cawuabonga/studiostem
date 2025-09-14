@@ -42,11 +42,11 @@ export default function ControlDeAccesoPage() {
     // For larger datasets, a more complex querying strategy would be needed.
     const unsubscribe = listenToAllAccessLogs(instituteId, (newLogs) => {
       setLogs(newLogs);
-      if (logsLoading) setLogsLoading(false);
+      setLogsLoading(false);
     });
     
     return () => unsubscribe();
-  }, [instituteId, logsLoading]);
+  }, [instituteId]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
