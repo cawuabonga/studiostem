@@ -28,7 +28,34 @@ El Sistema Tecnológico de Educación Modular (STEM) está construido sobre una 
     *   Los lectores RFID (basados en ESP32) actúan como clientes que consumen la API de Next.js.
     *   Envían peticiones `POST` seguras, autenticadas con una API Key, al endpoint `/api/flow/processAccessAttemptFlow` para validar el acceso.
 
-### Flujo de Datos (Ejemplo: Control de Acceso)
+### Diagrama de Flujo de Datos (Control de Acceso)
+
+```mermaid
+sequenceDiagram
+    participant ESP32 as Lector RFID (ESP32)
+    participant Server as Servidor (Next.js API)
+    participant DB as Base de Datos (Firestore)
+
+    ESP32->>Server: POST /api/.../processAccessAttemptFlow <br> Payload: { rfid, accessPointId } <br> Header: { Authorization: Bearer KEY }
+    activate Server
+
+    Server->>Server: 1. Validar API Key
+    Server->>DB: 2. Consultar RFID y Permisos del Rol
+    activate DB
+    DB-->>Server: Devuelve perfil y permisos
+    deactivate DB
+
+    alt Acceso Permitido
+        Server->>ESP32: 3. Responder { action: "open" }
+        Server->>DB: 4. Registrar Acceso Permitido
+    else Acceso Denegado
+        Server->>ESP32: 3. Responder { action: "deny" }
+        Server->>DB: 4. Registrar Acceso Denegado
+    end
+    deactivate Server
+```
+
+### Flujo de Datos Detallado
 
 1.  Un usuario pasa su tarjeta RFID por el lector ESP32.
 2.  El ESP32 lee el UID de la tarjeta y construye un payload JSON: `{ "accessPointId": "...", "rfidCardId": "..." }`.

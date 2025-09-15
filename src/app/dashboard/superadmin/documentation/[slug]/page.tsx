@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/documentation/MarkdownRenderer';
 
 async function getDocumentContent(slug: string) {
   const docsDirectory = path.join(process.cwd(), 'src/documentation');
@@ -62,10 +63,7 @@ export default async function DocumentationPage({ params }: { params: { slug: st
                 )}
             </CardHeader>
             <CardContent>
-                <article
-                className="prose dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: doc.content.replace(/\n/g, '<br />') }} // Simple markdown to HTML
-                />
+                <MarkdownRenderer content={doc.content} />
             </CardContent>
         </Card>
     </div>

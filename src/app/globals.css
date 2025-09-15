@@ -114,3 +114,6 @@ body {
         transform-origin: top left;
     }
 }
+.prose h1, .prose h2, .prose h3 {
+  color: hsl(var(--card-foreground));
+}
