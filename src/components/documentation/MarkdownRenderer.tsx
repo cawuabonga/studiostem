@@ -10,10 +10,12 @@ interface MarkdownRendererProps {
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
   useEffect(() => {
-    mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
-    // Use mermaid.run() to render all elements with the class 'mermaid'
-    // This is the modern and recommended approach.
-    mermaid.run();
+    try {
+      mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+      mermaid.run();
+    } catch (error) {
+      console.error("Error rendering mermaid diagram:", error);
+    }
   }, [content]);
 
   // A simple way to render markdown-like content as HTML.
