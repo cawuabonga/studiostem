@@ -1,8 +1,8 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getStaffProfileByDocumentId, getStudentProfile, getAccessPoints, getRoles, db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, getDocs, query, where } from 'firebase/firestore';
+import { getAccessPoints, getRoles, db } from '@/config/firebase';
+import { collection, addDoc, Timestamp, getDocs, query, where, doc, runTransaction } from 'firebase/firestore';
 
 
 const AccessAttemptInputSchema = z.object({
@@ -49,11 +49,15 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
     }
     
     const logAccess = async (status: 'Permitido' | 'Denegado') => {
+        const now = Timestamp.now();
+        const currentDate = now.toDate().toISOString().split('T')[0]; // YYYY-MM-DD
+        const currentHour = now.toDate().getHours(); // 0-23
+        
         if (!instituteId) {
             console.error("Cannot log access: instituteId not found for the given RFID card.");
             const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
              await addDoc(unknownLogCollectionRef, {
-                timestamp: Timestamp.now(),
+                timestamp: now,
                 status,
                 rfidCardId,
                 accessPointId,
@@ -73,19 +77,80 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         }
 
         const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+        const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
 
-        await addDoc(logCollectionRef, {
-            timestamp: Timestamp.now(),
-            type: 'Entrada',
-            status,
-            userDocumentId: userDocumentId || 'Desconocido',
-            userName: userName || 'Tarjeta no registrada',
-            userRole: userRoleName || 'Desconocido',
-            userRoleId: userRoleId || 'Desconocido',
-            accessPointId,
-            accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
-            rfidCardId,
-            instituteId: instituteId,
+        // Firestore transaction to update logs and statistics atomically
+        await runTransaction(db, async (transaction) => {
+             // 1. Add the new access log entry
+            const logDocRef = doc(logCollectionRef);
+            transaction.set(logDocRef, {
+                timestamp: now,
+                type: 'Entrada', // Assuming 'Entrada' for now
+                status,
+                userDocumentId: userDocumentId || 'Desconocido',
+                userName: userName || 'Tarjeta no registrada',
+                userRole: userRoleName || 'Desconocido',
+                userRoleId: userRoleId || 'Desconocido',
+                accessPointId,
+                accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
+                rfidCardId,
+                instituteId: instituteId,
+            });
+
+             // 2. Update daily statistics
+            const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
+            const dailyStatsDoc = await transaction.get(dailyStatsRef);
+            if (!dailyStatsDoc.exists()) {
+                transaction.set(dailyStatsRef, {
+                    total: 1,
+                    permitted: status === 'Permitido' ? 1 : 0,
+                    denied: status === 'Denegado' ? 1 : 0,
+                    byHour: { [currentHour]: 1 },
+                });
+            } else {
+                const currentData = dailyStatsDoc.data();
+                transaction.update(dailyStatsRef, {
+                    total: (currentData.total || 0) + 1,
+                    permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
+                    denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
+                    [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
+                });
+            }
+
+            // 3. Update hourly summary statistics
+            const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
+            const hourlyStatsDoc = await transaction.get(hourlyStatsRef);
+             if (!hourlyStatsDoc.exists()) {
+                transaction.set(hourlyStatsRef, {
+                    byHour: { [currentHour]: 1 }
+                });
+            } else {
+                const currentData = hourlyStatsDoc.data();
+                transaction.update(hourlyStatsRef, {
+                    [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
+                });
+            }
+
+            // 4. Update overall statistics
+            const overallStatsRef = doc(statsCollectionRef, 'overall');
+            const overallStatsDoc = await transaction.get(overallStatsRef);
+             if (!overallStatsDoc.exists()) {
+                transaction.set(overallStatsRef, {
+                    total: 1,
+                    permitted: status === 'Permitido' ? 1 : 0,
+                    denied: status === 'Denegado' ? 1 : 0,
+                    firstAccess: now,
+                    lastAccess: now
+                });
+            } else {
+                 const currentData = overallStatsDoc.data();
+                transaction.update(overallStatsRef, {
+                    total: (currentData.total || 0) + 1,
+                    permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
+                    denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
+                    lastAccess: now
+                });
+            }
         });
     };
 
@@ -163,3 +228,5 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
     }
 }
+
+    

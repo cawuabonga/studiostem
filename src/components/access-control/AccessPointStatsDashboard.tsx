@@ -175,3 +175,5 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
     )
 
 }
+
+    

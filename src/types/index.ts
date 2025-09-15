@@ -75,6 +75,8 @@ export interface AccessLog {
     userRoleId?: string; // ID of the role, e.g., "teacher"
     accessPointId: string;
     accessPointName?: string;
+    rfidCardId?: string;
+    instituteId?: string;
 }
 
 // --- NEW STATISTICS TYPES ---
@@ -83,13 +85,12 @@ export interface DailyStats {
     total: number;
     permitted: number;
     denied: number;
-    byRole: Record<string, number>; // { "teacher": 50, "student": 100 }
     byHour: Record<string, number>; // { "0": 0, ..., "8": 25, "9": 60, ... }
 }
 
 export interface HourlyStats {
     id: 'summary';
-    byHour: Record<string, number>; // Lifetime average accesses per hour
+    byHour: Record<string, number>; // Lifetime accesses per hour for all days
 }
 
 export interface OverallStats {
@@ -458,3 +459,5 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
+    
