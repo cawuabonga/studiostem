@@ -172,7 +172,7 @@ void sendAccessAttempt(String cardId) {
 
     http.end();
   } else {
-    Serial.println("Error: WiFi no conectado.");
+    Serial.println("Error: WiFi no conectado.");  
     signalAccessDenied(); // No hay conexión, se deniega el acceso.
   }
   

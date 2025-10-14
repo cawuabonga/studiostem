@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
-import type { Unit, Program } from '@/types';
+import type { Unit, Program, ProgramModule, UnitPeriod } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Copy, MoreHorizontal, ImageIcon, Loader2 } from 'lucide-react';
@@ -23,21 +23,31 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Badge } from '../ui/badge';
 
 interface UnitsListProps {
     onDataChange: () => void;
 }
 
 const PAGE_SIZE = 10;
+const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
 export function UnitsList({ onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
-  const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
+  const [programs, setPrograms] = useState<Program[]>([]);
+  const [programMap, setProgramMap] = useState<Map<string, Program>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [filter, setFilter] = useState('');
+  
+  // State for filters
+  const [textFilter, setTextFilter] = useState('');
+  const [programFilter, setProgramFilter] = useState('all');
+  const [moduleFilter, setModuleFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
+
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -50,9 +60,9 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           getUnits(id),
           getPrograms(id)
       ]);
-      const programMap = new Map(fetchedPrograms.map(p => [p.id, p]));
+      setPrograms(fetchedPrograms);
+      setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p])));
       setUnits(fetchedUnits);
-      setPrograms(programMap);
     } catch (error) {
       toast({
         title: "Error",
@@ -108,12 +118,28 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     }
   };
 
+  const availableModules = useMemo(() => {
+      if(programFilter === 'all') return [];
+      const program = programs.find(p => p.id === programFilter);
+      return program?.modules || [];
+  }, [programFilter, programs]);
+
   const filteredUnits = useMemo(() => 
-    units.filter(unit => 
-        unit.name.toLowerCase().includes(filter.toLowerCase()) ||
-        unit.code.toLowerCase().includes(filter.toLowerCase()) ||
-        (programs.get(unit.programId)?.name || '').toLowerCase().includes(filter.toLowerCase())
-    ), [units, filter, programs]);
+    units.filter(unit => {
+        const program = programMap.get(unit.programId);
+        const module = program?.modules.find(m => m.code === unit.moduleId);
+        
+        const matchesProgram = programFilter === 'all' || unit.programId === programFilter;
+        const matchesModule = moduleFilter === 'all' || unit.moduleId === moduleFilter;
+        const matchesPeriod = periodFilter === 'all' || unit.period === periodFilter;
+        const matchesText = textFilter === '' || 
+                            unit.name.toLowerCase().includes(textFilter.toLowerCase()) ||
+                            unit.code.toLowerCase().includes(textFilter.toLowerCase()) ||
+                            (program?.name || '').toLowerCase().includes(textFilter.toLowerCase()) ||
+                            (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
+
+        return matchesProgram && matchesModule && matchesPeriod && matchesText;
+    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -122,11 +148,15 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   }, [filteredUnits, currentPage]);
 
   const totalPages = Math.ceil(filteredUnits.length / PAGE_SIZE);
+  
+  useEffect(() => {
+      setCurrentPage(1);
+  }, [textFilter, programFilter, moduleFilter, periodFilter]);
 
   if (loading) {
     return (
       <div className="space-y-2">
-         <Skeleton className="h-10 w-1/3 mb-2" />
+         <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
@@ -144,16 +174,40 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
 
   return (
     <>
-      <div className="mb-4">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4 flex-wrap">
         <Input 
-          placeholder="Buscar por nombre, código o programa..."
-          value={filter}
-          onChange={(e) => {
-            setFilter(e.target.value);
-            setCurrentPage(1);
-          }}
+          placeholder="Buscar por nombre, código..."
+          value={textFilter}
+          onChange={(e) => setTextFilter(e.target.value)}
           className="max-w-sm"
         />
+        <Select value={programFilter} onValueChange={setProgramFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filtrar por programa..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Programas</SelectItem>
+                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+        </Select>
+        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={programFilter === 'all'}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filtrar por módulo..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Módulos</SelectItem>
+                {availableModules.map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)}
+            </SelectContent>
+        </Select>
+        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as any)}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por período..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Períodos</SelectItem>
+                {periods.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+        </Select>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -161,42 +215,50 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Programa</TableHead>
-              <TableHead>Módulo</TableHead>
+              <TableHead>Semestre</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Turno</TableHead>
-              <TableHead>Total Horas</TableHead>
+              <TableHead>Créditos</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedUnits.map((unit) => {
-                const program = programs.get(unit.programId);
-                const module = program?.modules.find(m => m.code === unit.moduleId);
+                const program = programMap.get(unit.programId);
                 return (
                   <TableRow key={unit.id}>
-                    <TableCell className="font-medium">{unit.name}</TableCell>
-                    <TableCell>{program?.name || 'N/A'}</TableCell>
-                    <TableCell>{module?.code || 'N/A'}</TableCell>
+                    <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
+                    <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>
+                    <TableCell className="text-center">{unit.semester}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
-                    <TableCell>{unit.totalHours}</TableCell>
-                    <TableCell className="text-right space-x-1">
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
-                            {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-                            <span className="sr-only">Generar Imagen</span>
-                        </Button>
-                         <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => handleDuplicate(unit.id)}>
-                            <Copy className="h-4 w-4" />
-                            <span className="sr-only">Duplicar</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                            <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Editar</span>
-                        </Button>
-                        <Button variant="destructive" size="sm" className="h-8 w-8 p-0" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Eliminar</span>
-                        </Button>
+                    <TableCell className="text-center">{unit.credits}</TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                                    <Edit2 className="mr-2 h-4 w-4" /> Editar
+                                </DropdownMenuItem>
+                                 <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                                    {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                                    Regenerar Imagen
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 )
