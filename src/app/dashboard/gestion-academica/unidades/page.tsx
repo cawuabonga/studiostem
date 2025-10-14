@@ -17,18 +17,19 @@ export default function ManageUnitsPage() {
   const router = useRouter();
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const canView = hasPermission('academic:unit:manage') || hasPermission('academic:unit:manage:own');
+
   useEffect(() => {
-    // Check for specific permission instead of role
-    if (!loading && !hasPermission('academic:unit:manage')) {
+    if (!loading && !canView) {
       router.push('/dashboard');
     }
-  }, [user, loading, router, hasPermission]);
+  }, [user, loading, router, canView]);
 
   const handleDataChange = () => {
     setRefreshKey(prevKey => prevKey + 1);
   };
   
-  if (loading || !hasPermission('academic:unit:manage')) {
+  if (loading || !canView) {
       return <p>Cargando o no autorizado...</p>
   }
 

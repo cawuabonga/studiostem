@@ -371,6 +371,7 @@ export type Permission =
   // Academic Management
   | 'academic:program:manage'
   | 'academic:unit:manage'
+  | 'academic:unit:manage:own'
   | 'academic:assignment:manage'
   | 'academic:teacher:view'
   | 'academic:workload:view'
@@ -408,7 +409,8 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         description: 'Permisos relacionados con la administración de programas, unidades, asignaciones y matrículas.',
         permissions: [
             { id: 'academic:program:manage', label: 'Gestionar Programas de Estudio' },
-            { id: 'academic:unit:manage', label: 'Gestionar Unidades Didácticas' },
+            { id: 'academic:unit:manage', label: 'Gestionar Todas las Unidades Didácticas' },
+            { id: 'academic:unit:manage:own', label: 'Gestionar Unidades del Propio Programa (Coordinador)' },
             { id: 'academic:assignment:manage', label: 'Gestionar Asignaciones de Docentes' },
             { id: 'academic:teacher:view', label: 'Ver Lista de Docentes' },
             { id: 'academic:workload:view', label: 'Ver Carga Horaria' },

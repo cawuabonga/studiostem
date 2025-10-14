@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
-import type { Unit, Program, ProgramModule, UnitPeriod } from '@/types';
+import type { Unit, Program, ProgramModule, UnitPeriod, StaffProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Copy, MoreHorizontal, ImageIcon, Loader2 } from 'lucide-react';
@@ -51,7 +51,11 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { instituteId } = useAuth();
+  const { instituteId, user, hasPermission } = useAuth();
+  
+  const isFullAdmin = hasPermission('academic:program:manage'); // Broad permission for admins
+  const isCoordinator = hasPermission('academic:unit:manage:own');
+  const coordinatorProgramId = (user as StaffProfile)?.programId;
 
   const fetchUnitsAndPrograms = useCallback(async (id: string) => {
     setLoading(true);
@@ -119,17 +123,23 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   };
 
   const availableModules = useMemo(() => {
-      if(programFilter === 'all') return [];
-      const program = programs.find(p => p.id === programFilter);
+      if(programFilter === 'all' && !isCoordinator) return [];
+      const currentProgramId = isCoordinator ? coordinatorProgramId : programFilter;
+      const program = programs.find(p => p.id === currentProgramId);
       return program?.modules || [];
-  }, [programFilter, programs]);
+  }, [programFilter, programs, isCoordinator, coordinatorProgramId]);
 
   const filteredUnits = useMemo(() => 
     units.filter(unit => {
         const program = programMap.get(unit.programId);
         const module = program?.modules.find(m => m.code === unit.moduleId);
         
-        const matchesProgram = programFilter === 'all' || unit.programId === programFilter;
+        // Coordinator can only see their own program's units
+        if (isCoordinator && unit.programId !== coordinatorProgramId) {
+            return false;
+        }
+
+        const matchesProgram = isFullAdmin ? (programFilter === 'all' || unit.programId === programFilter) : true;
         const matchesModule = moduleFilter === 'all' || unit.moduleId === moduleFilter;
         const matchesPeriod = periodFilter === 'all' || unit.period === periodFilter;
         const matchesText = textFilter === '' || 
@@ -139,7 +149,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                             (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
 
         return matchesProgram && matchesModule && matchesPeriod && matchesText;
-    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap]);
+    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, isCoordinator, isFullAdmin, coordinatorProgramId]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -181,16 +191,18 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           onChange={(e) => setTextFilter(e.target.value)}
           className="max-w-sm"
         />
-        <Select value={programFilter} onValueChange={setProgramFilter}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filtrar por programa..." />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Todos los Programas</SelectItem>
-                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-        </Select>
-        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={programFilter === 'all'}>
+        {isFullAdmin && (
+            <Select value={programFilter} onValueChange={setProgramFilter}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Filtrar por programa..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los Programas</SelectItem>
+                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        )}
+        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={!isFullAdmin && !isCoordinator}>
             <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrar por módulo..." />
             </SelectTrigger>
@@ -214,7 +226,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Programa</TableHead>
+               {isFullAdmin && <TableHead>Programa</TableHead>}
               <TableHead>Semestre</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Turno</TableHead>
@@ -228,7 +240,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                 return (
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
-                    <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>
+                    {isFullAdmin && <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>}
                     <TableCell className="text-center">{unit.semester}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
@@ -306,3 +318,4 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
+
