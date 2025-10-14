@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -42,6 +43,9 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [filter, setFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+  const { hasPermission } = useAuth();
+
+  const canEdit = hasPermission('users:staff:manage');
 
   const fetchData = useCallback(async (id: string) => {
     setLoading(true);
@@ -82,7 +86,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   };
 
   const teachersAndCoordinators = useMemo(() => {
-    // Dynamically find the IDs for roles named "Docente" or "Coordinador"
+    // This logic relies on specific role names. It could be improved by using permissions.
     const targetRoleIds = roles
         .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
         .map(role => role.id);
@@ -180,12 +184,16 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
                               <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
                           </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
-                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                      </DropdownMenuItem>
+                      {canEdit && (
+                        <>
+                          <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

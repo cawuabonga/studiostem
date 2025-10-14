@@ -53,8 +53,8 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const { toast } = useToast();
   const { instituteId, user, hasPermission } = useAuth();
   
-  const isFullAdmin = hasPermission('academic:program:manage'); // Broad permission for admins
-  const isCoordinator = hasPermission('academic:unit:manage:own');
+  const isFullAdmin = hasPermission('academic:program:manage');
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
   const coordinatorProgramId = (user as StaffProfile)?.programId;
 
   const fetchUnitsAndPrograms = useCallback(async (id: string) => {
@@ -318,4 +318,5 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
+
 
