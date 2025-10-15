@@ -36,7 +36,7 @@ const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 export function UnitsList({ onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [programMap, setProgramMap] = useState<Map<string, Program>>(new Map());
+  const [programMap, setProgramMap] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -68,11 +68,12 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
       setPrograms(fetchedPrograms);
       setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
 
-      // If user is a coordinator, fetch their profile to get their program ID
       if (isCoordinator && user?.documentId) {
           const profile = await getStaffProfileByDocumentId(id, user.documentId);
           if (profile?.programId) {
               setCoordinatorProgramId(profile.programId);
+              // Set the program filter to the coordinator's program ID
+              setProgramFilter(profile.programId); 
           } else {
               toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
           }
@@ -148,12 +149,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         const programData = programs.find(p => p.id === unit.programId);
         const module = programData?.modules.find(m => m.code === unit.moduleId);
         
-        // Coordinator can only see their own program's units
-        if (isCoordinator && unit.programId !== coordinatorProgramId) {
-            return false;
-        }
-
-        const matchesProgram = isFullAdmin ? (programFilter === 'all' || unit.programId === programFilter) : true;
+        const matchesProgram = programFilter === 'all' || unit.programId === programFilter;
         const matchesModule = moduleFilter === 'all' || unit.moduleId === moduleFilter;
         const matchesPeriod = periodFilter === 'all' || unit.period === periodFilter;
         const matchesText = textFilter === '' || 
@@ -163,7 +159,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                             (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
 
         return matchesProgram && matchesModule && matchesPeriod && matchesText;
-    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, isCoordinator, isFullAdmin, coordinatorProgramId, programs]);
+    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, programs]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -177,7 +173,12 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
       setCurrentPage(1);
   }, [textFilter, programFilter, moduleFilter, periodFilter]);
 
-  if (loading) {
+  useEffect(() => {
+    // Reset module filter when program filter changes
+    setModuleFilter('all');
+  }, [programFilter]);
+
+  if (loading && !coordinatorProgramId) { // Show full loading only on initial load
     return (
       <div className="space-y-2">
          <Skeleton className="h-10 w-full mb-2" />
@@ -192,7 +193,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
       return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
   }
   
-  if (!units.length) {
+  if (!loading && !units.length) {
     return <p className="text-center text-muted-foreground">No hay unidades didácticas registradas.</p>;
   }
 
@@ -205,17 +206,15 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           onChange={(e) => setTextFilter(e.target.value)}
           className="max-w-sm"
         />
-        {isFullAdmin && (
-            <Select value={programFilter} onValueChange={setProgramFilter}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Filtrar por programa..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Todos los Programas</SelectItem>
-                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-            </Select>
-        )}
+        <Select value={programFilter} onValueChange={setProgramFilter} disabled={isCoordinator}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+                <SelectValue placeholder="Filtrar por programa..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Programas</SelectItem>
+                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+        </Select>
         <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={availableModules.length === 0}>
             <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrar por módulo..." />
@@ -240,7 +239,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-               {isFullAdmin && <TableHead>Programa</TableHead>}
+              {isFullAdmin && <TableHead>Programa</TableHead>}
               <TableHead>Semestre</TableHead>
               <TableHead>Período</TableHead>
               <TableHead>Turno</TableHead>
@@ -332,6 +331,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
+
 
 
 
