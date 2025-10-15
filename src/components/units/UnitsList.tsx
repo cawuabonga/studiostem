@@ -3,7 +3,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
+import { getUnits, getPrograms, updateUnitImage, duplicateUnit, getStaffProfileByDocumentId } from '@/config/firebase';
 import type { Unit, Program, ProgramModule, UnitPeriod, StaffProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -47,6 +47,8 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const [programFilter, setProgramFilter] = useState('all');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
+  
+  const [coordinatorProgramId, setCoordinatorProgramId] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
@@ -55,7 +57,6 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   
   const isFullAdmin = hasPermission('academic:program:manage');
   const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-  const coordinatorProgramId = (user as StaffProfile)?.programId;
 
   const fetchUnitsAndPrograms = useCallback(async (id: string) => {
     setLoading(true);
@@ -65,8 +66,20 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           getPrograms(id)
       ]);
       setPrograms(fetchedPrograms);
-      setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p])));
+      setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
+
+      // If user is a coordinator, fetch their profile to get their program ID
+      if (isCoordinator && user?.documentId) {
+          const profile = await getStaffProfileByDocumentId(id, user.documentId);
+          if (profile?.programId) {
+              setCoordinatorProgramId(profile.programId);
+          } else {
+              toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
+          }
+      }
+      
       setUnits(fetchedUnits);
+
     } catch (error) {
       toast({
         title: "Error",
@@ -76,7 +89,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, isCoordinator, user?.documentId]);
 
   useEffect(() => {
     if (instituteId) {
@@ -123,8 +136,8 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   };
 
   const availableModules = useMemo(() => {
-      if(programFilter === 'all' && !isCoordinator) return [];
       const currentProgramId = isCoordinator ? coordinatorProgramId : programFilter;
+      if(currentProgramId === 'all' || !currentProgramId) return [];
       const program = programs.find(p => p.id === currentProgramId);
       return program?.modules || [];
   }, [programFilter, programs, isCoordinator, coordinatorProgramId]);
@@ -132,7 +145,8 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const filteredUnits = useMemo(() => 
     units.filter(unit => {
         const program = programMap.get(unit.programId);
-        const module = program?.modules.find(m => m.code === unit.moduleId);
+        const programData = programs.find(p => p.id === unit.programId);
+        const module = programData?.modules.find(m => m.code === unit.moduleId);
         
         // Coordinator can only see their own program's units
         if (isCoordinator && unit.programId !== coordinatorProgramId) {
@@ -145,11 +159,11 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         const matchesText = textFilter === '' || 
                             unit.name.toLowerCase().includes(textFilter.toLowerCase()) ||
                             unit.code.toLowerCase().includes(textFilter.toLowerCase()) ||
-                            (program?.name || '').toLowerCase().includes(textFilter.toLowerCase()) ||
+                            (program || '').toLowerCase().includes(textFilter.toLowerCase()) ||
                             (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
 
         return matchesProgram && matchesModule && matchesPeriod && matchesText;
-    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, isCoordinator, isFullAdmin, coordinatorProgramId]);
+    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, isCoordinator, isFullAdmin, coordinatorProgramId, programs]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -202,7 +216,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                 </SelectContent>
             </Select>
         )}
-        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={!isFullAdmin && !isCoordinator}>
+        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={availableModules.length === 0}>
             <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrar por módulo..." />
             </SelectTrigger>
@@ -236,7 +250,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           </TableHeader>
           <TableBody>
             {paginatedUnits.map((unit) => {
-                const program = programMap.get(unit.programId);
+                const program = programs.find(p => p.id === unit.programId);
                 return (
                   <TableRow key={unit.id}>
                     <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
@@ -318,5 +332,6 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
+
 
 
