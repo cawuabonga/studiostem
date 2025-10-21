@@ -37,7 +37,10 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [programs, setPrograms] = useState<Program[]>([]);
   const [programMap, setProgramMap] = useState<Map<string, string>>(new Map());
+  
   const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true); // For permission check
+
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -57,7 +60,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   
   const isFullAdmin = hasPermission('academic:program:manage');
   
-  const fetchUnitsAndPrograms = useCallback(async () => {
+  const fetchData = useCallback(async (filterByProgramId?: string) => {
     if (!instituteId) return;
     setLoading(true);
 
@@ -67,22 +70,14 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
             getPrograms(instituteId)
         ]);
         
-        setUnits(fetchedUnits);
+        const unitsToSet = filterByProgramId 
+            ? fetchedUnits.filter(u => u.programId === filterByProgramId) 
+            : fetchedUnits;
+
+        setUnits(unitsToSet);
         setPrograms(fetchedPrograms);
         setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
 
-        // New logic to handle coordinator view
-        const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-        setIsCoordinatorView(isCoordinator);
-
-        if (isCoordinator && user?.documentId) {
-            const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
-            if (profile?.programId) {
-                setProgramFilter(profile.programId);
-            } else {
-                 toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
-            }
-        }
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -92,19 +87,62 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
       });
     } finally {
       setLoading(false);
+      setInitialLoading(false);
     }
-  }, [instituteId, toast, user, hasPermission, isFullAdmin]);
+  }, [instituteId, toast]);
 
   useEffect(() => {
-    fetchUnitsAndPrograms();
-  }, [fetchUnitsAndPrograms]);
+    const checkPermissionsAndFetch = async () => {
+        if (!user || !instituteId) return;
+
+        setInitialLoading(true);
+        const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
+        setIsCoordinatorView(isCoordinator);
+
+        if (isCoordinator && user.documentId) {
+            try {
+                const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
+                if (profile?.programId) {
+                    setProgramFilter(profile.programId);
+                    await fetchData(profile.programId); // Fetch data already filtered
+                } else {
+                    toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
+                    setUnits([]); // Clear units if coordinator profile is incomplete
+                    setLoading(false);
+                    setInitialLoading(false);
+                }
+            } catch (error) {
+                 toast({ title: 'Error', description: 'No se pudo cargar el perfil del coordinador.', variant: 'destructive'});
+                 setLoading(false);
+                 setInitialLoading(false);
+            }
+        } else if (isFullAdmin) {
+            await fetchData(); // Fetch all data for admin
+        } else {
+            // No permissions, show empty state
+             setLoading(false);
+             setInitialLoading(false);
+        }
+    };
+    checkPermissionsAndFetch();
+  }, [user, instituteId, hasPermission, isFullAdmin, fetchData, toast]);
+
+  const handleRefresh = useCallback(() => {
+     if (isCoordinatorView && user?.documentId) {
+         getStaffProfileByDocumentId(instituteId!, user.documentId).then(profile => {
+             if (profile?.programId) fetchData(profile.programId);
+         });
+     } else {
+         fetchData();
+     }
+  }, [isCoordinatorView, user?.documentId, instituteId, fetchData]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedUnit(null);
     if (updated) {
-      fetchUnitsAndPrograms();
+      handleRefresh();
       onDataChange();
     }
   };
@@ -116,7 +154,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         const imageUrl = await generateUnitImage({ unitName: unit.name });
         await updateUnitImage(instituteId, unit.id, imageUrl);
         toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
-        fetchUnitsAndPrograms(); // Refetch to get the new URL
+        handleRefresh();
     } catch (error) {
         toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
     } finally {
@@ -129,7 +167,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     try {
         await duplicateUnit(instituteId, unitId);
         toast({ title: 'Unidad Duplicada', description: 'La unidad didáctica se ha duplicado correctamente.' });
-        fetchUnitsAndPrograms();
+        handleRefresh();
     } catch (error: any) {
         toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
     }
@@ -147,7 +185,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         const programData = programs.find(p => p.id === unit.programId);
         const module = programData?.modules.find(m => m.code === unit.moduleId);
         
-        const matchesProgram = programFilter === 'all' || unit.programId === programFilter;
+        const matchesProgram = isCoordinatorView || programFilter === 'all' || unit.programId === programFilter;
         const matchesModule = moduleFilter === 'all' || unit.moduleId === moduleFilter;
         const matchesPeriod = periodFilter === 'all' || unit.period === periodFilter;
         const matchesText = textFilter === '' || 
@@ -157,7 +195,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
                             (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
 
         return matchesProgram && matchesModule && matchesPeriod && matchesText;
-    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, programs]);
+    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, programs, isCoordinatorView]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -172,14 +210,13 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   }, [textFilter, programFilter, moduleFilter, periodFilter]);
 
   useEffect(() => {
-    // Reset module filter when program filter changes, but not for the initial coordinator load
     if(!isCoordinatorView) {
       setModuleFilter('all');
     }
   }, [programFilter, isCoordinatorView]);
 
-  if (loading) {
-    return (
+  if (initialLoading) {
+     return (
       <div className="space-y-2">
          <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
@@ -189,11 +226,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     );
   }
   
-  if (!instituteId) {
-      return <p className="text-center text-muted-foreground">Seleccionando instituto...</p>;
-  }
-  
-  if (!loading && !units.length) {
+  if (!loading && !units.length && !isCoordinatorView) {
     return <p className="text-center text-muted-foreground">No hay unidades didácticas registradas.</p>;
   }
 
@@ -248,46 +281,60 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedUnits.map((unit) => {
-                const program = programs.find(p => p.id === unit.programId);
-                return (
-                  <TableRow key={unit.id}>
-                    <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
-                    {isFullAdmin && <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>}
-                    <TableCell className="text-center">{unit.semester}</TableCell>
-                    <TableCell>{unit.period}</TableCell>
-                    <TableCell>{unit.turno}</TableCell>
-                    <TableCell className="text-center">{unit.credits}</TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                                    <Edit2 className="mr-2 h-4 w-4" /> Editar
-                                </DropdownMenuItem>
-                                 <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
-                                    <Copy className="mr-2 h-4 w-4" /> Duplicar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
-                                    {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
-                                    Regenerar Imagen
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+            {loading ? (
+                <TableRow>
+                    <TableCell colSpan={isFullAdmin ? 7 : 6} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground"/>
                     </TableCell>
-                  </TableRow>
-                )
-            })}
+                </TableRow>
+            ) : paginatedUnits.length > 0 ? (
+                 paginatedUnits.map((unit) => {
+                    const program = programs.find(p => p.id === unit.programId);
+                    return (
+                    <TableRow key={unit.id}>
+                        <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
+                        {isFullAdmin && <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>}
+                        <TableCell className="text-center">{unit.semester}</TableCell>
+                        <TableCell>{unit.period}</TableCell>
+                        <TableCell>{unit.turno}</TableCell>
+                        <TableCell className="text-center">{unit.credits}</TableCell>
+                        <TableCell className="text-right">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">Abrir menú</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                    <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                                        <Edit2 className="mr-2 h-4 w-4" /> Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
+                                        <Copy className="mr-2 h-4 w-4" /> Duplicar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                                        {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                                        Regenerar Imagen
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                    )
+                })
+            ) : (
+                 <TableRow>
+                    <TableCell colSpan={isFullAdmin ? 7 : 6} className="h-24 text-center">
+                       No se encontraron unidades con los filtros aplicados.
+                    </TableCell>
+                </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -331,5 +378,4 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
-
 
