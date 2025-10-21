@@ -1,10 +1,9 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms, updateUnitImage, duplicateUnit, getStaffProfileByDocumentId } from '@/config/firebase';
-import type { Unit, Program, ProgramModule, UnitPeriod, StaffProfile } from '@/types';
+import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
+import type { Unit, Program, UnitPeriod } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, Copy, MoreHorizontal, ImageIcon, Loader2 } from 'lucide-react';
@@ -13,7 +12,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EditUnitDialog } from './EditUnitDialog';
 import { DeleteUnitDialog } from './DeleteUnitDialog';
-import { Input } from '../ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,119 +21,87 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 
 interface UnitsListProps {
+    instituteId: string;
+    filters: {
+        programFilter: string;
+        moduleFilter: string;
+        periodFilter: UnitPeriod | 'all';
+        textFilter: string;
+    };
+    isCoordinator: boolean;
     onDataChange: () => void;
 }
 
 const PAGE_SIZE = 10;
-const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
-export function UnitsList({ onDataChange }: UnitsListProps) {
+export function UnitsList({ instituteId, filters, isCoordinator, onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [programMap, setProgramMap] = useState<Map<string, string>>(new Map());
   
   const [loading, setLoading] = useState(true);
-  const [initialLoading, setInitialLoading] = useState(true); // For permission check
-
+  
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
-  // State for filters
-  const [textFilter, setTextFilter] = useState('');
-  const [programFilter, setProgramFilter] = useState('all');
-  const [moduleFilter, setModuleFilter] = useState('all');
-  const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
-  
-  const [isCoordinatorView, setIsCoordinatorView] = useState(false);
-
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { instituteId, user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   
   const isFullAdmin = hasPermission('academic:program:manage');
   
-  const fetchData = useCallback(async (filterByProgramId?: string) => {
-    if (!instituteId) return;
+  const fetchData = useCallback(async () => {
     setLoading(true);
-
     try {
         const [fetchedUnits, fetchedPrograms] = await Promise.all([
             getUnits(instituteId),
             getPrograms(instituteId)
         ]);
-        
-        const unitsToSet = filterByProgramId 
-            ? fetchedUnits.filter(u => u.programId === filterByProgramId) 
-            : fetchedUnits;
 
-        setUnits(unitsToSet);
-        setPrograms(fetchedPrograms);
         setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
+        
+        // Apply filters here
+        const filtered = fetchedUnits.filter(unit => {
+            const program = fetchedPrograms.find(p => p.id === unit.programId);
+            const module = program?.modules.find(m => m.code === unit.moduleId);
+            
+            const matchesProgram = filters.programFilter === 'all' || unit.programId === filters.programFilter;
+            const matchesModule = filters.moduleFilter === 'all' || unit.moduleId === filters.moduleFilter;
+            const matchesPeriod = filters.periodFilter === 'all' || unit.period === filters.periodFilter;
+            const matchesText = filters.textFilter === '' || 
+                                unit.name.toLowerCase().includes(filters.textFilter.toLowerCase()) ||
+                                unit.code.toLowerCase().includes(filters.textFilter.toLowerCase()) ||
+                                (program?.name || '').toLowerCase().includes(filters.textFilter.toLowerCase()) ||
+                                (module?.name || '').toLowerCase().includes(filters.textFilter.toLowerCase());
+
+            return matchesProgram && matchesModule && matchesPeriod && matchesText;
+        });
+
+        setUnits(filtered);
 
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
         title: "Error",
-        description: "No se pudieron cargar los datos.",
+        description: "No se pudieron cargar las unidades.",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
-      setInitialLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [instituteId, toast, filters]);
 
   useEffect(() => {
-    const checkPermissionsAndFetch = async () => {
-        if (!user || !instituteId) return;
-
-        setInitialLoading(true);
-        const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-        setIsCoordinatorView(isCoordinator);
-
-        if (isCoordinator && user.documentId) {
-            try {
-                const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
-                if (profile?.programId) {
-                    setProgramFilter(profile.programId);
-                    await fetchData(profile.programId); // Fetch data already filtered
-                } else {
-                    toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
-                    setUnits([]); // Clear units if coordinator profile is incomplete
-                    setLoading(false);
-                    setInitialLoading(false);
-                }
-            } catch (error) {
-                 toast({ title: 'Error', description: 'No se pudo cargar el perfil del coordinador.', variant: 'destructive'});
-                 setLoading(false);
-                 setInitialLoading(false);
-            }
-        } else if (isFullAdmin) {
-            await fetchData(); // Fetch all data for admin
-        } else {
-            // No permissions, show empty state
-             setLoading(false);
-             setInitialLoading(false);
-        }
-    };
-    checkPermissionsAndFetch();
-  }, [user, instituteId, hasPermission, isFullAdmin, fetchData, toast]);
+    fetchData();
+  }, [fetchData]);
 
   const handleRefresh = useCallback(() => {
-     if (isCoordinatorView && user?.documentId) {
-         getStaffProfileByDocumentId(instituteId!, user.documentId).then(profile => {
-             if (profile?.programId) fetchData(profile.programId);
-         });
-     } else {
-         fetchData();
-     }
-  }, [isCoordinatorView, user?.documentId, instituteId, fetchData]);
+     fetchData();
+  }, [fetchData]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
@@ -172,53 +138,19 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
     }
   };
-
-  const availableModules = useMemo(() => {
-      if(programFilter === 'all') return [];
-      const program = programs.find(p => p.id === programFilter);
-      return program?.modules || [];
-  }, [programFilter, programs]);
-
-  const filteredUnits = useMemo(() => 
-    units.filter(unit => {
-        const program = programMap.get(unit.programId);
-        const programData = programs.find(p => p.id === unit.programId);
-        const module = programData?.modules.find(m => m.code === unit.moduleId);
-        
-        const matchesProgram = isCoordinatorView || programFilter === 'all' || unit.programId === programFilter;
-        const matchesModule = moduleFilter === 'all' || unit.moduleId === moduleFilter;
-        const matchesPeriod = periodFilter === 'all' || unit.period === periodFilter;
-        const matchesText = textFilter === '' || 
-                            unit.name.toLowerCase().includes(textFilter.toLowerCase()) ||
-                            unit.code.toLowerCase().includes(textFilter.toLowerCase()) ||
-                            (program || '').toLowerCase().includes(textFilter.toLowerCase()) ||
-                            (module?.name || '').toLowerCase().includes(textFilter.toLowerCase());
-
-        return matchesProgram && matchesModule && matchesPeriod && matchesText;
-    }), [units, textFilter, programFilter, moduleFilter, periodFilter, programMap, programs, isCoordinatorView]);
   
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
-    return filteredUnits.slice(start, end);
-  }, [filteredUnits, currentPage]);
+    return units.slice(start, end);
+  }, [units, currentPage]);
 
-  const totalPages = Math.ceil(filteredUnits.length / PAGE_SIZE);
-  
-  useEffect(() => {
-      setCurrentPage(1);
-  }, [textFilter, programFilter, moduleFilter, periodFilter]);
+  const totalPages = Math.ceil(units.length / PAGE_SIZE);
 
-  useEffect(() => {
-    if(!isCoordinatorView) {
-      setModuleFilter('all');
-    }
-  }, [programFilter, isCoordinatorView]);
-
-  if (initialLoading) {
-     return (
+  if (loading) {
+    return (
       <div className="space-y-2">
-         <Skeleton className="h-10 w-full mb-2" />
+        <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
@@ -226,47 +158,12 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     );
   }
   
-  if (!loading && !units.length && !isCoordinatorView) {
-    return <p className="text-center text-muted-foreground">No hay unidades didácticas registradas.</p>;
+  if (!units.length) {
+    return <p className="text-center text-muted-foreground py-8">No se encontraron unidades didácticas con los filtros aplicados.</p>;
   }
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row gap-2 mb-4 flex-wrap">
-        <Input 
-          placeholder="Buscar por nombre, código..."
-          value={textFilter}
-          onChange={(e) => setTextFilter(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={programFilter} onValueChange={setProgramFilter} disabled={isCoordinatorView}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filtrar por programa..." />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Todos los Programas</SelectItem>
-                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-            </SelectContent>
-        </Select>
-        <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={availableModules.length === 0}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-                <SelectValue placeholder="Filtrar por módulo..." />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Todos los Módulos</SelectItem>
-                {availableModules.map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)}
-            </SelectContent>
-        </Select>
-        <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as any)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Filtrar por período..." />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="all">Todos los Períodos</SelectItem>
-                {periods.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-        </Select>
-      </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -281,60 +178,43 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-                <TableRow>
-                    <TableCell colSpan={isFullAdmin ? 7 : 6} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground"/>
+             {paginatedUnits.map((unit) => (
+                <TableRow key={unit.id}>
+                    <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
+                    {isFullAdmin && <TableCell><Badge variant="outline">{programMap.get(unit.programId) || 'N/A'}</Badge></TableCell>}
+                    <TableCell className="text-center">{unit.semester}</TableCell>
+                    <TableCell>{unit.period}</TableCell>
+                    <TableCell>{unit.turno}</TableCell>
+                    <TableCell className="text-center">{unit.credits}</TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Abrir menú</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                                    <Edit2 className="mr-2 h-4 w-4" /> Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
+                                    <Copy className="mr-2 h-4 w-4" /> Duplicar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                                    {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
+                                    Regenerar Imagen
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                 </TableRow>
-            ) : paginatedUnits.length > 0 ? (
-                 paginatedUnits.map((unit) => {
-                    const program = programs.find(p => p.id === unit.programId);
-                    return (
-                    <TableRow key={unit.id}>
-                        <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
-                        {isFullAdmin && <TableCell><Badge variant="outline">{program?.abbreviation || 'N/A'}</Badge></TableCell>}
-                        <TableCell className="text-center">{unit.semester}</TableCell>
-                        <TableCell>{unit.period}</TableCell>
-                        <TableCell>{unit.turno}</TableCell>
-                        <TableCell className="text-center">{unit.credits}</TableCell>
-                        <TableCell className="text-right">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">Abrir menú</span>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                    <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                                        <Edit2 className="mr-2 h-4 w-4" /> Editar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
-                                        <Copy className="mr-2 h-4 w-4" /> Duplicar
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
-                                        {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
-                                        Regenerar Imagen
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
-                    )
-                })
-            ) : (
-                 <TableRow>
-                    <TableCell colSpan={isFullAdmin ? 7 : 6} className="h-24 text-center">
-                       No se encontraron unidades con los filtros aplicados.
-                    </TableCell>
-                </TableRow>
-            )}
+             ))}
           </TableBody>
         </Table>
       </div>
@@ -378,4 +258,3 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
-
