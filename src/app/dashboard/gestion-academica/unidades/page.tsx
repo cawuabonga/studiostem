@@ -1,22 +1,32 @@
 
 "use client";
 
-import { AddUnitForm } from "@/components/units/AddUnitForm";
-import { UnitsList } from "@/components/units/UnitsList";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import { ArrowRight, List, ListPlus } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { BulkUploadUnits } from "@/components/units/BulkUploadUnits";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Upload } from "lucide-react";
+import { useEffect } from "react";
+
+const modules = [
+  {
+    title: "Registrar Unidades Didácticas",
+    description: "Añadir nuevas unidades de forma individual o mediante una carga masiva.",
+    href: "/dashboard/gestion-academica/unidades/register",
+    icon: ListPlus,
+  },
+  {
+    title: "Listar y Gestionar Unidades",
+    description: "Ver, editar, filtrar y eliminar las unidades didácticas existentes.",
+    href: "/dashboard/gestion-academica/unidades/list",
+    icon: List,
+  },
+];
 
 export default function ManageUnitsPage() {
-  const { user, instituteId, loading, hasPermission } = useAuth();
+  const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
-
+  
   const canView = hasPermission('academic:unit:manage') || hasPermission('academic:unit:manage:own');
 
   useEffect(() => {
@@ -25,64 +35,44 @@ export default function ManageUnitsPage() {
     }
   }, [user, loading, router, canView]);
 
-  const handleDataChange = () => {
-    setRefreshKey(prevKey => prevKey + 1);
-  };
-  
   if (loading || !canView) {
       return <p>Cargando o no autorizado...</p>
   }
-
-  if (!instituteId) {
-    return <p>Cargando instituto...</p>;
-  }
-
+  
   return (
     <div className="space-y-6">
-        <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="item-1">
-                <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                    <Upload className="h-5 w-5"/> Carga Masiva de Unidades Didácticas
-                </AccordionTrigger>
-                <AccordionContent>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Registro por Lotes de Unidades Didácticas</CardTitle>
-                            <CardDescription>Este proceso le permite agregar múltiples unidades didácticas a un programa y módulo específicos de una sola vez.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <BulkUploadUnits instituteId={instituteId} onUploadSuccess={handleDataChange} />
-                        </CardContent>
-                    </Card>
-                </AccordionContent>
-            </AccordionItem>
-        </Accordion>
-        
-      <Card>
+       <Card>
         <CardHeader>
-          <CardTitle>Registrar Nueva Unidad Didáctica (Individual)</CardTitle>
+          <CardTitle>Módulo de Gestión de Unidades Didácticas</CardTitle>
           <CardDescription>
-            Añada una nueva unidad didáctica de forma individual.
+            Administra los cursos o materias de cada programa de estudio. Selecciona una opción para comenzar.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <AddUnitForm instituteId={instituteId} onUnitAdded={handleDataChange} />
-        </CardContent>
       </Card>
-      
-      <Separator />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Unidades Didácticas Registradas</CardTitle>
-          <CardDescription>
-            Ver, editar y eliminar las unidades existentes en el instituto.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <UnitsList key={refreshKey} onDataChange={handleDataChange} />
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 md:grid-cols-2">
+        {modules.map((module) => (
+          <Link href={module.href} key={module.title} className="flex">
+            <Card className="flex flex-col w-full hover:bg-muted/50 transition-colors">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-lg font-medium">
+                  {module.title}
+                </CardTitle>
+                <module.icon className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground">
+                  {module.description}
+                </p>
+              </CardContent>
+               <CardFooter>
+                  <p className="text-sm font-medium text-primary flex items-center">
+                    Ir a {module.title} <ArrowRight className="ml-2 h-4 w-4" />
+                  </p>
+              </CardFooter>
+            </Card>
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }
