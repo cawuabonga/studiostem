@@ -1,4 +1,3 @@
-
 "use client";
 
 import { UnitsList } from "@/components/units/UnitsList";
@@ -20,17 +19,18 @@ export default function ListUnitsPage() {
   const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
 
-  // State for filters, managed now in the parent page
+  // State for filters
   const [textFilter, setTextFilter] = useState('');
   const [programFilter, setProgramFilter] = useState('all');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
+  // State for initial data loading and permissions
   const [programs, setPrograms] = useState<Program[]>([]);
   const [isCoordinator, setIsCoordinator] = useState(false);
-  const [coordinatorProgramId, setCoordinatorProgramId] = useState<string | null>(null);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
 
+  // State to control when to show the list
   const [showUnits, setShowUnits] = useState(false);
 
   const isFullAdmin = hasPermission('academic:program:manage');
@@ -51,7 +51,6 @@ export default function ListUnitsPage() {
           const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
           if (profile?.programId) {
             setProgramFilter(profile.programId);
-            setCoordinatorProgramId(profile.programId);
           }
         }
       } catch (error) {
@@ -74,13 +73,17 @@ export default function ListUnitsPage() {
   }, [textFilter, programFilter, moduleFilter, periodFilter]);
 
   const availableModules = useMemo(() => {
-      if(programFilter === 'all' || !programs) return [];
+      if(programFilter === 'all' || !programs.length) return [];
       const program = programs.find(p => p.id === programFilter);
       return program?.modules || [];
   }, [programFilter, programs]);
 
   if (initialDataLoading) {
-      return <p>Cargando configuración...</p>
+      return (
+          <div className="flex justify-center items-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+      )
   }
 
   return (
