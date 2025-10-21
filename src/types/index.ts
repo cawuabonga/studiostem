@@ -16,6 +16,7 @@ export interface AppUser {
   roleId?: string; 
   // Will hold the specific permissions for the user's role
   permissions?: Permission[];
+  programName?: string;
 }
 
 // Represents a pre-created profile for a staff member, identified by Document ID.

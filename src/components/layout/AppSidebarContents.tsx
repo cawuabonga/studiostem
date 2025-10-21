@@ -102,6 +102,9 @@ export function AppSidebarContents() {
             <div className="text-center group-data-[collapsible=icon]:hidden">
               <p className="font-semibold text-sidebar-foreground">{user.displayName}</p>
               <p className="text-xs text-sidebar-foreground/80">{user.role}</p>
+               {user.programName && (
+                <p className="text-xs text-sidebar-foreground/70 italic mt-1">{user.programName}</p>
+              )}
             </div>
           </div>
         )}

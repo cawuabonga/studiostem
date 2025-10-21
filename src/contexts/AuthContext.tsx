@@ -12,7 +12,8 @@ import {
   createUserWithEmailAndPassword,
   getRolePermissions,
   getStaffProfileByDocumentId,
-  getStudentProfile
+  getStudentProfile,
+  getPrograms
 } from '@/config/firebase'; 
 import { 
   onAuthStateChanged, 
@@ -113,11 +114,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       let profileData: Partial<StudentProfile | StaffProfile> = {};
+      let programName: string | undefined = undefined;
+
       if (userDataFromDb.documentId && userDataFromDb.instituteId) {
+        const programs = await getPrograms(userDataFromDb.instituteId);
+        const programMap = new Map(programs.map(p => [p.id, p.name]));
+
         if (userDataFromDb.role === 'Student') {
-          profileData = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
+          const studentProfile = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId);
+          profileData = studentProfile || {};
+           if (studentProfile?.programId) {
+            programName = programMap.get(studentProfile.programId);
+          }
         } else {
-          profileData = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId) || {};
+           const staffProfile = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId);
+           profileData = staffProfile || {};
+           if (staffProfile?.programId) {
+            programName = programMap.get(staffProfile.programId);
+          }
         }
       }
 
@@ -129,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
         email: firebaseUser.email,
         permissions: permissions,
+        programName: programName
       };
 
       setUser(appUser);
@@ -308,5 +323,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    
