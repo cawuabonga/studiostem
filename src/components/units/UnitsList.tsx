@@ -48,7 +48,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
-  const [coordinatorProgramId, setCoordinatorProgramId] = useState<string | null>(null);
+  const [isCoordinatorView, setIsCoordinatorView] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [imageLoadingId, setImageLoadingId] = useState<string | null>(null);
@@ -56,32 +56,38 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   const { instituteId, user, hasPermission } = useAuth();
   
   const isFullAdmin = hasPermission('academic:program:manage');
-  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-
-  const fetchUnitsAndPrograms = useCallback(async (id: string) => {
+  
+  const fetchUnitsAndPrograms = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
+
     try {
+      let effectiveProgramFilter = 'all';
+
+      // Determine user role and set program filter accordingly
+      if (hasPermission('academic:unit:manage:own') && !isFullAdmin && user?.documentId) {
+        setIsCoordinatorView(true);
+        const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
+        if (profile?.programId) {
+          effectiveProgramFilter = profile.programId;
+          setProgramFilter(profile.programId); // Set and lock the filter
+        } else {
+          toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
+        }
+      } else {
+        setIsCoordinatorView(false);
+      }
+
       const [fetchedUnits, fetchedPrograms] = await Promise.all([
-          getUnits(id),
-          getPrograms(id)
+          getUnits(instituteId),
+          getPrograms(instituteId)
       ]);
+      setUnits(fetchedUnits);
       setPrograms(fetchedPrograms);
       setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
 
-      if (isCoordinator && user?.documentId) {
-          const profile = await getStaffProfileByDocumentId(id, user.documentId);
-          if (profile?.programId) {
-              setCoordinatorProgramId(profile.programId);
-              // Set the program filter to the coordinator's program ID
-              setProgramFilter(profile.programId); 
-          } else {
-              toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
-          }
-      }
-      
-      setUnits(fetchedUnits);
-
     } catch (error) {
+      console.error("Error fetching data:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar los datos.",
@@ -90,22 +96,18 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     } finally {
       setLoading(false);
     }
-  }, [toast, isCoordinator, user?.documentId]);
+  }, [instituteId, toast, user, hasPermission, isFullAdmin]);
 
   useEffect(() => {
-    if (instituteId) {
-      fetchUnitsAndPrograms(instituteId);
-    } else {
-      setLoading(false);
-    }
-  }, [instituteId, fetchUnitsAndPrograms]);
+    fetchUnitsAndPrograms();
+  }, [fetchUnitsAndPrograms]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedUnit(null);
-    if (updated && instituteId) {
-      fetchUnitsAndPrograms(instituteId);
+    if (updated) {
+      fetchUnitsAndPrograms();
       onDataChange();
     }
   };
@@ -117,7 +119,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
         const imageUrl = await generateUnitImage({ unitName: unit.name });
         await updateUnitImage(instituteId, unit.id, imageUrl);
         toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
-        fetchUnitsAndPrograms(instituteId); // Refetch to get the new URL
+        fetchUnitsAndPrograms(); // Refetch to get the new URL
     } catch (error) {
         toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
     } finally {
@@ -130,18 +132,17 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     try {
         await duplicateUnit(instituteId, unitId);
         toast({ title: 'Unidad Duplicada', description: 'La unidad didáctica se ha duplicado correctamente.' });
-        fetchUnitsAndPrograms(instituteId);
+        fetchUnitsAndPrograms();
     } catch (error: any) {
         toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
     }
   };
 
   const availableModules = useMemo(() => {
-      const currentProgramId = isCoordinator ? coordinatorProgramId : programFilter;
-      if(currentProgramId === 'all' || !currentProgramId) return [];
-      const program = programs.find(p => p.id === currentProgramId);
+      if(programFilter === 'all') return [];
+      const program = programs.find(p => p.id === programFilter);
       return program?.modules || [];
-  }, [programFilter, programs, isCoordinator, coordinatorProgramId]);
+  }, [programFilter, programs]);
 
   const filteredUnits = useMemo(() => 
     units.filter(unit => {
@@ -178,7 +179,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     setModuleFilter('all');
   }, [programFilter]);
 
-  if (loading && !coordinatorProgramId) { // Show full loading only on initial load
+  if (loading) {
     return (
       <div className="space-y-2">
          <Skeleton className="h-10 w-full mb-2" />
@@ -206,7 +207,7 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
           onChange={(e) => setTextFilter(e.target.value)}
           className="max-w-sm"
         />
-        <Select value={programFilter} onValueChange={setProgramFilter} disabled={isCoordinator}>
+        <Select value={programFilter} onValueChange={setProgramFilter} disabled={isCoordinatorView}>
             <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Filtrar por programa..." />
             </SelectTrigger>
@@ -331,7 +332,4 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
-
-
-
 
