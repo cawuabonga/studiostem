@@ -62,30 +62,27 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     setLoading(true);
 
     try {
-      let effectiveProgramFilter = 'all';
+        const [fetchedUnits, fetchedPrograms] = await Promise.all([
+            getUnits(instituteId),
+            getPrograms(instituteId)
+        ]);
+        
+        setUnits(fetchedUnits);
+        setPrograms(fetchedPrograms);
+        setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
 
-      // Determine user role and set program filter accordingly
-      if (hasPermission('academic:unit:manage:own') && !isFullAdmin && user?.documentId) {
-        setIsCoordinatorView(true);
-        const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
-        if (profile?.programId) {
-          effectiveProgramFilter = profile.programId;
-          setProgramFilter(profile.programId); // Set and lock the filter
-        } else {
-          toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
+        // New logic to handle coordinator view
+        const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
+        setIsCoordinatorView(isCoordinator);
+
+        if (isCoordinator && user?.documentId) {
+            const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
+            if (profile?.programId) {
+                setProgramFilter(profile.programId);
+            } else {
+                 toast({ title: 'Error de Coordinador', description: 'No se pudo determinar el programa para tu perfil.', variant: 'destructive'});
+            }
         }
-      } else {
-        setIsCoordinatorView(false);
-      }
-
-      const [fetchedUnits, fetchedPrograms] = await Promise.all([
-          getUnits(instituteId),
-          getPrograms(instituteId)
-      ]);
-      setUnits(fetchedUnits);
-      setPrograms(fetchedPrograms);
-      setProgramMap(new Map(fetchedPrograms.map(p => [p.id, p.name])));
-
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -175,9 +172,11 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
   }, [textFilter, programFilter, moduleFilter, periodFilter]);
 
   useEffect(() => {
-    // Reset module filter when program filter changes
-    setModuleFilter('all');
-  }, [programFilter]);
+    // Reset module filter when program filter changes, but not for the initial coordinator load
+    if(!isCoordinatorView) {
+      setModuleFilter('all');
+    }
+  }, [programFilter, isCoordinatorView]);
 
   if (loading) {
     return (
@@ -332,4 +331,5 @@ export function UnitsList({ onDataChange }: UnitsListProps) {
     </>
   );
 }
+
 
