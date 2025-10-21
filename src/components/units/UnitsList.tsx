@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -31,13 +30,12 @@ interface UnitsListProps {
         periodFilter: UnitPeriod | 'all';
         textFilter: string;
     };
-    isCoordinator: boolean;
     onDataChange: () => void;
 }
 
 const PAGE_SIZE = 10;
 
-export function UnitsList({ instituteId, filters, isCoordinator, onDataChange }: UnitsListProps) {
+export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps) {
   const [units, setUnits] = useState<Unit[]>([]);
   const [programMap, setProgramMap] = useState<Map<string, string>>(new Map());
   

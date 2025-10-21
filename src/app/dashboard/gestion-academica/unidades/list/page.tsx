@@ -4,11 +4,11 @@ import { UnitsList } from "@/components/units/UnitsList";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { getPrograms, getStaffProfileByDocumentId } from "@/config/firebase";
+import { getPrograms } from "@/config/firebase";
 import type { Program, UnitPeriod } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -19,49 +19,46 @@ export default function ListUnitsPage() {
   const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
 
-  // State for filters
+  // Determine if the user is a Coordinator
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
+
+  // State for filters, pre-filled for Coordinator
   const [textFilter, setTextFilter] = useState('');
-  const [programFilter, setProgramFilter] = useState('all');
+  const [programFilter, setProgramFilter] = useState(() => isCoordinator && user?.programId ? user.programId : 'all');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
-  // State for initial data loading and permissions
+  // State for initial data loading
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [isCoordinator, setIsCoordinator] = useState(false);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
 
   // State to control when to show the list
   const [showUnits, setShowUnits] = useState(false);
 
-  const isFullAdmin = hasPermission('academic:program:manage');
-
-  // Effect to determine user role and fetch necessary initial data
+  // Effect to fetch the list of all programs for the filter dropdown
   useEffect(() => {
-    const setupPermissionsAndFilters = async () => {
+    const fetchInitialData = async () => {
       if (authLoading || !instituteId) return;
-
-      const userIsCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-      setIsCoordinator(userIsCoordinator);
 
       try {
         const fetchedPrograms = await getPrograms(instituteId);
         setPrograms(fetchedPrograms);
 
-        if (userIsCoordinator && user?.documentId) {
-          const profile = await getStaffProfileByDocumentId(instituteId, user.documentId);
-          if (profile?.programId) {
-            setProgramFilter(profile.programId);
-          }
+        // If user is coordinator and their programId is set, ensure the filter reflects that.
+        // This is a safeguard in case the user object loads after initial state is set.
+        if (isCoordinator && user?.programId) {
+            setProgramFilter(user.programId);
         }
+
       } catch (error) {
-        console.error("Error setting up filters:", error);
+        console.error("Error fetching programs:", error);
       } finally {
         setInitialDataLoading(false);
       }
     };
 
-    setupPermissionsAndFilters();
-  }, [authLoading, instituteId, user, hasPermission, isFullAdmin]);
+    fetchInitialData();
+  }, [authLoading, instituteId, user, isCoordinator]);
   
   const handleShowUnits = () => {
     setShowUnits(true);
@@ -78,7 +75,8 @@ export default function ListUnitsPage() {
       return program?.modules || [];
   }, [programFilter, programs]);
 
-  if (initialDataLoading) {
+  // Handle loading state
+  if (initialDataLoading || authLoading) {
       return (
           <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -146,7 +144,6 @@ export default function ListUnitsPage() {
           key={`${programFilter}-${moduleFilter}-${periodFilter}-${textFilter}`}
           instituteId={instituteId}
           filters={{ programFilter, moduleFilter, periodFilter, textFilter }}
-          isCoordinator={isCoordinator}
           onDataChange={() => setShowUnits(false)} // Force refilter on data change
         />
       )}
