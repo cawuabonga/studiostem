@@ -10,19 +10,31 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Program } from "@/types";
 import { Label } from '@/components/ui/label';
 import { AssignmentBoard } from '@/components/assignments/AssignmentBoard';
+import { Input } from '@/components/ui/input';
 
 export default function AsignacionesPage() {
-  const { instituteId } = useAuth();
+  const { user, instituteId, hasPermission } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [showAssignments, setShowAssignments] = useState(false);
+
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
 
   useEffect(() => {
     if (instituteId) {
       getPrograms(instituteId).then(setPrograms).catch(console.error);
     }
   }, [instituteId]);
+
+  useEffect(() => {
+    if (isCoordinator && user?.programId) {
+      setSelectedProgramId(user.programId);
+    } else {
+      setSelectedProgramId('');
+    }
+     setShowAssignments(false);
+  }, [isCoordinator, user?.programId]);
 
   const handleShowAssignments = () => {
     if (selectedProgramId && selectedYear) {
@@ -57,7 +69,11 @@ export default function AsignacionesPage() {
             </div>
             <div className="flex-1 space-y-2">
                  <Label htmlFor="program-select">Programa de Estudio</Label>
-                <Select value={selectedProgramId} onValueChange={(value) => { setSelectedProgramId(value); setShowAssignments(false); }} disabled={!programs.length}>
+                <Select 
+                    value={selectedProgramId} 
+                    onValueChange={(value) => { setSelectedProgramId(value); setShowAssignments(false); }} 
+                    disabled={!programs.length || isCoordinator}
+                >
                     <SelectTrigger id="program-select">
                         <SelectValue placeholder="Seleccione un programa" />
                     </SelectTrigger>

@@ -12,17 +12,29 @@ import { Label } from '@/components/ui/label';
 import { TeacherLoadDashboard } from '@/components/carga-horaria/TeacherLoadDashboard';
 
 export default function CargaHorariaPage() {
-  const { instituteId } = useAuth();
+  const { user, hasPermission, instituteId } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [showLoad, setShowLoad] = useState(false);
+
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
 
   useEffect(() => {
     if (instituteId) {
       getPrograms(instituteId).then(setPrograms).catch(console.error);
     }
   }, [instituteId]);
+
+  useEffect(() => {
+    if (isCoordinator && user?.programId) {
+      setSelectedProgramId(user.programId);
+    } else {
+      setSelectedProgramId('');
+    }
+     setShowLoad(false);
+  }, [isCoordinator, user?.programId]);
+
 
   const handleShowLoad = () => {
     if (selectedProgramId && selectedYear) {
@@ -46,7 +58,7 @@ export default function CargaHorariaPage() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-2">
                 <Label htmlFor="year-select">Año</Label>
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setShowLoad(false); }}>
                     <SelectTrigger id="year-select">
                         <SelectValue placeholder="Seleccione un año" />
                     </SelectTrigger>
@@ -57,7 +69,11 @@ export default function CargaHorariaPage() {
             </div>
             <div className="flex-1 space-y-2">
                  <Label htmlFor="program-select">Programa de Estudio</Label>
-                <Select value={selectedProgramId} onValueChange={(value) => { setSelectedProgramId(value); setShowLoad(false); }} disabled={!programs.length}>
+                <Select 
+                    value={selectedProgramId} 
+                    onValueChange={(value) => { setSelectedProgramId(value); setShowLoad(false); }} 
+                    disabled={!programs.length || isCoordinator}
+                >
                     <SelectTrigger id="program-select">
                         <SelectValue placeholder="Seleccione un programa" />
                     </SelectTrigger>

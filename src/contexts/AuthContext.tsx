@@ -131,7 +131,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             profileData = foundProfile;
             if (foundProfile.programId) {
                 programName = programMap.get(foundProfile.programId);
-                profileData.programId = foundProfile.programId;
             }
         }
       }
@@ -144,10 +143,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
         email: firebaseUser.email,
         permissions: permissions,
-        programName: programName,
-        programId: profileData.programId
+        programName: programName
       };
-
+      
       setUser(appUser);
       if (appUser.instituteId && appUser.instituteId !== instituteId) {
         await setInstitute(appUser.instituteId);

@@ -200,6 +200,7 @@ export function StaffTable({ instituteId, onDataChange }: StaffTableProps) {
       {selectedProfile && isEditDialogOpen && (
         <EditStaffProfileDialog 
           profile={selectedProfile}
+          instituteId={instituteId}
           isOpen={isEditDialogOpen}
           onClose={handleDialogClose}
         />
