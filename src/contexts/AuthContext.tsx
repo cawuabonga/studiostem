@@ -113,25 +113,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         permissions = []; // SuperAdmin has implicit global access
       }
       
-      let profileData: Partial<StudentProfile | StaffProfile> = {};
+      let profileData: Partial<StudentProfile | StaffProfile> & {programId?: string} = {};
       let programName: string | undefined = undefined;
 
       if (userDataFromDb.documentId && userDataFromDb.instituteId) {
         const programs = await getPrograms(userDataFromDb.instituteId);
         const programMap = new Map(programs.map(p => [p.id, p.name]));
 
+        let foundProfile: StudentProfile | StaffProfile | null = null;
         if (userDataFromDb.role === 'Student') {
-          const studentProfile = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId);
-          profileData = studentProfile || {};
-           if (studentProfile?.programId) {
-            programName = programMap.get(studentProfile.programId);
-          }
+          foundProfile = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId);
         } else {
-           const staffProfile = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId);
-           profileData = staffProfile || {};
-           if (staffProfile?.programId) {
-            programName = programMap.get(staffProfile.programId);
-          }
+           foundProfile = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId);
+        }
+
+        if (foundProfile) {
+            profileData = foundProfile;
+            if (foundProfile.programId) {
+                programName = programMap.get(foundProfile.programId);
+                profileData.programId = foundProfile.programId;
+            }
         }
       }
 
@@ -143,7 +144,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
         email: firebaseUser.email,
         permissions: permissions,
-        programName: programName
+        programName: programName,
+        programId: profileData.programId
       };
 
       setUser(appUser);
