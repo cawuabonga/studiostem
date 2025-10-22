@@ -16,9 +16,13 @@ interface ProgramSelectorProps {
 }
 
 export function ProgramSelector({ onSelectionChange, children }: ProgramSelectorProps) {
-  const { user, instituteId, activeProgramId, setActiveProgramId, isCoordinator, isFullAdmin, loading: authLoading } = useAuth();
+  const { user, instituteId, activeProgramId, setActiveProgramId, loading: authLoading, hasPermission } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(true);
+
+  // Determine user type based on permissions
+  const isFullAdmin = hasPermission('academic:program:manage');
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
 
   useEffect(() => {
     if (instituteId) {
@@ -31,6 +35,15 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
         setLoadingPrograms(false);
     }
   }, [instituteId, authLoading]);
+  
+  useEffect(() => {
+    // If the user is a coordinator, their active program ID should always be their own programId.
+    // This effect ensures it's set correctly when the user data is available.
+    if (isCoordinator && user?.programId && activeProgramId !== user.programId) {
+      setActiveProgramId(user.programId);
+    }
+  }, [isCoordinator, user?.programId, activeProgramId, setActiveProgramId]);
+
 
   const handleAdminSelection = (programId: string) => {
     const newActiveProgramId = programId === 'all' ? null : programId;
@@ -41,6 +54,9 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
   };
   
   const isLoading = authLoading || loadingPrograms;
+  
+  // This is the definitive program to be used, either from the coordinator or the admin's selection.
+  const definitiveProgramId = isCoordinator ? user?.programId : activeProgramId;
   const coordinatorProgram = isCoordinator ? programs.find(p => p.id === user?.programId) : null;
   
   if (isLoading) {
@@ -54,7 +70,7 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
             {isCoordinator ? (
                  <Input 
                     id="program-selector"
-                    value={coordinatorProgram?.name || 'Cargando...'} 
+                    value={coordinatorProgram?.name || 'Cargando programa...'} 
                     disabled 
                     className="font-semibold"
                 />
@@ -81,8 +97,8 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
             )}
         </div>
         
-        {/* Render children, passing the active program ID */}
-        {children(activeProgramId)}
+        {/* Render children, passing the definitive program ID */}
+        {children(definitiveProgramId || null)}
 
     </div>
   );
