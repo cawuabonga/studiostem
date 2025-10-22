@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
 export default function ListUnitsPage() {
-  const { user, loading: authLoading, hasPermission } = useAuth();
+  const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
 
   const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
@@ -68,8 +68,6 @@ export default function ListUnitsPage() {
       const program = programs.find(p => p.id === programFilter);
       return program?.modules || [];
   }, [programFilter, programs]);
-
-  const { instituteId } = useAuth(); // Moved down to avoid error before authLoading check
 
   if (initialDataLoading || authLoading) {
       return (
