@@ -23,7 +23,6 @@ export default function ListUnitsPage() {
   const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
 
   const [textFilter, setTextFilter] = useState('');
-  // For Admin, this is controlled by the Select. For Coordinator, it's set from their profile.
   const [programFilter, setProgramFilter] = useState('all'); 
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
@@ -41,7 +40,6 @@ export default function ListUnitsPage() {
         const fetchedPrograms = await getPrograms(instituteId);
         setPrograms(fetchedPrograms);
 
-        // If the user is a coordinator, pre-set their program filter
         if (isCoordinator && user?.programId) {
             setProgramFilter(user.programId);
         }
@@ -70,7 +68,6 @@ export default function ListUnitsPage() {
       return program?.modules || [];
   }, [programFilter, programs]);
 
-  // Reset module filter when available modules change
   useEffect(() => {
       setModuleFilter('all');
   }, [availableModules]);
