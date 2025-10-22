@@ -16,26 +16,28 @@ import { Input } from "@/components/ui/input";
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
 export default function ListUnitsPage() {
-  const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
+  const { user, loading: authLoading, hasPermission } = useAuth();
   const router = useRouter();
 
-  // Determine if the user is a Coordinator
   const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
 
-  // State for filters, pre-filled for Coordinator
   const [textFilter, setTextFilter] = useState('');
-  const [programFilter, setProgramFilter] = useState(() => isCoordinator && user?.programId ? user.programId : 'all');
+  const [programFilter, setProgramFilter] = useState('all');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
-  // State for initial data loading
   const [programs, setPrograms] = useState<Program[]>([]);
   const [initialDataLoading, setInitialDataLoading] = useState(true);
 
-  // State to control when to show the list
   const [showUnits, setShowUnits] = useState(false);
 
-  // Effect to fetch the list of all programs for the filter dropdown
+  // Correctly set the program filter when user data is available for a coordinator
+  useEffect(() => {
+    if (!authLoading && isCoordinator && user?.programId) {
+      setProgramFilter(user.programId);
+    }
+  }, [authLoading, isCoordinator, user]);
+  
   useEffect(() => {
     const fetchInitialData = async () => {
       if (authLoading || !instituteId) return;
@@ -43,13 +45,6 @@ export default function ListUnitsPage() {
       try {
         const fetchedPrograms = await getPrograms(instituteId);
         setPrograms(fetchedPrograms);
-
-        // If user is coordinator and their programId is set, ensure the filter reflects that.
-        // This is a safeguard in case the user object loads after initial state is set.
-        if (isCoordinator && user?.programId) {
-            setProgramFilter(user.programId);
-        }
-
       } catch (error) {
         console.error("Error fetching programs:", error);
       } finally {
@@ -58,13 +53,12 @@ export default function ListUnitsPage() {
     };
 
     fetchInitialData();
-  }, [authLoading, instituteId, user, isCoordinator]);
+  }, [authLoading, instituteId]);
   
   const handleShowUnits = () => {
     setShowUnits(true);
   };
   
-  // Reset showUnits state if filters change
   useEffect(() => {
       setShowUnits(false);
   }, [textFilter, programFilter, moduleFilter, periodFilter]);
@@ -75,7 +69,8 @@ export default function ListUnitsPage() {
       return program?.modules || [];
   }, [programFilter, programs]);
 
-  // Handle loading state
+  const { instituteId } = useAuth(); // Moved down to avoid error before authLoading check
+
   if (initialDataLoading || authLoading) {
       return (
           <div className="flex justify-center items-center h-64">
