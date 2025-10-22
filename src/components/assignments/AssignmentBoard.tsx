@@ -10,14 +10,15 @@ import { getUnits, getTeachers, getAssignments, getPrograms, saveAssignments } f
 import type { Unit, Teacher, Assignment, Program, ProgramModule, UnitPeriod } from '@/types';
 import { Save } from 'lucide-react';
 import { AssignmentPeriodColumn } from './AssignmentPeriodColumn';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AssignmentBoardProps {
-  instituteId: string;
   programId: string;
   year: string;
 }
 
-export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoardProps) {
+export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
+  const { instituteId } = useAuth();
   const [units, setUnits] = useState<Unit[]>([]);
   const [program, setProgram] = useState<Program | null>(null);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -27,6 +28,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
       const [allUnits, fetchedTeachers, existingAssignments, allPrograms] = await Promise.all([
@@ -71,6 +73,7 @@ export function AssignmentBoard({ instituteId, programId, year }: AssignmentBoar
   };
 
   const handleSaveAssignments = async () => {
+    if (!instituteId) return;
     setIsSaving(true);
     try {
       await saveAssignments(instituteId, year, programId, assignments);

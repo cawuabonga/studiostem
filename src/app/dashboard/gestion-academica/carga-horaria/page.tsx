@@ -1,44 +1,23 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { getPrograms } from "@/config/firebase";
-import { useAuth } from "@/contexts/AuthContext";
-import type { Program } from "@/types";
 import { Label } from '@/components/ui/label';
 import { TeacherLoadDashboard } from '@/components/carga-horaria/TeacherLoadDashboard';
+import { ProgramSelector } from '@/components/common/ProgramSelector';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function CargaHorariaPage() {
-  const { user, hasPermission, instituteId } = useAuth();
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [selectedProgramId, setSelectedProgramId] = useState<string>('');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
   const [showLoad, setShowLoad] = useState(false);
 
-  const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
-
-  useEffect(() => {
-    if (instituteId) {
-      getPrograms(instituteId).then(setPrograms).catch(console.error);
-    }
-  }, [instituteId]);
-
-  useEffect(() => {
-    if (isCoordinator && user?.programId) {
-      setSelectedProgramId(user.programId);
-    } else {
-      setSelectedProgramId('');
-    }
-     setShowLoad(false);
-  }, [isCoordinator, user?.programId]);
-
-
-  const handleShowLoad = () => {
-    if (selectedProgramId && selectedYear) {
+  const handleShowLoad = (programId: string | null) => {
+    if (programId && selectedYear) {
       setShowLoad(true);
+    } else {
+        setShowLoad(false);
     }
   };
   
@@ -51,56 +30,42 @@ export default function CargaHorariaPage() {
         <CardHeader>
           <CardTitle>Consulta de Carga Horaria</CardTitle>
           <CardDescription>
-            Selecciona un año y un programa de estudio para ver la carga horaria de los docentes y coordinadores.
+            Selecciona un programa y un año para ver la carga horaria de los docentes y coordinadores.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 space-y-2">
-                <Label htmlFor="year-select">Año</Label>
-                <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setShowLoad(false); }}>
-                    <SelectTrigger id="year-select">
-                        <SelectValue placeholder="Seleccione un año" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                    </SelectContent>
-                </Select>
-            </div>
-            <div className="flex-1 space-y-2">
-                 <Label htmlFor="program-select">Programa de Estudio</Label>
-                <Select 
-                    value={selectedProgramId} 
-                    onValueChange={(value) => { setSelectedProgramId(value); setShowLoad(false); }} 
-                    disabled={!programs.length || isCoordinator}
-                >
-                    <SelectTrigger id="program-select">
-                        <SelectValue placeholder="Seleccione un programa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {programs.map(program => (
-                            <SelectItem key={program.id} value={program.id}>
-                                {program.name}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-          </div>
-          <Button onClick={handleShowLoad} disabled={!selectedProgramId || !selectedYear}>
-            Consultar Carga Horaria
-          </Button>
+            <ProgramSelector onSelectionChange={() => setShowLoad(false)}>
+                {(activeProgramId) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-4">
+                         <div className="space-y-2">
+                            <Label htmlFor="year-select">Año</Label>
+                            <Select value={selectedYear} onValueChange={(value) => { setSelectedYear(value); setShowLoad(false); }}>
+                                <SelectTrigger id="year-select">
+                                    <SelectValue placeholder="Seleccione un año" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {years.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={() => handleShowLoad(activeProgramId)} disabled={!activeProgramId || !selectedYear}>
+                            Consultar Carga Horaria
+                        </Button>
+                        
+                        {showLoad && activeProgramId && (
+                            <div className="col-span-full pt-4">
+                                <TeacherLoadDashboard 
+                                    key={`${activeProgramId}-${selectedYear}`}
+                                    programId={activeProgramId} 
+                                    year={selectedYear} 
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </ProgramSelector>
         </CardContent>
       </Card>
-
-      {showLoad && instituteId && (
-        <TeacherLoadDashboard 
-          key={`${instituteId}-${selectedProgramId}-${selectedYear}`}
-          instituteId={instituteId} 
-          programId={selectedProgramId} 
-          year={selectedYear} 
-        />
-      )}
     </div>
   );
 }

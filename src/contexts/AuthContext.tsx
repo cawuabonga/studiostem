@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile } from '@/types';
+import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program } from '@/types';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   auth, 
@@ -13,7 +13,8 @@ import {
   getRolePermissions,
   getStaffProfileByDocumentId,
   getStudentProfile,
-  getPrograms
+  getPrograms,
+  getRoles
 } from '@/config/firebase'; 
 import { 
   onAuthStateChanged, 
@@ -39,6 +40,10 @@ interface AuthContextType {
   signOutUser: () => Promise<void>;
   reloadUser: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
+  activeProgramId: string | null;
+  setActiveProgramId: (programId: string | null) => void;
+  isCoordinator: boolean;
+  isFullAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [instituteId, setInstituteIdState] = useState<string | null>(getInitialInstituteId);
   const [institute, setInstituteObject] = useState<Institute | null>(null);
+  const [activeProgramId, setActiveProgramId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -81,13 +87,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    // On initial load, if there's an instituteId from localStorage, load its data.
     if (instituteId && !institute) {
         getInstitute(instituteId).then(data => {
             setInstituteObject(data);
         }).catch(err => {
             console.error("Failed to load initial institute data:", err);
-            // Maybe the ID is stale, clear it
             setInstitute(null);
         });
     }
@@ -98,82 +102,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDocRef = doc(db, 'users', firebaseUser.uid);
     const userDocSnap = await getDoc(userDocRef);
 
-    if (userDocSnap.exists()) {
-      const userDataFromDb = userDocSnap.data() as AppUser;
-
-      let permissions: Permission[] = [];
-      if (userDataFromDb.roleId && userDataFromDb.instituteId) {
-        try {
-          permissions = await getRolePermissions(userDataFromDb.instituteId, userDataFromDb.roleId) || [];
-        } catch (error) {
-          console.error("Error fetching permissions, defaulting to empty:", error);
-          permissions = [];
-        }
-      } else if (userDataFromDb.role === 'SuperAdmin') {
-        permissions = []; // SuperAdmin has implicit global access
-      }
-      
-      let profileData: Partial<StudentProfile | StaffProfile> & {programId?: string} = {};
-      let programName: string | undefined = undefined;
-
-      if (userDataFromDb.documentId && userDataFromDb.instituteId) {
-        const programs = await getPrograms(userDataFromDb.instituteId);
-        const programMap = new Map(programs.map(p => [p.id, p.name]));
-
-        let foundProfile: StudentProfile | StaffProfile | null = null;
-        if (userDataFromDb.role === 'Student') {
-          foundProfile = await getStudentProfile(userDataFromDb.instituteId, userDataFromDb.documentId);
-        } else {
-           foundProfile = await getStaffProfileByDocumentId(userDataFromDb.instituteId, userDataFromDb.documentId);
-        }
-
-        if (foundProfile) {
-            profileData = foundProfile;
-            if (foundProfile.programId) {
-                programName = programMap.get(foundProfile.programId);
-            }
-        }
-      }
-
-      const appUser: AppUser = {
-        ...userDataFromDb,
-        ...profileData,
-        uid: firebaseUser.uid,
-        displayName: profileData.displayName || userDataFromDb.displayName || firebaseUser.displayName,
-        photoURL: profileData.photoURL || userDataFromDb.photoURL || firebaseUser.photoURL,
-        email: firebaseUser.email,
-        permissions: permissions,
-        programName: programName
-      };
-      
-      setUser(appUser);
-      if (appUser.instituteId && appUser.instituteId !== instituteId) {
-        await setInstitute(appUser.instituteId);
-      } else if (!appUser.instituteId && instituteId) {
-        await setInstitute(null);
-      }
-    } else {
-      // This is a brand new user who has just signed up but has not created a user document yet.
-      // This is a valid state.
-      const appUser: AppUser = {
+    if (!userDocSnap.exists()) {
+       // This case handles brand new sign-ups that might not have a user doc yet.
+      const newUser: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName,
         photoURL: firebaseUser.photoURL,
-        role: 'Student', 
-        instituteId: null, 
+        role: 'Student', // Default role
+        instituteId: null,
         documentId: '',
-        roleId: 'student', // Default roleId for new signups
+        roleId: 'student', // Default roleId
         permissions: [],
       };
-      // Let's create their user document now.
       await saveUserAdditionalData(
-        { uid: firebaseUser.uid, email: firebaseUser.email, displayName: appUser.displayName, photoURL: appUser.photoURL },
-        appUser.role,
+        { uid: newUser.uid, email: newUser.email, displayName: newUser.displayName, photoURL: newUser.photoURL },
+        newUser.role,
         null
       );
-      setUser(appUser);
+      setUser(newUser);
+      return;
     }
+
+    const baseUserData = userDocSnap.data() as AppUser;
+    let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid };
+
+    // --- Start Sequential Data Loading ---
+
+    // 1. Load Institute, Roles, and Permissions if instituteId exists
+    if (baseUserData.instituteId) {
+      const instituteData = await getInstitute(baseUserData.instituteId);
+      finalUser.instituteId = instituteData?.id || null;
+
+      if (instituteData && baseUserData.roleId) {
+        const instituteRoles = await getRoles(instituteData.id);
+        const userRole = instituteRoles.find(r => r.id === baseUserData.roleId);
+        finalUser.permissions = userRole?.permissions || [];
+      } else {
+        finalUser.permissions = [];
+      }
+    } else {
+        finalUser.permissions = baseUserData.role === 'SuperAdmin' ? [] : ['student:unit:view', 'student:grades:view', 'student:payments:manage'];
+    }
+    
+    // 2. Load Specific Profile Data (Staff/Student) if documentId and instituteId exist
+    if (baseUserData.documentId && baseUserData.instituteId) {
+      let profileData: StudentProfile | StaffProfile | null = null;
+      if (baseUserData.role === 'Student') {
+        profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
+      } else {
+        profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
+      }
+
+      if (profileData) {
+        finalUser = { ...finalUser, ...profileData }; // Merge profile data
+        const programs = await getPrograms(baseUserData.instituteId);
+        const programMap = new Map(programs.map(p => [p.id, p.name]));
+        finalUser.programName = programMap.get(profileData.programId) || undefined;
+      }
+    }
+    
+    // 3. Consolidate display name and photo from the best available source
+    finalUser.displayName = finalUser.displayName || firebaseUser.displayName;
+    finalUser.photoURL = finalUser.photoURL || firebaseUser.photoURL;
+
+    setUser(finalUser);
+     if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
+        await setInstitute(finalUser.instituteId);
+      } else if (!finalUser.instituteId && instituteId) {
+        await setInstitute(null);
+      }
   };
 
   useEffect(() => {
@@ -185,19 +183,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
            console.error("Error fetching user data from Firestore:", error);
            toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
-           // Signing out to prevent being stuck in a broken state
            await firebaseSignOut(auth);
            setUser(null);
         }
       } else {
         setUser(null);
+        setInstitute(null);
       }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast, setInstitute]);
   
   const reloadUser = async () => {
     const firebaseUser = auth.currentUser;
@@ -211,6 +208,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
     }
   };
+
+  const hasPermission = useCallback((permission: Permission): boolean => {
+    if (user?.role === 'SuperAdmin') return true;
+    return user?.permissions?.includes(permission) ?? false;
+  }, [user]);
+
+  const isFullAdmin = hasPermission('academic:program:manage');
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
+
+   useEffect(() => {
+    if (!loading && user) {
+      if (isCoordinator && user.programId && activeProgramId !== user.programId) {
+        setActiveProgramId(user.programId);
+      }
+      // For admins, we let them choose, so we don't set a default here unless desired.
+      // If activeProgramId is not valid for the current list of programs, it could be cleared here.
+    }
+   }, [user, loading, isCoordinator, activeProgramId]);
+
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
@@ -226,28 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
-      
-      // Explicitly create the default user state, save it, and then set it.
-      const appUser: AppUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
-        role: 'Student', 
-        instituteId: null, 
-        documentId: '',
-        roleId: 'student',
-        permissions: [],
-      };
-      
-      await saveUserAdditionalData(
-          { uid: firebaseUser.uid, email: firebaseUser.email, displayName: name, photoURL: firebaseUser.photoURL },
-          'Student',
-          null
-      );
-      
-      setUser(appUser);
-      // The onAuthStateChanged listener will also fire, but setting it here ensures a smooth UI transition.
+      await fetchAndSetUser(firebaseUser);
       
     } catch (error: any) {
       console.error("Sign up error:", error);
@@ -258,32 +253,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signInWithGoogle = async () => {
     try {
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const userDocRef = doc(db, 'users', result.user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (!userDocSnap.exists()) {
-        const appUser: AppUser = {
-            uid: result.user.uid,
-            email: result.user.email,
-            displayName: result.user.displayName,
-            photoURL: result.user.photoURL,
-            role: 'Student',
-            instituteId: null,
-            documentId: '',
-            roleId: 'student',
-            permissions: []
-        };
-        await saveUserAdditionalData({
-            uid: appUser.uid,
-            email: appUser.email,
-            displayName: appUser.displayName,
-            photoURL: appUser.photoURL
-        }, 'Student', null);
-        setUser(appUser);
-      }
-      // If user exists, onAuthStateChanged will handle fetching the data.
-
+      await signInWithPopup(auth, provider);
+      // onAuthStateChanged will handle the rest.
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -293,24 +264,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOutUser = async () => {
     try {
       await firebaseSignOut(auth);
-      // The onAuthStateChanged listener will handle the state update and redirection.
-      setUser(null);
-      setInstitute(null);
       router.push('/');
-
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
     }
   };
 
-  const hasPermission = useCallback((permission: Permission): boolean => {
-    if (user?.role === 'SuperAdmin') return true;
-    return user?.permissions?.includes(permission) ?? false;
-  }, [user]);
-
   return (
-    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser, hasPermission }}>
+    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser, hasPermission, activeProgramId, setActiveProgramId, isCoordinator, isFullAdmin }}>
       {children}
     </AuthContext.Provider>
   );

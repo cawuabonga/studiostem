@@ -8,9 +8,9 @@ import { useToast } from "@/hooks/use-toast";
 import { getUnits, getStaffProfiles, getAssignments, getPrograms, getRoles, getAllNonTeachingAssignmentsForYear } from '@/config/firebase';
 import type { Unit, Teacher, Assignment, UnitPeriod, StaffProfile, Program, Role, NonTeachingAssignment } from '@/types';
 import { TeacherLoadCard } from './TeacherLoadCard';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeacherLoadDashboardProps {
-  instituteId: string;
   programId: string;
   year: string;
 }
@@ -21,13 +21,15 @@ interface TeacherWithLoad {
     nonTeachingAssignments: NonTeachingAssignment[];
 }
 
-export function TeacherLoadDashboard({ instituteId, programId, year }: TeacherLoadDashboardProps) {
+export function TeacherLoadDashboard({ programId, year }: TeacherLoadDashboardProps) {
+  const { instituteId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [teachersWithLoad, setTeachersWithLoad] = useState<TeacherWithLoad[]>([]);
   const [programMap, setProgramMap] = useState<Map<string, Program>>(new Map());
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
+    if (!instituteId) return;
     setLoading(true);
     try {
       const [

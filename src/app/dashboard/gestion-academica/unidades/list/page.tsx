@@ -1,87 +1,46 @@
+
 "use client";
 
 import { UnitsList } from "@/components/units/UnitsList";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import { getPrograms } from "@/config/firebase";
-import type { Program, UnitPeriod, ProgramModule } from "@/types";
+import type { UnitPeriod } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ProgramSelector } from "@/components/common/ProgramSelector";
 
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
 export default function ListUnitsPage() {
-  const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
+  const { instituteId, loading: authLoading } = useAuth();
   
-  const isFullAdmin = hasPermission('academic:program:manage');
-  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-
   const [textFilter, setTextFilter] = useState('');
-  const [adminProgramFilter, setAdminProgramFilter] = useState('all'); // State for admin's selection
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [initialDataLoading, setInitialDataLoading] = useState(true);
-
   const [showUnits, setShowUnits] = useState(false);
 
-  // Derived state for the actual filter value
-  const programFilter = isCoordinator ? (user?.programId || 'all') : adminProgramFilter;
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      if (authLoading || !instituteId) return;
-
-      try {
-        const fetchedPrograms = await getPrograms(instituteId);
-        setPrograms(fetchedPrograms);
-
-      } catch (error) {
-        console.error("Error fetching programs:", error);
-      } finally {
-        setInitialDataLoading(false);
-      }
-    };
-
-    fetchInitialData();
-  }, [authLoading, instituteId]);
-  
   const handleShowUnits = () => {
     setShowUnits(true);
   };
   
-  useEffect(() => {
+  const resetAndSearch = (setter: React.Dispatch<React.SetStateAction<any>>) => (value: any) => {
+      setter(value);
       setShowUnits(false);
-  }, [textFilter, adminProgramFilter, moduleFilter, periodFilter]);
-
-  const availableModules = useMemo(() => {
-      if(programFilter === 'all' || !programs.length) return [];
-      const program = programs.find(p => p.id === programFilter);
-      return program?.modules || [];
-  }, [programFilter, programs]);
-
-  useEffect(() => {
-      setModuleFilter('all');
-  }, [programFilter]);
-
-
-  if (initialDataLoading || authLoading) {
+  };
+  
+  if (authLoading) {
       return (
           <div className="flex justify-center items-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
       )
   }
-
-  const coordinatorProgramName = isCoordinator ? programs.find(p => p.id === programFilter)?.name : '';
-
 
   return (
     <div className="space-y-6">
@@ -99,75 +58,51 @@ export default function ListUnitsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-              <div className="space-y-2">
-                <Label htmlFor="text-filter">Búsqueda por texto</Label>
-                <Input 
-                  id="text-filter"
-                  placeholder="Buscar por nombre, código..."
-                  value={textFilter}
-                  onChange={(e) => setTextFilter(e.target.value)}
-                />
-              </div>
+            <ProgramSelector onSelectionChange={() => setShowUnits(false)}>
+                {(activeProgramId) => (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="text-filter">Búsqueda por texto</Label>
+                            <Input 
+                            id="text-filter"
+                            placeholder="Buscar por nombre, código..."
+                            value={textFilter}
+                            onChange={resetAndSearch(setTextFilter)}
+                            />
+                        </div>
+                        
+                        {/* Module and Period filters could be adapted to be children too, or remain here */}
+                        <div className="space-y-2">
+                            <Label htmlFor="period-filter">Período</Label>
+                            <Select value={periodFilter} onValueChange={resetAndSearch(setPeriodFilter)}>
+                                <SelectTrigger id="period-filter">
+                                    <SelectValue placeholder="Filtrar por período..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Períodos</SelectItem>
+                                    {periods.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="col-span-1 md:col-span-2 lg:col-span-4">
+                            <Button onClick={handleShowUnits}>Cargar Unidades</Button>
+                        </div>
 
-            {isCoordinator ? (
-                <div className="space-y-2">
-                  <Label>Programa de Estudio</Label>
-                  <Input value={coordinatorProgramName || 'Cargando...'} disabled />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                   <Label htmlFor="program-filter">Programa de Estudio</Label>
-                  <Select value={adminProgramFilter} onValueChange={setAdminProgramFilter}>
-                      <SelectTrigger id="program-filter">
-                          <SelectValue placeholder="Filtrar por programa..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                          <SelectItem value="all">Todos los Programas</SelectItem>
-                          {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                      </SelectContent>
-                  </Select>
-                </div>
-            )}
-              
-            <div className="space-y-2">
-              <Label htmlFor="module-filter">Módulo</Label>
-              <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={availableModules.length === 0}>
-                  <SelectTrigger id="module-filter">
-                      <SelectValue placeholder="Filtrar por módulo..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="all">Todos los Módulos</SelectItem>
-                      {availableModules.map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)}
-                  </SelectContent>
-              </Select>
-            </div>
-             
-            <div className="space-y-2">
-              <Label htmlFor="period-filter">Período</Label>
-              <Select value={periodFilter} onValueChange={(v) => setPeriodFilter(v as any)}>
-                  <SelectTrigger id="period-filter">
-                      <SelectValue placeholder="Filtrar por período..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                      <SelectItem value="all">Todos los Períodos</SelectItem>
-                      {periods.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-              </Select>
-            </div>
-            </div>
-             <Button onClick={handleShowUnits}>Cargar Unidades</Button>
+                         {showUnits && instituteId && (
+                            <div className="col-span-1 md:col-span-2 lg:col-span-4 pt-4">
+                                <UnitsList
+                                    key={`${activeProgramId}-${moduleFilter}-${periodFilter}-${textFilter}`}
+                                    instituteId={instituteId}
+                                    filters={{ programFilter: activeProgramId || 'all', moduleFilter, periodFilter, textFilter }}
+                                    onDataChange={() => setShowUnits(false)}
+                                />
+                            </div>
+                        )}
+                    </div>
+                )}
+            </ProgramSelector>
         </CardContent>
       </Card>
-      
-      {showUnits && instituteId && (
-        <UnitsList
-          key={`${programFilter}-${moduleFilter}-${periodFilter}-${textFilter}`}
-          instituteId={instituteId}
-          filters={{ programFilter, moduleFilter, periodFilter, textFilter }}
-          onDataChange={() => setShowUnits(false)} // Force refilter on data change
-        />
-      )}
     </div>
   );
 }
