@@ -27,8 +27,10 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
         .then(setPrograms)
         .catch(console.error)
         .finally(() => setLoadingPrograms(false));
+    } else if (!authLoading) {
+        setLoadingPrograms(false);
     }
-  }, [instituteId]);
+  }, [instituteId, authLoading]);
 
   const handleAdminSelection = (programId: string) => {
     const newActiveProgramId = programId === 'all' ? null : programId;
@@ -47,13 +49,14 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
 
   return (
     <div className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-2 max-w-sm">
             <Label htmlFor="program-selector">Programa de Estudio</Label>
             {isCoordinator ? (
                  <Input 
                     id="program-selector"
                     value={coordinatorProgram?.name || 'Cargando...'} 
                     disabled 
+                    className="font-semibold"
                 />
             ) : isFullAdmin ? (
                 <Select 
@@ -73,7 +76,9 @@ export function ProgramSelector({ onSelectionChange, children }: ProgramSelector
                         ))}
                     </SelectContent>
                 </Select>
-            ) : null }
+            ) : (
+                <p className="text-sm text-muted-foreground">No tiene permisos para seleccionar un programa.</p>
+            )}
         </div>
         
         {/* Render children, passing the active program ID */}
