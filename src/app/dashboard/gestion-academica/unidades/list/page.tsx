@@ -18,12 +18,12 @@ const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 
 export default function ListUnitsPage() {
   const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
-  const router = useRouter();
-
-  const isCoordinator = hasPermission('academic:unit:manage:own') && !hasPermission('academic:program:manage');
+  
+  const isFullAdmin = hasPermission('academic:program:manage');
+  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
 
   const [textFilter, setTextFilter] = useState('');
-  const [programFilter, setProgramFilter] = useState('all'); 
+  const [adminProgramFilter, setAdminProgramFilter] = useState('all'); // State for admin's selection
   const [moduleFilter, setModuleFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
   
@@ -31,7 +31,10 @@ export default function ListUnitsPage() {
   const [initialDataLoading, setInitialDataLoading] = useState(true);
 
   const [showUnits, setShowUnits] = useState(false);
-  
+
+  // Derived state for the actual filter value
+  const programFilter = isCoordinator ? (user?.programId || 'all') : adminProgramFilter;
+
   useEffect(() => {
     const fetchInitialData = async () => {
       if (authLoading || !instituteId) return;
@@ -39,10 +42,6 @@ export default function ListUnitsPage() {
       try {
         const fetchedPrograms = await getPrograms(instituteId);
         setPrograms(fetchedPrograms);
-
-        if (isCoordinator && user?.programId) {
-            setProgramFilter(user.programId);
-        }
 
       } catch (error) {
         console.error("Error fetching programs:", error);
@@ -52,7 +51,7 @@ export default function ListUnitsPage() {
     };
 
     fetchInitialData();
-  }, [authLoading, instituteId, isCoordinator, user?.programId]);
+  }, [authLoading, instituteId]);
   
   const handleShowUnits = () => {
     setShowUnits(true);
@@ -60,7 +59,7 @@ export default function ListUnitsPage() {
   
   useEffect(() => {
       setShowUnits(false);
-  }, [textFilter, programFilter, moduleFilter, periodFilter]);
+  }, [textFilter, adminProgramFilter, moduleFilter, periodFilter]);
 
   const availableModules = useMemo(() => {
       if(programFilter === 'all' || !programs.length) return [];
@@ -70,7 +69,7 @@ export default function ListUnitsPage() {
 
   useEffect(() => {
       setModuleFilter('all');
-  }, [availableModules]);
+  }, [programFilter]);
 
 
   if (initialDataLoading || authLoading) {
@@ -119,7 +118,7 @@ export default function ListUnitsPage() {
               ) : (
                 <div className="space-y-2">
                    <Label htmlFor="program-filter">Programa de Estudio</Label>
-                  <Select value={programFilter} onValueChange={setProgramFilter}>
+                  <Select value={adminProgramFilter} onValueChange={setAdminProgramFilter}>
                       <SelectTrigger id="program-filter">
                           <SelectValue placeholder="Filtrar por programa..." />
                       </SelectTrigger>
