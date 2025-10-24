@@ -25,7 +25,7 @@ interface NavItem {
     href: string;
     label: string;
     icon: React.ElementType;
-    permission?: Permission; // Now using a single permission
+    permission?: Permission | Permission[]; // Allow single or multiple permissions
     isDefault?: boolean; // For items always visible like Dashboard
 }
 
@@ -39,7 +39,8 @@ const allNavItems: NavItem[] = [
 
     // Institute Admin/Coordinator
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' }, // Example permission, adjust as needed
-    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: 'academic:program:manage' }, // Broad permission
+    // This now checks if user has EITHER of these permissions
+    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: 'admin:fees:manage' }, // Broad permission
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: 'users:staff:manage' },
@@ -59,12 +60,17 @@ export function AppSidebarContents() {
   const pathname = usePathname();
   
   const accessibleNavItems = allNavItems.filter(item => {
-      // The dashboard link is always visible for logged-in users.
       if (item.isDefault) return true;
-      // If no permission is required, show the item (should be rare).
       if (!item.permission) return true;
-      // Otherwise, check if the user has the required permission.
-      return hasPermission(item.permission);
+
+      // Handle both single and multiple permissions
+      if (Array.isArray(item.permission)) {
+          // If it's an array, check if user has at least one of the permissions
+          return item.permission.some(p => hasPermission(p));
+      } else {
+          // If it's a single permission string
+          return hasPermission(item.permission);
+      }
   });
   
   const getSidebarTitle = () => {
