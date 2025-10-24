@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -17,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import Image from 'next/image';
 import Link from 'next/link';
 import { EditStudentProfileDialog } from './EditStudentProfileDialog';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface StudentsTableProps {
     instituteId: string;
@@ -25,6 +25,28 @@ interface StudentsTableProps {
 }
 
 const PAGE_SIZE = 10;
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+
+const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-JUL' | 'AGO-DIC'): number => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); // 0-11
+    
+    const yearsDiff = currentYear - parseInt(admissionYear);
+    let semesterCount = yearsDiff * 2;
+
+    if (admissionPeriod === 'MAR-JUL') {
+        semesterCount += 1;
+    }
+
+    if (currentMonth >= 7) { // July onwards, we are in the second semester of the year
+        semesterCount += 1;
+    } else if (admissionPeriod === 'AGO-DIC') {
+         semesterCount -=1;
+    }
+
+    return Math.max(1, semesterCount);
+};
+
 
 export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = false }: StudentsTableProps) {
   const [allProfiles, setAllProfiles] = useState<StudentProfile[]>([]);
@@ -32,8 +54,13 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const [loading, setLoading] = useState(true);
   const [textFilter, setTextFilter] = useState('');
   const [programFilter, setProgramFilter] = useState('all');
+  const [semesterFilter, setSemesterFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
+  const { user, hasPermission } = useAuth();
+  
+  const isFullAdmin = hasPermission('academic:program:manage');
+  const isCoordinator = hasPermission('academic:enrollment:manage') && !isFullAdmin;
 
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -61,8 +88,11 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   useEffect(() => {
     if (instituteId) {
       fetchData(instituteId);
+      if (isCoordinator && user?.programId) {
+        setProgramFilter(user.programId);
+      }
     }
-  }, [instituteId, fetchData]);
+  }, [instituteId, fetchData, isCoordinator, user?.programId]);
 
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
@@ -80,6 +110,13 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
         profiles = profiles.filter(p => p.programId === programFilter);
     }
 
+    if (semesterFilter !== 'all') {
+        profiles = profiles.filter(p => {
+            const studentSemester = calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
+            return studentSemester === parseInt(semesterFilter);
+        });
+    }
+
     if (textFilter) {
         profiles = profiles.filter(profile =>
             profile.fullName.toLowerCase().includes(textFilter.toLowerCase()) ||
@@ -88,8 +125,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
         );
     }
 
-    return profiles;
-  }, [allProfiles, textFilter, programFilter]);
+    return profiles.sort((a, b) => a.lastName.localeCompare(b.lastName));
+  }, [allProfiles, textFilter, programFilter, semesterFilter]);
   
   const paginatedProfiles = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -116,6 +153,9 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     return <p className="text-center text-muted-foreground py-8">No hay perfiles de estudiantes registrados.</p>;
   }
 
+  const coordinatorProgramName = isCoordinator ? programMap.get(user?.programId || '')?.name : '';
+
+
   return (
     <>
       <div className="flex flex-col sm:flex-row gap-4 mb-4">
@@ -128,13 +168,26 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
           }}
           className="max-w-sm"
         />
-        <Select value={programFilter} onValueChange={(value) => {setProgramFilter(value); setCurrentPage(1);}}>
-            <SelectTrigger className="w-full sm:w-[280px]">
-                <SelectValue placeholder="Filtrar por programa" />
+         {isCoordinator ? (
+            <Input value={coordinatorProgramName || 'Cargando...'} disabled />
+         ) : (
+            <Select value={programFilter} onValueChange={(value) => {setProgramFilter(value); setCurrentPage(1);}}>
+                <SelectTrigger className="w-full sm:w-[280px]">
+                    <SelectValue placeholder="Filtrar por programa" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los Programas</SelectItem>
+                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+            </Select>
+         )}
+        <Select value={semesterFilter} onValueChange={(value) => {setSemesterFilter(value); setCurrentPage(1);}}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por semestre" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="all">Todos los Programas</SelectItem>
-                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                <SelectItem value="all">Todos los Semestres</SelectItem>
+                {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
             </SelectContent>
         </Select>
       </div>

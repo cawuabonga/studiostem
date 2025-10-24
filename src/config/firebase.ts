@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -797,7 +796,7 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
         getPrograms(instituteId),
         getUnits(instituteId)
     ]);
-    const programMap = new Map(programs.map(p => [p.id, p]));
+    const programMap = new Map(programs.map(p => [p.id, p.name]));
     const unitMap = new Map(allUnits.map(u => [u.id, u]));
 
     const enrolledUnits: EnrolledUnit[] = [];
@@ -1360,3 +1359,4 @@ export const getAccessPointStats = async (
 
 
     
+
