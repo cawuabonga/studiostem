@@ -21,7 +21,7 @@ const academicModules = [
     description: "Administrar los cursos o materias de cada programa de estudio.",
     href: "/dashboard/gestion-academica/unidades",
     icon: Library,
-    permission: "academic:program:manage",
+    permission: ["academic:program:manage", "academic:unit:manage:own"],
   },
   {
     title: "Lista de Docentes",
@@ -71,8 +71,11 @@ export default function GestionAcademicaPage() {
   const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
 
-  // A user can access this page if they can manage programs OR assignments.
-  const canAccessPage = hasPermission('academic:program:manage') || hasPermission('academic:assignment:manage');
+  // A user can access this page if they can perform any academic management task.
+  const canAccessPage = academicModules.some(module => {
+    const permissions = Array.isArray(module.permission) ? module.permission : [module.permission];
+    return permissions.some(p => hasPermission(p as any));
+  });
 
   useEffect(() => {
     if (!loading && !canAccessPage) { 
@@ -80,7 +83,10 @@ export default function GestionAcademicaPage() {
     }
   }, [user, loading, hasPermission, router, canAccessPage]);
   
-  const accessibleModules = academicModules.filter(module => hasPermission(module.permission as any));
+  const accessibleModules = academicModules.filter(module => {
+      const permissions = Array.isArray(module.permission) ? module.permission : [module.permission];
+      return permissions.some(p => hasPermission(p as any));
+  });
 
   if (loading || !user || !canAccessPage) {
     return <p>Cargando...</p>;
