@@ -9,10 +9,15 @@ import type { Permission } from "@/types";
 
 // Define a prioritized list of routes based on permissions.
 // The first match will be used for redirection.
+// **ORDER IS CRITICAL HERE**
 const roleRedirects: { permission: Permission; route: string }[] = [
   { permission: 'superadmin:institute:manage', route: '/dashboard/superadmin/manage-institutes' },
-  { permission: 'academic:program:manage', route: '/dashboard/gestion-academica' }, // Admin, Coordinator
+  // A coordinator has 'academic:assignment:manage', an admin has 'academic:program:manage'. Check both.
+  { permission: 'academic:assignment:manage', route: '/dashboard/gestion-academica' },
+  { permission: 'academic:program:manage', route: '/dashboard/gestion-academica' },
+  // A teacher's primary view is their own units.
   { permission: 'teacher:unit:view', route: '/dashboard/docente' },
+  // A student's primary view is their general academic dashboard.
   { permission: 'student:unit:view', route: '/dashboard/academic' },
 ];
 
@@ -40,7 +45,6 @@ export default function DashboardRedirectPage() {
     
     // Fallback for any other roles or if role is not defined yet,
     // or if the user has a role with no specific dashboard permissions.
-    // SuperAdmin without permissions (edge case) will also be handled by the check above.
     // The most common case for this default is a brand new user who needs to link their profile.
     router.replace('/dashboard/academic');
 

@@ -71,15 +71,18 @@ export default function GestionAcademicaPage() {
   const { user, loading, hasPermission } = useAuth();
   const router = useRouter();
 
+  // A user can access this page if they can manage programs OR assignments.
+  const canAccessPage = hasPermission('academic:program:manage') || hasPermission('academic:assignment:manage');
+
   useEffect(() => {
-    if (!loading && !hasPermission('academic:program:manage')) { // Example broad permission check
+    if (!loading && !canAccessPage) { 
       router.push("/dashboard");
     }
-  }, [user, loading, hasPermission, router]);
+  }, [user, loading, hasPermission, router, canAccessPage]);
   
   const accessibleModules = academicModules.filter(module => hasPermission(module.permission as any));
 
-  if (loading || !user || !hasPermission('academic:program:manage')) {
+  if (loading || !user || !canAccessPage) {
     return <p>Cargando...</p>;
   }
 
