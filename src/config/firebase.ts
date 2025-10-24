@@ -263,7 +263,7 @@ export const getUnit = async (instituteId: string, unitId: string): Promise<Unit
 
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
-    const q = query(unitsCol, orderBy("name"));
+    const q = query(unitsCol, orderBy("code"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
 }
