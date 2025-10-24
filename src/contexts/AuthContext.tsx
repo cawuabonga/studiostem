@@ -40,10 +40,6 @@ interface AuthContextType {
   signOutUser: () => Promise<void>;
   reloadUser: () => Promise<void>;
   hasPermission: (permission: Permission) => boolean;
-  activeProgramId: string | null;
-  setActiveProgramId: (programId: string | null) => void;
-  isCoordinator: boolean;
-  isFullAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -61,7 +57,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [instituteId, setInstituteIdState] = useState<string | null>(getInitialInstituteId);
   const [institute, setInstituteObject] = useState<Institute | null>(null);
-  const [activeProgramId, setActiveProgramId] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -103,16 +98,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDocSnap = await getDoc(userDocRef);
 
     if (!userDocSnap.exists()) {
-       // This case handles brand new sign-ups that might not have a user doc yet.
       const newUser: AppUser = {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         displayName: firebaseUser.displayName,
         photoURL: firebaseUser.photoURL,
-        role: 'Student', // Default role
+        role: 'Student',
         instituteId: null,
         documentId: '',
-        roleId: 'student', // Default roleId
+        roleId: 'student', 
         permissions: [],
       };
       await saveUserAdditionalData(
@@ -125,53 +119,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const baseUserData = userDocSnap.data() as AppUser;
-    let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid };
+    let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid, permissions: [] };
 
-    // --- Start Sequential Data Loading ---
-
-    // 1. Load Institute, Roles, and Permissions if instituteId exists
     if (baseUserData.instituteId) {
-      const instituteData = await getInstitute(baseUserData.instituteId);
-      finalUser.instituteId = instituteData?.id || null;
+        finalUser.instituteId = baseUserData.instituteId;
+        if(baseUserData.roleId) {
+             const permissions = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
+             finalUser.permissions = permissions || [];
+        }
 
-      if (instituteData && baseUserData.roleId) {
-        const instituteRoles = await getRoles(instituteData.id);
-        const userRole = instituteRoles.find(r => r.id === baseUserData.roleId);
-        finalUser.permissions = userRole?.permissions || [];
-      } else {
-        finalUser.permissions = [];
-      }
-    } else {
-        finalUser.permissions = baseUserData.role === 'SuperAdmin' ? [] : ['student:unit:view', 'student:grades:view', 'student:payments:manage'];
-    }
-    
-    // 2. Load Specific Profile Data (Staff/Student) if documentId and instituteId exist
-    if (baseUserData.documentId && baseUserData.instituteId) {
-      let profileData: StudentProfile | StaffProfile | null = null;
-      if (baseUserData.role === 'Student') {
-        profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
-      } else {
-        profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
-      }
+        if (baseUserData.documentId) {
+            let profileData: StudentProfile | StaffProfile | null = null;
+            if (baseUserData.role === 'Student') {
+                profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
+            } else {
+                profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
+            }
 
-      if (profileData) {
-        finalUser = { ...finalUser, ...profileData }; // Merge profile data
-        const programs = await getPrograms(baseUserData.instituteId);
-        const programMap = new Map(programs.map(p => [p.id, p.name]));
-        finalUser.programName = programMap.get(profileData.programId) || undefined;
-      }
+            if (profileData) {
+                finalUser = { ...finalUser, ...profileData };
+                 if (profileData.programId) {
+                    const programs = await getPrograms(baseUserData.instituteId);
+                    const programMap = new Map(programs.map(p => [p.id, p.name]));
+                    finalUser.programName = programMap.get(profileData.programId) || undefined;
+                }
+            }
+        }
+    } else if (baseUserData.role === 'SuperAdmin') {
+         finalUser.permissions = ['superadmin:institute:manage', 'superadmin:users:manage', 'superadmin:design:manage', 'superadmin:roles:manage'];
     }
-    
-    // 3. Consolidate display name and photo from the best available source
+
     finalUser.displayName = finalUser.displayName || firebaseUser.displayName;
     finalUser.photoURL = finalUser.photoURL || firebaseUser.photoURL;
 
     setUser(finalUser);
-     if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
-        await setInstitute(finalUser.instituteId);
-      } else if (!finalUser.instituteId && instituteId) {
-        await setInstitute(null);
-      }
+    if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
+      await setInstitute(finalUser.instituteId);
+    } else if (!finalUser.instituteId && instituteId) {
+      await setInstitute(null);
+    }
   };
 
   useEffect(() => {
@@ -213,20 +199,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user?.role === 'SuperAdmin') return true;
     return user?.permissions?.includes(permission) ?? false;
   }, [user]);
-
-  const isFullAdmin = hasPermission('academic:program:manage');
-  const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
-
-   useEffect(() => {
-    if (!loading && user) {
-      if (isCoordinator && user.programId && activeProgramId !== user.programId) {
-        setActiveProgramId(user.programId);
-      }
-      // For admins, we let them choose, so we don't set a default here unless desired.
-      // If activeProgramId is not valid for the current list of programs, it could be cleared here.
-    }
-   }, [user, loading, isCoordinator, activeProgramId]);
-
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
@@ -272,7 +244,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser, hasPermission, activeProgramId, setActiveProgramId, isCoordinator, isFullAdmin }}>
+    <AuthContext.Provider value={{ user, loading, instituteId, institute, setInstitute, signInWithEmail, signUpWithEmail, signInWithGoogle, signOutUser, reloadUser, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );
