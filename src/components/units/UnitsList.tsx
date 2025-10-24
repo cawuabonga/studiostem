@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -27,6 +28,7 @@ interface UnitsListProps {
     filters: {
         programFilter: string;
         moduleFilter: string;
+        semesterFilter: string;
         periodFilter: UnitPeriod | 'all';
         textFilter: string;
     };
@@ -69,6 +71,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
             
             const matchesProgram = filters.programFilter === 'all' || unit.programId === filters.programFilter;
             const matchesModule = filters.moduleFilter === 'all' || unit.moduleId === filters.moduleFilter;
+            const matchesSemester = filters.semesterFilter === 'all' || String(unit.semester) === filters.semesterFilter;
             const matchesPeriod = filters.periodFilter === 'all' || unit.period === filters.periodFilter;
             const matchesText = filters.textFilter === '' || 
                                 unit.name.toLowerCase().includes(filters.textFilter.toLowerCase()) ||
@@ -76,10 +79,11 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
                                 (program?.name || '').toLowerCase().includes(filters.textFilter.toLowerCase()) ||
                                 (module?.name || '').toLowerCase().includes(filters.textFilter.toLowerCase());
 
-            return matchesProgram && matchesModule && matchesPeriod && matchesText;
+            return matchesProgram && matchesModule && matchesSemester && matchesPeriod && matchesText;
         });
 
         setUnits(filtered);
+        setCurrentPage(1); // Reset to first page on new filter
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -148,7 +152,6 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   if (loading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}

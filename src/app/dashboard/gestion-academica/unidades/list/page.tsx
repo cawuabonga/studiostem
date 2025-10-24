@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from "react";
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader2 } from 'lucide-react';
-import type { UnitPeriod, Program } from "@/types";
+import type { UnitPeriod, Program, ProgramModule } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,22 +16,22 @@ import { getPrograms } from "@/config/firebase";
 
 
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
 export default function ListUnitsPage() {
   const { instituteId, loading: authLoading, user, hasPermission } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [modules, setModules] = useState<ProgramModule[]>([]);
 
   const isFullAdmin = hasPermission('academic:program:manage');
   const isCoordinator = hasPermission('academic:unit:manage:own') && !isFullAdmin;
 
   const [programFilter, setProgramFilter] = useState(() => isCoordinator ? user?.programId || 'all' : 'all');
-  
-  const [textFilter, setTextFilter] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
+  const [semesterFilter, setSemesterFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<UnitPeriod | 'all'>('all');
+  const [textFilter, setTextFilter] = useState('');
   
-  const [showUnits, setShowUnits] = useState(isCoordinator); // Show immediately for coordinators
-
   useEffect(() => {
     if (instituteId) {
         getPrograms(instituteId).then(setPrograms);
@@ -39,25 +39,19 @@ export default function ListUnitsPage() {
   }, [instituteId]);
 
   useEffect(() => {
-    // If user changes, and they are a coordinator, lock the filter
-    if (isCoordinator && user?.programId) {
+    if (user?.programId && isCoordinator) {
       setProgramFilter(user.programId);
-      setShowUnits(true);
     }
   }, [user, isCoordinator]);
-
-
-  const handleShowUnits = () => {
-    if (programFilter !== 'all') {
-      setShowUnits(true);
-    } else {
-        alert("Por favor, seleccione un programa de estudios para cargar las unidades.")
-    }
-  };
   
+  useEffect(() => {
+    const selectedProgram = programs.find(p => p.id === programFilter);
+    setModules(selectedProgram?.modules || []);
+    setModuleFilter('all'); // Reset module filter when program changes
+  }, [programFilter, programs]);
+
   const handleProgramFilterChange = (value: string) => {
     setProgramFilter(value);
-    setShowUnits(false);
   }
   
   if (authLoading) {
@@ -69,6 +63,7 @@ export default function ListUnitsPage() {
   }
 
   const coordinatorProgram = isCoordinator ? programs.find(p => p.id === user?.programId) : null;
+  const showUnits = programFilter !== 'all';
 
   return (
     <div className="space-y-6">
@@ -82,12 +77,12 @@ export default function ListUnitsPage() {
         <CardHeader>
           <CardTitle>Unidades Didácticas Registradas</CardTitle>
           <CardDescription>
-            Utilice los filtros para refinar su búsqueda y luego haga clic en "Cargar Unidades" para ver los resultados.
+            Utilice los filtros para refinar su búsqueda. La tabla se actualizará automáticamente.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end pt-4">
-                <div className="space-y-2 lg:col-span-2">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end pt-4">
+                <div className="space-y-2">
                     <Label htmlFor="program-filter">Programa de Estudios</Label>
                     {isCoordinator && coordinatorProgram ? (
                         <Input value={coordinatorProgram.name} disabled />
@@ -105,18 +100,34 @@ export default function ListUnitsPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <Label htmlFor="text-filter">Búsqueda por texto</Label>
-                    <Input 
-                    id="text-filter"
-                    placeholder="Buscar por nombre, código..."
-                    value={textFilter}
-                    onChange={(e) => {setTextFilter(e.target.value); setShowUnits(false);}}
-                    />
+                    <Label htmlFor="module-filter">Módulo Formativo</Label>
+                    <Select value={moduleFilter} onValueChange={setModuleFilter} disabled={!showUnits || modules.length === 0}>
+                        <SelectTrigger id="module-filter">
+                            <SelectValue placeholder="Filtrar por módulo..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los Módulos</SelectItem>
+                            {modules.map(m => <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                 </div>
-                
+
+                <div className="space-y-2">
+                    <Label htmlFor="semester-filter">Semestre</Label>
+                    <Select value={semesterFilter} onValueChange={setSemesterFilter} disabled={!showUnits}>
+                        <SelectTrigger id="semester-filter">
+                            <SelectValue placeholder="Filtrar por semestre..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los Semestres</SelectItem>
+                            {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+
                 <div className="space-y-2">
                     <Label htmlFor="period-filter">Período</Label>
-                    <Select value={periodFilter} onValueChange={(v) => {setPeriodFilter(v); setShowUnits(false);}}>
+                    <Select value={periodFilter} onValueChange={(v) => {setPeriodFilter(v as any);}}>
                         <SelectTrigger id="period-filter">
                             <SelectValue placeholder="Filtrar por período..." />
                         </SelectTrigger>
@@ -127,19 +138,23 @@ export default function ListUnitsPage() {
                     </Select>
                 </div>
                 
-                {!isCoordinator && (
-                    <div className="col-span-1 md:col-span-2 lg:col-span-4">
-                        <Button onClick={handleShowUnits}>Cargar Unidades</Button>
-                    </div>
-                )}
-
+                 <div className="space-y-2">
+                    <Label htmlFor="text-filter">Búsqueda por texto</Label>
+                    <Input 
+                    id="text-filter"
+                    placeholder="Buscar por nombre, código..."
+                    value={textFilter}
+                    onChange={(e) => {setTextFilter(e.target.value);}}
+                    />
+                </div>
+                 
                  {showUnits && instituteId && (
-                    <div className="col-span-1 md:col-span-2 lg:col-span-4 pt-4">
+                    <div className="col-span-1 md:col-span-2 lg:col-span-5 pt-4">
                         <UnitsList
-                            key={`${programFilter}-${moduleFilter}-${periodFilter}-${textFilter}`}
+                            key={`${programFilter}-${moduleFilter}-${semesterFilter}-${periodFilter}-${textFilter}`}
                             instituteId={instituteId}
-                            filters={{ programFilter, moduleFilter, periodFilter, textFilter }}
-                            onDataChange={() => setShowUnits(false)}
+                            filters={{ programFilter, moduleFilter, periodFilter, semesterFilter, textFilter }}
+                            onDataChange={() => {}}
                         />
                     </div>
                 )}
