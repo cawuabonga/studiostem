@@ -12,20 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NonTeachingAssignmentManager } from "@/components/carga-horaria/NonTeachingAssignmentManager";
+import { Input } from "@/components/ui/input";
 
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
 export default function AsignarHorasNoLectivasPage() {
-  const { instituteId, hasPermission } = useAuth();
+  const { user, instituteId, hasPermission } = useAuth();
   const { toast } = useToast();
   
+  const isCoordinator = hasPermission('academic:assignment:manage') && !hasPermission('academic:program:manage');
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedProgramId, setSelectedProgramId] = useState<string>('');
+  const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
   const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
   const [selectedPeriod, setSelectedPeriod] = useState<UnitPeriod | ''>('');
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
@@ -40,14 +43,21 @@ export default function AsignarHorasNoLectivasPage() {
         getTeachers(instituteId),
         getPrograms(instituteId),
       ]);
-      setPrograms(fetchedPrograms);
+
+      if (isCoordinator && user?.programId) {
+        setPrograms(fetchedPrograms.filter(p => p.id === user.programId));
+      } else {
+        setPrograms(fetchedPrograms);
+      }
+      
       setAllTeachers(fetchedTeachers);
+
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [instituteId, toast, isCoordinator, user?.programId]);
   
   useEffect(() => {
     if (canManage) {
@@ -56,6 +66,12 @@ export default function AsignarHorasNoLectivasPage() {
         setLoading(false);
     }
   }, [canManage, fetchData]);
+
+  useEffect(() => {
+    if (isCoordinator && user?.programId) {
+        setSelectedProgramId(user.programId);
+    }
+  }, [isCoordinator, user?.programId]);
 
   const filteredTeachers = useMemo(() => {
     if (!selectedProgramId) return [];
@@ -66,6 +82,9 @@ export default function AsignarHorasNoLectivasPage() {
     // Reset teacher selection when program changes
     setSelectedTeacherId('');
   }, [selectedProgramId]);
+  
+  const coordinatorProgramName = isCoordinator ? programs.find(p => p.id === user?.programId)?.name : '';
+
 
   if (!canManage && !loading) {
       return <p>No tienes permiso para acceder a este módulo.</p>
@@ -89,15 +108,19 @@ export default function AsignarHorasNoLectivasPage() {
                 <Skeleton className="h-10 w-full" />
              </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                <div className="space-y-2">
                 <Label htmlFor="program-select">Programa de Estudios</Label>
-                <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
-                  <SelectTrigger id="program-select"><SelectValue placeholder="Seleccione un programa" /></SelectTrigger>
-                  <SelectContent>
-                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                 {isCoordinator ? (
+                    <Input value={coordinatorProgramName || 'Cargando...'} disabled />
+                ) : (
+                    <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                        <SelectTrigger id="program-select"><SelectValue placeholder="Seleccione un programa" /></SelectTrigger>
+                        <SelectContent>
+                            {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="teacher-select">Docente</Label>
