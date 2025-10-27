@@ -3,7 +3,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1339,6 +1339,65 @@ export const getAccessPointStats = async (
         overall: overallSnap.exists() ? overallSnap.data() as OverallStats : null,
     };
 };
+
+// --- REPORTS ---
+export const getMatriculationReportData = async (
+  programId: string,
+  year: string,
+  semester: number
+): Promise<MatriculationReportData | null> => {
+    const instituteId = (await getDoc(doc(db, 'programs', programId))).data()?.instituteId;
+    if (!instituteId) {
+        throw new Error("Could not determine institute from programId");
+    }
+
+    const [allPrograms, allUnits, allStaff] = await Promise.all([
+        getPrograms(instituteId),
+        getUnits(instituteId),
+        getStaffProfiles(instituteId)
+    ]);
+    
+    const program = allPrograms.find(p => p.id === programId);
+    if (!program) return null;
+    
+    const teacherMap = new Map(allStaff.map(s => [s.documentId, s.displayName]));
+    
+    const unitsForSemester = allUnits.filter(u => u.programId === programId && u.semester === semester);
+    
+    const assignments = await getAssignments(instituteId, year, programId);
+
+    const reportUnits = await Promise.all(unitsForSemester.map(async (unit) => {
+        const teacherId = assignments[unit.period]?.[unit.id];
+        const teacherName = teacherId ? teacherMap.get(teacherId) || null : null;
+        
+        const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+        const matriculationQuery = query(matriculationsCol, 
+            where("unitId", "==", unit.id),
+            where("year", "==", year)
+        );
+        const matriculationSnap = await getDocs(matriculationQuery);
+        const studentIds = matriculationSnap.docs.map(d => d.data().studentId);
+        
+        let students: StudentProfile[] = [];
+        if (studentIds.length > 0) {
+            const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
+            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
+            const studentSnap = await getDocs(studentQuery);
+            students = studentSnap.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
+        }
+
+        return {
+            unit,
+            teacherName,
+            students
+        };
+    }));
+
+    return {
+        program,
+        units: reportUnits,
+    };
+};
     
 
     
@@ -1360,3 +1419,6 @@ export const getAccessPointStats = async (
 
     
 
+
+
+    
