@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { getMatriculationReportData } from '@/config/firebase';
 import type { MatriculationReportData } from '@/types';
 import { Printer, User, BookOpen } from 'lucide-react';
@@ -19,13 +20,15 @@ interface MatriculationReportViewProps {
 
 export function MatriculationReportView({ programId, year, semester }: MatriculationReportViewProps) {
     const { toast } = useToast();
+    const { instituteId } = useAuth();
     const [reportData, setReportData] = useState<MatriculationReportData | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
+        if (!instituteId) return;
         setLoading(true);
         try {
-            const data = await getMatriculationReportData(programId, year, semester);
+            const data = await getMatriculationReportData(instituteId, programId, year, semester);
             setReportData(data);
         } catch (error) {
             console.error("Error fetching matriculation report data:", error);
@@ -37,7 +40,7 @@ export function MatriculationReportView({ programId, year, semester }: Matricula
         } finally {
             setLoading(false);
         }
-    }, [programId, year, semester, toast]);
+    }, [instituteId, programId, year, semester, toast]);
 
     useEffect(() => {
         fetchData();

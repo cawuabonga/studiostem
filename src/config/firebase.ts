@@ -1342,15 +1342,12 @@ export const getAccessPointStats = async (
 
 // --- REPORTS ---
 export const getMatriculationReportData = async (
+  instituteId: string,
   programId: string,
   year: string,
   semester: number
 ): Promise<MatriculationReportData | null> => {
-    const instituteId = (await getDoc(doc(db, 'programs', programId))).data()?.instituteId;
-    if (!instituteId) {
-        throw new Error("Could not determine institute from programId");
-    }
-
+    
     const [allPrograms, allUnits, allStaff] = await Promise.all([
         getPrograms(instituteId),
         getUnits(instituteId),
