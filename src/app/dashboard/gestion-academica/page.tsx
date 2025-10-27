@@ -1,8 +1,7 @@
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus, FileText } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -64,6 +63,13 @@ const academicModules = [
     href: "/dashboard/gestion-academica/matricula",
     icon: ClipboardList,
     permission: "academic:enrollment:manage",
+  },
+  {
+    title: "Reportes de Matrícula",
+    description: "Generar e imprimir listas de estudiantes matriculados por unidad y semestre.",
+    href: "/dashboard/gestion-academica/reportes/matriculas",
+    icon: FileText,
+    permission: "academic:enrollment:manage", // Re-using permission, might need a specific one later
   },
 ];
 

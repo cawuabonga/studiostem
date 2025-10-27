@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -366,6 +365,17 @@ export interface SyllabusDesignOptions {
     showInfoTable: boolean;
     showSignature: boolean;
 }
+
+// --- Report Data ---
+export interface MatriculationReportData {
+    program: Program;
+    units: {
+        unit: Unit;
+        teacherName: string | null;
+        students: StudentProfile[];
+    }[];
+}
+
 
 // --- PERMISSIONS AND ROLES ---
 export type Permission = 
