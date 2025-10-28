@@ -1428,6 +1428,23 @@ export const getScheduleTemplates = async (instituteId: string): Promise<Schedul
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleTemplate));
 };
 
+export const getDefaultScheduleTemplate = async (instituteId: string): Promise<ScheduleTemplate | null> => {
+    const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
+    const q = query(templatesCol, where("isDefault", "==", true), limit(1));
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        // Fallback to get any template if no default is set
+        const anyTemplateQuery = query(templatesCol, limit(1));
+        const anySnapshot = await getDocs(anyTemplateQuery);
+        if (anySnapshot.empty) {
+            return null;
+        }
+        return { id: anySnapshot.docs[0].id, ...anySnapshot.docs[0].data() } as ScheduleTemplate;
+    }
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ScheduleTemplate;
+};
+
+
 export const addScheduleTemplate = async (instituteId: string, data: Omit<ScheduleTemplate, 'id'>): Promise<string> => {
     const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
     const docRef = await addDoc(templatesCol, data);
