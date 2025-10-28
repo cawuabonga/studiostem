@@ -1,6 +1,5 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserClock } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 
 export default function MiHorarioPage() {
   return (
@@ -8,7 +7,7 @@ export default function MiHorarioPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-             <UserClock className="h-8 w-8" />
+             <CalendarClock className="h-8 w-8" />
             <div>
               <CardTitle>Mi Horario Semanal</CardTitle>
               <CardDescription>
