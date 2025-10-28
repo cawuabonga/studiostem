@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -127,6 +127,15 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     }, [schedule]);
 
 
+    const assignedHoursMap = useMemo(() => {
+        const map = new Map<string, number>();
+        Object.values(schedule).forEach(block => {
+            map.set(block.unitId, (map.get(block.unitId) || 0) + 1);
+        });
+        return map;
+    }, [schedule]);
+
+
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, unit: Unit) => {
         e.dataTransfer.setData("unitId", unit.id);
     };
@@ -228,7 +237,12 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                     </CardHeader>
                     <CardContent className="space-y-2 max-h-[70vh] overflow-y-auto">
                         {units.length > 0 ? units.map(unit => (
-                            <UnassignedUnitCard key={unit.id} unit={unit} onDragStart={handleDragStart} />
+                            <UnassignedUnitCard 
+                                key={unit.id} 
+                                unit={unit} 
+                                assignedHours={assignedHoursMap.get(unit.id) || 0}
+                                onDragStart={handleDragStart} 
+                            />
                         )) : (
                             <p className="text-sm text-muted-foreground text-center py-4">No hay unidades para este semestre.</p>
                         )}
