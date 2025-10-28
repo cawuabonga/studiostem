@@ -393,8 +393,8 @@ export interface ScheduleBlock {
     startTime: string; // e.g., "08:00"
     endTime: string; // e.g., "09:30"
     unitId: string;
-    teacherId: string;
-    environmentId: string;
+    teacherId?: string;
+    environmentId?: string;
     programId: string;
     semester: number;
     year: string;
@@ -403,7 +403,7 @@ export interface ScheduleBlock {
 export type TimeBlockType = 'clase' | 'receso';
 
 export interface TimeBlock {
-    id: string;
+    id?: string;
     startTime: string; // "HH:mm"
     endTime: string; // "HH:mm"
     type: TimeBlockType;

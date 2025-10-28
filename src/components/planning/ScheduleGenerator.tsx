@@ -5,8 +5,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule } from '@/config/firebase';
-import type { Unit, ScheduleBlock, ScheduleTemplate } from '@/types';
+import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule, getEnvironments, getTeachers, getAssignments } from '@/config/firebase';
+import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { UnassignedUnitCard } from './UnassignedUnitCard';
@@ -27,6 +27,9 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     const { toast } = useToast();
     
     const [units, setUnits] = useState<Unit[]>([]);
+    const [environments, setEnvironments] = useState<Environment[]>([]);
+    const [teachers, setTeachers] = useState<Teacher[]>([]);
+    const [assignments, setAssignments] = useState<Assignment>({});
     const [template, setTemplate] = useState<ScheduleTemplate | null>(null);
     const [schedule, setSchedule] = useState<Record<string, ScheduleBlock>>({}); // Key: `${day}-${hour}`
     const [loading, setLoading] = useState(true);
@@ -36,16 +39,27 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         if (!instituteId) return;
         setLoading(true);
         try {
-            const [allUnits, defaultTemplate, savedSchedule] = await Promise.all([
+            const [allUnits, defaultTemplate, savedSchedule, fetchedEnvironments, fetchedTeachers, fetchedAssignments] = await Promise.all([
                 getUnits(instituteId),
                 getDefaultScheduleTemplate(instituteId),
-                getSchedule(instituteId, programId, year, semester)
+                getSchedule(instituteId, programId, year, semester),
+                getEnvironments(instituteId),
+                getTeachers(instituteId),
+                getAssignments(instituteId, year, programId)
             ]);
 
             const unitsForSemester = allUnits.filter(u => u.programId === programId && u.semester === semester);
             setUnits(unitsForSemester);
             setTemplate(defaultTemplate);
             setSchedule(savedSchedule);
+            setEnvironments(fetchedEnvironments);
+            
+            // We only need teachers from the relevant program for the selectors
+            const teachersInProgram = fetchedTeachers.filter(t => t.programId === programId);
+            setTeachers(teachersInProgram);
+
+            // Combine assignments from both periods
+            setAssignments({ ...fetchedAssignments['MAR-JUL'], ...fetchedAssignments['AGO-DIC'] });
             
             if (!defaultTemplate) {
                 toast({
@@ -95,6 +109,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             ...(template?.turnos.noche || [])
         ];
         const timeBlock = allTimeBlocks.find(b => b.startTime === hour);
+        const assignedTeacherId = assignments[unitId];
 
         setSchedule(
             produce(draft => {
@@ -104,8 +119,8 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                     startTime: hour,
                     endTime: timeBlock?.endTime || '',
                     unitId,
-                    teacherId: '', // To be assigned later
-                    environmentId: '', // To be assigned later
+                    teacherId: assignedTeacherId || undefined,
+                    environmentId: undefined,
                     programId,
                     semester,
                     year
@@ -118,6 +133,16 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         setSchedule(
             produce(draft => {
                 delete draft[`${day}-${hour}`];
+            })
+        );
+    }
+
+    const updateBlock = (key: string, data: Partial<ScheduleBlock>) => {
+         setSchedule(
+            produce(draft => {
+                if (draft[key]) {
+                    draft[key] = { ...draft[key], ...data };
+                }
             })
         );
     }
@@ -187,7 +212,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                                 No hay una plantilla de horario por defecto. No se puede generar la cuadrícula.
                             </p>
                         ) : (
-                            <div className="grid grid-cols-[auto_repeat(5,minmax(150px,1fr))] gap-px bg-muted">
+                            <div className="grid grid-cols-[auto_repeat(5,minmax(200px,1fr))] gap-px bg-muted">
                                 {/* Header row */}
                                 <div className="font-semibold p-2 text-center sticky top-0 bg-background z-10">Hora</div>
                                 {days.map(day => (
@@ -195,9 +220,21 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                                 ))}
 
                                 {/* Turnos Grid */}
-                                <TurnoGrid turno="Mañana" timeBlocks={template.turnos.mañana} {...{ schedule, units, handleDrop, handleDragOver, removeBlock }} />
-                                <TurnoGrid turno="Tarde" timeBlocks={template.turnos.tarde} {...{ schedule, units, handleDrop, handleDragOver, removeBlock }} />
-                                <TurnoGrid turno="Noche" timeBlocks={template.turnos.noche} {...{ schedule, units, handleDrop, handleDragOver, removeBlock }} />
+                                <TurnoGrid 
+                                    turno="Mañana" 
+                                    timeBlocks={template.turnos.mañana} 
+                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                />
+                                <TurnoGrid 
+                                    turno="Tarde" 
+                                    timeBlocks={template.turnos.tarde} 
+                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                />
+                                <TurnoGrid 
+                                    turno="Noche" 
+                                    timeBlocks={template.turnos.noche} 
+                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                />
                             </div>
                         )}
                     </CardContent>
