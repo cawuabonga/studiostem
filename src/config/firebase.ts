@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -1031,26 +1030,38 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 };
 
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
+    console.log('[DEBUG] addContentToWeek called.');
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
     const newContent: Omit<Content, 'id'> & { id: string } = {
         ...data,
-        id: doc(collection(db, 'idGenerator')).id, // Generate a unique ID client-side
+        id: doc(collection(db, 'idGenerator')).id,
         createdAt: Timestamp.now(),
     };
 
     if (data.type === 'file' && file) {
-        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        newContent.value = await getDownloadURL(storageRef);
+        try {
+            const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`;
+            console.log('[DEBUG] Uploading file to:', storagePath);
+            const storageRef = ref(firebaseStorage, storagePath);
+            await uploadBytes(storageRef, file);
+            console.log('[DEBUG] File uploaded successfully.');
+            newContent.value = await getDownloadURL(storageRef);
+            console.log('[DEBUG] Got download URL:', newContent.value);
+        } catch (error) {
+            console.error('[DEBUG] Error during file upload:', error);
+            throw error; // Re-throw to be caught by the form
+        }
     }
     
     await updateDoc(weekDocRef, {
         contents: arrayUnion(newContent)
     });
+    console.log('[DEBUG] Firestore document updated with new content.');
 };
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
+    console.log('[DEBUG] updateContentInWeek called.');
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.contents) return;
@@ -1061,19 +1072,32 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-         if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
-             try {
+         try {
+            if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
+                console.log('[DEBUG] Deleting old file...');
                 const oldFileRef = ref(firebaseStorage, weekData.contents[contentIndex].value);
                 await deleteObject(oldFileRef);
-            } catch(e) { console.error("Could not delete old file, it might not exist.", e)}
+                console.log('[DEBUG] Old file deleted.');
+            }
+            const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${contentId}_${file.name}`;
+            console.log('[DEBUG] Uploading new file to:', storagePath);
+            const storageRef = ref(firebaseStorage, storagePath);
+            await uploadBytes(storageRef, file);
+            console.log('[DEBUG] New file uploaded.');
+            updatedContent.value = await getDownloadURL(storageRef);
+            console.log('[DEBUG] Got new download URL:', updatedContent.value);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error('[DEBUG] Error during file update:', error);
+                throw error;
+            }
+             console.log('[DEBUG] Old file not found, proceeding with upload.');
         }
-        const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/contents/${contentId}_${file.name}`);
-        await uploadBytes(storageRef, file);
-        updatedContent.value = await getDownloadURL(storageRef);
     }
 
     weekData.contents[contentIndex] = updatedContent;
     await updateDoc(weekDocRef, { contents: weekData.contents });
+    console.log('[DEBUG] Firestore document updated with modified content.');
 }
 
 

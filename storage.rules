@@ -1,14 +1,10 @@
 rules_version = '2';
 
-// See: https://firebase.google.com/docs/storage/security
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read/write access to all authenticated users.
-    // In a real production app, you would likely want to restrict this further.
-    // For example, only allow a user to write to their own folder:
-    // match /users/{userId}/{allPaths=**} {
-    //  allow read, write: if request.auth != null && request.auth.uid == userId;
-    // }
+    // Allow read and write access for all authenticated users.
+    // In a production environment, you would want to restrict this further.
+    // For example, allow users to only write to their own folder.
     match /{allPaths=**} {
       allow read, write: if request.auth != null;
     }
