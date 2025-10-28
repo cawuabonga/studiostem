@@ -21,7 +21,7 @@ export function ScheduleBlockCard({ block, unit, onRemove }: ScheduleBlockCardPr
                 <p className="font-bold text-primary">{unit.code}</p>
                 <p className="leading-tight">{unit.name}</p>
             </div>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mt-1">
                  <Badge variant="secondary" className="text-xs">
                     {unit.turno}
                  </Badge>
@@ -38,4 +38,3 @@ export function ScheduleBlockCard({ block, unit, onRemove }: ScheduleBlockCardPr
         </div>
     );
 }
-
