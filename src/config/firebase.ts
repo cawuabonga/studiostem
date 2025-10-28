@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment, ScheduleTemplate } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1477,4 +1477,25 @@ export const setDefaultScheduleTemplate = async (instituteId: string, templateId
     batch.update(newDefaultRef, { isDefault: true });
 
     await batch.commit();
+}
+
+
+// --- SCHEDULE DATA ---
+const getScheduleDocRef = (instituteId: string, programId: string, year: string, semester: number) => {
+    const scheduleId = `${programId}_${year}_${semester}`;
+    return doc(db, 'institutes', instituteId, 'schedules', scheduleId);
+}
+
+export const getSchedule = async (instituteId: string, programId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
+    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
+    const docSnap = await getDoc(scheduleRef);
+    if (docSnap.exists()) {
+        return docSnap.data().schedule || {};
+    }
+    return {};
+}
+
+export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, schedule: Record<string, ScheduleBlock>): Promise<void> => {
+    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
+    await setDoc(scheduleRef, { schedule, programId, year, semester }, { merge: true });
 }
