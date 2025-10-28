@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -374,6 +375,16 @@ export interface MatriculationReportData {
         teacherName: string | null;
         students: StudentProfile[];
     }[];
+}
+
+
+// --- HORARIOS / SCHEDULES ---
+export interface Environment {
+  id: string;
+  name: string;
+  code: string;
+  type: 'Aula' | 'Laboratorio' | 'Oficina' | 'Auditorio' | 'Taller' | 'Otro';
+  capacity: number;
 }
 
 

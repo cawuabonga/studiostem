@@ -1,9 +1,10 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1395,6 +1396,29 @@ export const getMatriculationReportData = async (
         units: reportUnits,
     };
 };
+
+// --- SCHEDULES / AMBIENTES ---
+export const addEnvironment = async (instituteId: string, data: Omit<Environment, 'id'>): Promise<void> => {
+    const envCol = getSubCollectionRef(instituteId, 'environments');
+    await addDoc(envCol, data);
+};
+
+export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
+    const envCol = getSubCollectionRef(instituteId, 'environments');
+    const q = query(envCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Environment));
+};
+
+export const updateEnvironment = async (instituteId: string, envId: string, data: Partial<Environment>): Promise<void> => {
+    const envRef = doc(db, 'institutes', instituteId, 'environments', envId);
+    await updateDoc(envRef, data);
+};
+
+export const deleteEnvironment = async (instituteId: string, envId: string): Promise<void> => {
+    const envRef = doc(db, 'institutes', instituteId, 'environments', envId);
+    await deleteDoc(envRef);
+};
     
 
     
@@ -1419,3 +1443,4 @@ export const getMatriculationReportData = async (
 
 
     
+
