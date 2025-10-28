@@ -405,6 +405,10 @@ export type Permission =
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
+  // Planning & Schedules
+  | 'planning:schedule:manage'
+  | 'planning:environment:manage'
+  | 'planning:schedule:view:own'
   // SuperAdmin
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
@@ -446,6 +450,15 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
             { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
             { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
+        ],
+    },
+     {
+        category: 'Planificación y Horarios',
+        description: 'Permisos para gestionar ambientes, generar horarios y visualizar la carga horaria.',
+        permissions: [
+            { id: 'planning:environment:manage', label: 'Gestionar Ambientes (aulas, laboratorios)' },
+            { id: 'planning:schedule:manage', label: 'Generar y Gestionar Horarios' },
+            { id: 'planning:schedule:view:own', label: 'Ver Mi Horario' },
         ],
     },
     {

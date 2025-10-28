@@ -13,8 +13,8 @@ export default function AmbientesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    // Only full admins can manage environments
-    if (!loading && !hasPermission('academic:program:manage')) {
+    // Only users with this permission can manage environments
+    if (!loading && !hasPermission('planning:environment:manage')) {
       router.push('/dashboard');
     }
   }, [user, loading, router, hasPermission]);
@@ -23,7 +23,7 @@ export default function AmbientesPage() {
     setRefreshKey(prevKey => prevKey + 1);
   };
   
-  if (loading || !hasPermission('academic:program:manage')) {
+  if (loading || !hasPermission('planning:environment:manage')) {
       return <p>Cargando o no autorizado...</p>
   }
   

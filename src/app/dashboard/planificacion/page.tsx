@@ -7,28 +7,29 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Permission } from "@/types";
 
-const planningModules = [
+const planningModules: { title: string; description: string; href: string; icon: React.ElementType; permission: Permission}[] = [
   {
     title: "Gestionar Ambientes",
     description: "Crear, editar y organizar las aulas, laboratorios y oficinas del instituto.",
     href: "/dashboard/planificacion/ambientes",
     icon: DoorClosed,
-    permission: "academic:program:manage", // Only admins can manage environments
+    permission: "planning:environment:manage",
   },
   {
     title: "Generar Horarios",
     description: "Asignar unidades didácticas y actividades a docentes, ambientes y bloques horarios.",
     href: "/dashboard/planificacion/generador",
     icon: CalendarDays,
-    permission: "academic:assignment:manage",
+    permission: "planning:schedule:manage",
   },
   {
     title: "Mi Horario",
     description: "Visualiza tu horario de clases o de trabajo semanal.",
     href: "/dashboard/planificacion/mi-horario",
     icon: UserClock,
-    permission: "student:unit:view", // A generic permission all logged-in users have
+    permission: "planning:schedule:view:own",
   },
 ];
 
@@ -37,10 +38,7 @@ export default function PlanificacionPage() {
   const router = useRouter();
 
   // A user can access this page if they can perform any planning task.
-  const canAccessPage = planningModules.some(module => {
-    const permissions = Array.isArray(module.permission) ? module.permission : [module.permission];
-    return permissions.some(p => hasPermission(p as any));
-  });
+  const canAccessPage = planningModules.some(module => hasPermission(module.permission));
 
   useEffect(() => {
     if (!loading && !canAccessPage) { 
@@ -48,10 +46,7 @@ export default function PlanificacionPage() {
     }
   }, [user, loading, hasPermission, router, canAccessPage]);
   
-  const accessibleModules = planningModules.filter(module => {
-      const permissions = Array.isArray(module.permission) ? module.permission : [module.permission];
-      return permissions.some(p => hasPermission(p as any));
-  });
+  const accessibleModules = planningModules.filter(module => hasPermission(module.permission));
 
   if (loading || !user || !canAccessPage) {
     return <p>Cargando...</p>;

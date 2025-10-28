@@ -38,13 +38,12 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanban, permission: 'superadmin:institute:manage' },
 
     // Institute Admin/Coordinator
-    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' }, // Example permission, adjust as needed
-    // This now checks if user has EITHER of these permissions
-    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage'] },
-    { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: 'academic:assignment:manage' },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: 'admin:fees:manage' }, // Broad permission
+    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' },
+    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view'] },
+    { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage'] },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
-    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: 'users:staff:manage' },
+    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
     
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
