@@ -4,11 +4,12 @@
 import React from 'react';
 import type { ScheduleBlock, Unit, Teacher, Environment } from '@/types';
 import { Button } from '../ui/button';
-import { X, User, Home, ChevronsUpDown, AlertTriangle } from 'lucide-react';
+import { X, User, Home, ChevronsUpDown, AlertTriangle, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface ScheduleBlockCardProps {
     block: ScheduleBlock;
@@ -16,8 +17,11 @@ interface ScheduleBlockCardProps {
     teachers: Teacher[];
     environments: Environment[];
     conflicts: { teacherConflict: boolean; environmentConflict: boolean };
+    isSuggestionOrigin: boolean;
     onRemove: () => void;
     onUpdate: (data: Partial<ScheduleBlock>) => void;
+    onAcceptSuggestion: () => void;
+    onRejectSuggestion: () => void;
 }
 
 const Combobox = ({ items, selectedValue, onSelect, placeholder, icon: Icon, hasConflict }: { items: {value: string, label: string}[], selectedValue?: string, onSelect: (value: string) => void, placeholder: string, icon: React.ElementType, hasConflict: boolean }) => {
@@ -52,7 +56,34 @@ const Combobox = ({ items, selectedValue, onSelect, placeholder, icon: Icon, has
     )
 }
 
-export function ScheduleBlockCard({ block, unit, teachers, environments, conflicts, onRemove, onUpdate }: ScheduleBlockCardProps) {
+const SuggestionBox = ({ onAccept, onReject }: { onAccept: () => void; onReject: () => void; }) => (
+    <div className="absolute -bottom-10 left-0 right-0 z-10 flex justify-center">
+        <div className="bg-popover p-1 rounded-lg shadow-lg border flex items-center gap-1">
+             <p className="text-xs font-semibold px-2">Autocompletar?</p>
+             <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button onClick={onAccept} size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-100">
+                            <ThumbsUp className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Aceptar sugerencia</p></TooltipContent>
+                </Tooltip>
+                 <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button onClick={onReject} size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-100">
+                             <ThumbsDown className="h-4 w-4" />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p>Rechazar sugerencia</p></TooltipContent>
+                </Tooltip>
+             </TooltipProvider>
+        </div>
+    </div>
+);
+
+
+export function ScheduleBlockCard({ block, unit, teachers, environments, conflicts, isSuggestionOrigin, onRemove, onUpdate, onAcceptSuggestion, onRejectSuggestion }: ScheduleBlockCardProps) {
 
     const teacherOptions = teachers.map(t => ({ value: t.documentId, label: t.fullName }));
     const environmentOptions = environments.map(e => ({ value: e.id, label: e.name }));
@@ -101,6 +132,9 @@ export function ScheduleBlockCard({ block, unit, teachers, environments, conflic
                     hasConflict={conflicts.environmentConflict}
                 />
             </div>
+             {isSuggestionOrigin && (
+                <SuggestionBox onAccept={onAcceptSuggestion} onReject={onRejectSuggestion} />
+            )}
         </div>
     );
 }

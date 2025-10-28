@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule, getEnvironments, getTeachers, getAssignments } from '@/config/firebase';
-import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment } from '@/types';
+import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment, TimeBlock } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { UnassignedUnitCard } from './UnassignedUnitCard';
@@ -18,6 +18,12 @@ interface ScheduleGeneratorProps {
     programId: string;
     year: string;
     semester: number;
+}
+
+interface Suggestion {
+    originKey: string;
+    unit: Unit;
+    suggestedKeys: string[];
 }
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -33,6 +39,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     const [template, setTemplate] = useState<ScheduleTemplate | null>(null);
     const [schedule, setSchedule] = useState<Record<string, ScheduleBlock>>({}); // Key: `${day}-${hour}`
     const [conflicts, setConflicts] = useState<Record<string, { teacherConflict: boolean, environmentConflict: boolean }>>({});
+    const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -87,7 +94,6 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             const environmentUsage: Record<string, string[]> = {};
             const newConflicts: Record<string, { teacherConflict: boolean, environmentConflict: boolean }> = {};
 
-            // Populate usage maps
             for (const key in schedule) {
                 const block = schedule[key];
                 const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
@@ -102,7 +108,6 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                 }
             }
 
-            // Check for conflicts
             for (const key in schedule) {
                 const block = schedule[key];
                 const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
@@ -138,6 +143,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, unit: Unit) => {
         e.dataTransfer.setData("unitId", unit.id);
+        setSuggestion(null);
     };
 
     const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -180,15 +186,83 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                     year
                 }
             })
-        )
+        );
+        
+        // --- Suggestion Logic ---
+        const weeklyHours = (unit.theoreticalHours || 0) + (unit.practicalHours || 0);
+        const remainingHours = weeklyHours - ((assignedHoursMap.get(unitId) || 0) + 1);
+        
+        if (remainingHours > 0) {
+            const turnoBlocks: TimeBlock[] = template?.turnos.mañana.some(b => b.startTime === hour) ? template.turnos.mañana 
+                                         : template?.turnos.tarde.some(b => b.startTime === hour) ? template.turnos.tarde
+                                         : template?.turnos.noche || [];
+            
+            const currentBlockIndex = turnoBlocks.findIndex(b => b.startTime === hour);
+            const suggestedKeys: string[] = [];
+
+            if (currentBlockIndex !== -1) {
+                for (let i = currentBlockIndex + 1; i < turnoBlocks.length && suggestedKeys.length < remainingHours; i++) {
+                    const nextBlock = turnoBlocks[i];
+                    if (nextBlock.type === 'clase') {
+                        const nextCellKey = `${day}-${nextBlock.startTime}`;
+                        if (!schedule[nextCellKey]) {
+                            suggestedKeys.push(nextCellKey);
+                        } else {
+                            break; // Stop if there's an obstacle
+                        }
+                    }
+                }
+            }
+            if (suggestedKeys.length > 0) {
+                setSuggestion({ originKey: cellKey, unit, suggestedKeys });
+            }
+        }
     };
     
+    const handleAcceptSuggestion = () => {
+        if (!suggestion) return;
+
+        const allTimeBlocks = [
+            ...(template?.turnos.mañana || []),
+            ...(template?.turnos.tarde || []),
+            ...(template?.turnos.noche || [])
+        ];
+        const assignedTeacherId = assignments[suggestion.unit.id];
+
+        setSchedule(
+            produce(draft => {
+                suggestion.suggestedKeys.forEach(key => {
+                    const [day, hour] = key.split('-');
+                    const timeBlock = allTimeBlocks.find(b => b.startTime === hour);
+                    draft[key] = {
+                        id: `${suggestion.unit.id}-${key}`,
+                        dayOfWeek: day as any,
+                        startTime: hour,
+                        endTime: timeBlock?.endTime || '',
+                        unitId: suggestion.unit.id,
+                        teacherId: assignedTeacherId || undefined,
+                        environmentId: undefined, // Or copy from origin if set
+                        programId,
+                        semester,
+                        year
+                    };
+                });
+            })
+        );
+        setSuggestion(null);
+    };
+
+    const handleRejectSuggestion = () => {
+        setSuggestion(null);
+    };
+
     const removeBlock = (day: string, hour: string) => {
         setSchedule(
             produce(draft => {
                 delete draft[`${day}-${hour}`];
             })
         );
+        setSuggestion(null);
     }
 
     const updateBlock = (key: string, data: Partial<ScheduleBlock>) => {
@@ -282,17 +356,20 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                                 <TurnoGrid 
                                     turno="Mañana" 
                                     timeBlocks={template.turnos.mañana} 
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    suggestion={suggestion}
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                                 <TurnoGrid 
                                     turno="Tarde" 
                                     timeBlocks={template.turnos.tarde} 
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    suggestion={suggestion}
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                                 <TurnoGrid 
                                     turno="Noche" 
                                     timeBlocks={template.turnos.noche} 
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    suggestion={suggestion}
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                             </div>
                         )}
