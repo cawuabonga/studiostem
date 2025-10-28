@@ -15,7 +15,7 @@ interface UnassignedUnitCardProps {
 }
 
 export function UnassignedUnitCard({ unit, assignedHours, onDragStart }: UnassignedUnitCardProps) {
-    const weeklyHours = unit.totalWeeks > 0 ? Math.ceil(unit.totalHours / unit.totalWeeks) : 0;
+    const weeklyHours = unit.totalWeeks > 0 ? Math.round(unit.totalHours / unit.totalWeeks) : 0;
     const isCompleted = assignedHours >= weeklyHours;
     const progressPercentage = weeklyHours > 0 ? (assignedHours / weeklyHours) * 100 : 0;
 
