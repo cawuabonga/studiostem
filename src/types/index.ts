@@ -1,5 +1,6 @@
 
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -385,6 +386,19 @@ export interface Environment {
   code: string;
   type: 'Aula' | 'Laboratorio' | 'Oficina' | 'Auditorio' | 'Taller' | 'Otro';
   capacity: number;
+}
+
+export interface ScheduleBlock {
+    id: string;
+    dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes';
+    startTime: string; // e.g., "08:00"
+    endTime: string; // e.g., "09:30"
+    unitId: string;
+    teacherId: string;
+    environmentId: string;
+    programId: string;
+    semester: number;
+    year: string;
 }
 
 
