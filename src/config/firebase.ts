@@ -296,30 +296,16 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
     const batch = writeBatch(db);
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     
-    const imagePromises = units.map(unitData => {
+    for (const unitData of units) {
         const docRef = doc(unitsCol); 
         const dataWithHours = {
             ...unitData,
             totalHours: (unitData.theoreticalHours || 0) + (unitData.practicalHours || 0),
-            semester: 0, // Default value, should be set properly
         };
         batch.set(docRef, dataWithHours);
-        // This part needs to be handled outside or differently, as we can't await inside forEach
-        return {docRef, unitName: unitData.name};
-    });
+    }
 
     await batch.commit();
-
-    // Now, generate and update images. This will not block the UI.
-    // NOTE: This will not be reflected immediately on the client side after bulkAddUnits returns.
-    // A refresh or re-fetch mechanism would be needed.
-    // imagePromises.forEach(({ docRef, unitName }) => {
-    //     generateUnitImage({ unitName }).then(imageUrl => {
-    //         updateDoc(docRef, { imageUrl: imageUrl });
-    //     }).catch(error => {
-    //         console.error(`Error generating image for bulk unit ${unitName}:`, error);
-    //     });
-    // })
 }
 
 export const duplicateUnit = async (instituteId: string, unitId: string): Promise<void> => {
@@ -1047,7 +1033,7 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
-    const newContent: Content = {
+    const newContent: Omit<Content, 'id'> & { id: string } = {
         ...data,
         id: doc(collection(db, 'idGenerator')).id, // Generate a unique ID client-side
         createdAt: Timestamp.now(),
@@ -1059,9 +1045,9 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
         newContent.value = await getDownloadURL(storageRef);
     }
     
-    await setDoc(weekDocRef, {
+    await updateDoc(weekDocRef, {
         contents: arrayUnion(newContent)
-    }, { merge: true });
+    });
 };
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
@@ -1075,8 +1061,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-         // Delete old file if it exists
-        if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
+         if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
              try {
                 const oldFileRef = ref(firebaseStorage, weekData.contents[contentIndex].value);
                 await deleteObject(oldFileRef);
@@ -1125,9 +1110,9 @@ export const addTaskToWeek = async (instituteId: string, unitId: string, weekNum
         createdAt: Timestamp.now(),
     };
     
-    await setDoc(weekDocRef, {
+    await updateDoc(weekDocRef, {
         tasks: arrayUnion(newTask)
-    }, { merge: true });
+    });
 };
 
 export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>) => {
