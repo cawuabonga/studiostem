@@ -129,17 +129,21 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   };
   
   const handleGenerateSummary = async () => {
-    setIsGenerating(true);
-    try {
-        const summary = await generateSyllabusSummary({ unitName: unit.name });
-        form.setValue('summary', summary, { shouldValidate: true });
-        toast({ title: "Sumilla Generada", description: "La IA ha creado una propuesta para la sumilla." });
-    } catch (error) {
-        toast({ title: "Error", description: "No se pudo generar la sumilla.", variant: "destructive"});
-        console.error("Error generating summary:", error);
-    } finally {
-        setIsGenerating(false);
-    }
+    toast({
+        title: "Función no disponible",
+        description: "La generación con IA se implementará en futuras versiones.",
+    });
+    // setIsGenerating(true);
+    // try {
+    //     const summary = await generateSyllabusSummary({ unitName: unit.name });
+    //     form.setValue('summary', summary, { shouldValidate: true });
+    //     toast({ title: "Sumilla Generada", description: "La IA ha creado una propuesta para la sumilla." });
+    // } catch (error) {
+    //     toast({ title: "Error", description: "No se pudo generar la sumilla.", variant: "destructive"});
+    //     console.error("Error generating summary:", error);
+    // } finally {
+    //     setIsGenerating(false);
+    // }
   };
 
   const handlePrint = () => {
