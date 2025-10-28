@@ -4,7 +4,7 @@
 import React from 'react';
 import type { ScheduleBlock, Unit, Teacher, Environment } from '@/types';
 import { Button } from '../ui/button';
-import { X, User, Home, ChevronsUpDown } from 'lucide-react';
+import { X, User, Home, ChevronsUpDown, AlertTriangle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
@@ -15,18 +15,19 @@ interface ScheduleBlockCardProps {
     unit: Unit;
     teachers: Teacher[];
     environments: Environment[];
+    conflicts: { teacherConflict: boolean; environmentConflict: boolean };
     onRemove: () => void;
     onUpdate: (data: Partial<ScheduleBlock>) => void;
 }
 
-const Combobox = ({ items, selectedValue, onSelect, placeholder, icon: Icon }: { items: {value: string, label: string}[], selectedValue?: string, onSelect: (value: string) => void, placeholder: string, icon: React.ElementType }) => {
+const Combobox = ({ items, selectedValue, onSelect, placeholder, icon: Icon, hasConflict }: { items: {value: string, label: string}[], selectedValue?: string, onSelect: (value: string) => void, placeholder: string, icon: React.ElementType, hasConflict: boolean }) => {
     const [open, setOpen] = React.useState(false);
     const selectedLabel = items.find(item => item.value === selectedValue)?.label || placeholder;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" role="combobox" className="w-full justify-start text-xs h-7 px-2 font-normal">
+                <Button variant="ghost" size="sm" role="combobox" className={cn("w-full justify-start text-xs h-7 px-2 font-normal", hasConflict && "bg-destructive/20 text-destructive-foreground hover:bg-destructive/30")}>
                     <Icon className="mr-2 h-3.5 w-3.5 shrink-0" />
                     <span className="truncate flex-1">{selectedLabel}</span>
                     <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
@@ -51,16 +52,23 @@ const Combobox = ({ items, selectedValue, onSelect, placeholder, icon: Icon }: {
     )
 }
 
-export function ScheduleBlockCard({ block, unit, teachers, environments, onRemove, onUpdate }: ScheduleBlockCardProps) {
+export function ScheduleBlockCard({ block, unit, teachers, environments, conflicts, onRemove, onUpdate }: ScheduleBlockCardProps) {
 
     const teacherOptions = teachers.map(t => ({ value: t.documentId, label: t.fullName }));
     const environmentOptions = environments.map(e => ({ value: e.id, label: e.name }));
+    const hasAnyConflict = conflicts.teacherConflict || conflicts.environmentConflict;
 
     return (
-        <div className="h-full w-full bg-primary/10 border border-primary/30 rounded-md p-1.5 text-xs relative flex flex-col justify-between">
+        <div className={cn(
+            "h-full w-full bg-primary/10 border border-primary/30 rounded-md p-1.5 text-xs relative flex flex-col justify-between",
+            hasAnyConflict && "border-destructive border-2 bg-destructive/10"
+        )}>
             <div>
                 <div className="flex justify-between items-start">
-                    <p className="font-bold text-primary leading-tight flex-1 pr-4">{unit.name}</p>
+                    <p className={cn("font-bold text-primary leading-tight flex-1 pr-4", hasAnyConflict && "text-destructive")}>{unit.name}</p>
+                    {hasAnyConflict && (
+                         <AlertTriangle className="h-4 w-4 text-destructive absolute top-1 right-6" />
+                    )}
                     <Button
                         variant="ghost"
                         size="icon"
@@ -82,6 +90,7 @@ export function ScheduleBlockCard({ block, unit, teachers, environments, onRemov
                     onSelect={(value) => onUpdate({ teacherId: value })}
                     placeholder="Asignar Docente"
                     icon={User}
+                    hasConflict={conflicts.teacherConflict}
                 />
                  <Combobox 
                     items={environmentOptions}
@@ -89,6 +98,7 @@ export function ScheduleBlockCard({ block, unit, teachers, environments, onRemov
                     onSelect={(value) => onUpdate({ environmentId: value })}
                     placeholder="Asignar Ambiente"
                     icon={Home}
+                    hasConflict={conflicts.environmentConflict}
                 />
             </div>
         </div>

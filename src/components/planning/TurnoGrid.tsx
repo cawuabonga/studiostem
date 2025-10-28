@@ -14,6 +14,7 @@ export const TurnoGrid = ({
     units,
     teachers,
     environments,
+    conflicts,
     handleDrop,
     handleDragOver,
     removeBlock,
@@ -25,6 +26,7 @@ export const TurnoGrid = ({
     units: Unit[],
     teachers: Teacher[],
     environments: Environment[],
+    conflicts: Record<string, { teacherConflict: boolean, environmentConflict: boolean }>,
     handleDrop: (e: React.DragEvent<HTMLDivElement>, day: string, hour: string) => void,
     handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void,
     removeBlock: (day: string, hour: string) => void,
@@ -47,6 +49,7 @@ export const TurnoGrid = ({
                         const scheduleBlock = schedule[cellKey];
                         const unit = scheduleBlock ? units.find(u => u.id === scheduleBlock.unitId) : null;
                         const isReceso = block.type === 'receso';
+                        const blockConflicts = conflicts[cellKey] || { teacherConflict: false, environmentConflict: false };
 
                         return (
                             <div 
@@ -65,6 +68,7 @@ export const TurnoGrid = ({
                                         unit={unit} 
                                         teachers={teachers}
                                         environments={environments}
+                                        conflicts={blockConflicts}
                                         onRemove={() => removeBlock(day, block.startTime)}
                                         onUpdate={(data) => updateBlock(cellKey, data)}
                                     />

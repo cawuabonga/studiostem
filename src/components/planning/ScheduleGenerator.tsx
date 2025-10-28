@@ -32,6 +32,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     const [assignments, setAssignments] = useState<Assignment>({});
     const [template, setTemplate] = useState<ScheduleTemplate | null>(null);
     const [schedule, setSchedule] = useState<Record<string, ScheduleBlock>>({}); // Key: `${day}-${hour}`
+    const [conflicts, setConflicts] = useState<Record<string, { teacherConflict: boolean, environmentConflict: boolean }>>({});
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -54,11 +55,9 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             setSchedule(savedSchedule);
             setEnvironments(fetchedEnvironments);
             
-            // We only need teachers from the relevant program for the selectors
             const teachersInProgram = fetchedTeachers.filter(t => t.programId === programId);
             setTeachers(teachersInProgram);
-
-            // Combine assignments from both periods
+            
             setAssignments({ ...fetchedAssignments['MAR-JUL'], ...fetchedAssignments['AGO-DIC'] });
             
             if (!defaultTemplate) {
@@ -81,6 +80,52 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+    
+    useEffect(() => {
+        const detectConflicts = () => {
+            const teacherUsage: Record<string, string[]> = {};
+            const environmentUsage: Record<string, string[]> = {};
+            const newConflicts: Record<string, { teacherConflict: boolean, environmentConflict: boolean }> = {};
+
+            // Populate usage maps
+            for (const key in schedule) {
+                const block = schedule[key];
+                const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
+                
+                if (block.teacherId) {
+                    if (!teacherUsage[block.teacherId]) teacherUsage[block.teacherId] = [];
+                    teacherUsage[block.teacherId].push(timeSlot);
+                }
+                if (block.environmentId) {
+                    if (!environmentUsage[block.environmentId]) environmentUsage[block.environmentId] = [];
+                    environmentUsage[block.environmentId].push(timeSlot);
+                }
+            }
+
+            // Check for conflicts
+            for (const key in schedule) {
+                const block = schedule[key];
+                const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
+                let teacherConflict = false;
+                let environmentConflict = false;
+
+                if (block.teacherId && teacherUsage[block.teacherId].filter(slot => slot === timeSlot).length > 1) {
+                    teacherConflict = true;
+                }
+                if (block.environmentId && environmentUsage[block.environmentId].filter(slot => slot === timeSlot).length > 1) {
+                    environmentConflict = true;
+                }
+
+                if (teacherConflict || environmentConflict) {
+                    newConflicts[key] = { teacherConflict, environmentConflict };
+                }
+            }
+            setConflicts(newConflicts);
+        };
+
+        detectConflicts();
+    }, [schedule]);
+
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, unit: Unit) => {
         e.dataTransfer.setData("unitId", unit.id);
@@ -223,17 +268,17 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                                 <TurnoGrid 
                                     turno="Mañana" 
                                     timeBlocks={template.turnos.mañana} 
-                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
                                 />
                                 <TurnoGrid 
                                     turno="Tarde" 
                                     timeBlocks={template.turnos.tarde} 
-                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
                                 />
                                 <TurnoGrid 
                                     turno="Noche" 
                                     timeBlocks={template.turnos.noche} 
-                                    {...{ schedule, units, teachers, environments, handleDrop, handleDragOver, removeBlock, updateBlock }} 
+                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock }} 
                                 />
                             </div>
                         )}
