@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DoorClosed, CalendarDays, UserClock } from "lucide-react";
+import { DoorClosed, CalendarDays, CalendarClock } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -27,7 +27,7 @@ const planningModules: { title: string; description: string; href: string; icon:
     title: "Mi Horario",
     description: "Visualiza tu horario de clases o de trabajo semanal.",
     href: "/dashboard/planificacion/mi-horario",
-    icon: UserClock,
+    icon: CalendarClock,
     permission: "planning:schedule:view:own",
   },
 ];
