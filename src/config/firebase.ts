@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment, ScheduleTemplate } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1420,27 +1420,44 @@ export const deleteEnvironment = async (instituteId: string, envId: string): Pro
     await deleteDoc(envRef);
 };
     
+// --- SCHEDULE TEMPLATES ---
+export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
+    const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
+    const q = query(templatesCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ScheduleTemplate));
+};
 
-    
+export const addScheduleTemplate = async (instituteId: string, data: Omit<ScheduleTemplate, 'id'>): Promise<string> => {
+    const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
+    const docRef = await addDoc(templatesCol, data);
+    return docRef.id;
+};
 
+export const updateScheduleTemplate = async (instituteId: string, templateId: string, data: Partial<ScheduleTemplate>): Promise<void> => {
+    const templateRef = doc(db, 'institutes', instituteId, 'scheduleTemplates', templateId);
+    await updateDoc(templateRef, data);
+};
 
+export const deleteScheduleTemplate = async (instituteId: string, templateId: string): Promise<void> => {
+    const templateRef = doc(db, 'institutes', instituteId, 'scheduleTemplates', templateId);
+    await deleteDoc(templateRef);
+};
 
+export const setDefaultScheduleTemplate = async (instituteId: string, templateId: string): Promise<void> => {
+    const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
+    const batch = writeBatch(db);
 
+    // Unset any existing default
+    const q = query(templatesCol, where("isDefault", "==", true));
+    const snapshot = await getDocs(q);
+    snapshot.forEach(doc => {
+        batch.update(doc.ref, { isDefault: false });
+    });
 
+    // Set the new default
+    const newDefaultRef = doc(templatesCol, templateId);
+    batch.update(newDefaultRef, { isDefault: true });
 
-    
-
-
-
-
-
-
-
-
-
-    
-
-
-
-    
-
+    await batch.commit();
+}
