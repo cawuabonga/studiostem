@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DoorClosed, CalendarDays, CalendarClock } from "lucide-react";
+import { DoorClosed, CalendarDays, CalendarClock, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,13 @@ const planningModules: { title: string; description: string; href: string; icon:
     href: "/dashboard/planificacion/ambientes",
     icon: DoorClosed,
     permission: "planning:environment:manage",
+  },
+  {
+    title: "Configuración de Horarios",
+    description: "Define las plantillas de horas y turnos para el generador de horarios.",
+    href: "/dashboard/planificacion/configuracion-horario",
+    icon: Settings2,
+    permission: "planning:schedule:manage",
   },
   {
     title: "Generar Horarios",

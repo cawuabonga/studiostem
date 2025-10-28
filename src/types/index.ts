@@ -1,6 +1,5 @@
 
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -399,6 +398,27 @@ export interface ScheduleBlock {
     programId: string;
     semester: number;
     year: string;
+}
+
+export type TimeBlockType = 'clase' | 'receso';
+
+export interface TimeBlock {
+    id: string;
+    startTime: string; // "HH:mm"
+    endTime: string; // "HH:mm"
+    type: TimeBlockType;
+    label?: string; // Optional label e.g., "Receso"
+}
+
+export interface ScheduleTemplate {
+    id: string;
+    name: string;
+    turnos: {
+        mañana: TimeBlock[];
+        tarde: TimeBlock[];
+        noche: TimeBlock[];
+    };
+    isDefault: boolean;
 }
 
 
