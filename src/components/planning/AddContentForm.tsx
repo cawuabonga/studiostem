@@ -119,13 +119,9 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     if (!instituteId) return;
     setLoading(true);
 
-    console.log('[DEBUG] Form submitted. Data:', data);
-
     try {
         const file = data.file?.[0];
         const contentData: Partial<Content> = { title: data.title, type: data.type, value: data.value || '' };
-        
-        console.log(`[DEBUG] Mode: ${isEditMode ? 'Edit' : 'Add'}. Preparing to call Firebase function.`);
         
         if (isEditMode && initialData) {
              await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, contentData, file);
@@ -135,20 +131,16 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
             toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
         }
         
-        console.log('[DEBUG] Firebase function executed successfully.');
-        
         form.reset();
         onDataChanged();
 
     } catch (error: any) {
-      console.error('[DEBUG] Error during form submission process:', error);
       toast({
         title: 'Error',
         description: error.message || `No se pudo ${isEditMode ? 'actualizar' : 'añadir'} el contenido.`,
         variant: 'destructive',
       });
     } finally {
-      console.log('[DEBUG] Submission process finished.');
       setLoading(false);
     }
   };
