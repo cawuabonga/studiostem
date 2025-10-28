@@ -245,4 +245,3 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
     </Form>
   );
 }
-
