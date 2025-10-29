@@ -253,7 +253,7 @@ export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'imag
 
 export const getUnit = async (instituteId: string, unitId: string): Promise<Unit | null> => {
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-    const docSnap = await getDoc(docRef);
+    const docSnap = await getDoc(unitRef);
     if (docSnap.exists()) {
         const data = docSnap.data();
         return { id: docSnap.id, ...data } as Unit;
