@@ -2,29 +2,43 @@
 import { NextResponse } from 'next/server';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
+import type { NextRequest } from 'next/server';
 
-export async function POST(req: Request) {
-  try {
+// Helper function to parse multipart/form-data
+async function parseForm(req: NextRequest): Promise<{ fields: Record<string, string>, files: Record<string, File> }> {
     const formData = await req.formData();
-    const file = formData.get('file') as File | null;
-    const path = formData.get('path') as string | null;
+    const fields: Record<string, string> = {};
+    const files: Record<string, File> = {};
+
+    for (const [key, value] of formData.entries()) {
+        if (value instanceof File) {
+            files[key] = value;
+        } else {
+            fields[key] = value;
+        }
+    }
+    return { fields, files };
+}
+
+
+export async function POST(req: NextRequest) {
+  try {
+    const { fields, files } = await parseForm(req);
+    const file = files['file'];
+    const path = fields['path'];
 
     if (!file || !path) {
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    // Convert the file to a buffer in memory
     const fileBuffer = await file.arrayBuffer();
 
-    // Create a reference in Firebase Storage
     const storageRef = ref(storage, `${path}/${file.name}`);
 
-    // Upload the file buffer from memory, now including the contentType
     const snapshot = await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.type, // <-- LA CORRECCIÓN CLAVE ESTÁ AQUÍ
+      contentType: file.type,
     });
 
-    // Get the download URL
     const downloadURL = await getDownloadURL(snapshot.ref);
 
     return NextResponse.json({ downloadURL });
