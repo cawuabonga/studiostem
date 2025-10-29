@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
   authDomain: "stem-v2-4y6a0.firebaseapp.com",
   projectId: "stem-v2-4y6a0",
-  storageBucket: "stem-v2-4y6a0.appspot.com",
+  storageBucket: "stem-v2-4y6a0.firebasestorage.app",
   messagingSenderId: "865497414457",
   appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
 };
@@ -272,11 +272,9 @@ export const updateUnitImage = async (instituteId: string, unitId: string, image
 };
 
 export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
-    const storageRef = ref(firebaseStorage, `institutes/${instituteId}/units/${unitId}/coverImage`);
-    await uploadBytes(storageRef, file);
-    const imageUrl = await getDownloadURL(storageRef);
-    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-    await updateDoc(unitRef, { imageUrl });
+    const path = `institutes/${instituteId}/units/${unitId}/coverImage`;
+    const downloadURL = await uploadFileViaApi(file, path);
+    await updateUnitImage(instituteId, unitId, downloadURL);
 };
 
 
