@@ -56,8 +56,12 @@ const addContentSchema = z.object({
     message: 'El contenido es requerido.',
     path: ['value'],
 }).refine(data => {
-     if (data.type === 'file') {
-        return data.file && data.file.length > 0;
+    // For edit mode, file is not required
+    if (data.type === 'file' && !data.file) {
+        return true;
+    }
+    if (data.type === 'file' && data.file) {
+        return data.file.length > 0;
     }
     return true;
 }, {
@@ -122,6 +126,12 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
         return;
     };
     
+    // In create mode, a file is required for type 'file'
+    if (!isEditMode && data.type === 'file' && (!data.file || data.file.length === 0)) {
+        form.setError('file', { message: 'Debe seleccionar un archivo.' });
+        return;
+    }
+
     setLoading(true);
 
     try {

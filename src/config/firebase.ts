@@ -28,16 +28,6 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-// Helper function to convert a file to a Base64 Data URI
-const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-};
-
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
   try {
@@ -688,11 +678,25 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const voucherUrl = await fileToDataUri(voucherFile);
+    const formData = new FormData();
+    formData.append('file', voucherFile);
+    formData.append('path', `institutes/${instituteId}/vouchers`);
+
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Server-side upload failed.');
+    }
+    
+    const { downloadURL } = await response.json();
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
-        voucherUrl,
+        voucherUrl: downloadURL,
         status: 'Pendiente',
         createdAt: Timestamp.now()
     };
@@ -1028,30 +1032,44 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
     return null;
 };
 
-export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
-    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
 
-    const newContentId = doc(collection(db, 'idGenerator')).id;
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+    });
 
-    if (data.type === 'file' && file) {
-        const fileDataUri = await fileToDataUri(file);
-        const newContent: Content = {
-            ...data,
-            id: newContentId,
-            value: fileDataUri, // Store the Data URI
-            createdAt: Timestamp.now(),
-        };
-        await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
-    } else {
-        const newContent: Content = {
-            ...data,
-            id: newContentId,
-            createdAt: Timestamp.now(),
-        };
-        await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Server-side upload failed.');
     }
+    
+    const { downloadURL } = await response.json();
+    return downloadURL;
 };
 
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
+    const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
+    const newContentId = doc(collection(db, 'idGenerator')).id;
+
+    let fileUrl = '';
+    if (data.type === 'file' && file) {
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}`;
+        fileUrl = await uploadFileViaApi(file, storagePath);
+    }
+    
+    const newContent: Content = {
+        ...data,
+        id: newContentId,
+        value: data.type === 'file' ? fileUrl : (data.value || ''),
+        createdAt: Timestamp.now(),
+    };
+    
+    await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
+};
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
@@ -1064,7 +1082,8 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-        updatedContent.value = await fileToDataUri(file);
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}`;
+        updatedContent.value = await uploadFileViaApi(file, storagePath);
     }
 
     weekData.contents[contentIndex] = updatedContent;
@@ -1075,7 +1094,16 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
-    // No need to delete from Storage if we are using Data URIs
+    if (content.type === 'file') {
+        try {
+            const fileRef = ref(storage, content.value);
+            await deleteObject(fileRef);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Error deleting file from storage, but proceeding to delete from Firestore:", error);
+            }
+        }
+    }
     
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.contents) return;
@@ -1473,3 +1501,4 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
