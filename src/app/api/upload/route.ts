@@ -45,6 +45,6 @@ export async function POST(req: NextRequest) {
 
   } catch (e: any) {
     console.error('Error en la subida de archivo:', e);
-    return NextResponse.json({ error: 'Error al subir el archivo.', details: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Error al subir el archivo.', details: e.message, stack: e.stack }, { status: 500 });
   }
 }
