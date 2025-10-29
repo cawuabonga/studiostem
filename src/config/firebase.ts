@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -292,19 +293,17 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
 }
 
 export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'imageUrl'>[]) => {
-    const batch = writeBatch(db);
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     
+    // Use a for...of loop to handle async operations correctly
     for (const unitData of units) {
         const docRef = doc(unitsCol); 
         const dataWithHours = {
             ...unitData,
             totalHours: (unitData.theoreticalHours || 0) + (unitData.practicalHours || 0),
         };
-        batch.set(docRef, dataWithHours);
+        await setDoc(docRef, dataWithHours);
     }
-
-    await batch.commit();
 }
 
 export const duplicateUnit = async (instituteId: string, unitId: string): Promise<void> => {
@@ -1039,13 +1038,17 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
     };
 
     if (data.type === 'file' && file) {
+        console.log('File detected, preparing to upload...');
         try {
             const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`;
             const storageRef = ref(firebaseStorage, storagePath);
+            console.log('Uploading to:', storagePath);
             await uploadBytes(storageRef, file);
+            console.log('Upload complete. Getting download URL...');
             newContent.value = await getDownloadURL(storageRef);
+            console.log('Download URL obtained:', newContent.value);
         } catch (error) {
-            console.error(error);
+            console.error("Firebase Storage Error in addContentToWeek:", error);
             throw error;
         }
     }
@@ -1053,6 +1056,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
     await updateDoc(weekDocRef, {
         contents: arrayUnion(newContent)
     });
+    console.log('Firestore document updated with new content.');
 };
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
@@ -1496,3 +1500,5 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     await setDoc(scheduleRef, { schedule, programId, year, semester }, { merge: true });
 }
 
+
+    
