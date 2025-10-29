@@ -17,7 +17,10 @@ const firebaseConfig = {
 
 let app;
 if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
+  app = initializeApp({
+    ...firebaseConfig,
+    storageBucket: 'stem-v2-4y6a0.firebasestorage.app'
+  });
 } else {
   app = getApp();
 }
@@ -1044,7 +1047,7 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Server-side upload failed.');
+        throw new Error(errorData.message || 'Server-side upload failed.');
     }
     
     const { downloadURL } = await response.json();
@@ -1501,4 +1504,3 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
-
