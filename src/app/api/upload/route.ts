@@ -19,9 +19,9 @@ export async function POST(req: Request) {
     // Create a reference in Firebase Storage
     const storageRef = ref(storage, `${path}/${file.name}`);
 
-    // Upload the file buffer from memory
+    // Upload the file buffer from memory, now including the contentType
     const snapshot = await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.type || undefined,
+      contentType: file.type, // <-- LA CORRECCIÓN CLAVE ESTÁ AQUÍ
     });
 
     // Get the download URL
