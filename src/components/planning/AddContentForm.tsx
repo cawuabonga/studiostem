@@ -117,11 +117,7 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
   const contentType = form.watch('type');
 
   const onSubmit = async (data: AddContentFormValues) => {
-    console.log("[DEBUG] AddContentForm: onSubmit triggered.");
-    console.log("[DEBUG] Form data:", data);
-
     if (!instituteId) {
-        console.error("[DEBUG] Institute ID not found.");
         toast({ title: 'Error de Autenticación', description: 'No se pudo encontrar la información del instituto. Por favor, vuelve a iniciar sesión.', variant: 'destructive'});
         return;
     };
@@ -130,32 +126,26 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
 
     try {
         const file = data.file?.[0];
-        console.log("[DEBUG] Extracted file:", file);
         const contentData: Partial<Content> = { title: data.title, type: data.type, value: data.value || '' };
         
         if (isEditMode && initialData) {
-             console.log("[DEBUG] Calling updateContentInWeek...");
              await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, contentData, file);
              toast({ title: '¡Éxito!', description: 'El contenido ha sido actualizado.' });
         } else {
-            console.log("[DEBUG] Calling addContentToWeek...");
             await addContentToWeek(instituteId, unit.id, weekNumber, contentData as Omit<Content, 'id'>, file);
             toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
         }
         
-        console.log("[DEBUG] Operation successful in form.");
         form.reset();
         onDataChanged();
 
     } catch (error: any) {
-      console.error("[DEBUG] Error caught in AddContentForm onSubmit:", error);
       toast({
         title: 'Error',
         description: error.message || `No se pudo ${isEditMode ? 'actualizar' : 'añadir'} el contenido.`,
         variant: 'destructive',
       });
     } finally {
-      console.log("[DEBUG] AddContentForm: finally block reached.");
       setLoading(false);
     }
   };

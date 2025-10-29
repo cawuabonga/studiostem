@@ -1029,7 +1029,6 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 };
 
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
-    console.log("[DEBUG] addContentToWeek: Fired with file:", file);
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
     const newContent: Omit<Content, 'id'> & { id: string } = {
@@ -1042,28 +1041,21 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
         try {
             const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`;
             const storageRef = ref(firebaseStorage, storagePath);
-            console.log(`[DEBUG] Attempting to upload to: ${storagePath}`);
             await uploadBytes(storageRef, file);
-            console.log("[DEBUG] Upload successful. Getting download URL.");
             newContent.value = await getDownloadURL(storageRef);
-            console.log(`[DEBUG] Download URL obtained: ${newContent.value}`);
         } catch (error) {
-            console.error("[DEBUG] Firebase Storage Error in addContentToWeek:", error);
+            console.error("Firebase Storage Error in addContentToWeek:", error);
             throw error;
         }
-    } else {
-         console.log("[DEBUG] No file detected or not a file type.");
     }
     
     await updateDoc(weekDocRef, {
         contents: arrayUnion(newContent)
     });
-    console.log('[DEBUG] Firestore document updated with new content.');
 };
 
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
-    console.log("[DEBUG] updateContentInWeek: Fired with file:", file);
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.contents) return;
@@ -1076,30 +1068,23 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     if (data.type === 'file' && file) {
          try {
             if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
-                console.log("[DEBUG] Deleting old file...");
                 const oldFileRef = ref(firebaseStorage, weekData.contents[contentIndex].value);
                 await deleteObject(oldFileRef);
-                console.log("[DEBUG] Old file deleted.");
             }
             const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${contentId}_${file.name}`;
             const storageRef = ref(firebaseStorage, storagePath);
-            console.log(`[DEBUG] Attempting to upload new file to: ${storagePath}`);
             await uploadBytes(storageRef, file);
-            console.log("[DEBUG] New file upload successful.");
             updatedContent.value = await getDownloadURL(storageRef);
-            console.log(`[DEBUG] New download URL: ${updatedContent.value}`);
         } catch (error: any) {
             if (error.code !== 'storage/object-not-found') {
-                console.error("[DEBUG] Error handling file replacement:", error);
+                console.error("Error handling file replacement:", error);
                 throw error;
             }
-            console.warn("[DEBUG] Old file not found, proceeding with upload.");
         }
     }
 
     weekData.contents[contentIndex] = updatedContent;
     await updateDoc(weekDocRef, { contents: weekData.contents });
-    console.log("[DEBUG] Firestore updated for content update.");
 }
 
 
