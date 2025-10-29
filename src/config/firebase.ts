@@ -1030,28 +1030,26 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
-    
-    const newContent: Omit<Content, 'id'> & { id: string } = {
-        ...data,
-        id: doc(collection(db, 'idGenerator')).id,
-        createdAt: Timestamp.now(),
-    };
+
+    const newContentId = doc(collection(db, 'idGenerator')).id;
 
     if (data.type === 'file' && file) {
-        try {
-            const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${newContent.id}_${file.name}`;
-            const storageRef = ref(firebaseStorage, storagePath);
-            await uploadBytes(storageRef, file);
-            newContent.value = await getDownloadURL(storageRef);
-        } catch (error) {
-            console.error("Firebase Storage Error in addContentToWeek:", error);
-            throw error;
-        }
+        const fileDataUri = await fileToDataUri(file);
+        const newContent: Content = {
+            ...data,
+            id: newContentId,
+            value: fileDataUri, // Store the Data URI
+            createdAt: Timestamp.now(),
+        };
+        await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
+    } else {
+        const newContent: Content = {
+            ...data,
+            id: newContentId,
+            createdAt: Timestamp.now(),
+        };
+        await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
     }
-    
-    await updateDoc(weekDocRef, {
-        contents: arrayUnion(newContent)
-    });
 };
 
 
@@ -1066,21 +1064,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-         try {
-            if (weekData.contents[contentIndex].type === 'file' && weekData.contents[contentIndex].value) {
-                const oldFileRef = ref(firebaseStorage, weekData.contents[contentIndex].value);
-                await deleteObject(oldFileRef);
-            }
-            const storagePath = `institutes/${instituteId}/units/${unitId}/contents/${contentId}_${file.name}`;
-            const storageRef = ref(firebaseStorage, storagePath);
-            await uploadBytes(storageRef, file);
-            updatedContent.value = await getDownloadURL(storageRef);
-        } catch (error: any) {
-            if (error.code !== 'storage/object-not-found') {
-                console.error("Error handling file replacement:", error);
-                throw error;
-            }
-        }
+        updatedContent.value = await fileToDataUri(file);
     }
 
     weekData.contents[contentIndex] = updatedContent;
@@ -1091,16 +1075,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
-    if (content.type === 'file' && content.value) {
-        try {
-            const fileRef = ref(firebaseStorage, content.value);
-            await deleteObject(fileRef);
-        } catch (error: any) {
-            if (error.code !== 'storage/object-not-found') {
-                console.error("Error deleting file from storage:", error);
-            }
-        }
-    }
+    // No need to delete from Storage if we are using Data URIs
     
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.contents) return;

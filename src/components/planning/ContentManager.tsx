@@ -130,10 +130,11 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                            <div className="flex items-center gap-3 flex-1">
                              {getIconForType(content.type)}
                              <a 
-                                href={content.type === 'link' || content.type === 'file' ? content.value : undefined} 
+                                href={content.value} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className={`font-medium ${content.type !== 'text' ? 'hover:underline' : 'cursor-default'}`}
+                                download={content.type === 'file' ? content.title : undefined}
                             >
                                 {content.title}
                             </a>
@@ -164,7 +165,6 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                                     <AlertDialogTitle>¿Estás seguro de eliminar este contenido?</AlertDialogTitle>
                                     <AlertDialogDescription>
                                         Esta acción no se puede deshacer. Se eliminará el contenido "{content.title}".
-                                        Si es un archivo, también será borrado del almacenamiento.
                                     </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
