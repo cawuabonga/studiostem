@@ -2,48 +2,26 @@
 import { NextResponse } from 'next/server';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
-import formidable from 'formidable';
-import type { File } from 'formidable';
-import fs from 'fs/promises';
-
-// We need to disable the default body parser to allow formidable to stream the request.
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
-
-// Helper to parse the form
-const parseForm = async (req: Request): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
-  return new Promise((resolve, reject) => {
-    const form = formidable({});
-    form.parse(req as any, (err, fields, files) => {
-      if (err) reject(err);
-      else resolve({ fields, files });
-    });
-  });
-};
 
 export async function POST(req: Request) {
   try {
-    const { files, fields } = await parseForm(req);
-    
-    const file = (files.file as File[])?.[0];
-    const path = (fields.path as string[])?.[0];
+    const formData = await req.formData();
+    const file = formData.get('file') as File | null;
+    const path = formData.get('path') as string | null;
 
     if (!file || !path) {
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    // Read the file from the temporary path where formidable stores it
-    const fileBuffer = await fs.readFile(file.filepath);
+    // Convert the file to a buffer in memory
+    const fileBuffer = await file.arrayBuffer();
 
     // Create a reference in Firebase Storage
-    const storageRef = ref(storage, `${path}/${file.originalFilename}`);
+    const storageRef = ref(storage, `${path}/${file.name}`);
 
-    // Upload the file buffer
+    // Upload the file buffer from memory
     const snapshot = await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.mimetype || undefined,
+      contentType: file.type || undefined,
     });
 
     // Get the download URL
