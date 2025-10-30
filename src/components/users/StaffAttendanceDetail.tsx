@@ -12,13 +12,15 @@ import type { DateRange } from "react-day-picker";
 import { Label } from "@/components/ui/label";
 import { AccessLogTable } from "@/components/access-control/AccessLogTable";
 import { StaffAttendanceSummary } from "./StaffAttendanceSummary";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { Badge } from "../ui/badge";
 
 interface StaffAttendanceDetailProps {
     staffId: string;
 }
 
 export function StaffAttendanceDetail({ staffId }: StaffAttendanceDetailProps) {
-    const { instituteId, hasPermission } = useAuth();
+    const { instituteId } = useAuth();
     const [profile, setProfile] = useState<StaffProfile | null>(null);
     const [logs, setLogs] = useState<AccessLog[]>([]);
     const [loading, setLoading] = useState(true);
@@ -57,11 +59,23 @@ export function StaffAttendanceDetail({ staffId }: StaffAttendanceDetailProps) {
     const filteredLogs = useMemo(() => {
         return logs.filter(log => {
           const isDateMatch = dateRange?.from && dateRange?.to
-            ? log.timestamp.toDate() >= dateRange.from && log.timestamp.toDate() <= dateRange.to
+            ? log.timestamp.toDate() >= dateRange.from && log.timestamp.toDate() <= new Date(dateRange.to.getTime() + 86400000) // Include the whole end day
             : true;
           return isDateMatch;
         });
     }, [logs, dateRange]);
+    
+     const groupedLogs = useMemo(() => {
+        const groups: Record<string, AccessLog[]> = {};
+        filteredLogs.forEach(log => {
+            const pointName = log.accessPointName || 'Punto Desconocido';
+            if (!groups[pointName]) {
+                groups[pointName] = [];
+            }
+            groups[pointName].push(log);
+        });
+        return Object.entries(groups).sort(([nameA], [nameB]) => nameA.localeCompare(nameB));
+    }, [filteredLogs]);
 
 
     if (loading) {
@@ -97,10 +111,35 @@ export function StaffAttendanceDetail({ staffId }: StaffAttendanceDetailProps) {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Registros de Acceso Detallados</CardTitle>
+                    <CardTitle>Registros de Acceso por Punto</CardTitle>
+                    <CardDescription>
+                        A continuación se muestran los registros de acceso agrupados por cada punto de acceso.
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <AccessLogTable logs={filteredLogs} loading={logsLoading} />
+                   {logsLoading ? (
+                        <Skeleton className="h-48 w-full" />
+                   ) : groupedLogs.length > 0 ? (
+                     <Accordion type="multiple" className="w-full space-y-4">
+                        {groupedLogs.map(([pointName, logsForPoint]) => (
+                            <AccordionItem key={pointName} value={pointName} className="border rounded-lg shadow-sm">
+                                <AccordionTrigger className="text-lg font-medium px-6 py-4 hover:no-underline">
+                                    <div className="flex items-center gap-4">
+                                        <span>{pointName}</span>
+                                        <Badge variant="secondary">{logsForPoint.length} Registros</Badge>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="px-1 pb-1">
+                                    <AccessLogTable logs={logsForPoint} loading={false} />
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                   ) : (
+                        <p className="text-center text-muted-foreground py-8">
+                            No se encontraron registros de acceso para el rango de fechas seleccionado.
+                        </p>
+                   )}
                 </CardContent>
             </Card>
         </div>
