@@ -85,7 +85,7 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                 
                 let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default to Entry
 
-                // --- NEW Entry/Exit Logic ---
+                // --- Corrected Entry/Exit Logic ---
                 if (userDocumentId) {
                     const accessStatesCol = collection(db, 'institutes', instituteId, 'accessStates');
                     const stateDocRef = doc(accessStatesCol, userDocumentId);
@@ -95,14 +95,13 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
 
                     if (lastState && lastState.type === 'Entrada') {
-                        // Check if the last entry was on the same day. If not, it's a new entry.
                         const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
                         if (lastDate === currentDate) {
                             logType = 'Salida';
                         }
                     }
-
-                    // --- Update user's access state within the transaction ---
+                    
+                    // --- Update user's access state AFTER determining logType ---
                     transaction.set(stateDocRef, {
                         lastStateByAccessPoint: {
                             [accessPointDocId]: {
@@ -132,7 +131,8 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                 // 2. Update daily statistics
                 const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
                 const dailyStatsDoc = await transaction.get(dailyStatsRef);
-                if (!dailyStatsDoc.exists()) {
+                const dailyData = dailyStatsDoc.exists() ? dailyStatsDoc.data() : null;
+                if (!dailyData) {
                     transaction.set(dailyStatsRef, {
                         total: 1,
                         permitted: status === 'Permitido' ? 1 : 0,
@@ -140,33 +140,32 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                         byHour: { [currentHour]: 1 },
                     });
                 } else {
-                    const currentData = dailyStatsDoc.data();
                     transaction.update(dailyStatsRef, {
-                        total: (currentData.total || 0) + 1,
-                        permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
-                        denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
-                        [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
+                        total: (dailyData.total || 0) + 1,
+                        permitted: (dailyData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
+                        denied: (dailyData.denied || 0) + (status === 'Denegado' ? 1 : 0),
+                        [`byHour.${currentHour}`]: (dailyData.byHour?.[currentHour] || 0) + 1,
                     });
                 }
 
                 // 3. Update hourly summary statistics
                 const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
                 const hourlyStatsDoc = await transaction.get(hourlyStatsRef);
-                if (!hourlyStatsDoc.exists()) {
+                const hourlyData = hourlyStatsDoc.exists() ? hourlyStatsDoc.data() : null;
+                if (!hourlyData) {
                     transaction.set(hourlyStatsRef, { byHour: { [currentHour]: 1 } });
                 } else {
-                    const currentData = hourlyStatsDoc.data();
-                    transaction.update(hourlyStatsRef, { [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1 });
+                    transaction.update(hourlyStatsRef, { [`byHour.${currentHour}`]: (hourlyData.byHour?.[currentHour] || 0) + 1 });
                 }
 
                 // 4. Update overall statistics
                 const overallStatsRef = doc(statsCollectionRef, 'overall');
                 const overallStatsDoc = await transaction.get(overallStatsRef);
-                if (!overallStatsDoc.exists()) {
+                const overallData = overallStatsDoc.exists() ? overallStatsDoc.data() : null;
+                if (!overallData) {
                     transaction.set(overallStatsRef, { total: 1, permitted: status === 'Permitido' ? 1 : 0, denied: status === 'Denegado' ? 1 : 0, firstAccess: now, lastAccess: now });
                 } else {
-                    const currentData = overallStatsDoc.data();
-                    transaction.update(overallStatsRef, { total: (currentData.total || 0) + 1, permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0), denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0), lastAccess: now });
+                    transaction.update(overallStatsRef, { total: (overallData.total || 0) + 1, permitted: (overallData.permitted || 0) + (status === 'Permitido' ? 1 : 0), denied: (overallData.denied || 0) + (status === 'Denegado' ? 1 : 0), lastAccess: now });
                 }
             });
         } catch (e) {
@@ -250,5 +249,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
     }
 }
+
+    
 
     
