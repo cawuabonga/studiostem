@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
   authDomain: "stem-v2-4y6a0.firebaseapp.com",
   projectId: "stem-v2-4y6a0",
-  storageBucket: "stem-v2-4y6a0.firebasestorage.app",
+  storageBucket: "stem-v2-4y6a0.appspot.com",
   messagingSenderId: "865497414457",
   appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
 };
@@ -19,7 +19,7 @@ let app;
 if (!getApps().length) {
   app = initializeApp({
     ...firebaseConfig,
-    storageBucket: 'stem-v2-4y6a0.firebasestorage.app'
+    storageBucket: 'stem-v2-4y6a0.appspot.com'
   });
 } else {
   app = getApp();
@@ -1349,6 +1349,38 @@ export const getAccessPointStats = async (
     };
 };
 
+export const getLastAccessLog = async (
+    instituteId: string,
+    accessPointId: string,
+    rfidCardId: string,
+    date: Date
+): Promise<AccessLog | null> => {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const logsCollection = collectionGroup(db, 'accessLogs');
+    const q = query(
+        logsCollection,
+        where('instituteId', '==', instituteId),
+        where('accessPointId', '==', accessPointId),
+        where('rfidCardId', '==', rfidCardId),
+        where('timestamp', '>=', startOfDay),
+        where('timestamp', '<=', endOfDay),
+        orderBy('timestamp', 'desc'),
+        limit(1)
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+        return null;
+    }
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AccessLog;
+};
+
+
 // --- REPORTS ---
 export const getMatriculationReportData = async (
   instituteId: string,
@@ -1523,13 +1555,12 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
 
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, schedule: Record<string, ScheduleBlock>): Promise<void> => {
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
-    // Use setDoc with merge to only update the schedule for the current program,
-    // leaving other programs' data intact in a theoretical combined document (though we save per program)
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
 
 
     
+
 
 
 
