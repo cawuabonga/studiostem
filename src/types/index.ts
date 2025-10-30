@@ -436,6 +436,7 @@ export type Permission =
   | 'admin:fees:manage'
   | 'admin:payments:validate'
   | 'admin:access-control:manage'
+  | 'admin:attendance:report'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
@@ -484,6 +485,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
             { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
             { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
+            { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
         ],
     },
      {

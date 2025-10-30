@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -39,6 +39,13 @@ const adminModules: AdminModule[] = [
     icon: Fingerprint,
     permission: "admin:access-control:manage",
   },
+  {
+    title: "Reporte de Asistencia",
+    description: "Consultar el historial de asistencia y las horas trabajadas del personal.",
+    href: "/dashboard/gestion-administrativa/reporte-asistencia",
+    icon: Users,
+    permission: "admin:attendance:report",
+  }
 ];
 
 const studentModules = [
@@ -63,7 +70,7 @@ export default function GestionAdministrativaPage() {
     const { user, loading, hasPermission } = useAuth();
     const router = useRouter();
 
-    const canViewPage = hasPermission('admin:fees:manage') || hasPermission('admin:payments:validate') || hasPermission('student:payments:manage') || hasPermission('admin:access-control:manage');
+    const canViewPage = adminModules.some(m => hasPermission(m.permission as Permission)) || studentModules.some(m => hasPermission(m.permission as Permission));
 
     useEffect(() => {
         if (!loading && !canViewPage) {
