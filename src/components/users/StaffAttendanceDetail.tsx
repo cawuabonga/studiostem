@@ -11,6 +11,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
 import { Label } from "@/components/ui/label";
 import { AccessLogTable } from "@/components/access-control/AccessLogTable";
+import { StaffAttendanceSummary } from "./StaffAttendanceSummary";
 
 interface StaffAttendanceDetailProps {
     staffId: string;
@@ -80,14 +81,8 @@ export function StaffAttendanceDetail({ staffId }: StaffAttendanceDetailProps) {
                         Historial de registros de entrada y salida para {profile.email}.
                     </CardDescription>
                 </CardHeader>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Registros de Acceso</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="w-full md:w-auto md:max-w-xs">
+                 <CardContent>
+                     <div className="w-full md:w-auto md:max-w-xs space-y-2">
                         <Label>Filtrar por Fecha</Label>
                         <DateRangePicker 
                             date={dateRange}
@@ -95,6 +90,16 @@ export function StaffAttendanceDetail({ staffId }: StaffAttendanceDetailProps) {
                             className="w-full"
                         />
                     </div>
+                 </CardContent>
+            </Card>
+
+            <StaffAttendanceSummary logs={filteredLogs} />
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Registros de Acceso Detallados</CardTitle>
+                </CardHeader>
+                <CardContent>
                     <AccessLogTable logs={filteredLogs} loading={logsLoading} />
                 </CardContent>
             </Card>
