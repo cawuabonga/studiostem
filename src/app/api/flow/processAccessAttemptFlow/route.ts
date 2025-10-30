@@ -82,12 +82,14 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
             await runTransaction(db, async (transaction) => {
                 const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
                 const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
-                const stateDocRef = userDocumentId ? doc(db, 'institutes', instituteId, 'accessStates', userDocumentId) : null;
-
+                
                 let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default to Entry
 
                 // --- NEW Entry/Exit Logic ---
-                if (stateDocRef) {
+                if (userDocumentId) {
+                    const accessStatesCol = collection(db, 'institutes', instituteId, 'accessStates');
+                    const stateDocRef = doc(accessStatesCol, userDocumentId);
+                    
                     const stateDoc = await transaction.get(stateDocRef);
                     const stateData = stateDoc.exists() ? stateDoc.data() as AccessState : null;
                     const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
@@ -99,6 +101,16 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                             logType = 'Salida';
                         }
                     }
+
+                    // --- Update user's access state within the transaction ---
+                    transaction.set(stateDocRef, {
+                        lastStateByAccessPoint: {
+                            [accessPointDocId]: {
+                                type: logType,
+                                timestamp: now
+                            }
+                        }
+                    }, { merge: true });
                 }
                 
                 // 1. Add the new access log entry
@@ -116,18 +128,6 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     rfidCardId,
                     instituteId: instituteId,
                 });
-                
-                // --- NEW: Update user's access state ---
-                if(stateDocRef) {
-                    transaction.set(stateDocRef, {
-                        lastStateByAccessPoint: {
-                            [accessPointDocId]: {
-                                type: logType,
-                                timestamp: now
-                            }
-                        }
-                    }, { merge: true });
-                }
 
                 // 2. Update daily statistics
                 const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
