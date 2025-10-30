@@ -80,6 +80,17 @@ export interface AccessLog {
     instituteId?: string;
 }
 
+// NEW: Document to hold the last access state for a user
+export interface AccessState {
+    lastStateByAccessPoint: {
+        [accessPointDocId: string]: {
+            type: 'Entrada' | 'Salida';
+            timestamp: Timestamp;
+        };
+    };
+}
+
+
 // --- NEW STATISTICS TYPES ---
 export interface DailyStats {
     id: string; // YYYY-MM-DD

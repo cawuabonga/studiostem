@@ -1349,39 +1349,6 @@ export const getAccessPointStats = async (
     };
 };
 
-export const getLastAccessLog = async (
-    instituteId: string,
-    accessPointDocId: string,
-    userDocumentId: string,
-    date: Date
-): Promise<AccessLog | null> => {
-    if (!accessPointDocId || !userDocumentId) return null;
-
-    const startOfDay = new Date(date);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(date);
-    endOfDay.setHours(23, 59, 59, 999);
-    
-    const logsCollection = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
-    
-    const q = query(
-        logsCollection,
-        where('userDocumentId', '==', userDocumentId),
-        where('timestamp', '>=', startOfDay),
-        where('timestamp', '<=', endOfDay),
-        orderBy('timestamp', 'desc'),
-        limit(1)
-    );
-
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-        return null;
-    }
-    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as AccessLog;
-};
-
-
 // --- REPORTS ---
 export const getMatriculationReportData = async (
   instituteId: string,
@@ -1561,6 +1528,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 

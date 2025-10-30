@@ -1,8 +1,9 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getAccessPoints, getRoles, db, getLastAccessLog } from '@/config/firebase';
+import { getAccessPoints, getRoles, db } from '@/config/firebase';
 import { collection, addDoc, Timestamp, getDocs, query, where, doc, runTransaction } from 'firebase/firestore';
+import type { AccessState } from '@/types';
 
 
 const AccessAttemptInputSchema = z.object({
@@ -48,17 +49,17 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         }
     }
     
+    // This function now uses a transaction to ensure atomicity
     const logAccess = async (status: 'Permitido' | 'Denegado') => {
-        const now = new Date();
-        const timestamp = Timestamp.fromDate(now);
-        const currentDate = now.toISOString().split('T')[0]; // YYYY-MM-DD
-        const currentHour = now.getHours(); // 0-23
+        const now = Timestamp.now();
+        const currentDate = now.toDate().toISOString().split('T')[0]; // YYYY-MM-DD
+        const currentHour = now.toDate().getHours(); // 0-23
         
         if (!instituteId) {
-            console.error("Cannot log access: instituteId not found for the given RFID card.");
-            const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
+             console.error("Cannot log access: instituteId not found for the given RFID card.");
+             const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
              await addDoc(unknownLogCollectionRef, {
-                timestamp: timestamp,
+                timestamp: now,
                 status,
                 rfidCardId,
                 accessPointId,
@@ -72,92 +73,107 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         
         if (!accessPoint) {
             console.error(`Access point with ID ${accessPointId} not found in institute ${instituteId}. Logging attempt anyway.`);
-            accessPointDocId = 'unknown_access_points'; // Log to a generic document
+            accessPointDocId = 'unknown_access_points';
         } else {
-            accessPointDocId = accessPoint.id; // Store the document ID
+            accessPointDocId = accessPoint.id;
         }
+        
+        try {
+            await runTransaction(db, async (transaction) => {
+                const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+                const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
+                const stateDocRef = userDocumentId ? doc(db, 'institutes', instituteId, 'accessStates', userDocumentId) : null;
 
-        const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
-        const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
+                let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default to Entry
 
-        // Determine Entry or Exit
-        const lastLog = await getLastAccessLog(instituteId, accessPointDocId, userDocumentId, now);
-        const logType: 'Entrada' | 'Salida' = (lastLog && lastLog.type === 'Entrada') ? 'Salida' : 'Entrada';
+                // --- NEW Entry/Exit Logic ---
+                if (stateDocRef) {
+                    const stateDoc = await transaction.get(stateDocRef);
+                    const stateData = stateDoc.exists() ? stateDoc.data() as AccessState : null;
+                    const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
 
+                    if (lastState && lastState.type === 'Entrada') {
+                        // Check if the last entry was on the same day. If not, it's a new entry.
+                        const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
+                        if (lastDate === currentDate) {
+                            logType = 'Salida';
+                        }
+                    }
+                }
+                
+                // 1. Add the new access log entry
+                const logDocRef = doc(logCollectionRef);
+                transaction.set(logDocRef, {
+                    timestamp: now,
+                    type: logType,
+                    status,
+                    userDocumentId: userDocumentId || 'Desconocido',
+                    userName: userName || 'Tarjeta no registrada',
+                    userRole: userRoleName || 'Desconocido',
+                    userRoleId: userRoleId || 'Desconocido',
+                    accessPointId,
+                    accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
+                    rfidCardId,
+                    instituteId: instituteId,
+                });
+                
+                // --- NEW: Update user's access state ---
+                if(stateDocRef) {
+                    transaction.set(stateDocRef, {
+                        lastStateByAccessPoint: {
+                            [accessPointDocId]: {
+                                type: logType,
+                                timestamp: now
+                            }
+                        }
+                    }, { merge: true });
+                }
 
-        // Firestore transaction to update logs and statistics atomically
-        await runTransaction(db, async (transaction) => {
-             // 1. Add the new access log entry
-            const logDocRef = doc(logCollectionRef);
-            transaction.set(logDocRef, {
-                timestamp,
-                type: logType,
-                status,
-                userDocumentId: userDocumentId || 'Desconocido',
-                userName: userName || 'Tarjeta no registrada',
-                userRole: userRoleName || 'Desconocido',
-                userRoleId: userRoleId || 'Desconocido',
-                accessPointId,
-                accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
-                rfidCardId,
-                instituteId: instituteId,
+                // 2. Update daily statistics
+                const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
+                const dailyStatsDoc = await transaction.get(dailyStatsRef);
+                if (!dailyStatsDoc.exists()) {
+                    transaction.set(dailyStatsRef, {
+                        total: 1,
+                        permitted: status === 'Permitido' ? 1 : 0,
+                        denied: status === 'Denegado' ? 1 : 0,
+                        byHour: { [currentHour]: 1 },
+                    });
+                } else {
+                    const currentData = dailyStatsDoc.data();
+                    transaction.update(dailyStatsRef, {
+                        total: (currentData.total || 0) + 1,
+                        permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
+                        denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
+                        [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
+                    });
+                }
+
+                // 3. Update hourly summary statistics
+                const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
+                const hourlyStatsDoc = await transaction.get(hourlyStatsRef);
+                if (!hourlyStatsDoc.exists()) {
+                    transaction.set(hourlyStatsRef, { byHour: { [currentHour]: 1 } });
+                } else {
+                    const currentData = hourlyStatsDoc.data();
+                    transaction.update(hourlyStatsRef, { [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1 });
+                }
+
+                // 4. Update overall statistics
+                const overallStatsRef = doc(statsCollectionRef, 'overall');
+                const overallStatsDoc = await transaction.get(overallStatsRef);
+                if (!overallStatsDoc.exists()) {
+                    transaction.set(overallStatsRef, { total: 1, permitted: status === 'Permitido' ? 1 : 0, denied: status === 'Denegado' ? 1 : 0, firstAccess: now, lastAccess: now });
+                } else {
+                    const currentData = overallStatsDoc.data();
+                    transaction.update(overallStatsRef, { total: (currentData.total || 0) + 1, permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0), denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0), lastAccess: now });
+                }
             });
-
-             // 2. Update daily statistics
-            const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
-            const dailyStatsDoc = await transaction.get(dailyStatsRef);
-            if (!dailyStatsDoc.exists()) {
-                transaction.set(dailyStatsRef, {
-                    total: 1,
-                    permitted: status === 'Permitido' ? 1 : 0,
-                    denied: status === 'Denegado' ? 1 : 0,
-                    byHour: { [currentHour]: 1 },
-                });
-            } else {
-                const currentData = dailyStatsDoc.data();
-                transaction.update(dailyStatsRef, {
-                    total: (currentData.total || 0) + 1,
-                    permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
-                    denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
-                    [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
-                });
-            }
-
-            // 3. Update hourly summary statistics
-            const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
-            const hourlyStatsDoc = await transaction.get(hourlyStatsRef);
-             if (!hourlyStatsDoc.exists()) {
-                transaction.set(hourlyStatsRef, {
-                    byHour: { [currentHour]: 1 }
-                });
-            } else {
-                const currentData = hourlyStatsDoc.data();
-                transaction.update(hourlyStatsRef, {
-                    [`byHour.${currentHour}`]: (currentData.byHour?.[currentHour] || 0) + 1,
-                });
-            }
-
-            // 4. Update overall statistics
-            const overallStatsRef = doc(statsCollectionRef, 'overall');
-            const overallStatsDoc = await transaction.get(overallStatsRef);
-             if (!overallStatsDoc.exists()) {
-                transaction.set(overallStatsRef, {
-                    total: 1,
-                    permitted: status === 'Permitido' ? 1 : 0,
-                    denied: status === 'Denegado' ? 1 : 0,
-                    firstAccess: timestamp,
-                    lastAccess: timestamp
-                });
-            } else {
-                 const currentData = overallStatsDoc.data();
-                transaction.update(overallStatsRef, {
-                    total: (currentData.total || 0) + 1,
-                    permitted: (currentData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
-                    denied: (currentData.denied || 0) + (status === 'Denegado' ? 1 : 0),
-                    lastAccess: timestamp
-                });
-            }
-        });
+        } catch (e) {
+            console.error("Access Log Transaction failed: ", e);
+            // If the transaction fails, we might still want to log the attempt somewhere, or handle the error.
+            // For now, we'll just log it to the server console.
+        }
     };
 
     if (!userProfile) {

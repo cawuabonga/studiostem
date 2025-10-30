@@ -124,20 +124,6 @@
           "order": "DESCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "userDocumentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []
