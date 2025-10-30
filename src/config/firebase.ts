@@ -371,6 +371,32 @@ export const getAssignments = async (
   return { 'MAR-JUL': {}, 'AGO-DIC': {} };
 };
 
+export const getAllAssignmentsForYear = async (
+    instituteId: string,
+    year: string
+): Promise<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }> => {
+    const assignmentsCol = getSubCollectionRef(instituteId, 'assignments');
+    const q = query(assignmentsCol, where('__name__', '>=', `${year}_`), where('__name__', '<', `${year}_\uf8ff`));
+    const querySnapshot = await getDocs(q);
+
+    const allAssignments: { 'MAR-JUL': Assignment; 'AGO-DIC': Assignment } = {
+        'MAR-JUL': {},
+        'AGO-DIC': {},
+    };
+
+    querySnapshot.forEach(doc => {
+        const data = doc.data() as { 'MAR-JUL'?: Assignment; 'AGO-DIC'?: Assignment };
+        if (data['MAR-JUL']) {
+            Object.assign(allAssignments['MAR-JUL'], data['MAR-JUL']);
+        }
+        if (data['AGO-DIC']) {
+            Object.assign(allAssignments['AGO-DIC'], data['AGO-DIC']);
+        }
+    });
+
+    return allAssignments;
+};
+
 export const saveAssignments = async (
   instituteId: string,
   year: string,
@@ -690,7 +716,7 @@ export const registerPayment = async (
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Server-side upload failed.');
+        throw new Error(errorData.message || 'Server-side upload failed.');
     }
     
     const { downloadURL } = await response.json();
@@ -1502,4 +1528,5 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 

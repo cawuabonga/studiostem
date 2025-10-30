@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule, getEnvironments, getTeachers, getAssignments } from '@/config/firebase';
+import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule, getEnvironments, getTeachers, getAllAssignmentsForYear } from '@/config/firebase';
 import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment, TimeBlock } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
@@ -47,13 +47,13 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         if (!instituteId) return;
         setLoading(true);
         try {
-            const [allUnits, defaultTemplate, savedSchedule, fetchedEnvironments, fetchedTeachers, fetchedAssignments] = await Promise.all([
+            const [allUnits, defaultTemplate, savedSchedule, fetchedEnvironments, fetchedTeachers, allAssignmentsForYear] = await Promise.all([
                 getUnits(instituteId),
                 getDefaultScheduleTemplate(instituteId),
                 getSchedule(instituteId, programId, year, semester),
                 getEnvironments(instituteId),
                 getTeachers(instituteId),
-                getAssignments(instituteId, year, programId)
+                getAllAssignmentsForYear(instituteId, year)
             ]);
 
             const unitsForSemester = allUnits.filter(u => u.programId === programId && u.semester === semester);
@@ -65,7 +65,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             const teachersInProgram = fetchedTeachers.filter(t => t.programId === programId);
             setTeachers(teachersInProgram);
             
-            setAssignments({ ...fetchedAssignments['MAR-JUL'], ...fetchedAssignments['AGO-DIC'] });
+            setAssignments({ ...allAssignmentsForYear['MAR-JUL'], ...allAssignmentsForYear['AGO-DIC'] });
             
             if (!defaultTemplate) {
                 toast({
