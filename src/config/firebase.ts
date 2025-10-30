@@ -314,31 +314,13 @@ export const duplicateUnit = async (instituteId: string, unitId: string): Promis
 
 // Teachers (derived from StaffProfiles)
 export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
-    const roles = await getRoles(instituteId);
-    const targetRoleIds = roles
-        .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
-        .map(role => role.id);
+    const allStaff = await getStaffProfiles(instituteId);
+    const allPrograms = await getPrograms(instituteId);
+    const programMap = new Map(allPrograms.map(p => [p.id, p.name]));
     
-    // Also include legacy roles for backwards compatibility
-    const legacyRoles = ['Teacher', 'Coordinator'];
-
-    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
-    const roleIdQuery = query(staffCol, where("roleId", "in", targetRoleIds.length > 0 ? targetRoleIds : ['dummy-value']));
-    const legacyRoleQuery = query(staffCol, where("role", "in", legacyRoles));
-    
-    const [roleIdSnapshot, legacyRoleSnapshot] = await Promise.all([
-        getDocs(roleIdQuery),
-        getDocs(legacyRoleQuery)
-    ]);
-    
-    const combinedDocs = new Map<string, StaffProfile>();
-    roleIdSnapshot.docs.forEach(docSnap => combinedDocs.set(docSnap.id, { documentId: docSnap.id, ...docSnap.data() } as StaffProfile));
-    legacyRoleSnapshot.docs.forEach(docSnap => combinedDocs.set(docSnap.id, { documentId: docSnap.id, ...docSnap.data() } as StaffProfile));
-    
-    const programs = await getPrograms(instituteId);
-    const programMap = new Map(programs.map(p => [p.id, p.name]));
-    
-    return Array.from(combinedDocs.values()).map(data => {
+    // We are returning all staff profiles as potential teachers,
+    // as assignments can cross programs. Filtering will happen in the component.
+    return allStaff.map(data => {
         return {
             id: data.documentId,
             documentId: data.documentId,
@@ -1521,12 +1503,33 @@ export const getSchedule = async (instituteId: string, programId: string, year: 
     return {};
 }
 
+export const getAllSchedules = async (instituteId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
+    const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
+    // We can't query based on a part of the document ID easily. We fetch all and filter.
+    // This is acceptable if the number of programs/schedules per institute isn't massive.
+    const snapshot = await getDocs(schedulesCol);
+    const allBlocks: Record<string, ScheduleBlock> = {};
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        // Filter by year and semester from the document's fields
+        if (data.year === year && data.semester === semester) {
+            Object.assign(allBlocks, data.schedule);
+        }
+    });
+
+    return allBlocks;
+}
+
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, schedule: Record<string, ScheduleBlock>): Promise<void> => {
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
+    // Use setDoc with merge to only update the schedule for the current program,
+    // leaving other programs' data intact in a theoretical combined document (though we save per program)
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
 
 
     
+
 
 

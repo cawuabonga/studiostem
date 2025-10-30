@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getUnits, getDefaultScheduleTemplate, saveSchedule, getSchedule, getEnvironments, getTeachers, getAllAssignmentsForYear } from '@/config/firebase';
+import { getUnits, getDefaultScheduleTemplate, saveSchedule, getAllSchedules, getEnvironments, getTeachers, getAllAssignmentsForYear } from '@/config/firebase';
 import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment, TimeBlock } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
@@ -13,6 +13,7 @@ import { UnassignedUnitCard } from './UnassignedUnitCard';
 import { TurnoGrid } from './TurnoGrid';
 import { Button } from '../ui/button';
 import { Loader2, Save } from 'lucide-react';
+import { OccupiedBlockCard } from './OccupiedBlockCard';
 
 interface ScheduleGeneratorProps {
     programId: string;
@@ -37,20 +38,34 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     const [teachers, setTeachers] = useState<Teacher[]>([]);
     const [assignments, setAssignments] = useState<Assignment>({});
     const [template, setTemplate] = useState<ScheduleTemplate | null>(null);
-    const [schedule, setSchedule] = useState<Record<string, ScheduleBlock>>({}); // Key: `${day}-${hour}`
-    const [conflicts, setConflicts] = useState<Record<string, { teacherConflict: boolean, environmentConflict: boolean }>>({});
+    // This state now holds ALL schedule blocks for the given semester/year
+    const [allSchedules, setAllSchedules] = useState<Record<string, ScheduleBlock>>({});
+    const [conflicts, setConflicts] = useState<Record<string, { teacherConflict: boolean; environmentConflict: boolean }>>({});
     const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+
+    const programMap = useMemo(() => {
+        const map = new Map<string, string>();
+        if(allSchedules){
+            Object.values(allSchedules).forEach(block => {
+                if(!map.has(block.programId)) {
+                    // This is a simplified map. A better approach would be to load programs data.
+                     map.set(block.programId, block.programId);
+                }
+            })
+        }
+        return map;
+    }, [allSchedules])
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const [allUnits, defaultTemplate, savedSchedule, fetchedEnvironments, fetchedTeachers, allAssignmentsForYear] = await Promise.all([
+            const [allUnits, defaultTemplate, savedSchedules, fetchedEnvironments, fetchedTeachers, allAssignmentsForYear] = await Promise.all([
                 getUnits(instituteId),
                 getDefaultScheduleTemplate(instituteId),
-                getSchedule(instituteId, programId, year, semester),
+                getAllSchedules(instituteId, year, semester), // Fetch all schedules
                 getEnvironments(instituteId),
                 getTeachers(instituteId),
                 getAllAssignmentsForYear(instituteId, year)
@@ -59,12 +74,9 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             const unitsForSemester = allUnits.filter(u => u.programId === programId && u.semester === semester);
             setUnits(unitsForSemester);
             setTemplate(defaultTemplate);
-            setSchedule(savedSchedule);
+            setAllSchedules(savedSchedules); // Set the global schedule object
             setEnvironments(fetchedEnvironments);
-            
-            // Load ALL teachers, not just from the current program
             setTeachers(fetchedTeachers);
-            
             setAssignments({ ...allAssignmentsForYear['MAR-JUL'], ...allAssignmentsForYear['AGO-DIC'] });
             
             if (!defaultTemplate) {
@@ -88,14 +100,15 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         fetchData();
     }, [fetchData]);
     
-    useEffect(() => {
+     useEffect(() => {
         const detectConflicts = () => {
             const teacherUsage: Record<string, string[]> = {};
             const environmentUsage: Record<string, string[]> = {};
             const newConflicts: Record<string, { teacherConflict: boolean, environmentConflict: boolean }> = {};
 
-            for (const key in schedule) {
-                const block = schedule[key];
+            // Iterate over the global schedule to build usage maps
+            for (const key in allSchedules) {
+                const block = allSchedules[key];
                 const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
                 
                 if (block.teacherId) {
@@ -108,8 +121,9 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                 }
             }
 
-            for (const key in schedule) {
-                const block = schedule[key];
+            // Check for conflicts in the current program's schedule
+            for (const key in allSchedules) {
+                const block = allSchedules[key];
                 const timeSlot = `${block.dayOfWeek}-${block.startTime}`;
                 let teacherConflict = false;
                 let environmentConflict = false;
@@ -129,16 +143,18 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         };
 
         detectConflicts();
-    }, [schedule]);
+    }, [allSchedules]);
 
 
     const assignedHoursMap = useMemo(() => {
         const map = new Map<string, number>();
-        Object.values(schedule).forEach(block => {
-            map.set(block.unitId, (map.get(block.unitId) || 0) + 1);
+        Object.values(allSchedules).forEach(block => {
+            if(block.programId === programId) {
+                map.set(block.unitId, (map.get(block.unitId) || 0) + 1);
+            }
         });
         return map;
-    }, [schedule]);
+    }, [allSchedules, programId]);
 
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, unit: Unit) => {
@@ -155,7 +171,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         const unitId = e.dataTransfer.getData("unitId");
         const cellKey = `${day}-${hour}`;
 
-        if (schedule[cellKey]) {
+        if (allSchedules[cellKey]) {
             toast({ title: "Conflicto de Horario", description: "Ya existe un bloque asignado en esta celda.", variant: "destructive"});
             return;
         }
@@ -171,7 +187,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         const timeBlock = allTimeBlocks.find(b => b.startTime === hour);
         const assignedTeacherId = assignments[unitId];
 
-        setSchedule(
+        setAllSchedules(
             produce(draft => {
                 draft[cellKey] = {
                     id: `${unitId}-${day}-${hour}`,
@@ -190,7 +206,8 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         
         // --- Suggestion Logic ---
         const weeklyHours = (unit.theoreticalHours || 0) + (unit.practicalHours || 0);
-        const remainingHours = weeklyHours - ((assignedHoursMap.get(unitId) || 0) + 1);
+        const currentAssigned = Object.values(allSchedules).filter(b => b.unitId === unitId).length;
+        const remainingHours = weeklyHours - (currentAssigned + 1);
         
         if (remainingHours > 0) {
             const turnoBlocks: TimeBlock[] = template?.turnos.mañana.some(b => b.startTime === hour) ? template.turnos.mañana 
@@ -205,10 +222,10 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                     const nextBlock = turnoBlocks[i];
                     if (nextBlock.type === 'clase') {
                         const nextCellKey = `${day}-${nextBlock.startTime}`;
-                        if (!schedule[nextCellKey]) {
+                        if (!allSchedules[nextCellKey]) {
                             suggestedKeys.push(nextCellKey);
                         } else {
-                            break; // Stop if there's an obstacle
+                            break; 
                         }
                     }
                 }
@@ -229,7 +246,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         ];
         const assignedTeacherId = assignments[suggestion.unit.id];
 
-        setSchedule(
+        setAllSchedules(
             produce(draft => {
                 suggestion.suggestedKeys.forEach(key => {
                     const [day, hour] = key.split('-');
@@ -241,7 +258,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                         endTime: timeBlock?.endTime || '',
                         unitId: suggestion.unit.id,
                         teacherId: assignedTeacherId || undefined,
-                        environmentId: undefined, // Or copy from origin if set
+                        environmentId: undefined, 
                         programId,
                         semester,
                         year
@@ -257,7 +274,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     };
 
     const removeBlock = (day: string, hour: string) => {
-        setSchedule(
+        setAllSchedules(
             produce(draft => {
                 delete draft[`${day}-${hour}`];
             })
@@ -266,7 +283,7 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
     }
 
     const updateBlock = (key: string, data: Partial<ScheduleBlock>) => {
-         setSchedule(
+         setAllSchedules(
             produce(draft => {
                 if (draft[key]) {
                     draft[key] = { ...draft[key], ...data };
@@ -279,7 +296,11 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         if (!instituteId) return;
         setIsSaving(true);
         try {
-            await saveSchedule(instituteId, programId, year, semester, schedule);
+            // Filter only the blocks for the current program before saving
+            const scheduleToSave = Object.fromEntries(
+                Object.entries(allSchedules).filter(([key, block]) => block.programId === programId)
+            );
+            await saveSchedule(instituteId, programId, year, semester, scheduleToSave);
             toast({
                 title: "Horario Guardado",
                 description: "Los cambios en el horario han sido guardados correctamente."
@@ -301,9 +322,13 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
         )
     }
 
+    // Filtered schedule for the current program to pass to the grid
+    const currentProgramSchedule = Object.fromEntries(
+        Object.entries(allSchedules).filter(([key, block]) => block.programId === programId)
+    );
+
     return (
         <div className="grid grid-cols-12 gap-6">
-            {/* Unassigned Units Panel */}
             <div className="col-span-12 md:col-span-3">
                 <Card>
                     <CardHeader>
@@ -324,7 +349,6 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                 </Card>
             </div>
 
-            {/* Schedule Grid Panel */}
             <div className="col-span-12 md:col-span-9">
                 <Card>
                     <CardHeader>
@@ -346,30 +370,37 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
                             </p>
                         ) : (
                             <div className="grid grid-cols-[auto_repeat(5,minmax(200px,1fr))] gap-px bg-muted">
-                                {/* Header row */}
                                 <div className="font-semibold p-2 text-center sticky top-0 bg-background z-10">Hora</div>
                                 {days.map(day => (
                                     <div key={day} className="font-semibold p-2 text-center sticky top-0 bg-background z-10">{day}</div>
                                 ))}
 
-                                {/* Turnos Grid */}
                                 <TurnoGrid 
                                     turno="Mañana" 
-                                    timeBlocks={template.turnos.mañana} 
+                                    timeBlocks={template.turnos.mañana}
+                                    schedule={currentProgramSchedule}
+                                    allSchedules={allSchedules}
+                                    currentProgramId={programId}
                                     suggestion={suggestion}
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
+                                    {...{ units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                                 <TurnoGrid 
                                     turno="Tarde" 
                                     timeBlocks={template.turnos.tarde} 
+                                    schedule={currentProgramSchedule}
+                                    allSchedules={allSchedules}
+                                    currentProgramId={programId}
                                     suggestion={suggestion}
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
+                                    {...{ units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                                 <TurnoGrid 
                                     turno="Noche" 
-                                    timeBlocks={template.turnos.noche} 
+                                    timeBlocks={template.turnos.noche}
+                                    schedule={currentProgramSchedule}
+                                    allSchedules={allSchedules}
+                                    currentProgramId={programId}
                                     suggestion={suggestion}
-                                    {...{ schedule, units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
+                                    {...{ units, teachers, environments, conflicts, handleDrop, handleDragOver, removeBlock, updateBlock, handleAcceptSuggestion, handleRejectSuggestion }} 
                                 />
                             </div>
                         )}

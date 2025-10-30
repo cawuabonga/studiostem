@@ -5,6 +5,7 @@ import React from 'react';
 import type { ScheduleBlock, TimeBlock, Unit, Teacher, Environment } from '@/types';
 import { ScheduleBlockCard } from './ScheduleBlockCard';
 import { cn } from '@/lib/utils';
+import { OccupiedBlockCard } from './OccupiedBlockCard';
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
@@ -18,6 +19,8 @@ export const TurnoGrid = ({
     turno,
     timeBlocks,
     schedule,
+    allSchedules,
+    currentProgramId,
     units,
     teachers,
     environments,
@@ -33,6 +36,8 @@ export const TurnoGrid = ({
     turno: string,
     timeBlocks: TimeBlock[],
     schedule: Record<string, ScheduleBlock>,
+    allSchedules: Record<string, ScheduleBlock>,
+    currentProgramId: string,
     units: Unit[],
     teachers: Teacher[],
     environments: Environment[],
@@ -59,12 +64,13 @@ export const TurnoGrid = ({
                     </div>
                     {days.map(day => {
                         const cellKey = `${day}-${block.startTime}`;
-                        const scheduleBlock = schedule[cellKey];
+                        const scheduleBlock = allSchedules[cellKey];
                         const unit = scheduleBlock ? units.find(u => u.id === scheduleBlock.unitId) : null;
                         const isReceso = block.type === 'receso';
                         const blockConflicts = conflicts[cellKey] || { teacherConflict: false, environmentConflict: false };
                         const isSuggestion = suggestion?.suggestedKeys.includes(cellKey);
                         const isSuggestionOrigin = suggestion?.originKey === cellKey;
+                        const isOccupiedByOther = scheduleBlock && scheduleBlock.programId !== currentProgramId;
 
                         return (
                             <div 
@@ -74,15 +80,18 @@ export const TurnoGrid = ({
                                     isReceso 
                                         ? 'bg-muted/60' 
                                         : 'bg-background hover:bg-muted/50 transition-colors',
-                                    isSuggestion && 'border-dashed border-2 border-primary bg-primary/10'
+                                    isSuggestion && 'border-dashed border-2 border-primary bg-primary/10',
+                                    isOccupiedByOther && 'bg-gray-200 dark:bg-gray-800'
                                 )}
-                                onDragOver={!isReceso ? handleDragOver : undefined}
-                                onDrop={!isReceso ? (e) => handleDrop(e, day, block.startTime) : undefined}
+                                onDragOver={!isReceso && !isOccupiedByOther ? handleDragOver : undefined}
+                                onDrop={!isReceso && !isOccupiedByOther ? (e) => handleDrop(e, day, block.startTime) : undefined}
                             >
                                {isReceso ? (
                                     <div className="flex items-center justify-center h-full text-muted-foreground text-xs font-semibold">
                                         {block.label || 'Receso'}
                                     </div>
+                                ) : isOccupiedByOther ? (
+                                    <OccupiedBlockCard block={scheduleBlock} />
                                 ) : scheduleBlock && unit ? (
                                      <ScheduleBlockCard 
                                         block={scheduleBlock} 
