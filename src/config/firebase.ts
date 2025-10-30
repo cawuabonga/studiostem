@@ -1497,8 +1497,9 @@ export const getSchedule = async (instituteId: string, programId: string, year: 
 
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, schedule: Record<string, ScheduleBlock>): Promise<void> => {
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
-    await setDoc(scheduleRef, { schedule, programId, year, semester }, { merge: true });
+    await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
 
 
     
+
