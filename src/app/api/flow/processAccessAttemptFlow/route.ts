@@ -81,7 +81,7 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
 
         // Determine Entry or Exit
-        const lastLog = await getLastAccessLog(instituteId, accessPointDocId, rfidCardId, now);
+        const lastLog = await getLastAccessLog(instituteId, accessPointDocId, userDocumentId, now);
         const logType: 'Entrada' | 'Salida' = (lastLog && lastLog.type === 'Entrada') ? 'Salida' : 'Entrada';
 
 

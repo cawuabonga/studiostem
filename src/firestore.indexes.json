@@ -128,18 +128,10 @@
     },
     {
       "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION_GROUP",
+      "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "accessPointId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "rfidCardId",
+          "fieldPath": "userDocumentId",
           "order": "ASCENDING"
         },
         {
@@ -151,6 +143,7 @@
   ],
   "fieldOverrides": []
 }
+
 
 
 
