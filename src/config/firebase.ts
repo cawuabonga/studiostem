@@ -1351,7 +1351,7 @@ export const getAccessPointStats = async (
 
 export const getLastAccessLog = async (
     instituteId: string,
-    accessPointId: string,
+    accessPointDocId: string, // Use Firestore Document ID
     rfidCardId: string,
     date: Date
 ): Promise<AccessLog | null> => {
@@ -1360,12 +1360,11 @@ export const getLastAccessLog = async (
 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-
-    const logsCollection = collectionGroup(db, 'accessLogs');
+    
+    const logsCollection = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+    
     const q = query(
         logsCollection,
-        where('instituteId', '==', instituteId),
-        where('accessPointId', '==', accessPointId),
         where('rfidCardId', '==', rfidCardId),
         where('timestamp', '>=', startOfDay),
         where('timestamp', '<=', endOfDay),
@@ -1560,6 +1559,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 
