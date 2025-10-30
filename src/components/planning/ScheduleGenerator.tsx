@@ -62,8 +62,8 @@ export function ScheduleGenerator({ programId, year, semester }: ScheduleGenerat
             setSchedule(savedSchedule);
             setEnvironments(fetchedEnvironments);
             
-            const teachersInProgram = fetchedTeachers.filter(t => t.programId === programId);
-            setTeachers(teachersInProgram);
+            // Load ALL teachers, not just from the current program
+            setTeachers(fetchedTeachers);
             
             setAssignments({ ...allAssignmentsForYear['MAR-JUL'], ...allAssignmentsForYear['AGO-DIC'] });
             

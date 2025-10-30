@@ -4,7 +4,7 @@
 import React from 'react';
 import type { ScheduleBlock, Unit, Teacher, Environment } from '@/types';
 import { Button } from '../ui/button';
-import { X, User, Home, ChevronsUpDown, AlertTriangle, Check, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { X, User, Home, ChevronsUpDown, AlertTriangle, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
@@ -84,10 +84,11 @@ const SuggestionBox = ({ onAccept, onReject }: { onAccept: () => void; onReject:
 
 
 export function ScheduleBlockCard({ block, unit, teachers, environments, conflicts, isSuggestionOrigin, onRemove, onUpdate, onAcceptSuggestion, onRejectSuggestion }: ScheduleBlockCardProps) {
-
-    const teacherOptions = teachers.map(t => ({ value: t.documentId, label: t.fullName }));
+    
     const environmentOptions = environments.map(e => ({ value: e.id, label: e.name }));
     const hasAnyConflict = conflicts.teacherConflict || conflicts.environmentConflict;
+
+    const assignedTeacherName = block.teacherId ? (teachers.find(t => t.documentId === block.teacherId)?.fullName || "Docente no encontrado") : "Sin docente asignado";
 
     return (
         <div className={cn(
@@ -115,14 +116,15 @@ export function ScheduleBlockCard({ block, unit, teachers, environments, conflic
                  </Badge>
             </div>
             <div className="space-y-1 mt-1">
-                <Combobox 
-                    items={teacherOptions}
-                    selectedValue={block.teacherId}
-                    onSelect={(value) => onUpdate({ teacherId: value })}
-                    placeholder="Asignar Docente"
-                    icon={User}
-                    hasConflict={conflicts.teacherConflict}
-                />
+                 <div
+                    className={cn(
+                        "w-full justify-start text-xs h-7 px-2 font-normal flex items-center rounded-sm",
+                        conflicts.teacherConflict ? "bg-destructive/20 text-destructive-foreground" : "bg-muted/30"
+                    )}
+                >
+                    <User className="mr-2 h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate flex-1">{assignedTeacherName}</span>
+                </div>
                  <Combobox 
                     items={environmentOptions}
                     selectedValue={block.environmentId}
