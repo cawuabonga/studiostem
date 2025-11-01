@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getAccessPoints, getRoles, db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, getDocs, query, where, doc, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, Timestamp, getDocs, query, where, doc, runTransaction, FieldValue } from 'firebase/firestore';
 import type { AccessState } from '@/types';
 
 
@@ -73,46 +73,41 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         
         if (!accessPoint) {
             console.error(`Access point with ID ${accessPointId} not found in institute ${instituteId}. Logging attempt anyway.`);
-            accessPointDocId = 'unknown_access_points';
+            accessPointDocId = 'unknown_access_point';
         } else {
             accessPointDocId = accessPoint.id;
         }
         
         try {
             await runTransaction(db, async (transaction) => {
-                const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
-                const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
-                
-                let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default to Entry
+                let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default
 
-                // --- Corrected Entry/Exit Logic ---
+                // --- Entry/Exit Logic ---
                 if (userDocumentId) {
-                    const accessStatesCol = collection(db, 'institutes', instituteId, 'accessStates');
-                    const stateDocRef = doc(accessStatesCol, userDocumentId);
-                    
+                    const statesCol = collection(db, 'institutes', instituteId, 'accessStates');
+                    const stateDocRef = doc(statesCol, userDocumentId);
                     const stateDoc = await transaction.get(stateDocRef);
                     const stateData = stateDoc.exists() ? stateDoc.data() as AccessState : null;
-                    const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
 
-                    if (lastState && lastState.type === 'Entrada') {
+                    const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
+                    
+                    if (lastState?.type === 'Entrada') {
                         const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
                         if (lastDate === currentDate) {
                             logType = 'Salida';
                         }
                     }
-                    
-                    // --- Update user's access state AFTER determining logType ---
+
+                    // Always update the state within the transaction
                     transaction.set(stateDocRef, {
                         lastStateByAccessPoint: {
-                            [accessPointDocId]: {
-                                type: logType,
-                                timestamp: now
-                            }
+                            [accessPointDocId]: { type: logType, timestamp: now }
                         }
                     }, { merge: true });
                 }
-                
-                // 1. Add the new access log entry
+
+                // --- Log Document Creation ---
+                const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
                 const logDocRef = doc(logCollectionRef);
                 transaction.set(logDocRef, {
                     timestamp: now,
@@ -127,12 +122,21 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     rfidCardId,
                     instituteId: instituteId,
                 });
-
-                // 2. Update daily statistics
+                
+                // --- Statistics Update Logic ---
+                const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
                 const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
-                const dailyStatsDoc = await transaction.get(dailyStatsRef);
-                const dailyData = dailyStatsDoc.exists() ? dailyStatsDoc.data() : null;
-                if (!dailyData) {
+                const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
+                const overallStatsRef = doc(statsCollectionRef, 'overall');
+                
+                const [dailyStatsDoc, hourlyStatsDoc, overallStatsDoc] = await Promise.all([
+                    transaction.get(dailyStatsRef),
+                    transaction.get(hourlyStatsRef),
+                    transaction.get(overallStatsRef)
+                ]);
+
+                // Daily Stats
+                if (!dailyStatsDoc.exists()) {
                     transaction.set(dailyStatsRef, {
                         total: 1,
                         permitted: status === 'Permitido' ? 1 : 0,
@@ -140,6 +144,7 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                         byHour: { [currentHour]: 1 },
                     });
                 } else {
+                    const dailyData = dailyStatsDoc.data();
                     transaction.update(dailyStatsRef, {
                         total: (dailyData.total || 0) + 1,
                         permitted: (dailyData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
@@ -148,30 +153,36 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     });
                 }
 
-                // 3. Update hourly summary statistics
-                const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
-                const hourlyStatsDoc = await transaction.get(hourlyStatsRef);
-                const hourlyData = hourlyStatsDoc.exists() ? hourlyStatsDoc.data() : null;
-                if (!hourlyData) {
+                // Hourly Summary
+                if (!hourlyStatsDoc.exists()) {
                     transaction.set(hourlyStatsRef, { byHour: { [currentHour]: 1 } });
                 } else {
+                     const hourlyData = hourlyStatsDoc.data();
                     transaction.update(hourlyStatsRef, { [`byHour.${currentHour}`]: (hourlyData.byHour?.[currentHour] || 0) + 1 });
                 }
 
-                // 4. Update overall statistics
-                const overallStatsRef = doc(statsCollectionRef, 'overall');
-                const overallStatsDoc = await transaction.get(overallStatsRef);
-                const overallData = overallStatsDoc.exists() ? overallStatsDoc.data() : null;
-                if (!overallData) {
-                    transaction.set(overallStatsRef, { total: 1, permitted: status === 'Permitido' ? 1 : 0, denied: status === 'Denegado' ? 1 : 0, firstAccess: now, lastAccess: now });
+                // Overall Stats
+                if (!overallStatsDoc.exists()) {
+                    transaction.set(overallStatsRef, {
+                        total: 1,
+                        permitted: status === 'Permitido' ? 1 : 0,
+                        denied: status === 'Denegado' ? 1 : 0,
+                        firstAccess: now,
+                        lastAccess: now
+                    });
                 } else {
-                    transaction.update(overallStatsRef, { total: (overallData.total || 0) + 1, permitted: (overallData.permitted || 0) + (status === 'Permitido' ? 1 : 0), denied: (overallData.denied || 0) + (status === 'Denegado' ? 1 : 0), lastAccess: now });
+                    const overallData = overallStatsDoc.data();
+                    transaction.update(overallStatsRef, {
+                        total: (overallData.total || 0) + 1,
+                        permitted: (overallData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
+                        denied: (overallData.denied || 0) + (status === 'Denegado' ? 1 : 0),
+                        lastAccess: now
+                    });
                 }
             });
+            console.log('Access Log Transaction successful.');
         } catch (e) {
             console.error("Access Log Transaction failed: ", e);
-            // If the transaction fails, we might still want to log the attempt somewhere, or handle the error.
-            // For now, we'll just log it to the server console.
         }
     };
 
@@ -249,7 +260,3 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Internal Server Error', message: error.message }, { status: 500 });
     }
 }
-
-    
-
-    
