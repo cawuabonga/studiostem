@@ -62,9 +62,14 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
 
     const stats = useMemo(() => {
         const now = new Date();
-        const todayStr = now.toISOString().split('T')[0];
 
-        const todayLogs = logs.filter(log => log.timestamp.toDate().toISOString().startsWith(todayStr));
+        const todayLogs = logs.filter(log => {
+            const logDate = log.timestamp.toDate();
+            return logDate.getDate() === now.getDate() &&
+                   logDate.getMonth() === now.getMonth() &&
+                   logDate.getFullYear() === now.getFullYear();
+        });
+
         const totalToday = todayLogs.length;
         const permittedToday = todayLogs.filter(log => log.status === 'Permitido').length;
         const deniedToday = todayLogs.filter(log => log.status === 'Denegado').length;
@@ -193,5 +198,7 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
     )
 
 }
+
+    
 
     
