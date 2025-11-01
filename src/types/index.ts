@@ -91,30 +91,6 @@ export interface AccessState {
 }
 
 
-// --- NEW STATISTICS TYPES ---
-export interface DailyStats {
-    id: string; // YYYY-MM-DD
-    total: number;
-    permitted: number;
-    denied: number;
-    byHour: Record<string, number>; // { "0": 0, ..., "8": 25, "9": 60, ... }
-}
-
-export interface HourlyStats {
-    id: 'summary';
-    byHour: Record<string, number>; // Lifetime accesses per hour for all days
-}
-
-export interface OverallStats {
-    id: 'summary';
-    total: number;
-    permitted: number;
-    denied: number;
-    firstAccess: Timestamp | null;
-    lastAccess: Timestamp | null;
-}
-
-
 export interface LoginDesign {
   imageUrl: string;
   backgroundColor: string;

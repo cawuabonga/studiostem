@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import type { DailyStats, HourlyStats, OverallStats, AccessPoint, AccessLog } from '@/types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type { AccessPoint, AccessLog } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAccessPointStats, getAccessPoint, listenToAccessLogsForPoint } from '@/config/firebase';
+import { getAccessPoint, listenToAccessLogsForPoint } from '@/config/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart as BarChartIcon, Clock, ShieldCheck, ShieldOff, Users } from 'lucide-react';
@@ -35,46 +35,64 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
 export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDashboardProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
-    const [stats, setStats] = useState<{ daily: DailyStats | null; hourly: HourlyStats | null; overall: OverallStats | null }>({ daily: null, hourly: null, overall: null });
     const [accessPoint, setAccessPoint] = useState<AccessPoint | null>(null);
     const [logs, setLogs] = useState<AccessLog[]>([]);
     const [loading, setLoading] = useState(true);
-    const [logsLoading, setLogsLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
+        setLoading(true);
         try {
-            const [fetchedStats, fetchedPoint] = await Promise.all([
-                getAccessPointStats(instituteId, accessPointId),
-                getAccessPoint(instituteId, accessPointId)
-            ]);
-            setStats(fetchedStats);
+            const fetchedPoint = await getAccessPoint(instituteId, accessPointId);
             setAccessPoint(fetchedPoint);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudieron cargar las estadísticas.", variant: "destructive" });
-        } finally {
-            setLoading(false);
+            toast({ title: "Error", description: "No se pudo cargar la información del punto de acceso.", variant: "destructive" });
         }
     }, [instituteId, accessPointId, toast]);
 
     useEffect(() => {
         fetchData();
-
         const unsubscribe = listenToAccessLogsForPoint(instituteId, accessPointId, (newLogs) => {
             setLogs(newLogs);
-            if(logsLoading) setLogsLoading(false);
+            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [fetchData, instituteId, accessPointId, logsLoading]);
+    }, [fetchData, instituteId, accessPointId]);
+
+    const stats = useMemo(() => {
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
+        const todayLogs = logs.filter(log => log.timestamp.toDate().toISOString().startsWith(todayStr));
+        const totalToday = todayLogs.length;
+        const permittedToday = todayLogs.filter(log => log.status === 'Permitido').length;
+        const deniedToday = todayLogs.filter(log => log.status === 'Denegado').length;
+
+        const hourlyCounts: Record<string, number> = {};
+        for(let i=0; i<24; i++) { hourlyCounts[i] = 0; }
+        logs.forEach(log => {
+            const hour = log.timestamp.toDate().getHours();
+            hourlyCounts[hour] = (hourlyCounts[hour] || 0) + 1;
+        });
+
+        const peakHour = Object.entries(hourlyCounts).sort(([,a],[,b]) => b-a)[0]?.[0] || "N/A";
+        
+        return {
+            totalToday,
+            permittedToday,
+            deniedToday,
+            hourlyCounts,
+            peakHour
+        };
+    }, [logs]);
 
     const hourlyChartData = React.useMemo(() => {
-        if (!stats.hourly) return [];
         return Array.from({ length: 24 }, (_, i) => ({
             hour: `${i}:00`,
-            Accesos: stats.hourly?.byHour[i] || 0,
+            Accesos: stats.hourlyCounts[i] || 0,
         }));
-    }, [stats.hourly]);
+    }, [stats.hourlyCounts]);
 
 
     if (loading) {
@@ -102,10 +120,10 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
             </Card>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <StatCard title="Accesos Totales Hoy" value={stats.daily?.total ?? 0} icon={Users} description="Total de intentos de acceso registrados hoy."/>
-                <StatCard title="Accesos Permitidos Hoy" value={stats.daily?.permitted ?? 0} icon={ShieldCheck} description="Total de accesos concedidos hoy."/>
-                <StatCard title="Accesos Denegados Hoy" value={stats.daily?.denied ?? 0} icon={ShieldOff} description="Total de accesos denegados hoy."/>
-                <StatCard title="Hora Pico (Histórico)" value={Object.entries(stats.hourly?.byHour || {}).sort(([,a],[,b]) => b-a)[0]?.[0] + ":00" || "N/A"} icon={Clock} description="La hora con más accesos registrados."/>
+                <StatCard title="Accesos Totales Hoy" value={stats.totalToday} icon={Users} description="Total de intentos de acceso registrados hoy."/>
+                <StatCard title="Accesos Permitidos Hoy" value={stats.permittedToday} icon={ShieldCheck} description="Total de accesos concedidos hoy."/>
+                <StatCard title="Accesos Denegados Hoy" value={stats.deniedToday} icon={ShieldOff} description="Total de accesos denegados hoy."/>
+                <StatCard title="Hora Pico (Histórico)" value={stats.peakHour + ":00"} icon={Clock} description="La hora con más accesos registrados."/>
             </div>
             
             <Card>
@@ -133,7 +151,7 @@ export function AccessPointStatsDashboard({ accessPointId }: AccessPointStatsDas
                     <CardDescription>Últimos 50 eventos registrados para este punto de acceso.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                     {logsLoading ? <Skeleton className="h-48 w-full"/> : (
+                     {loading ? <Skeleton className="h-48 w-full"/> : (
                         <div className="rounded-md border">
                             <Table>
                                 <TableHeader>

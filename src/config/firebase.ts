@@ -4,7 +4,7 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, DailyStats, HourlyStats, OverallStats, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1325,30 +1325,6 @@ export const listenToAccessLogsForUser = (
     });
 };
 
-export const getAccessPointStats = async (
-    instituteId: string,
-    accessPointId: string
-): Promise<{ daily: DailyStats | null; hourly: HourlyStats | null; overall: OverallStats | null }> => {
-    const statsCol = collection(db, 'institutes', instituteId, 'accessPoints', accessPointId, 'statistics');
-    const today = new Date().toISOString().split('T')[0];
-
-    const dailyRef = doc(statsCol, `daily_${today}`);
-    const hourlyRef = doc(statsCol, 'hourly_summary');
-    const overallRef = doc(statsCol, 'overall');
-    
-    const [dailySnap, hourlySnap, overallSnap] = await Promise.all([
-        getDoc(dailyRef),
-        getDoc(hourlyRef),
-        getDoc(overallRef)
-    ]);
-    
-    return {
-        daily: dailySnap.exists() ? dailySnap.data() as DailyStats : null,
-        hourly: hourlySnap.exists() ? hourlySnap.data() as HourlyStats : null,
-        overall: overallSnap.exists() ? overallSnap.data() as OverallStats : null,
-    };
-};
-
 // --- REPORTS ---
 export const getMatriculationReportData = async (
   instituteId: string,
@@ -1528,6 +1504,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 

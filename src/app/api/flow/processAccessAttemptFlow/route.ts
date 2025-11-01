@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getAccessPoints, getRoles, db } from '@/config/firebase';
-import { collection, addDoc, Timestamp, getDocs, query, where, doc, runTransaction, FieldValue } from 'firebase/firestore';
+import { collection, doc, runTransaction, Timestamp } from 'firebase/firestore';
 import type { AccessState } from '@/types';
 
 
@@ -52,13 +52,13 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
     // This function now uses a transaction to ensure atomicity
     const logAccess = async (status: 'Permitido' | 'Denegado') => {
         const now = Timestamp.now();
-        const currentDate = now.toDate().toISOString().split('T')[0]; // YYYY-MM-DD
-        const currentHour = now.toDate().getHours(); // 0-23
         
         if (!instituteId) {
              console.error("Cannot log access: instituteId not found for the given RFID card.");
+             // Log to a generic collection if institute is unknown
              const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
-             await addDoc(unknownLogCollectionRef, {
+             const logDocRef = doc(unknownLogCollectionRef);
+             await setDoc(logDocRef, {
                 timestamp: now,
                 status,
                 rfidCardId,
@@ -80,33 +80,33 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         
         try {
             await runTransaction(db, async (transaction) => {
+                const currentDate = now.toDate().toISOString().split('T')[0]; // YYYY-MM-DD
                 let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default
 
-                // --- Entry/Exit Logic ---
                 if (userDocumentId) {
                     const statesCol = collection(db, 'institutes', instituteId, 'accessStates');
                     const stateDocRef = doc(statesCol, userDocumentId);
                     const stateDoc = await transaction.get(stateDocRef);
                     const stateData = stateDoc.exists() ? stateDoc.data() as AccessState : null;
-
                     const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
                     
-                    if (lastState?.type === 'Entrada') {
+                    if (lastState) {
                         const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
-                        if (lastDate === currentDate) {
-                            logType = 'Salida';
+                        if (lastState.type === 'Entrada' && lastDate === currentDate) {
+                             logType = 'Salida';
                         }
                     }
-
-                    // Always update the state within the transaction
+                    
+                    // Update state within the transaction
                     transaction.set(stateDocRef, {
                         lastStateByAccessPoint: {
+                            ...stateData?.lastStateByAccessPoint,
                             [accessPointDocId]: { type: logType, timestamp: now }
                         }
                     }, { merge: true });
                 }
 
-                // --- Log Document Creation ---
+                // Log Document Creation
                 const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
                 const logDocRef = doc(logCollectionRef);
                 transaction.set(logDocRef, {
@@ -122,63 +122,6 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     rfidCardId,
                     instituteId: instituteId,
                 });
-                
-                // --- Statistics Update Logic ---
-                const statsCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'statistics');
-                const dailyStatsRef = doc(statsCollectionRef, `daily_${currentDate}`);
-                const hourlyStatsRef = doc(statsCollectionRef, 'hourly_summary');
-                const overallStatsRef = doc(statsCollectionRef, 'overall');
-                
-                const [dailyStatsDoc, hourlyStatsDoc, overallStatsDoc] = await Promise.all([
-                    transaction.get(dailyStatsRef),
-                    transaction.get(hourlyStatsRef),
-                    transaction.get(overallStatsRef)
-                ]);
-
-                // Daily Stats
-                if (!dailyStatsDoc.exists()) {
-                    transaction.set(dailyStatsRef, {
-                        total: 1,
-                        permitted: status === 'Permitido' ? 1 : 0,
-                        denied: status === 'Denegado' ? 1 : 0,
-                        byHour: { [currentHour]: 1 },
-                    });
-                } else {
-                    const dailyData = dailyStatsDoc.data();
-                    transaction.update(dailyStatsRef, {
-                        total: (dailyData.total || 0) + 1,
-                        permitted: (dailyData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
-                        denied: (dailyData.denied || 0) + (status === 'Denegado' ? 1 : 0),
-                        [`byHour.${currentHour}`]: (dailyData.byHour?.[currentHour] || 0) + 1,
-                    });
-                }
-
-                // Hourly Summary
-                if (!hourlyStatsDoc.exists()) {
-                    transaction.set(hourlyStatsRef, { byHour: { [currentHour]: 1 } });
-                } else {
-                     const hourlyData = hourlyStatsDoc.data();
-                    transaction.update(hourlyStatsRef, { [`byHour.${currentHour}`]: (hourlyData.byHour?.[currentHour] || 0) + 1 });
-                }
-
-                // Overall Stats
-                if (!overallStatsDoc.exists()) {
-                    transaction.set(overallStatsRef, {
-                        total: 1,
-                        permitted: status === 'Permitido' ? 1 : 0,
-                        denied: status === 'Denegado' ? 1 : 0,
-                        firstAccess: now,
-                        lastAccess: now
-                    });
-                } else {
-                    const overallData = overallStatsDoc.data();
-                    transaction.update(overallStatsRef, {
-                        total: (overallData.total || 0) + 1,
-                        permitted: (overallData.permitted || 0) + (status === 'Permitido' ? 1 : 0),
-                        denied: (overallData.denied || 0) + (status === 'Denegado' ? 1 : 0),
-                        lastAccess: now
-                    });
-                }
             });
             console.log('Access Log Transaction successful.');
         } catch (e) {
