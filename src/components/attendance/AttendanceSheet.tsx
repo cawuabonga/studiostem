@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -13,6 +14,7 @@ interface AttendanceSheetProps {
     students: StudentProfile[];
     attendanceRecord: AttendanceRecord | null;
     totalWeeks: number;
+    scheduledDays: string[];
     onAttendanceChange: (studentId: string, weekNumber: number, dayIndex: number, status: string) => void;
     defaultWeek?: number;
 }
@@ -35,9 +37,11 @@ const getStatusColor = (status: AttendanceStatus) => {
     }
 }
 
-export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAttendanceChange, defaultWeek = 1 }: AttendanceSheetProps) {
+export function AttendanceSheet({ students, attendanceRecord, totalWeeks, scheduledDays, onAttendanceChange, defaultWeek = 1 }: AttendanceSheetProps) {
     const [selectedWeek, setSelectedWeek] = useState<number>(defaultWeek);
     const weekNumber = selectedWeek; // for clarity inside the table
+    
+    const daysToShow = scheduledDays.length > 0 ? scheduledDays : ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
     return (
         <div className="space-y-4">
@@ -66,7 +70,7 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAtte
                         <TableRow>
                             <TableHead className="w-[40px] sticky left-0 bg-background z-10">N°</TableHead>
                             <TableHead className="w-[250px] sticky left-[40px] bg-background z-10">Apellidos y Nombres</TableHead>
-                            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'].map(day => (
+                            {daysToShow.map(day => (
                                 <TableHead key={day} className="text-center min-w-[150px]">{day}</TableHead>
                             ))}
                             <TableHead className="text-center min-w-[150px] sticky right-0 bg-muted/50 z-10">Resumen Semanal</TableHead>
@@ -75,7 +79,7 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAtte
                     <TableBody>
                         {students.map((student, index) => {
                             const weekKey = `week_${weekNumber}`;
-                            const weeklyData = attendanceRecord?.records?.[student.documentId]?.[weekKey] || Array(5).fill('U');
+                            const weeklyData = attendanceRecord?.records?.[student.documentId]?.[weekKey] || Array(daysToShow.length).fill('U');
                             
                             const summary = weeklyData.reduce((acc, status) => {
                                 acc[status] = (acc[status] || 0) + 1;
@@ -86,10 +90,10 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAtte
                                 <TableRow key={student.documentId}>
                                     <TableCell className="text-center sticky left-0 bg-background z-10">{index + 1}</TableCell>
                                     <TableCell className="font-medium sticky left-[40px] bg-background z-10">{student.fullName}</TableCell>
-                                    {Array.from({ length: 5 }).map((_, dayIndex) => (
+                                    {daysToShow.map((day, dayIndex) => (
                                         <TableCell key={dayIndex} className="text-center p-1">
                                              <Select
-                                                value={weeklyData[dayIndex]}
+                                                value={weeklyData[dayIndex] || 'U'}
                                                 onValueChange={(value) => onAttendanceChange(student.documentId, weekNumber, dayIndex, value)}
                                             >
                                                 <SelectTrigger className={cn("w-full border-0 focus:ring-0", getStatusColor(weeklyData[dayIndex] as AttendanceStatus))}>
@@ -123,3 +127,5 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAtte
         </div>
     );
 }
+
+    

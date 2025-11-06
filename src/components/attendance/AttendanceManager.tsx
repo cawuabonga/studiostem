@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import type { Unit, StudentProfile, AttendanceRecord } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAttendanceForUnit, saveAttendance, getAcademicPeriods } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAttendanceForUnit, saveAttendance, getAcademicPeriods, getScheduledDaysForUnit } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { AttendanceSheet } from './AttendanceSheet';
@@ -31,6 +32,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
     
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
+    const [scheduledDays, setScheduledDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentWeek, setCurrentWeek] = useState(1);
 
@@ -39,16 +41,23 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
-            const [enrolledStudents, attendanceRecord, academicPeriods] = await Promise.all([
+            const [
+                enrolledStudents, 
+                attendanceRecord, 
+                academicPeriods, 
+                scheduledDaysForUnit
+            ] = await Promise.all([
                 getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
                 getAttendanceForUnit(instituteId, unit.id, currentYear, unit.period),
                 getAcademicPeriods(instituteId, currentYear),
+                getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester)
             ]);
 
             const periodStartDate = academicPeriods?.[unit.period]?.startDate?.toDate();
             setCurrentWeek(calculateCurrentWeek(periodStartDate));
 
             setStudents(enrolledStudents.sort((a,b) => a.fullName.localeCompare(b.fullName)));
+            setScheduledDays(scheduledDaysForUnit);
 
             if (attendanceRecord) {
                 setAttendance(attendanceRecord);
@@ -94,8 +103,8 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                 draft.records[studentId] = {};
             }
             if (!draft.records[studentId][weekKey]) {
-                // Initialize with 'U' for 'Unmarked' for all days
-                draft.records[studentId][weekKey] = Array(5).fill('U'); 
+                // Initialize with 'U' for 'Unmarked' for all scheduled days
+                draft.records[studentId][weekKey] = Array(scheduledDays.length).fill('U'); 
             }
             draft.records[studentId][weekKey][dayIndex] = status;
         });
@@ -149,7 +158,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
         <Card>
             <CardHeader>
                 <CardTitle>Registro de Asistencias</CardTitle>
-                <CardDescription>Marque la asistencia de los estudiantes para cada día de la semana. Los cambios se guardan automáticamente.</CardDescription>
+                <CardDescription>Marque la asistencia de los estudiantes para los días de clase programados. Los cambios se guardan automáticamente.</CardDescription>
             </CardHeader>
             <CardContent>
                 <AttendanceSheet
@@ -158,8 +167,11 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                     totalWeeks={unit.totalWeeks}
                     onAttendanceChange={handleAttendanceChange}
                     defaultWeek={currentWeek}
+                    scheduledDays={scheduledDays}
                 />
             </CardContent>
         </Card>
     );
 }
+
+    

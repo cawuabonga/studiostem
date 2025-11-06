@@ -1484,6 +1484,28 @@ const getScheduleDocRef = (instituteId: string, programId: string, year: string,
     return doc(db, 'institutes', instituteId, 'schedules', scheduleId);
 }
 
+export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
+    const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
+    const q = query(schedulesCol, where("year", "==", year), where("semester", "==", semester));
+    const snapshot = await getDocs(q);
+
+    const scheduledDays = new Set<string>();
+
+    snapshot.forEach(doc => {
+        const scheduleData = doc.data().schedule as Record<string, ScheduleBlock>;
+        for (const key in scheduleData) {
+            const block = scheduleData[key];
+            if (block.unitId === unitId) {
+                scheduledDays.add(block.dayOfWeek);
+            }
+        }
+    });
+
+    const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    return Array.from(scheduledDays).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+};
+
+
 export const getSchedule = async (instituteId: string, programId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     const docSnap = await getDoc(scheduleRef);
@@ -1527,3 +1549,6 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
 
+
+
+    
