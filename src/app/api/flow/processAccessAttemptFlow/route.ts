@@ -2,7 +2,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getAccessPoints, getRoles, db } from '@/config/firebase';
-import { collection, doc, runTransaction, Timestamp } from 'firebase/firestore';
+import { collection, doc, runTransaction, Timestamp, getDocs, query, where, setDoc } from 'firebase/firestore';
 import type { AccessState } from '@/types';
 
 
