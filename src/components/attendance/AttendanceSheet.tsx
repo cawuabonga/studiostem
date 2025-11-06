@@ -9,6 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
+import { addDays, startOfWeek, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 
 interface AttendanceSheetProps {
     students: StudentProfile[];
@@ -17,6 +20,7 @@ interface AttendanceSheetProps {
     scheduledDays: string[];
     onAttendanceChange: (studentId: string, weekNumber: number, dayIndex: number, status: string) => void;
     defaultWeek?: number;
+    periodStartDate?: Date;
 }
 
 const statusOptions: { value: AttendanceStatus, label: string }[] = [
@@ -37,11 +41,40 @@ const getStatusColor = (status: AttendanceStatus) => {
     }
 }
 
-export function AttendanceSheet({ students, attendanceRecord, totalWeeks, scheduledDays, onAttendanceChange, defaultWeek = 1 }: AttendanceSheetProps) {
+const dayNameToIndex: { [key: string]: number } = {
+    'Lunes': 1,
+    'Martes': 2,
+    'Miércoles': 3,
+    'Jueves': 4,
+    'Viernes': 5,
+    'Sábado': 6,
+    'Domingo': 0
+};
+
+export function AttendanceSheet({ students, attendanceRecord, totalWeeks, scheduledDays, onAttendanceChange, defaultWeek = 1, periodStartDate }: AttendanceSheetProps) {
     const [selectedWeek, setSelectedWeek] = useState<number>(defaultWeek);
     const weekNumber = selectedWeek; // for clarity inside the table
     
     const daysToShow = scheduledDays.length > 0 ? scheduledDays : ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+    const getWeekDateForDay = (dayName: string): string | null => {
+        if (!periodStartDate) return null;
+        try {
+            // Find the start of the academic period's week (assuming it's a Monday)
+            const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
+            // Calculate the start of the selected week
+            const startOfSelectedWeek = addDays(startOfFirstWeek, (selectedWeek - 1) * 7);
+            // Get the index of the day (Monday=1, etc.)
+            const dayIndex = dayNameToIndex[dayName];
+            // Get the date for that day in the selected week
+            const dateOfDay = addDays(startOfSelectedWeek, dayIndex - 1); // -1 because addDays is 0-indexed from the start date
+            
+            return format(dateOfDay, 'dd/MM');
+        } catch (e) {
+            console.error("Error calculating date for day:", e);
+            return null;
+        }
+    }
 
     return (
         <div className="space-y-4">
@@ -71,7 +104,12 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, schedu
                             <TableHead className="w-[40px] sticky left-0 bg-background z-10">N°</TableHead>
                             <TableHead className="w-[250px] sticky left-[40px] bg-background z-10">Apellidos y Nombres</TableHead>
                             {daysToShow.map(day => (
-                                <TableHead key={day} className="text-center min-w-[150px]">{day}</TableHead>
+                                <TableHead key={day} className="text-center min-w-[150px]">
+                                     <div>{day}</div>
+                                     <div className="text-xs font-normal text-muted-foreground">
+                                        {getWeekDateForDay(day)}
+                                     </div>
+                                </TableHead>
                             ))}
                             <TableHead className="text-center min-w-[150px] sticky right-0 bg-muted/50 z-10">Resumen Semanal</TableHead>
                         </TableRow>
@@ -127,5 +165,3 @@ export function AttendanceSheet({ students, attendanceRecord, totalWeeks, schedu
         </div>
     );
 }
-
-    

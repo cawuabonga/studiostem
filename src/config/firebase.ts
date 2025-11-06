@@ -1486,22 +1486,27 @@ const getScheduleDocRef = (instituteId: string, programId: string, year: string,
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
     const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
-    const q = query(schedulesCol, where("year", "==", year), where("semester", "==", semester));
+    // This is not efficient. A better data model would be to store schedules by unit.
+    // For now, we query all schedules for the semester and filter.
+    const q = query(schedulesCol);
     const snapshot = await getDocs(q);
 
     const scheduledDays = new Set<string>();
 
-    snapshot.forEach(doc => {
-        const scheduleData = doc.data().schedule as Record<string, ScheduleBlock>;
-        for (const key in scheduleData) {
-            const block = scheduleData[key];
-            if (block.unitId === unitId) {
-                scheduledDays.add(block.dayOfWeek);
+    snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.year === year && data.semester === semester) {
+            const scheduleData = data.schedule as Record<string, ScheduleBlock>;
+            for (const key in scheduleData) {
+                const block = scheduleData[key];
+                if (block.unitId === unitId) {
+                    scheduledDays.add(block.dayOfWeek);
+                }
             }
         }
     });
-
-    const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    
+    const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     return Array.from(scheduledDays).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 };
 

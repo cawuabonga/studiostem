@@ -35,6 +35,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
     const [scheduledDays, setScheduledDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentWeek, setCurrentWeek] = useState(1);
+    const [periodStartDate, setPeriodStartDate] = useState<Date | undefined>(undefined);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -53,8 +54,9 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                 getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester)
             ]);
 
-            const periodStartDate = academicPeriods?.[unit.period]?.startDate?.toDate();
-            setCurrentWeek(calculateCurrentWeek(periodStartDate));
+            const startDate = academicPeriods?.[unit.period]?.startDate?.toDate();
+            setPeriodStartDate(startDate);
+            setCurrentWeek(calculateCurrentWeek(startDate));
 
             setStudents(enrolledStudents.sort((a,b) => a.fullName.localeCompare(b.fullName)));
             setScheduledDays(scheduledDaysForUnit);
@@ -168,10 +170,9 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                     onAttendanceChange={handleAttendanceChange}
                     defaultWeek={currentWeek}
                     scheduledDays={scheduledDays}
+                    periodStartDate={periodStartDate}
                 />
             </CardContent>
         </Card>
     );
 }
-
-    
