@@ -429,6 +429,7 @@ export type Permission =
   | 'academic:teacher:view'
   | 'academic:workload:view'
   | 'academic:enrollment:manage'
+  | 'academic:periods:manage'
   // Administrative Management
   | 'admin:fees:manage'
   | 'admin:payments:validate'
@@ -473,6 +474,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'academic:teacher:view', label: 'Ver Lista de Docentes' },
             { id: 'academic:workload:view', label: 'Ver Carga Horaria' },
             { id: 'academic:enrollment:manage', label: 'Gestionar Matrículas' },
+            { id: 'academic:periods:manage', label: 'Gestionar Períodos Lectivos' },
         ],
     },
     {

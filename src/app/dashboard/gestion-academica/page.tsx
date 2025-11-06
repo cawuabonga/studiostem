@@ -27,7 +27,7 @@ const academicModules = [
     description: "Define las fechas de inicio y fin de los semestres académicos.",
     href: "/dashboard/gestion-academica/periodos-lectivos",
     icon: CalendarDays,
-    permission: "academic:program:manage",
+    permission: "academic:periods:manage",
   },
   {
     title: "Lista de Docentes",
