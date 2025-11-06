@@ -219,6 +219,16 @@ export interface Payment {
 
 // --- ACADEMIC & MATRICULATION TYPES ---
 
+export interface AcademicPeriodSettings {
+    startDate: Timestamp;
+    endDate: Timestamp;
+}
+
+export interface AcademicYearSettings {
+    [period: string]: AcademicPeriodSettings; // e.g., 'MAR-JUL', 'AGO-DIC'
+}
+
+
 export interface Matriculation {
     id?: string; // Firestore document ID
     studentId: string; // The student's document ID

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus, FileText } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus, FileText, CalendarDays } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,13 @@ const academicModules = [
     href: "/dashboard/gestion-academica/unidades",
     icon: Library,
     permission: ["academic:program:manage", "academic:unit:manage:own"],
+  },
+  {
+    title: "Gestionar Períodos Lectivos",
+    description: "Define las fechas de inicio y fin de los semestres académicos.",
+    href: "/dashboard/gestion-academica/periodos-lectivos",
+    icon: CalendarDays,
+    permission: "academic:program:manage",
   },
   {
     title: "Lista de Docentes",
