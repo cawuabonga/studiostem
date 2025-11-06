@@ -6,14 +6,24 @@ import type { Unit, StudentProfile, AttendanceRecord } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAttendanceForUnit, saveAttendance } from '@/config/firebase';
+import { getEnrolledStudentProfiles, getAttendanceForUnit, saveAttendance, getAcademicPeriods } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { AttendanceSheet } from './AttendanceSheet';
+import { differenceInWeeks } from 'date-fns';
 
 interface AttendanceManagerProps {
     unit: Unit;
 }
+
+const calculateCurrentWeek = (startDate: Date | undefined): number => {
+    if (!startDate) return 1;
+    const now = new Date();
+    // differenceInWeeks starts counting from 0, so we add 1.
+    const week = differenceInWeeks(now, startDate, { weekStartsOn: 1 }) + 1; // Assuming week starts on Monday
+    return Math.max(1, week); // Ensure it's at least week 1
+};
+
 
 export function AttendanceManager({ unit }: AttendanceManagerProps) {
     const { instituteId } = useAuth();
@@ -22,16 +32,21 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
     const [loading, setLoading] = useState(true);
+    const [currentWeek, setCurrentWeek] = useState(1);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
-            const [enrolledStudents, attendanceRecord] = await Promise.all([
+            const [enrolledStudents, attendanceRecord, academicPeriods] = await Promise.all([
                 getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
                 getAttendanceForUnit(instituteId, unit.id, currentYear, unit.period),
+                getAcademicPeriods(instituteId, currentYear),
             ]);
+
+            const periodStartDate = academicPeriods?.[unit.period]?.startDate?.toDate();
+            setCurrentWeek(calculateCurrentWeek(periodStartDate));
 
             setStudents(enrolledStudents.sort((a,b) => a.fullName.localeCompare(b.fullName)));
 
@@ -56,7 +71,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
             console.error("Error fetching attendance data:", error);
             toast({
                 title: "Error",
-                description: "No se pudieron cargar los datos de asistencia.",
+                description: "No se pudieron cargar los datos de asistencia. Asegúrese de que el período académico esté configurado.",
                 variant: "destructive",
             });
         } finally {
@@ -142,6 +157,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                     attendanceRecord={attendance}
                     totalWeeks={unit.totalWeeks}
                     onAttendanceChange={handleAttendanceChange}
+                    defaultWeek={currentWeek}
                 />
             </CardContent>
         </Card>

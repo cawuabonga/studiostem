@@ -14,6 +14,7 @@ interface AttendanceSheetProps {
     attendanceRecord: AttendanceRecord | null;
     totalWeeks: number;
     onAttendanceChange: (studentId: string, weekNumber: number, dayIndex: number, status: string) => void;
+    defaultWeek?: number;
 }
 
 const statusOptions: { value: AttendanceStatus, label: string }[] = [
@@ -34,8 +35,8 @@ const getStatusColor = (status: AttendanceStatus) => {
     }
 }
 
-export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAttendanceChange }: AttendanceSheetProps) {
-    const [selectedWeek, setSelectedWeek] = useState<number>(1);
+export function AttendanceSheet({ students, attendanceRecord, totalWeeks, onAttendanceChange, defaultWeek = 1 }: AttendanceSheetProps) {
+    const [selectedWeek, setSelectedWeek] = useState<number>(defaultWeek);
     const weekNumber = selectedWeek; // for clarity inside the table
 
     return (
