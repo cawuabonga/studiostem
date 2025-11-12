@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -186,7 +187,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
                     <TableCell className="text-center">{unit.semester}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
-                    <TableCell className="text-center">{unit.credits}</TableCell>
+                    <TableCell className="text-center">{isNaN(unit.credits) ? '' : unit.credits}</TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
