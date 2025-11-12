@@ -1,9 +1,8 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getUnits, getPrograms, updateUnitImage, duplicateUnit } from '@/config/firebase';
+import { getUnits, getPrograms, updateUnitImage, duplicateUnit, bulkDeleteUnits } from '@/config/firebase';
 import type { Unit, Program, UnitPeriod } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 import { Badge } from '../ui/badge';
+import { Checkbox } from '../ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 interface UnitsListProps {
     instituteId: string;
@@ -45,6 +46,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   const [loading, setLoading] = useState(true);
   
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
+  const [selectedUnitIds, setSelectedUnitIds] = useState<Set<string>>(new Set());
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
@@ -84,6 +86,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
         });
 
         setUnits(filtered);
+        setSelectedUnitIds(new Set()); // Clear selection on data change
         setCurrentPage(1); // Reset to first page on new filter
 
     } catch (error) {
@@ -142,6 +145,20 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     }
   };
   
+  const handleBulkDelete = async () => {
+    if (!instituteId || selectedUnitIds.size === 0) return;
+    try {
+        await bulkDeleteUnits(instituteId, Array.from(selectedUnitIds));
+        toast({
+            title: "Eliminación Exitosa",
+            description: `${selectedUnitIds.size} unidades han sido eliminadas.`,
+        });
+        handleRefresh();
+    } catch (error) {
+        toast({ title: "Error", description: "No se pudieron eliminar las unidades seleccionadas.", variant: "destructive"});
+    }
+  };
+
   const paginatedUnits = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
@@ -149,6 +166,27 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   }, [units, currentPage]);
 
   const totalPages = Math.ceil(units.length / PAGE_SIZE);
+
+  const handleSelectAll = (checked: boolean | string) => {
+    if (checked) {
+        setSelectedUnitIds(new Set(units.map(u => u.id)));
+    } else {
+        setSelectedUnitIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (unitId: string, isSelected: boolean) => {
+    const newSet = new Set(selectedUnitIds);
+    if (isSelected) {
+        newSet.add(unitId);
+    } else {
+        newSet.delete(unitId);
+    }
+    setSelectedUnitIds(newSet);
+  };
+
+  const isAllSelectedOnPage = paginatedUnits.length > 0 && paginatedUnits.every(u => selectedUnitIds.has(u.id));
+  const isSomeSelectedOnPage = paginatedUnits.some(u => selectedUnitIds.has(u.id));
 
   if (loading) {
     return (
@@ -166,10 +204,48 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
 
   return (
     <>
+      {selectedUnitIds.size > 0 && (
+         <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-lg">
+            <p className="text-sm font-medium">{selectedUnitIds.size} unidad(es) seleccionada(s)</p>
+             <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                        <Trash2 className="mr-2 h-4 w-4"/>
+                        Eliminar Seleccionadas
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminarán permanentemente {selectedUnitIds.size} unidades didácticas.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+      )}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={isAllSelectedOnPage}
+                    onCheckedChange={(checked) => {
+                        const newSet = new Set(selectedUnitIds);
+                        paginatedUnits.forEach(u => {
+                            if(checked) newSet.add(u.id);
+                            else newSet.delete(u.id);
+                        });
+                        setSelectedUnitIds(newSet);
+                    }}
+                 />
+              </TableHead>
               <TableHead>Nombre</TableHead>
               {isFullAdmin && <TableHead>Programa</TableHead>}
               <TableHead>Semestre</TableHead>
@@ -181,39 +257,32 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
           </TableHeader>
           <TableBody>
              {paginatedUnits.map((unit) => (
-                <TableRow key={unit.id}>
+                <TableRow key={unit.id} data-state={selectedUnitIds.has(unit.id) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedUnitIds.has(unit.id)}
+                            onCheckedChange={(checked) => handleSelectOne(unit.id, !!checked)}
+                        />
+                    </TableCell>
                     <TableCell className="font-medium">{unit.name} <br/><span className="text-xs text-muted-foreground font-mono">{unit.code}</span></TableCell>
                     {isFullAdmin && <TableCell><Badge variant="outline">{programMap.get(unit.programId) || 'N/A'}</Badge></TableCell>}
                     <TableCell className="text-center">{unit.semester}</TableCell>
                     <TableCell>{unit.period}</TableCell>
                     <TableCell>{unit.turno}</TableCell>
-                    <TableCell className="text-center">{isNaN(unit.credits) ? '' : unit.credits}</TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Abrir menú</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
-                                    <Edit2 className="mr-2 h-4 w-4" /> Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleDuplicate(unit.id)}>
-                                    <Copy className="mr-2 h-4 w-4" /> Duplicar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
-                                    {imageLoadingId === unit.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ImageIcon className="mr-2 h-4 w-4" />}
-                                    Regenerar Imagen
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                    <TableCell className="text-center">{unit.credits}</TableCell>
+                    <TableCell className="text-right space-x-1">
+                        <Button variant="ghost" size="icon" onClick={() => {setSelectedUnit(unit); setIsEditDialogOpen(true);}}>
+                            <Edit2 className="h-4 w-4" />
+                        </Button>
+                         <Button variant="ghost" size="icon" onClick={() => handleDuplicate(unit.id)}>
+                            <Copy className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
+                            {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                        </Button>
+                         <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
                     </TableCell>
                 </TableRow>
              ))}

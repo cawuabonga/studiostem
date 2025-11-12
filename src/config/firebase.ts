@@ -297,6 +297,17 @@ export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' |
     }
 }
 
+export const bulkDeleteUnits = async (instituteId: string, unitIds: string[]): Promise<void> => {
+    const batch = writeBatch(db);
+    const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
+    unitIds.forEach(id => {
+        const docRef = doc(unitsCol, id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
+}
+
+
 export const duplicateUnit = async (instituteId: string, unitId: string): Promise<void> => {
     const originalUnit = await getUnit(instituteId, unitId);
     if (!originalUnit) {
@@ -1557,3 +1568,4 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
