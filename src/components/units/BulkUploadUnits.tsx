@@ -57,6 +57,8 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
                 name: "Matemática Aplicada", 
                 code: "MA-101", 
                 credits: 4, 
+                semester: 1,
+                totalWeeks: 16,
                 theoreticalHours: 2,
                 practicalHours: 2,
                 period: "MAR-JUL",
@@ -66,7 +68,7 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
         ]);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Unidades");
-        XLSX.writeFile(workbook, "plantilla_unidades_simplificada.xlsx");
+        XLSX.writeFile(workbook, "plantilla_unidades.xlsx");
         toast({
             title: "Plantilla Descargada",
             description: "Complete la plantilla con los datos de las unidades para el módulo seleccionado.",
