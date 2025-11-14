@@ -453,6 +453,16 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffPro
     await batch.commit();
 };
 
+export const bulkDeleteStaff = async (instituteId: string, documentIds: string[]): Promise<void> => {
+    const batch = writeBatch(db);
+    const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
+    documentIds.forEach(id => {
+        const docRef = doc(staffCol, id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
+};
+
 export const updateStaffProfile = async (instituteId: string, documentId: string, data: Partial<StaffProfile>) => {
     const staffRef = doc(db, 'institutes', instituteId, 'staffProfiles', documentId);
     await updateDoc(staffRef, data);
@@ -1497,22 +1507,21 @@ const getScheduleDocRef = (instituteId: string, programId: string, year: string,
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
     const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
-    // This is not efficient. A better data model would be to store schedules by unit.
-    // For now, we query all schedules for the semester and filter.
-    const q = query(schedulesCol);
+    const q = query(schedulesCol, 
+        where("year", "==", year),
+        where("semester", "==", semester)
+    );
     const snapshot = await getDocs(q);
 
     const scheduledDays = new Set<string>();
 
     snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        if (data.year === year && data.semester === semester) {
-            const scheduleData = data.schedule as Record<string, ScheduleBlock>;
-            for (const key in scheduleData) {
-                const block = scheduleData[key];
-                if (block.unitId === unitId) {
-                    scheduledDays.add(block.dayOfWeek);
-                }
+        const scheduleData = data.schedule as Record<string, ScheduleBlock>;
+        for (const key in scheduleData) {
+            const block = scheduleData[key];
+            if (block.unitId === unitId) {
+                scheduledDays.add(block.dayOfWeek);
             }
         }
     });
@@ -1568,4 +1577,5 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 

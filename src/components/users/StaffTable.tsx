@@ -3,27 +3,22 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getStaffProfiles, getPrograms, getRoles } from '@/config/firebase';
+import { getStaffProfiles, getPrograms, getRoles, bulkDeleteStaff } from '@/config/firebase';
 import type { StaffProfile, Program, Role } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, MoreHorizontal, Eye, KeyRound, ArrowRight } from 'lucide-react';
+import { Edit2, Trash2, Eye, KeyRound, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
 import Link from 'next/link';
-// Assuming these dialogs are compatible or will be adapted for StaffProfile
 import { EditStaffProfileDialog } from '../users/EditStaffProfileDialog';
 import { DeleteStaffProfileDialog } from '../users/DeleteStaffProfileDialog';
+import { Checkbox } from '../ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+
 
 interface StaffTableProps {
     instituteId: string;
@@ -39,6 +34,8 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
   const [roles, setRoles] = useState<Map<string, Role>>(new Map());
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<StaffProfile | null>(null);
+  const [selectedProfileIds, setSelectedProfileIds] = useState<Set<string>>(new Set());
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [filter, setFilter] = useState('');
@@ -59,6 +56,7 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
       setProfiles(fetchedStaff);
       setPrograms(new Map(fetchedPrograms.map(p => [p.id, p])));
       setRoles(new Map(fetchedRoles.map(r => [r.id, r])));
+      setSelectedProfileIds(new Set());
     } catch (error) {
       toast({
         title: "Error",
@@ -99,6 +97,38 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
   }, [filteredProfiles, currentPage]);
 
   const totalPages = Math.ceil(filteredProfiles.length / PAGE_SIZE);
+
+  const handleSelectAll = (checked: boolean | string) => {
+    if (checked) {
+        setSelectedProfileIds(new Set(profiles.map(p => p.documentId)));
+    } else {
+        setSelectedProfileIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (profileId: string, isSelected: boolean) => {
+    const newSet = new Set(selectedProfileIds);
+    if (isSelected) {
+        newSet.add(profileId);
+    } else {
+        newSet.delete(profileId);
+    }
+    setSelectedProfileIds(newSet);
+  };
+  
+   const handleBulkDelete = async () => {
+    if (!instituteId || selectedProfileIds.size === 0) return;
+    try {
+        await bulkDeleteStaff(instituteId, Array.from(selectedProfileIds));
+        toast({
+            title: "Eliminación Exitosa",
+            description: `${selectedProfileIds.size} perfiles han sido eliminados.`,
+        });
+        onDataChange();
+    } catch (error) {
+        toast({ title: "Error", description: "No se pudieron eliminar los perfiles seleccionados.", variant: "destructive"});
+    }
+  };
   
   if (loading) {
     return (
@@ -117,6 +147,31 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
 
   return (
     <>
+       {canEdit && selectedProfileIds.size > 0 && (
+         <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-lg">
+            <p className="text-sm font-medium">{selectedProfileIds.size} perfil(es) seleccionado(s)</p>
+             <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm">
+                        <Trash2 className="mr-2 h-4 w-4"/>
+                        Eliminar Seleccionados
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar eliminación masiva?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Se eliminarán permanentemente {selectedProfileIds.size} perfiles.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </div>
+      )}
       <div className="mb-4">
         <Input 
           placeholder="Buscar por nombre, documento o email..."
@@ -132,6 +187,13 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
         <Table>
           <TableHeader>
             <TableRow>
+               <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={selectedProfileIds.size === profiles.length && profiles.length > 0}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Seleccionar todas las filas"
+                 />
+              </TableHead>
               <TableHead>N° Documento</TableHead>
               <TableHead>Nombre Completo</TableHead>
               <TableHead>Rol</TableHead>
@@ -142,7 +204,14 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
           </TableHeader>
           <TableBody>
             {paginatedProfiles.map((profile) => (
-              <TableRow key={`${profile.documentId}-${profile.email}`}>
+              <TableRow key={`${profile.documentId}-${profile.email}`} data-state={selectedProfileIds.has(profile.documentId) && "selected"}>
+                 <TableCell>
+                    <Checkbox
+                        checked={selectedProfileIds.has(profile.documentId)}
+                        onCheckedChange={(checked) => handleSelectOne(profile.documentId, !!checked)}
+                        aria-label={`Seleccionar fila para ${profile.displayName}`}
+                    />
+                </TableCell>
                 <TableCell className="font-mono">{profile.documentId}</TableCell>
                 <TableCell className="font-medium">{profile.displayName}</TableCell>
                 <TableCell>{roles.get(profile.roleId)?.name || profile.role || 'N/A'}</TableCell>
@@ -166,32 +235,23 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
                             </Link>
                         </Button>
                    ) : (
-                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Abrir menú</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                         <DropdownMenuItem asChild>
-                            <Link href={`/profile/${profile.documentId}`} target="_blank">
-                                <Eye className="mr-2 h-4 w-4" /> Ver Perfil Público
+                    <div className="inline-flex items-center gap-1">
+                        <Button asChild variant="ghost" size="icon" title="Ver Perfil Público">
+                           <Link href={`/profile/${profile.documentId}`} target="_blank">
+                                <Eye className="h-4 w-4" />
                             </Link>
-                        </DropdownMenuItem>
+                        </Button>
                         {canEdit && (
-                          <>
-                            <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}}>
-                              <Edit2 className="mr-2 h-4 w-4" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {setSelectedProfile(profile); setIsDeleteDialogOpen(true);}} className="text-destructive">
-                              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                            </DropdownMenuItem>
-                          </>
+                            <>
+                            <Button variant="ghost" size="icon" onClick={() => {setSelectedProfile(profile); setIsEditDialogOpen(true);}} title="Editar">
+                                <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => {setSelectedProfile(profile); setIsDeleteDialogOpen(true);}} title="Eliminar">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            </>
                         )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </div>
                    )}
                 </TableCell>
               </TableRow>
