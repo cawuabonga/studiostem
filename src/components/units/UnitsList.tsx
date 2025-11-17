@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -24,6 +25,7 @@ import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
 import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface UnitsListProps {
     instituteId: string;
@@ -120,18 +122,23 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   };
 
   const handleRegenerateImage = async (unit: Unit) => {
-    if (!instituteId) return;
-    setImageLoadingId(unit.id);
-    try {
-        const imageUrl = await generateUnitImage({ unitName: unit.name });
-        await updateUnitImage(instituteId, unit.id, imageUrl);
-        toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
-        handleRefresh();
-    } catch (error) {
-        toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
-    } finally {
-        setImageLoadingId(null);
-    }
+     toast({
+      title: "Función Desactivada",
+      description: "La generación de imágenes con IA está desactivada para controlar costos.",
+      variant: "default",
+    });
+    // if (!instituteId) return;
+    // setImageLoadingId(unit.id);
+    // try {
+    //     const imageUrl = await generateUnitImage({ unitName: unit.name });
+    //     await updateUnitImage(instituteId, unit.id, imageUrl);
+    //     toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
+    //     handleRefresh();
+    // } catch (error) {
+    //     toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
+    // } finally {
+    //     setImageLoadingId(null);
+    // }
   }
 
   const handleDuplicate = async (unitId: string) => {
@@ -203,7 +210,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   }
 
   return (
-    <>
+    <TooltipProvider>
       {selectedUnitIds.size > 0 && (
          <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-lg">
             <p className="text-sm font-medium">{selectedUnitIds.size} unidad(es) seleccionada(s)</p>
@@ -277,9 +284,16 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
                          <Button variant="ghost" size="icon" onClick={() => handleDuplicate(unit.id)}>
                             <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleRegenerateImage(unit)} disabled={imageLoadingId === unit.id}>
-                            {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-                        </Button>
+                         <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleRegenerateImage(unit)} disabled>
+                                    {imageLoadingId === unit.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Generación de imagen con IA (desactivado).</p>
+                            </TooltipContent>
+                        </Tooltip>
                          <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => {setSelectedUnit(unit); setIsDeleteDialogOpen(true);}}>
                             <Trash2 className="h-4 w-4" />
                         </Button>
@@ -326,6 +340,6 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
           onClose={handleDialogClose}
         />
        )}
-    </>
+    </TooltipProvider>
   );
 }
