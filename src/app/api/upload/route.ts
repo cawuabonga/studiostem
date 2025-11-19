@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getApps, initializeApp, cert } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
-import { serviceAccount } from '@/config/firebase-admin';
+import serviceAccount from '@/config/serviceAccount.json';
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK - this should only run once
 if (!getApps().length) {
   initializeApp({
     credential: cert(serviceAccount),
