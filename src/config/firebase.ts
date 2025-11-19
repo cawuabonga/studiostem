@@ -1,3 +1,4 @@
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -26,13 +27,25 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-const uploadFileAndGetURL = async (file: File, path: string): Promise<string> => {
-    const storageRef = ref(firebaseStorage, path);
-    await uploadBytes(storageRef, file);
-    const downloadURL = await getDownloadURL(storageRef);
+const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
+
+    const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[DEBUG] uploadFileViaApi: Server responded with an error:', errorData);
+        throw new Error( `Error del Servidor: ${errorData?.details?.errorMessage || errorData?.error || 'Falla desconocida.'} (Paso: ${errorData?.details?.failedStep || 'N/A'})` );
+    }
+    
+    const { downloadURL } = await response.json();
     return downloadURL;
 };
-
 
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
@@ -142,13 +155,10 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    const newImageId = doc(collection(db, 'idGenerator')).id;
-    const storagePath = `loginImages/${newImageId}`;
-    
     try {
-        console.log(`[DEBUG] Attempting to upload to: ${storagePath}`);
-        const downloadURL = await uploadFileAndGetURL(file, storagePath);
-        console.log(`[DEBUG] Upload successful. URL: ${downloadURL}`);
+        const newImageId = doc(collection(db, 'idGenerator')).id;
+        const storagePath = `loginImages/${newImageId}`;
+        const downloadURL = await uploadFileViaApi(file, storagePath);
 
         const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
         await setDoc(imageDocRef, {
@@ -156,10 +166,10 @@ export const uploadLoginImage = async (file: File, name: string): Promise<void> 
             url: downloadURL,
             createdAt: Timestamp.now()
         });
-        console.log(`[DEBUG] Firestore document created for image ${newImageId}`);
-    } catch (error: any) {
+    } catch (error) {
         console.error("[DEBUG] Error in uploadLoginImage:", error);
-        throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
+        // Re-throw the error so the component's catch block can display it.
+        throw error;
     }
 };
 
@@ -291,7 +301,7 @@ export const updateUnitImage = async (instituteId: string, unitId: string, image
 
 export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
     const path = `institutes/${instituteId}/units/${unitId}/coverImage`;
-    const downloadURL = await uploadFileAndGetURL(file, path);
+    const downloadURL = await uploadFileViaApi(file, path);
     await updateUnitImage(instituteId, unitId, downloadURL);
 };
 
@@ -726,7 +736,7 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const downloadURL = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
+    const downloadURL = await uploadFileViaApi(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
@@ -1087,7 +1097,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
     let fileUrl = '';
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${newContentId}`;
-        fileUrl = await uploadFileAndGetURL(file, storagePath);
+        fileUrl = await uploadFileViaApi(file, storagePath);
     }
     
     const newContent: Content = {
@@ -1112,7 +1122,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentId}`;
-        updatedContent.value = await uploadFileAndGetURL(file, storagePath);
+        updatedContent.value = await uploadFileViaApi(file, storagePath);
     }
 
     weekData.contents[contentIndex] = updatedContent;
