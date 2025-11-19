@@ -10,7 +10,7 @@ const initializeAdmin = () => {
     if (admin.apps.length === 0) {
         console.log('[API_UPLOAD_DEBUG] Step 2: No existing Firebase Admin app found. Initializing...');
         admin.initializeApp({
-            storageBucket: 'stem-v2-4y6a0.appspot.com'
+            storageBucket: 'stem-v2-4y6a0.firebasestorage.app' // CORRECTED BUCKET NAME
         });
         console.log('[API_UPLOAD_DEBUG] Step 3: Firebase Admin initialized successfully.');
     } else {
@@ -57,6 +57,7 @@ export async function POST(req: Request) {
     });
     console.log('[API_UPLOAD_DEBUG] Step 8: File saved successfully.');
     
+    // Construct the public URL manually
     const downloadURL = `https://storage.googleapis.com/${bucket.name}/${path}`;
 
     return NextResponse.json({ downloadURL });
