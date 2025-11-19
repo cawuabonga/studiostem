@@ -3,17 +3,23 @@ import { NextResponse } from 'next/server';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
 import type { NextRequest } from 'next/server';
-import { getApp, getApps } from 'firebase/app';
+import { getApp, getApps, initializeApp } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
 
-// Ensure Firebase is initialized
-const app = getApps().length ? getApp() : undefined; 
+// Robust Firebase initialization for server-side environments
+const firebaseConfig = {
+  apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
+  authDomain: "stem-v2-4y6a0.firebaseapp.com",
+  projectId: "stem-v2-4y6a0",
+  storageBucket: "stem-v2-4y6a0.appspot.com",
+  messagingSenderId: "865497414457",
+  appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const serverStorage = getStorage(app, 'gs://stem-v2-4y6a0.appspot.com');
 
 export async function POST(req: NextRequest) {
-  if (!app) {
-     return NextResponse.json({ error: 'Firebase app not initialized.' }, { status: 500 });
-  }
-
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
@@ -23,11 +29,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    // Explicitly get storage instance with the correct bucket URL for server-side operations
-    const serverStorage = getStorage(app, 'gs://stem-v2-4y6a0.appspot.com');
     const storageRef = ref(serverStorage, path);
     
-    const snapshot = await uploadBytes(storageRef, file, {
+    // Convert file to ArrayBuffer before uploading
+    const fileBuffer = await file.arrayBuffer();
+    
+    const snapshot = await uploadBytes(storageRef, fileBuffer, {
       contentType: file.type,
     });
     
