@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    const storageRef = ref(storage, `${path}/${file.name}`);
-
+    const storageRef = ref(storage, path);
+    
     // Directly upload the file Blob, which is more efficient
     const snapshot = await uploadBytes(storageRef, file, {
       contentType: file.type,
