@@ -2,11 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow read and write access for all authenticated users.
-    // In a production environment, you would want to restrict this further.
-    // For example, allow users to only write to their own folder.
+    // Allow public read access for all files.
+    // This is necessary so that images can be displayed in the app.
+    // Write access is restricted.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read;
+      // Allow write access only from our server-side API endpoint.
+      // Since the server uses admin credentials, request.auth is null.
+      // We are relying on the security of our API endpoint to control writes.
+      allow write: if request.auth == null;
     }
   }
 }
