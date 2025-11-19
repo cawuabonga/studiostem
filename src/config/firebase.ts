@@ -27,25 +27,14 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('path', path);
-
-    const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[DEBUG] uploadFileViaApi: Server responded with an error:', errorData);
-        throw new Error( `Error del Servidor: ${errorData?.details?.errorMessage || errorData?.error || 'Falla desconocida.'} (Paso: ${errorData?.details?.failedStep || 'N/A'})` );
-    }
-    
-    const { downloadURL } = await response.json();
+// Client-side file upload function
+const uploadFileAndGetURL = async (file: File, path: string): Promise<string> => {
+    const storageRef = ref(firebaseStorage, path);
+    const snapshot = await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
 };
+
 
 export const saveUserAdditionalData = async (user: { uid: string; email: string | null; displayName: string | null; photoURL: string | null; }, role: UserRole, instituteId: string | null) => {
   console.log(`Saving additional data for UID: ${user.uid}, Role: ${role}, Institute: ${instituteId}`);
@@ -158,7 +147,7 @@ export const uploadLoginImage = async (file: File, name: string): Promise<void> 
     try {
         const newImageId = doc(collection(db, 'idGenerator')).id;
         const storagePath = `loginImages/${newImageId}`;
-        const downloadURL = await uploadFileViaApi(file, storagePath);
+        const downloadURL = await uploadFileAndGetURL(file, storagePath);
 
         const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
         await setDoc(imageDocRef, {
@@ -168,7 +157,6 @@ export const uploadLoginImage = async (file: File, name: string): Promise<void> 
         });
     } catch (error) {
         console.error("[DEBUG] Error in uploadLoginImage:", error);
-        // Re-throw the error so the component's catch block can display it.
         throw error;
     }
 };
@@ -301,7 +289,7 @@ export const updateUnitImage = async (instituteId: string, unitId: string, image
 
 export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
     const path = `institutes/${instituteId}/units/${unitId}/coverImage`;
-    const downloadURL = await uploadFileViaApi(file, path);
+    const downloadURL = await uploadFileAndGetURL(file, path);
     await updateUnitImage(instituteId, unitId, downloadURL);
 };
 
@@ -736,7 +724,7 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const downloadURL = await uploadFileViaApi(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
+    const downloadURL = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
@@ -1097,7 +1085,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
     let fileUrl = '';
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${newContentId}`;
-        fileUrl = await uploadFileViaApi(file, storagePath);
+        fileUrl = await uploadFileAndGetURL(file, storagePath);
     }
     
     const newContent: Content = {
@@ -1122,7 +1110,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentId}`;
-        updatedContent.value = await uploadFileViaApi(file, storagePath);
+        updatedContent.value = await uploadFileAndGetURL(file, storagePath);
     }
 
     weekData.contents[contentIndex] = updatedContent;
@@ -1557,3 +1545,4 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
+
