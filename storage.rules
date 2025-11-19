@@ -13,12 +13,10 @@ service firebase.storage {
     // Regla general para todos los archivos.
     match /{allPaths=**} {
       // Cualquiera puede leer los archivos (necesario para mostrar imágenes públicas).
-      allow read;
+      allow read: if true;
 
-      // La escritura solo se permite si:
-      // 1. El usuario es un SuperAdmin.
-      // 2. La petición viene del servidor (sin autenticación de usuario, request.auth == null).
-      allow write: if isSuperAdmin() || request.auth == null;
+      // La escritura solo se permite a usuarios autenticados.
+      allow write: if request.auth != null;
     }
   }
 }
