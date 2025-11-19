@@ -141,7 +141,7 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
     const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
     
-    // Use the API endpoint for uploading
+    // Use the API endpoint for uploading, consistent with other uploads
     const downloadURL = await uploadFileViaApi(file, `loginImages/${imageDocRef.id}`);
 
     // Save the metadata to Firestore
@@ -286,7 +286,7 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
     await deleteDoc(unitRef);
 }
 
-export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'imageUrl'>[]) => {
+export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'imageUrl'>[]) => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     
     // Use a for...of loop to handle async operations correctly
@@ -322,7 +322,7 @@ export const duplicateUnit = async (instituteId: string, unitId: string): Promis
         name: `${name} (Copia)`,
         code: `${code}-COPY`,
     };
-    await addUnit(instituteId, newUnitData);
+    await addUnit(instituteId, newUnitData as Omit<Unit, 'id' | 'imageUrl'>);
 };
 
 
@@ -1566,6 +1566,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 
