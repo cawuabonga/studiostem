@@ -1077,7 +1077,7 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Server-side upload failed.');
+        throw new Error(errorData.details || errorData.error || 'Server-side upload failed.');
     }
     
     const { downloadURL } = await response.json();
@@ -1566,6 +1566,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 
