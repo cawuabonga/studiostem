@@ -711,21 +711,7 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const formData = new FormData();
-    formData.append('file', voucherFile);
-    formData.append('path', `institutes/${instituteId}/vouchers`);
-
-    const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Server-side upload failed.');
-    }
-    
-    const { downloadURL } = await response.json();
+    const downloadURL = await uploadFileViaApi(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
@@ -1104,7 +1090,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
 
     let fileUrl = '';
     if (data.type === 'file' && file) {
-        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}`;
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${newContentId}`;
         fileUrl = await uploadFileViaApi(file, storagePath);
     }
     
@@ -1115,7 +1101,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
         createdAt: Timestamp.now(),
     };
     
-    await updateDoc(weekDocRef, { contents: arrayUnion(newContent) });
+    await setDoc(weekDocRef, { contents: arrayUnion(newContent) }, { merge: true });
 };
 
 export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
@@ -1129,7 +1115,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}`;
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentId}`;
         updatedContent.value = await uploadFileViaApi(file, storagePath);
     }
 
@@ -1171,9 +1157,9 @@ export const addTaskToWeek = async (instituteId: string, unitId: string, weekNum
         createdAt: Timestamp.now(),
     };
     
-    await updateDoc(weekDocRef, {
+    await setDoc(weekDocRef, {
         tasks: arrayUnion(newTask)
-    });
+    }, { merge: true });
 };
 
 export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>) => {
@@ -1580,6 +1566,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 
