@@ -144,15 +144,25 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
     const newImageId = doc(collection(db, 'idGenerator')).id;
     const storagePath = `loginImages/${newImageId}`;
-    const downloadURL = await uploadFileAndGetURL(file, storagePath);
+    
+    try {
+        console.log(`[DEBUG] Attempting to upload to: ${storagePath}`);
+        const downloadURL = await uploadFileAndGetURL(file, storagePath);
+        console.log(`[DEBUG] Upload successful. URL: ${downloadURL}`);
 
-    const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
-    await setDoc(imageDocRef, {
-        name,
-        url: downloadURL,
-        createdAt: Timestamp.now()
-    });
+        const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
+        await setDoc(imageDocRef, {
+            name,
+            url: downloadURL,
+            createdAt: Timestamp.now()
+        });
+        console.log(`[DEBUG] Firestore document created for image ${newImageId}`);
+    } catch (error: any) {
+        console.error("[DEBUG] Error in uploadLoginImage:", error);
+        throw new Error(`Upload failed: ${error.message || 'Unknown error'}`);
+    }
 };
+
 
 export const getLoginImages = async (): Promise<LoginImage[]> => {
     const imagesCol = collection(db, 'config', 'loginDesign', 'images');
