@@ -64,7 +64,7 @@ export function AddLoginImageForm({ onImageUploaded }: AddLoginImageFormProps) {
        console.error("Upload error:", error);
       toast({
         title: 'Error',
-        description: error.message || 'No se pudo subir la imagen.',
+        description: error.details || error.message || 'No se pudo subir la imagen.',
         variant: 'destructive',
       });
     } finally {
