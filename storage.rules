@@ -2,15 +2,20 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    
+    function isSuperAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
     // Allow public read access for all files.
     // This is necessary so that images can be displayed in the app.
     // Write access is restricted.
     match /{allPaths=**} {
       allow read;
-      // Allow write access only from our server-side API endpoint.
-      // Since the server uses admin credentials, request.auth is null.
-      // We are relying on the security of our API endpoint to control writes.
-      allow write: if request.auth == null;
+      // Allow write if it's a SuperAdmin OR if it comes from our server-side API.
+      allow write: if isSuperAdmin() || request.auth == null;
     }
   }
 }
