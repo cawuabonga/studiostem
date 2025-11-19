@@ -40,6 +40,7 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
 
     if (!response.ok) {
         const errorData = await response.json();
+        // Throw a more detailed error to be caught by the calling function
         throw new Error(errorData.details || errorData.error || 'Server-side upload failed.');
     }
     
