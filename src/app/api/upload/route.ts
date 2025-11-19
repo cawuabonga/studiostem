@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import serviceAccount from '@/config/serviceAccount.json';
 
-// Initialize Firebase Admin SDK - this should only run once
+// Ensure Firebase Admin is initialized only once
 if (!getApps().length) {
   initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(serviceAccount as any),
     storageBucket: 'stem-v2-4y6a0.appspot.com',
   });
 }
