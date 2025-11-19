@@ -1,23 +1,15 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getStorage } from 'firebase-admin/storage';
+import { serviceAccount } from '@/config/firebase-admin';
 
-import { NextResponse } from 'next/server';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/config/firebase';
-import type { NextRequest } from 'next/server';
-import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getStorage } from 'firebase/storage';
-
-// Robust Firebase initialization for server-side environments
-const firebaseConfig = {
-  apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
-  authDomain: "stem-v2-4y6a0.firebaseapp.com",
-  projectId: "stem-v2-4y6a0",
-  storageBucket: "stem-v2-4y6a0.appspot.com",
-  messagingSenderId: "865497414457",
-  appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
-};
-
-const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-const serverStorage = getStorage(app, 'gs://stem-v2-4y6a0.appspot.com');
+// Initialize Firebase Admin SDK
+if (!getApps().length) {
+  initializeApp({
+    credential: cert(serviceAccount),
+    storageBucket: 'stem-v2-4y6a0.appspot.com',
+  });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,16 +21,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    const storageRef = ref(serverStorage, path);
+    const bucket = getStorage().bucket();
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
     
-    // Convert file to ArrayBuffer before uploading
-    const fileBuffer = await file.arrayBuffer();
-    
-    const snapshot = await uploadBytes(storageRef, fileBuffer, {
-      contentType: file.type,
+    const fileUpload = bucket.file(path);
+
+    await fileUpload.save(fileBuffer, {
+      metadata: {
+        contentType: file.type,
+      },
     });
-    
-    const downloadURL = await getDownloadURL(snapshot.ref);
+
+    // Make the file public and get its URL
+    await fileUpload.makePublic();
+    const downloadURL = fileUpload.publicUrl();
 
     return NextResponse.json({ downloadURL });
 

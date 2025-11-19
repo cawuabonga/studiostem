@@ -1071,7 +1071,7 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
     return null;
 };
 
-const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
+export const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('path', path);
@@ -1083,7 +1083,6 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
 
     if (!response.ok) {
         const errorData = await response.json();
-        console.error('[DEBUG] uploadFileViaApi: Server responded with an error:', errorData);
         throw new Error(errorData.details || errorData.error || 'Server-side upload failed.');
     }
     
@@ -1589,4 +1588,5 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     
 
     
+
 
