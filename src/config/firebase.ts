@@ -138,17 +138,19 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    const newImageRef = doc(collection(db, 'idGenerator')); // Create a reference to get a unique ID
-    const newImageId = newImageRef.id;
+    // Generate a unique ID for the image filename and document
+    const newImageId = doc(collection(db, 'idGenerator')).id;
     const storagePath = `loginImages/${newImageId}`;
 
+    // Upload the file using the centralized API endpoint
     const downloadURL = await uploadFileViaApi(file, storagePath);
 
+    // Save the metadata to Firestore
     const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
-    await setDoc(imageDocRef, { 
-        name, 
-        url: downloadURL, 
-        createdAt: Timestamp.now() 
+    await setDoc(imageDocRef, {
+        name,
+        url: downloadURL,
+        createdAt: Timestamp.now()
     });
 };
 
@@ -1070,9 +1072,15 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 };
 
 const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
+    console.log('[DEBUG] uploadFileViaApi: Starting upload.');
+    console.log('[DEBUG] uploadFileViaApi: File to upload:', file.name, file.size, file.type);
+    console.log('[DEBUG] uploadFileViaApi: Upload path:', path);
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('path', path);
+
+    console.log('[DEBUG] uploadFileViaApi: FormData created. Sending to /api/upload.');
 
     const response = await fetch('/api/upload', {
         method: 'POST',
@@ -1081,10 +1089,12 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
 
     if (!response.ok) {
         const errorData = await response.json();
+        console.error('[DEBUG] uploadFileViaApi: Server responded with an error:', errorData);
         throw new Error(errorData.details || errorData.error || 'Server-side upload failed.');
     }
     
     const { downloadURL } = await response.json();
+    console.log('[DEBUG] uploadFileViaApi: Upload successful. URL:', downloadURL);
     return downloadURL;
 };
 
@@ -1555,7 +1565,6 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
-    
     
     
     
