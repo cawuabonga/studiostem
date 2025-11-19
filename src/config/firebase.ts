@@ -1,4 +1,3 @@
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -27,23 +26,10 @@ const firebaseStorage = getStorage(app);
 
 export { auth, db, firebaseStorage as storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('path', path);
-
-    const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json();
-        console.error('[DEBUG] uploadFileViaApi: Server responded with an error:', errorData);
-        throw new Error(errorData.details || errorData.error || 'Server-side upload failed.');
-    }
-    
-    const { downloadURL } = await response.json();
+const uploadFileAndGetURL = async (file: File, path: string): Promise<string> => {
+    const storageRef = ref(firebaseStorage, path);
+    await uploadBytes(storageRef, file);
+    const downloadURL = await getDownloadURL(storageRef);
     return downloadURL;
 };
 
@@ -158,7 +144,7 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
     const newImageId = doc(collection(db, 'idGenerator')).id;
     const storagePath = `loginImages/${newImageId}`;
-    const downloadURL = await uploadFileViaApi(file, storagePath);
+    const downloadURL = await uploadFileAndGetURL(file, storagePath);
 
     const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
     await setDoc(imageDocRef, {
@@ -182,8 +168,14 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
     const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
-    // Deleting from storage is now handled client-side if needed, but API approach simplifies this.
-    // For now, we only delete the reference.
+    const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
+    try {
+        await deleteObject(storageRef);
+    } catch (error: any) {
+        if (error.code !== 'storage/object-not-found') {
+            throw error;
+        }
+    }
 };
 
 // --- User Management ---
@@ -289,7 +281,7 @@ export const updateUnitImage = async (instituteId: string, unitId: string, image
 
 export const uploadCustomUnitImage = async (instituteId: string, unitId: string, file: File): Promise<void> => {
     const path = `institutes/${instituteId}/units/${unitId}/coverImage`;
-    const downloadURL = await uploadFileViaApi(file, path);
+    const downloadURL = await uploadFileAndGetURL(file, path);
     await updateUnitImage(instituteId, unitId, downloadURL);
 };
 
@@ -724,7 +716,7 @@ export const registerPayment = async (
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const downloadURL = await uploadFileViaApi(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
+    const downloadURL = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
@@ -1085,7 +1077,7 @@ export const addContentToWeek = async (instituteId: string, unitId: string, week
     let fileUrl = '';
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${newContentId}`;
-        fileUrl = await uploadFileViaApi(file, storagePath);
+        fileUrl = await uploadFileAndGetURL(file, storagePath);
     }
     
     const newContent: Content = {
@@ -1110,7 +1102,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 
     if (data.type === 'file' && file) {
         const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentId}`;
-        updatedContent.value = await uploadFileViaApi(file, storagePath);
+        updatedContent.value = await uploadFileAndGetURL(file, storagePath);
     }
 
     weekData.contents[contentIndex] = updatedContent;
@@ -1121,9 +1113,16 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
 export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     
-    // Note: Deleting from storage is complex from the client due to security rules.
-    // This action will only remove the reference from Firestore.
-    // A cleanup script or Cloud Function would be needed for full deletion from Storage.
+    if (content.type === 'file') {
+        try {
+            const fileRef = ref(firebaseStorage, content.value);
+            await deleteObject(fileRef);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Error deleting file from storage, but proceeding to delete from Firestore:", error);
+            }
+        }
+    }
     
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.contents) return;
