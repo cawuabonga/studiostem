@@ -140,11 +140,14 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
     const imageDocRef = doc(collection(db, 'config', 'loginDesign', 'images'));
-    const storageRef = ref(firebaseStorage, `loginImages/${imageDocRef.id}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-    await setDoc(imageDocRef, { name, url, createdAt: Timestamp.now() });
+    
+    // Use the API endpoint for uploading
+    const downloadURL = await uploadFileViaApi(file, `loginImages/${imageDocRef.id}`);
+
+    // Save the metadata to Firestore
+    await setDoc(imageDocRef, { name, url: downloadURL, createdAt: Timestamp.now() });
 };
+
 
 export const getLoginImages = async (): Promise<LoginImage[]> => {
     const imagesCol = collection(db, 'config', 'loginDesign', 'images');
@@ -1577,6 +1580,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
 
 
     
+
 
 
 
