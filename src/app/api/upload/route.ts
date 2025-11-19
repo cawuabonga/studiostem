@@ -3,42 +3,47 @@ import { NextResponse } from 'next/server';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/config/firebase';
 import type { NextRequest } from 'next/server';
+import { getApp, getApps } from 'firebase/app';
+import { getStorage } from 'firebase/storage';
+
+// Ensure Firebase is initialized
+const app = getApps().length ? getApp() : undefined; 
 
 export async function POST(req: NextRequest) {
-  console.log('[API_DEBUG] /api/upload endpoint hit.');
+  if (!app) {
+     return NextResponse.json({ error: 'Firebase app not initialized.' }, { status: 500 });
+  }
+
   try {
     const formData = await req.formData();
-    console.log('[API_DEBUG] FormData received.');
-
     const file = formData.get('file') as File | null;
     const path = formData.get('path') as string | null;
 
-    console.log('[API_DEBUG] Extracted file:', file ? `${file.name} (${file.size} bytes)` : 'null');
-    console.log('[API_DEBUG] Extracted path:', path);
-
     if (!file || !path) {
-      console.error('[API_ERROR] Missing file or path.');
       return NextResponse.json({ error: 'Falta el archivo o la ruta de destino.' }, { status: 400 });
     }
 
-    const storageRef = ref(storage, path);
-    console.log('[API_DEBUG] Created storage reference for path:', path);
+    // Explicitly get storage instance with the correct bucket URL for server-side operations
+    const serverStorage = getStorage(app, 'gs://stem-v2-4y6a0.appspot.com');
+    const storageRef = ref(serverStorage, path);
     
-    console.log('[API_DEBUG] Starting uploadBytes...');
     const snapshot = await uploadBytes(storageRef, file, {
       contentType: file.type,
     });
-    console.log('[API_DEBUG] uploadBytes completed.');
-
-    console.log('[API_DEBUG] Starting getDownloadURL...');
+    
     const downloadURL = await getDownloadURL(snapshot.ref);
-    console.log('[API_DEBUG] getDownloadURL completed. URL:', downloadURL);
 
     return NextResponse.json({ downloadURL });
 
   } catch (e: any) {
     console.error('[API_ERROR] Error in file upload endpoint:', e);
-    console.error('[API_ERROR] Error stack:', e.stack);
-    return NextResponse.json({ error: 'Error al subir el archivo.', details: e.message, stack: e.stack }, { status: 500 });
+    const errorMessage = e.message || 'Error al subir el archivo.';
+    const errorDetails = e.code ? `Code: ${e.code}` : e.toString();
+    
+    return NextResponse.json({ 
+        error: errorMessage, 
+        details: errorDetails, 
+        stack: e.stack 
+    }, { status: 500 });
   }
 }

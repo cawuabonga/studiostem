@@ -1072,15 +1072,9 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
 };
 
 const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
-    console.log('[DEBUG] uploadFileViaApi: Starting upload.');
-    console.log('[DEBUG] uploadFileViaApi: File to upload:', file.name, file.size, file.type);
-    console.log('[DEBUG] uploadFileViaApi: Upload path:', path);
-
     const formData = new FormData();
     formData.append('file', file);
     formData.append('path', path);
-
-    console.log('[DEBUG] uploadFileViaApi: FormData created. Sending to /api/upload.');
 
     const response = await fetch('/api/upload', {
         method: 'POST',
@@ -1094,7 +1088,6 @@ const uploadFileViaApi = async (file: File, path: string): Promise<string> => {
     }
     
     const { downloadURL } = await response.json();
-    console.log('[DEBUG] uploadFileViaApi: Upload successful. URL:', downloadURL);
     return downloadURL;
 };
 
@@ -1596,3 +1589,4 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     
 
     
+
