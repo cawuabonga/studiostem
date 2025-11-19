@@ -7,7 +7,7 @@ import * as admin from 'firebase-admin';
 if (!admin.apps.length) {
   try {
     // When deployed to Firebase App Hosting, it will automatically use the runtime's service account.
-    // No need to provide credentials manually.
+    // We explicitly provide the storage bucket to ensure the SDK knows where to operate.
     admin.initializeApp({
       storageBucket: 'stem-v2-4y6a0.appspot.com'
     });
