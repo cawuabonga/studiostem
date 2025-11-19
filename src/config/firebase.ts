@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
@@ -139,14 +138,12 @@ export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
 
 // --- Login Image Management ---
 export const uploadLoginImage = async (file: File, name: string): Promise<void> => {
-    // 1. Generate a unique ID locally for the new image.
-    const newImageId = doc(collection(db, 'idGenerator')).id;
+    const newImageRef = doc(collection(db, 'idGenerator')); // Create a reference to get a unique ID
+    const newImageId = newImageRef.id;
     const storagePath = `loginImages/${newImageId}`;
 
-    // 2. Upload the file first.
     const downloadURL = await uploadFileViaApi(file, storagePath);
 
-    // 3. Only after a successful upload, save the metadata to Firestore.
     const imageDocRef = doc(db, 'config/loginDesign/images', newImageId);
     await setDoc(imageDocRef, { 
         name, 
@@ -1503,21 +1500,21 @@ const getScheduleDocRef = (instituteId: string, programId: string, year: string,
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
     const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
-    const q = query(schedulesCol, 
-        where("year", "==", year),
-        where("semester", "==", semester)
-    );
-    const snapshot = await getDocs(q);
-
+    // We can't query based on a part of the document ID easily. We fetch all and filter.
+    // This is acceptable if the number of programs/schedules per institute isn't massive.
+    const snapshot = await getDocs(schedulesCol);
     const scheduledDays = new Set<string>();
 
     snapshot.forEach(docSnap => {
         const data = docSnap.data();
-        const scheduleData = data.schedule as Record<string, ScheduleBlock>;
-        for (const key in scheduleData) {
-            const block = scheduleData[key];
-            if (block.unitId === unitId) {
-                scheduledDays.add(block.dayOfWeek);
+        // Filter by year and semester from the document's fields
+        if (data.year === year && data.semester === semester) {
+            const scheduleData = data.schedule as Record<string, ScheduleBlock>;
+            for (const key in scheduleData) {
+                const block = scheduleData[key];
+                if (block.unitId === unitId) {
+                    scheduledDays.add(block.dayOfWeek);
+                }
             }
         }
     });
@@ -1558,26 +1555,35 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
-
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
 
-
-
-
-
-
-
-
-
-
-
     
-
-
-
-
-
-
-
-

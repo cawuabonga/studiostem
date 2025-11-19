@@ -30,3 +30,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Error al subir el archivo.', details: e.message, stack: e.stack }, { status: 500 });
   }
 }
+
+    
