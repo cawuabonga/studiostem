@@ -11,10 +11,11 @@ interface ModuleAssignmentGroupProps {
     teachers: Teacher[];
     assignments: Assignment;
     period: UnitPeriod;
+    savingStatus: Record<string, boolean>;
     onAssignmentChange: (period: UnitPeriod, unitId: string, teacherId: string) => void;
 }
 
-export function ModuleAssignmentGroup({ module, units, teachers, assignments, period, onAssignmentChange }: ModuleAssignmentGroupProps) {
+export function ModuleAssignmentGroup({ module, units, teachers, assignments, period, savingStatus, onAssignmentChange }: ModuleAssignmentGroupProps) {
     if (units.length === 0) {
         return null; // Don't render anything if there are no units for this module in this period
     }
@@ -33,6 +34,7 @@ export function ModuleAssignmentGroup({ module, units, teachers, assignments, pe
                         teachers={teachers}
                         period={period}
                         selectedTeacherId={assignments[unit.id] || ''}
+                        isSaving={savingStatus[unit.id] || false}
                         onAssignmentChange={(teacherId) => onAssignmentChange(period, unit.id, teacherId)}
                     />
                 ))}

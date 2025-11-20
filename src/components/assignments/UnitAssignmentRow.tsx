@@ -2,7 +2,7 @@
 "use client";
 
 import * as React from "react"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -27,10 +27,11 @@ interface UnitAssignmentRowProps {
   teachers: Teacher[];
   period: UnitPeriod;
   selectedTeacherId: string;
+  isSaving: boolean;
   onAssignmentChange: (teacherId: string) => void;
 }
 
-export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, onAssignmentChange }: UnitAssignmentRowProps) {
+export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, isSaving, onAssignmentChange }: UnitAssignmentRowProps) {
   const [open, setOpen] = React.useState(false)
 
   const handleSelect = (currentValue: string) => {
@@ -49,7 +50,8 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, o
         <span className="text-sm font-medium flex-1">{unit.name}</span>
         <Badge variant="outline">{unit.turno}</Badge>
       </div>
-      <div className="w-56">
+      <div className="w-56 flex items-center gap-2">
+         {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
          <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -57,6 +59,7 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, o
               role="combobox"
               aria-expanded={open}
               className="w-full justify-between h-8 text-xs font-normal"
+              disabled={isSaving}
             >
               <span className="truncate">
                 {selectedTeacherName}

@@ -3,12 +3,10 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { getUnits, getTeachers, getAssignments, getPrograms, saveAssignments } from '@/config/firebase';
-import type { Unit, Teacher, Assignment, Program, ProgramModule, UnitPeriod } from '@/types';
-import { Save } from 'lucide-react';
+import { getUnits, getTeachers, getAssignments, getPrograms, saveSingleAssignment } from '@/config/firebase';
+import type { Unit, Teacher, Assignment, Program, UnitPeriod } from '@/types';
 import { AssignmentPeriodColumn } from './AssignmentPeriodColumn';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -24,7 +22,7 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [assignments, setAssignments] = useState<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }>({ 'MAR-JUL': {}, 'AGO-DIC': {} });
   const [loading, setLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [savingStatus, setSavingStatus] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const fetchData = useCallback(async () => {
@@ -62,7 +60,8 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
     fetchData();
   }, [fetchData]);
 
-  const handleAssignmentChange = (period: UnitPeriod, unitId: string, teacherId: string) => {
+  const handleAssignmentChange = async (period: UnitPeriod, unitId: string, teacherId: string) => {
+    // Optimistic UI update
     setAssignments(prev => ({
       ...prev,
       [period]: {
@@ -70,26 +69,30 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
         [unitId]: teacherId,
       },
     }));
-  };
 
-  const handleSaveAssignments = async () => {
-    if (!instituteId) return;
-    setIsSaving(true);
+    setSavingStatus(prev => ({ ...prev, [unitId]: true }));
+    
     try {
-      await saveAssignments(instituteId, year, programId, assignments);
-      toast({
-        title: "¡Éxito!",
-        description: "Las asignaciones se han guardado correctamente.",
-      });
+      await saveSingleAssignment(instituteId!, year, programId, period, unitId, teacherId || null);
+      // Success, just remove the saving indicator
+      setTimeout(() => {
+        setSavingStatus(prev => {
+            const newStatus = { ...prev };
+            delete newStatus[unitId];
+            return newStatus;
+        });
+      }, 1000);
+
     } catch (error) {
-       console.error("Error saving assignments:", error);
-      toast({
-        title: "Error al Guardar",
-        description: "No se pudieron guardar las asignaciones.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+        console.error("Error saving single assignment:", error);
+        toast({ title: 'Error al Guardar', description: 'No se pudo guardar la asignación. Revirtiendo cambio.', variant: 'destructive'});
+        // Revert UI on error
+        fetchData(); 
+        setSavingStatus(prev => {
+            const newStatus = { ...prev };
+            delete newStatus[unitId];
+            return newStatus;
+        });
     }
   };
   
@@ -136,13 +139,9 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
             <div>
                 <CardTitle>Tablero de Asignaciones del Año {year}</CardTitle>
                 <CardDescription>
-                    {`Asigne un docente a cada unidad didáctica del programa ${program?.name || '...'} para ambos períodos.`}
+                    {`Asigne un docente a cada unidad didáctica del programa ${program?.name || '...'}. Los cambios se guardan automáticamente.`}
                 </CardDescription>
             </div>
-            <Button onClick={handleSaveAssignments} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
-            </Button>
         </div>
       </CardHeader>
       <CardContent className="grid md:grid-cols-2 gap-6 items-start">
@@ -153,6 +152,7 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
             teachers={teachers}
             assignments={assignments['MAR-JUL']}
             onAssignmentChange={handleAssignmentChange}
+            savingStatus={savingStatus}
           />
           <AssignmentPeriodColumn
             period="AGO-DIC"
@@ -161,6 +161,7 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
             teachers={teachers}
             assignments={assignments['AGO-DIC']}
             onAssignmentChange={handleAssignmentChange}
+            savingStatus={savingStatus}
           />
       </CardContent>
     </Card>

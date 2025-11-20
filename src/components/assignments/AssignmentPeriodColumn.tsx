@@ -12,6 +12,7 @@ interface AssignmentPeriodColumnProps {
     program: Program | null;
     teachers: Teacher[];
     assignments: Assignment;
+    savingStatus: Record<string, boolean>;
     onAssignmentChange: (period: UnitPeriod, unitId: string, teacherId: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function AssignmentPeriodColumn({
     program,
     teachers,
     assignments,
+    savingStatus,
     onAssignmentChange
 }: AssignmentPeriodColumnProps) {
 
@@ -55,6 +57,7 @@ export function AssignmentPeriodColumn({
             assignments={assignments}
             onAssignmentChange={onAssignmentChange}
             period={period}
+            savingStatus={savingStatus}
           />
         ))}
 

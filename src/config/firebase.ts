@@ -1,7 +1,7 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings } from '@/types';
 
@@ -415,6 +415,26 @@ export const saveAssignments = async (
   const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
   await setDoc(assignmentDocRef, assignments);
 };
+
+export const saveSingleAssignment = async (
+  instituteId: string,
+  year: string,
+  programId: string,
+  period: UnitPeriod,
+  unitId: string,
+  teacherId: string | null
+): Promise<void> => {
+    const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
+    const fieldPath = `${period}.${unitId}`;
+
+    if (teacherId) {
+        await updateDoc(assignmentDocRef, { [fieldPath]: teacherId });
+    } else {
+        // This removes the field from the nested object
+        await updateDoc(assignmentDocRef, { [fieldPath]: deleteField() });
+    }
+};
+
 
 
 // STAFF PROFILES
@@ -1545,4 +1565,5 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
+
 
