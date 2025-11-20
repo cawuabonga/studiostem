@@ -18,7 +18,7 @@ import { EditStaffProfileDialog } from '../users/EditStaffProfileDialog';
 import { DeleteStaffProfileDialog } from '../users/DeleteStaffProfileDialog';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface TeachersListProps {
     instituteId: string;
@@ -26,10 +26,11 @@ interface TeachersListProps {
 }
 
 const PAGE_SIZE = 10;
+const conditions = ['NOMBRADO', 'CONTRATADO'];
 
 export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   const [staff, setStaff] = useState<StaffProfile[]>([]);
-  const [programs, setPrograms] = useState<Map<string, Program>>(new Map());
+  const [programs, setPrograms] = useState<Program[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<StaffProfile | null>(null);
@@ -37,7 +38,11 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [filter, setFilter] = useState('');
+  
+  const [textFilter, setTextFilter] = useState('');
+  const [programFilter, setProgramFilter] = useState('all');
+  const [conditionFilter, setConditionFilter] = useState('all');
+
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { hasPermission } = useAuth();
@@ -53,7 +58,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
         getRoles(id),
       ]);
       setStaff(fetchedStaff);
-      setPrograms(new Map(fetchedPrograms.map(p => [p.id, p])));
+      setPrograms(fetchedPrograms);
       setRoles(fetchedRoles);
       setSelectedProfileIds(new Set());
     } catch (error) {
@@ -83,6 +88,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   };
 
   const teachersAndCoordinators = useMemo(() => {
+    const programMap = new Map(programs.map(p => [p.id, p.name]));
     const targetRoleIds = roles
         .filter(role => role.name.toLowerCase() === 'docente' || role.name.toLowerCase() === 'coordinador')
         .map(role => role.id);
@@ -92,16 +98,21 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
       .map(s => ({
             ...s,
             id: s.documentId,
-            programName: programs.get(s.programId)?.name || 'N/A'
+            programName: programMap.get(s.programId) || 'N/A'
       } as StaffProfile & { programName: string }));
   }, [staff, programs, roles]);
 
-  const filteredData = useMemo(() => 
-    teachersAndCoordinators.filter(profile => 
-        profile.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.documentId.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.email.toLowerCase().includes(filter.toLowerCase())
-    ), [teachersAndCoordinators, filter]);
+  const filteredData = useMemo(() => {
+    return teachersAndCoordinators.filter(profile => {
+        const textMatch = profile.displayName.toLowerCase().includes(textFilter.toLowerCase()) ||
+                          profile.documentId.toLowerCase().includes(textFilter.toLowerCase()) ||
+                          profile.email.toLowerCase().includes(textFilter.toLowerCase());
+        const programMatch = programFilter === 'all' || profile.programId === programFilter;
+        const conditionMatch = conditionFilter === 'all' || profile.condition === conditionFilter;
+
+        return textMatch && programMatch && conditionMatch;
+    });
+  }, [teachersAndCoordinators, textFilter, programFilter, conditionFilter]);
   
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -146,7 +157,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
   if (loading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-10 w-1/3 mb-2" />
+        <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
@@ -185,16 +196,34 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
             </AlertDialog>
         </div>
       )}
-      <div className="mb-4">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <Input 
           placeholder="Buscar por nombre, documento o email..."
-          value={filter}
+          value={textFilter}
           onChange={(e) => {
-            setFilter(e.target.value);
+            setTextFilter(e.target.value);
             setCurrentPage(1);
           }}
           className="max-w-sm"
         />
+        <Select value={programFilter} onValueChange={(value) => {setProgramFilter(value); setCurrentPage(1);}}>
+            <SelectTrigger className="w-full sm:w-[240px]">
+                <SelectValue placeholder="Filtrar por programa..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Programas</SelectItem>
+                {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+        </Select>
+        <Select value={conditionFilter} onValueChange={(value) => {setConditionFilter(value); setCurrentPage(1);}}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por condición..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todas las Condiciones</SelectItem>
+                {conditions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+        </Select>
       </div>
       <div className="rounded-md border">
         <Table>
