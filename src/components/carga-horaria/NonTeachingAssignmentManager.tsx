@@ -181,7 +181,7 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
                             >
                                 <SelectTrigger id="activity"><SelectValue placeholder="Seleccione una actividad..." /></SelectTrigger>
                                 <SelectContent>
-                                    {activities.map(act => <SelectItem key={act.id} value={act.id}>{act.name}</SelectItem>)}
+                                    {activities.filter(act => act.isActive).map(act => <SelectItem key={act.id} value={act.id}>{act.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
