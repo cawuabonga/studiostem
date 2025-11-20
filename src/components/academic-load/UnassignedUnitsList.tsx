@@ -46,7 +46,10 @@ export function UnassignedUnitsList({ units }: UnassignedUnitsListProps) {
                                         <p className="font-semibold text-sm">{unit.name}</p>
                                         <p className="text-xs text-muted-foreground">{unit.code}</p>
                                     </div>
-                                    <Badge variant={unit.unitType === 'Especifica' ? 'default' : 'secondary'}>{unit.unitType}</Badge>
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline">{unit.turno}</Badge>
+                                        <Badge variant={unit.unitType === 'Especifica' ? 'default' : 'secondary'}>{unit.unitType}</Badge>
+                                    </div>
                                 </div>
                             ))}
                         </div>
