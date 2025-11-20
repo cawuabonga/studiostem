@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
@@ -1565,5 +1566,6 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
+
 
 
