@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react"
@@ -48,7 +47,10 @@ export function UnitAssignmentRow({ unit, teachers, period, selectedTeacherId, i
     <div className="flex items-center justify-between rounded-md border bg-card p-3 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 flex-1 pr-4">
         <span className="text-sm font-medium flex-1">{unit.name}</span>
-        <Badge variant="outline">{unit.turno}</Badge>
+        <div className="flex items-center gap-2 mt-1 sm:mt-0">
+            <Badge variant="outline">{unit.totalHours}h</Badge>
+            <Badge variant="outline">{unit.turno}</Badge>
+        </div>
       </div>
       <div className="w-56 flex items-center gap-2">
          {isSaving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
