@@ -1,6 +1,4 @@
-// This component is no longer used directly in the dashboard.
-// It is replaced by TeacherWorkloadList for a more detailed view.
-// This file can be removed in the future.
+
 "use client";
 
 import React from 'react';
@@ -37,7 +35,7 @@ export function FullTeachersList({ teachers }: FullTeachersListProps) {
             <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
                 {teachers.length > 0 ? teachers.map(load => {
                     return (
-                        <div key={load.teacher.documentId} className="p-3 border rounded-md bg-background flex justify-between items-center">
+                        <div key={load.teacher.documentId} className={cn("p-3 border rounded-md bg-background flex justify-between items-center", load.totalHours > 44 && "bg-destructive/10 border-destructive")}>
                             <div className="flex items-center gap-3">
                                 <Avatar className="h-8 w-8 text-xs">
                                     <AvatarFallback>{load.teacher.fullName ? load.teacher.fullName.charAt(0) : '?'}</AvatarFallback>

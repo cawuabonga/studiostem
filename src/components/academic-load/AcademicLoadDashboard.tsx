@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -15,8 +16,6 @@ import { AssignedUnitsList } from './AssignedUnitsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AvailableTeachersList } from './AvailableTeachersList';
 import { FullTeachersList } from './FullTeachersList';
-import { TeacherLoadCard } from '../carga-horaria/TeacherLoadCard';
-import { TeacherWorkloadList } from './TeacherWorkloadList';
 
 export function AcademicLoadDashboard() {
   const { user, hasPermission, instituteId } = useAuth();
@@ -146,6 +145,18 @@ export function AcademicLoadDashboard() {
 
   }, [selectedProgramId, selectedPeriod, allStaff, allRoles, allAssignments, nonTeachingAssignments, allUnits]);
 
+  const { availableTeachers, fullTeachers } = useMemo(() => {
+    const available: typeof teacherWorkloads = [];
+    const full: typeof teacherWorkloads = [];
+    teacherWorkloads.forEach(load => {
+        if (load.totalHours >= 40) {
+            full.push(load);
+        } else {
+            available.push(load);
+        }
+    });
+    return { availableTeachers: available, fullTeachers: full };
+  }, [teacherWorkloads]);
 
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
@@ -231,7 +242,10 @@ export function AcademicLoadDashboard() {
                     <Skeleton className="h-64 w-full" />
                 </div>
             ) : selectedProgramId ? (
-                <TeacherWorkloadList teacherWorkloads={teacherWorkloads} />
+                <div className="grid md:grid-cols-2 gap-6 items-start mt-6">
+                    <AvailableTeachersList teachers={availableTeachers} />
+                    <FullTeachersList teachers={fullTeachers} />
+                </div>
             ) : (
                 <p className="text-center text-muted-foreground py-8">Por favor, selecciona un programa para ver la carga de docentes.</p>
             )}
