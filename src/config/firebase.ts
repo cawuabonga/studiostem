@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1643,6 +1643,94 @@ export const deleteNews = async (instituteId: string, newsItem: News): Promise<v
             if (error.code !== 'storage/object-not-found') {
                 console.error("Error deleting news image from storage:", error);
             }
+        }
+    }
+};
+
+// --- GALLERY ---
+
+export const addAlbum = async (instituteId: string, data: Omit<Album, 'id' | 'createdAt'>): Promise<string> => {
+    const albumsCol = getSubCollectionRef(instituteId, 'albums');
+    const albumData = { ...data, createdAt: Timestamp.now() };
+    const docRef = await addDoc(albumsCol, albumData);
+    return docRef.id;
+};
+
+export const getAlbums = async (instituteId: string): Promise<Album[]> => {
+    const albumsCol = getSubCollectionRef(instituteId, 'albums');
+    const q = query(albumsCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Album));
+};
+
+export const getAlbum = async (instituteId: string, albumId: string): Promise<Album | null> => {
+    const albumRef = doc(db, 'institutes', instituteId, 'albums', albumId);
+    const docSnap = await getDoc(albumRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Album : null;
+};
+
+export const updateAlbum = async (instituteId: string, albumId: string, data: Partial<Album>): Promise<void> => {
+    const albumRef = doc(db, 'institutes', instituteId, 'albums', albumId);
+    await updateDoc(albumRef, data);
+};
+
+export const deleteAlbum = async (instituteId: string, albumId: string): Promise<void> => {
+    const albumRef = doc(db, 'institutes', instituteId, 'albums', albumId);
+    // TODO: Delete all photos inside the album from storage. This is better done with a Cloud Function.
+    await deleteDoc(albumRef);
+};
+
+export const getAlbumPhotos = async (instituteId: string, albumId: string): Promise<Photo[]> => {
+    const photosCol = collection(db, 'institutes', instituteId, 'albums', albumId, 'photos');
+    const q = query(photosCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Photo));
+};
+
+export const addPhotosToAlbum = async (instituteId: string, albumId: string, files: File[]): Promise<void> => {
+    const batch = writeBatch(db);
+    const photosCol = collection(db, 'institutes', instituteId, 'albums', albumId, 'photos');
+    let firstPhotoUrl: string | null = null;
+
+    for (const file of files) {
+        const photoDocRef = doc(photosCol);
+        const storagePath = `institutes/${instituteId}/albums/${albumId}/${photoDocRef.id}`;
+        const downloadURL = await uploadFileAndGetURL(file, storagePath);
+        
+        if (!firstPhotoUrl) {
+            firstPhotoUrl = downloadURL;
+        }
+
+        const photoData: Omit<Photo, 'id'> = {
+            albumId,
+            url: downloadURL,
+            createdAt: Timestamp.now(),
+        };
+        batch.set(photoDocRef, photoData);
+    }
+    
+    // If it's the first photo(s) being added, set the first one as the album cover.
+    if (firstPhotoUrl) {
+        const albumRef = doc(db, 'institutes', instituteId, 'albums', albumId);
+        const albumSnap = await getDoc(albumRef);
+        if (albumSnap.exists() && !albumSnap.data().coverImageUrl) {
+            batch.update(albumRef, { coverImageUrl: firstPhotoUrl });
+        }
+    }
+
+    await batch.commit();
+};
+
+export const deletePhotoFromAlbum = async (instituteId: string, albumId: string, photo: Photo): Promise<void> => {
+    const photoRef = doc(db, 'institutes', instituteId, 'albums', albumId, 'photos', photo.id);
+    await deleteDoc(photoRef);
+    
+    try {
+        const storageRef = ref(firebaseStorage, photo.url);
+        await deleteObject(storageRef);
+    } catch (error: any) {
+        if (error.code !== 'storage/object-not-found') {
+            console.error("Error deleting photo from storage:", error);
         }
     }
 };
