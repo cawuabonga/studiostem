@@ -6,10 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { UserX } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { cn } from '@/lib/utils';
+import { Badge } from '../ui/badge';
 
 interface TeacherLoad {
     teacher: Teacher;
     totalHours: number;
+    teachingHours: number;
+    nonTeachingHours: number;
 }
 
 interface FullTeachersListProps {
@@ -25,7 +28,7 @@ export function FullTeachersList({ teachers }: FullTeachersListProps) {
                     <CardTitle>Docentes con Carga Completa ({teachers.length})</CardTitle>
                 </div>
                 <CardDescription>
-                    Listado de docentes con 18 o más horas semanales asignadas.
+                    Listado de docentes con 40 o más horas semanales asignadas.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -36,11 +39,17 @@ export function FullTeachersList({ teachers }: FullTeachersListProps) {
                                 <Avatar className="h-8 w-8 text-xs">
                                     <AvatarFallback>{load.teacher.fullName ? load.teacher.fullName.charAt(0) : '?'}</AvatarFallback>
                                 </Avatar>
-                                <p className="font-semibold text-sm">{load.teacher.fullName}</p>
+                                <div>
+                                    <p className="font-semibold text-sm">{load.teacher.fullName}</p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                        <Badge variant="outline">Lectivas: {load.teachingHours}h</Badge>
+                                        <Badge variant="outline">No Lectivas: {load.nonTeachingHours}h</Badge>
+                                    </div>
+                                </div>
                             </div>
                             <div className="text-right">
-                                <span className={cn("font-bold text-lg", load.totalHours > 21 ? 'text-destructive' : 'text-amber-600')}>{load.totalHours}h</span>
-                                <p className="text-xs text-muted-foreground">/ 18h</p>
+                                <span className={cn("font-bold text-lg", load.totalHours > 44 ? 'text-destructive' : 'text-amber-600')}>{load.totalHours}h</span>
+                                <p className="text-xs text-muted-foreground">/ 40h</p>
                             </div>
                         </div>
                     )

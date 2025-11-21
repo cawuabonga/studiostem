@@ -121,8 +121,9 @@ export function AcademicLoadDashboard() {
     for(const unitId in periodAssignments) {
         const teacherId = periodAssignments[unitId];
         const unit = unitMap.get(unitId);
-        if (teacherId && unit && teacherWorkload[teacherId]) {
-            teacherWorkload[teacherId].teachingHours += unit.totalHours / unit.totalWeeks;
+        if (teacherId && unit && teacherWorkload[teacherId] && unit.period === selectedPeriod) {
+            const weeklyHours = unit.totalHours / unit.totalWeeks;
+            teacherWorkload[teacherId].teachingHours += weeklyHours;
         }
     }
     
@@ -139,14 +140,24 @@ export function AcademicLoadDashboard() {
 
     Object.values(teacherWorkload).forEach(load => {
         const totalHours = Math.round(load.teachingHours + load.nonTeachingHours);
-        if (totalHours >= 18) {
-            full.push({ ...load, totalHours });
+        const loadWithDetails = { 
+            ...load, 
+            totalHours,
+            teachingHours: Math.round(load.teachingHours),
+            nonTeachingHours: Math.round(load.nonTeachingHours) 
+        };
+        
+        if (totalHours >= 40) {
+            full.push(loadWithDetails);
         } else {
-            available.push({ ...load, totalHours });
+            available.push(loadWithDetails);
         }
     });
 
-    return { fullTeachers: full, availableTeachers: available };
+    return { 
+        fullTeachers: full.sort((a,b) => b.totalHours - a.totalHours), 
+        availableTeachers: available.sort((a,b) => b.totalHours - a.totalHours) 
+    };
 
   }, [selectedProgramId, selectedPeriod, allStaff, allRoles, allAssignments, nonTeachingAssignments, allUnits]);
 

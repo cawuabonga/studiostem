@@ -5,10 +5,13 @@ import type { Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserCheck } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
 
 interface TeacherLoad {
     teacher: Teacher;
     totalHours: number;
+    teachingHours: number;
+    nonTeachingHours: number;
 }
 
 interface AvailableTeachersListProps {
@@ -24,7 +27,7 @@ export function AvailableTeachersList({ teachers }: AvailableTeachersListProps) 
                     <CardTitle>Docentes con Horas Disponibles ({teachers.length})</CardTitle>
                 </div>
                 <CardDescription>
-                    Listado de docentes con menos de 18 horas semanales asignadas en este período.
+                    Listado de docentes con menos de 40 horas semanales asignadas en este período.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2 max-h-[60vh] overflow-y-auto">
@@ -35,11 +38,17 @@ export function AvailableTeachersList({ teachers }: AvailableTeachersListProps) 
                                 <Avatar className="h-8 w-8 text-xs">
                                     <AvatarFallback>{load.teacher.fullName ? load.teacher.fullName.charAt(0) : '?'}</AvatarFallback>
                                 </Avatar>
-                                <p className="font-semibold text-sm">{load.teacher.fullName}</p>
+                                <div>
+                                    <p className="font-semibold text-sm">{load.teacher.fullName}</p>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                        <Badge variant="outline">Lectivas: {load.teachingHours}h</Badge>
+                                        <Badge variant="outline">No Lectivas: {load.nonTeachingHours}h</Badge>
+                                    </div>
+                                </div>
                             </div>
                             <div className="text-right">
                                 <span className="font-bold text-lg text-green-600">{load.totalHours}h</span>
-                                <p className="text-xs text-muted-foreground">/ 18h</p>
+                                <p className="text-xs text-muted-foreground">/ 40h</p>
                             </div>
                         </div>
                     )
