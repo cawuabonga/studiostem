@@ -429,10 +429,22 @@ export const saveSingleAssignment = async (
     const fieldPath = `${period}.${unitId}`;
 
     if (teacherId) {
-        await updateDoc(assignmentDocRef, { [fieldPath]: teacherId });
+        // Use setDoc with merge to create the document if it doesn't exist
+        await setDoc(assignmentDocRef, { 
+            [period]: { 
+                [unitId]: teacherId 
+            }
+        }, { merge: true });
     } else {
-        // This removes the field from the nested object
-        await updateDoc(assignmentDocRef, { [fieldPath]: deleteField() });
+        // To delete a field, the document must exist. We can still use updateDoc here,
+        // but we must ensure the document exists. A transaction might be safer,
+        // but for this case, we can assume if we are un-assigning, an assignment likely existed.
+        // A safer setDoc approach for deletion:
+        await setDoc(assignmentDocRef, {
+            [period]: {
+                [unitId]: deleteField()
+            }
+        }, { merge: true });
     }
 };
 
@@ -1566,6 +1578,7 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
+
 
 
 
