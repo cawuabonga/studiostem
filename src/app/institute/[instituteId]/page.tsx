@@ -1,26 +1,30 @@
 
+
 import React from 'react';
-import { getInstitute, getPrograms, getInstitutes } from '@/config/firebase';
+import { getInstitute, getPrograms, getInstitutes, getNewsList } from '@/config/firebase';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, GraduationCap, Mail, Phone, MapPin } from 'lucide-react';
+import { Building, GraduationCap, Mail, Phone, MapPin, Newspaper } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 async function getInstituteData(instituteId: string) {
     try {
-        const [institute, programs] = await Promise.all([
+        const [institute, programs, news] = await Promise.all([
             getInstitute(instituteId),
             getPrograms(instituteId),
+            getNewsList(instituteId),
         ]);
         
         if (!institute) {
             return null;
         }
 
-        return { institute, programs };
+        return { institute, programs, news: news.slice(0, 3) }; // Return only the 3 latest news
     } catch (error) {
         console.error("Error fetching institute page data:", error);
         return null;
@@ -34,7 +38,7 @@ export default async function InstitutePublicPage({ params }: { params: { instit
         notFound();
     }
 
-    const { institute, programs } = data;
+    const { institute, programs, news } = data;
     const profile = institute.publicProfile;
 
     return (
@@ -98,6 +102,33 @@ export default async function InstitutePublicPage({ params }: { params: { instit
                                 </CardContent>
                             </Card>
                         )}
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2"><Newspaper /> Últimas Noticias</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {news.length > 0 ? (
+                                    news.map(item => (
+                                        <div key={item.id} className="flex flex-col md:flex-row gap-4 border-b pb-4 last:border-b-0 last:pb-0">
+                                            {item.imageUrl && (
+                                                <div className="w-full md:w-1/3 h-40 relative rounded-md overflow-hidden shrink-0">
+                                                     <Image src={item.imageUrl} alt={item.title} fill className="object-cover" />
+                                                </div>
+                                            )}
+                                            <div className="flex flex-col">
+                                                <p className="text-xs text-muted-foreground">{format(item.createdAt.toDate(), 'dd MMMM, yyyy', { locale: es })}</p>
+                                                <h3 className="font-bold text-lg leading-tight mt-1">{item.title}</h3>
+                                                <p className="text-sm text-muted-foreground mt-2 flex-grow">{item.summary}</p>
+                                                <a href="#" className="text-primary font-semibold text-sm mt-2">Leer más...</a>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-muted-foreground text-center py-8">No hay noticias publicadas recientemente.</p>
+                                )}
+                            </CardContent>
+                        </Card>
                         
                         <Card>
                             <CardHeader>

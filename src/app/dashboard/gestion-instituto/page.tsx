@@ -19,7 +19,7 @@ const instituteModules: {title: string; description: string; href: string; icon:
   {
     title: "Gestionar Noticias",
     description: "Crea y administra las noticias y anuncios para la página pública.",
-    href: "#", // To be implemented
+    href: "/dashboard/gestion-instituto/gestionar-noticias",
     icon: Newspaper,
     permission: "admin:institute:manage",
   },

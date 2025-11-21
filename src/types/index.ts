@@ -123,6 +123,15 @@ export interface InstitutePublicProfile {
     contactEmail?: string;
 }
 
+export interface News {
+  id: string;
+  title: string;
+  summary: string;
+  content: string;
+  imageUrl?: string;
+  createdAt: Timestamp;
+}
+
 
 export interface ProgramModule {
   name: string;

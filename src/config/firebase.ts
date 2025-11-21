@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1591,5 +1591,60 @@ export const saveSchedule = async (instituteId: string, programId: string, year:
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester });
 }
+
+// --- NEWS ---
+export const getNewsList = async (instituteId: string): Promise<News[]> => {
+    const newsCol = getSubCollectionRef(instituteId, 'news');
+    const q = query(newsCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as News));
+};
+
+export const addNews = async (instituteId: string, data: Omit<News, 'id' | 'createdAt'>, imageFile?: File): Promise<string> => {
+    const newsCol = getSubCollectionRef(instituteId, 'news');
+    const newDocRef = doc(newsCol);
+    
+    let imageUrl = '';
+    if (imageFile) {
+        const storagePath = `institutes/${instituteId}/news/${newDocRef.id}`;
+        imageUrl = await uploadFileAndGetURL(imageFile, storagePath);
+    }
+
+    const newsData: Omit<News, 'id'> = {
+        ...data,
+        imageUrl,
+        createdAt: Timestamp.now(),
+    };
+    await setDoc(newDocRef, newsData);
+    return newDocRef.id;
+};
+
+export const updateNews = async (instituteId: string, newsId: string, data: Partial<News>, imageFile?: File): Promise<void> => {
+    const newsRef = doc(db, 'institutes', instituteId, 'news', newsId);
+    
+    const updateData = { ...data };
+    if (imageFile) {
+        const storagePath = `institutes/${instituteId}/news/${newsId}`;
+        updateData.imageUrl = await uploadFileAndGetURL(imageFile, storagePath);
+    }
+
+    await updateDoc(newsRef, updateData);
+};
+
+export const deleteNews = async (instituteId: string, newsItem: News): Promise<void> => {
+    const newsRef = doc(db, 'institutes', instituteId, 'news', newsItem.id);
+    await deleteDoc(newsRef);
+
+    if (newsItem.imageUrl) {
+        try {
+            const storageRef = ref(firebaseStorage, newsItem.imageUrl);
+            await deleteObject(storageRef);
+        } catch (error: any) {
+            if (error.code !== 'storage/object-not-found') {
+                console.error("Error deleting news image from storage:", error);
+            }
+        }
+    }
+};
 
     
