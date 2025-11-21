@@ -14,8 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { updateInstitute } from '@/config/firebase';
 import type { Institute, InstitutePublicProfile } from '@/types';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const profileSchema = z.object({
   bannerUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
@@ -84,17 +85,27 @@ export default function PublicProfileManagementPage() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-start gap-4">
                 <div>
                     <CardTitle>Gestionar Perfil Público del Instituto</CardTitle>
                     <CardDescription>
                         Esta información será visible para todos en la página pública de tu instituto.
                     </CardDescription>
                 </div>
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
-                    Guardar Cambios
-                </Button>
+                <div className="flex items-center gap-2">
+                     {instituteId && (
+                        <Button asChild variant="outline">
+                            <Link href={`/institute/${instituteId}`} target="_blank">
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                                Ver Página Pública
+                            </Link>
+                        </Button>
+                    )}
+                    <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}
+                        Guardar Cambios
+                    </Button>
+                </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -148,3 +159,4 @@ export default function PublicProfileManagementPage() {
     </Card>
   );
 }
+
