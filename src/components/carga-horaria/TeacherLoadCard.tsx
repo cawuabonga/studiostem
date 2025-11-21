@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Separator } from "@/components/ui/separator";
 import type { Unit, Teacher, UnitPeriod, Program, NonTeachingAssignment } from '@/types';
 import { Badge } from '../ui/badge';
-import { Clock } from 'lucide-react';
+import { Clock, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TeacherLoadCardProps {
@@ -16,10 +16,10 @@ interface TeacherLoadCardProps {
     programMap: Map<string, Program>;
 }
 
-const getHoursColor = (hours: number): string => {
-    if (hours > 21) return 'text-red-600 dark:text-red-500';
-    if (hours >= 18) return 'text-green-600 dark:text-green-500';
-    return 'text-muted-foreground';
+const getPeriodHoursColor = (hours: number): string => {
+    if (hours > 40) return 'text-red-600 dark:text-red-500';
+    if (hours === 40) return 'text-green-600 dark:text-green-500';
+    return 'text-amber-600 dark:text-amber-500';
 };
 
 const PeriodColumn = ({ 
@@ -33,7 +33,7 @@ const PeriodColumn = ({
     nonTeaching: NonTeachingAssignment[], 
     programMap: Map<string, Program> 
 }) => {
-    const teachingHours = units.reduce((acc, unit) => acc + (unit.totalHours || 0), 0);
+    const teachingHours = units.reduce((acc, unit) => acc + ((unit.theoreticalHours || 0) + (unit.practicalHours || 0)), 0);
     const nonTeachingHours = nonTeaching.reduce((acc, a) => acc + a.assignedHours, 0);
     const totalPeriodHours = teachingHours + nonTeachingHours;
 
@@ -50,7 +50,7 @@ const PeriodColumn = ({
                                 <li key={unit.id} className="flex justify-between items-center gap-1 text-xs">
                                     <span className="flex-1">{unit.name}</span>
                                     <Badge variant="outline">{programMap.get(unit.programId)?.abbreviation}</Badge>
-                                    <Badge variant="secondary">{unit.totalHours}h</Badge>
+                                    <Badge variant="secondary">{(unit.theoreticalHours || 0) + (unit.practicalHours || 0)}h</Badge>
                                 </li>
                             ))}
                         </ul>
@@ -74,7 +74,8 @@ const PeriodColumn = ({
              <Separator />
             <div className="flex items-center justify-end font-bold text-sm">
                 <span className="mr-2">Total Horas Período:</span>
-                 <div className={cn("flex items-center gap-2", getHoursColor(totalPeriodHours))}>
+                 <div className={cn("flex items-center gap-2", getPeriodHoursColor(totalPeriodHours))}>
+                    {totalPeriodHours > 40 && <AlertTriangle className="h-4 w-4"/>}
                     <Clock className="h-4 w-4"/>
                     <span>{totalPeriodHours}h</span>
                 </div>
@@ -91,8 +92,8 @@ export function TeacherLoadCard({ teacher, units, nonTeachingAssignments, progra
         const marJulNonTeaching = nonTeachingAssignments.filter(a => a.period === 'MAR-JUL');
         const agoDicNonTeaching = nonTeachingAssignments.filter(a => a.period === 'AGO-DIC');
 
-        const marJulHours = marJulUnits.reduce((acc, u) => acc + u.totalHours, 0) + marJulNonTeaching.reduce((acc, a) => acc + a.assignedHours, 0);
-        const agoDicHours = agoDicUnits.reduce((acc, u) => acc + u.totalHours, 0) + agoDicNonTeaching.reduce((acc, a) => acc + a.assignedHours, 0);
+        const marJulHours = marJulUnits.reduce((acc, u) => acc + ((u.theoreticalHours || 0) + (u.practicalHours || 0)), 0) + marJulNonTeaching.reduce((acc, a) => acc + a.assignedHours, 0);
+        const agoDicHours = agoDicUnits.reduce((acc, u) => acc + ((u.theoreticalHours || 0) + (u.practicalHours || 0)), 0) + agoDicNonTeaching.reduce((acc, a) => acc + a.assignedHours, 0);
 
         return { marJulUnits, agoDicUnits, marJulNonTeaching, agoDicNonTeaching, totalAnnualHours: marJulHours + agoDicHours };
     }, [units, nonTeachingAssignments]);
@@ -116,9 +117,9 @@ export function TeacherLoadCard({ teacher, units, nonTeachingAssignments, progra
             <CardFooter className="p-4 bg-muted/50">
                  <div className="flex items-center justify-end w-full font-bold text-base">
                     <span>Carga Horaria Anual Total:</span>
-                    <div className={cn("flex items-center gap-2 ml-4", getHoursColor(totalAnnualHours))}>
+                    <div className={cn("flex items-center gap-2 ml-4")}>
                         <Clock className="h-5 w-5"/>
-                        <span>{totalAnnualHours}</span>
+                        <span>{totalAnnualHours}h</span>
                     </div>
                 </div>
             </CardFooter>
