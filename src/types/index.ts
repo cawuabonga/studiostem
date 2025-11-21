@@ -111,7 +111,18 @@ export interface Institute {
   name: string;
   logoUrl?: string;
   primaryColor?: string; // HSL format e.g., "225 65% 32%"
+  publicProfile?: InstitutePublicProfile;
 }
+
+export interface InstitutePublicProfile {
+    bannerUrl?: string;
+    slogan?: string;
+    aboutUs?: string;
+    contactAddress?: string;
+    contactPhone?: string;
+    contactEmail?: string;
+}
+
 
 export interface ProgramModule {
   name: string;
@@ -436,6 +447,7 @@ export type Permission =
   | 'admin:payments:validate'
   | 'admin:access-control:manage'
   | 'admin:attendance:report'
+  | 'admin:institute:manage'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
@@ -464,6 +476,13 @@ export interface Role {
 }
 
 export const PERMISSIONS_CONFIG: { category: string; description: string; permissions: { id: Permission; label: string }[] }[] = [
+    {
+        category: 'Gestión del Instituto',
+        description: 'Permisos relacionados con la configuración general y la página pública del instituto.',
+        permissions: [
+            { id: 'admin:institute:manage', label: 'Gestionar Perfil Público del Instituto' },
+        ],
+    },
     {
         category: 'Gestión Académica',
         description: 'Permisos relacionados con la administración de programas, unidades, asignaciones y matrículas.',
