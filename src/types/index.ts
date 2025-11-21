@@ -171,8 +171,8 @@ export interface Teacher {
   phone: string;
   specialty: string;
   active: boolean; // Could be derived from linked status or a specific field
-  programName?: string;
   condition: 'NOMBRADO' | 'CONTRATADO';
+  programName?: string;
 }
 
 export interface Assignment {

@@ -1,14 +1,14 @@
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { List, BookOpen, Users, LayoutDashboard, Settings } from "lucide-react";
+import { LayoutDashboard, Newspaper, Image as GalleryIcon } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { Permission } from "@/types";
 
-const instituteModules = [
+const instituteModules: {title: string; description: string; href: string; icon: React.ElementType; permission: Permission}[] = [
   {
     title: "Perfil Público del Instituto",
     description: "Edita la información que se muestra en la página pública de tu instituto.",
@@ -16,14 +16,20 @@ const instituteModules = [
     icon: LayoutDashboard,
     permission: "admin:institute:manage",
   },
-  // Futuros módulos de gestión del instituto irían aquí
-  // {
-  //   title: "Configuraciones Generales",
-  //   description: "Ajustes de notificaciones, temas y otros.",
-  //   href: "/dashboard/gestion-instituto/configuracion",
-  //   icon: Settings,
-  //   permission: "admin:institute:manage",
-  // },
+  {
+    title: "Gestionar Noticias",
+    description: "Crea y administra las noticias y anuncios para la página pública.",
+    href: "#", // To be implemented
+    icon: Newspaper,
+    permission: "admin:institute:manage",
+  },
+   {
+    title: "Gestionar Galería de Imágenes",
+    description: "Sube y organiza álbumes de fotos para mostrar la vida en el campus.",
+    href: "#", // To be implemented
+    icon: GalleryIcon,
+    permission: "admin:institute:manage",
+  },
 ];
 
 export default function GestionInstitutoPage() {
