@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { getInstitute, getPrograms } from '@/config/firebase';
+import { getInstitute, getPrograms, getInstitutes } from '@/config/firebase';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building, GraduationCap, Mail, Phone, MapPin } from 'lucide-react';
@@ -139,8 +139,8 @@ export default async function InstitutePublicPage({ params }: { params: { instit
 
 // Generate static paths for existing institutes
 export async function generateStaticParams() {
-    const institutes = await getInstitutes();
-    return institutes.map(institute => ({
-        instituteId: institute.id,
-    }));
+  const institutes = await getInstitutes();
+  return institutes.map(institute => ({
+    instituteId: institute.id,
+  }));
 }
