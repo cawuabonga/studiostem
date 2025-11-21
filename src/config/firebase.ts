@@ -1,5 +1,7 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
+import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -9,10 +11,12 @@ const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
   authDomain: "stem-v2-4y6a0.firebaseapp.com",
   projectId: "stem-v2-4y6a0",
-  storageBucket: "stem-v2-4y6a0.appspot.com",
+  storageBucket: "stem-v2-4y6a0.firebasestorage.app",
   messagingSenderId: "865497414457",
-  appId: "1:865497414457:web:0ab4345df399f13bfc86e8"
+  appId: "1:865497414457:web:0ab4345df399f13bfc86e8",
+  measurementId: "G-5FP9BYXHPF"
 };
+
 
 let app;
 if (!getApps().length) {
@@ -20,6 +24,12 @@ if (!getApps().length) {
 } else {
   app = getApp();
 }
+
+// Initialize Analytics if running in the browser
+if (typeof window !== 'undefined') {
+    getAnalytics(app);
+}
+
 
 const auth = getAuth(app);
 const db = getFirestore(app);
