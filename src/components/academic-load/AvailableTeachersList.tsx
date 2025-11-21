@@ -1,3 +1,6 @@
+// This component is no longer used directly in the dashboard.
+// It is replaced by TeacherWorkloadList for a more detailed view.
+// This file can be removed in the future.
 "use client";
 
 import React from 'react';

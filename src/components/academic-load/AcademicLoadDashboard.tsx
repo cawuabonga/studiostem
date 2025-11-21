@@ -15,6 +15,8 @@ import { AssignedUnitsList } from './AssignedUnitsList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AvailableTeachersList } from './AvailableTeachersList';
 import { FullTeachersList } from './FullTeachersList';
+import { TeacherLoadCard } from '../carga-horaria/TeacherLoadCard';
+import { TeacherWorkloadList } from './TeacherWorkloadList';
 
 export function AcademicLoadDashboard() {
   const { user, hasPermission, instituteId } = useAuth();
@@ -96,7 +98,7 @@ export function AcademicLoadDashboard() {
   
   const staffMap = useMemo(() => new Map(allStaff.map(s => [s.documentId, s.displayName])), [allStaff]);
   
-  const { fullTeachers, availableTeachers } = useMemo(() => {
+  const teacherWorkloads = useMemo(() => {
     const teacherRoleId = allRoles.find(r => r.name.toLowerCase() === 'docente')?.id;
     const coordinatorRoleId = allRoles.find(r => r.name.toLowerCase() === 'coordinador')?.id;
 
@@ -135,29 +137,12 @@ export function AcademicLoadDashboard() {
         }
       });
     
-    const full: any[] = [];
-    const available: any[] = [];
-
-    Object.values(teacherWorkload).forEach(load => {
-        const totalHours = Math.round(load.teachingHours + load.nonTeachingHours);
-        const loadWithDetails = { 
-            ...load, 
-            totalHours,
-            teachingHours: Math.round(load.teachingHours),
-            nonTeachingHours: Math.round(load.nonTeachingHours) 
-        };
-        
-        if (totalHours >= 40) {
-            full.push(loadWithDetails);
-        } else {
-            available.push(loadWithDetails);
-        }
-    });
-
-    return { 
-        fullTeachers: full.sort((a,b) => b.totalHours - a.totalHours), 
-        availableTeachers: available.sort((a,b) => b.totalHours - a.totalHours) 
-    };
+    return Object.values(teacherWorkload).map(load => ({
+        ...load,
+        teachingHours: Math.round(load.teachingHours),
+        nonTeachingHours: Math.round(load.nonTeachingHours),
+        totalHours: Math.round(load.teachingHours + load.nonTeachingHours)
+    })).sort((a,b) => b.totalHours - a.totalHours);
 
   }, [selectedProgramId, selectedPeriod, allStaff, allRoles, allAssignments, nonTeachingAssignments, allUnits]);
 
@@ -246,10 +231,7 @@ export function AcademicLoadDashboard() {
                     <Skeleton className="h-64 w-full" />
                 </div>
             ) : selectedProgramId ? (
-                 <div className="grid md:grid-cols-2 gap-6 items-start mt-6">
-                    <AvailableTeachersList teachers={availableTeachers} />
-                    <FullTeachersList teachers={fullTeachers} />
-                </div>
+                <TeacherWorkloadList teacherWorkloads={teacherWorkloads} />
             ) : (
                 <p className="text-center text-muted-foreground py-8">Por favor, selecciona un programa para ver la carga de docentes.</p>
             )}
