@@ -123,7 +123,7 @@ export function AcademicLoadDashboard() {
         const teacherId = periodAssignments[unitId];
         const unit = unitMap.get(unitId);
         if (teacherId && unit && teacherWorkload[teacherId] && unit.period === selectedPeriod) {
-            const weeklyHours = unit.totalHours / unit.totalWeeks;
+            const weeklyHours = (unit.theoreticalHours || 0) + (unit.practicalHours || 0);
             teacherWorkload[teacherId].teachingHours += weeklyHours;
         }
     }
