@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    if (instituteId && !institute) {
+    if (instituteId && (!institute || institute.id !== instituteId)) {
         getInstitute(instituteId).then(data => {
             setInstituteObject(data);
         }).catch(err => {
@@ -191,6 +191,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if(refreshedFirebaseUser) {
             await fetchAndSetUser(refreshedFirebaseUser);
         }
+        if (instituteId) {
+          const instituteData = await getInstitute(instituteId);
+          setInstituteObject(instituteData);
+        }
         setLoading(false);
     }
   };
@@ -257,3 +261,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+    

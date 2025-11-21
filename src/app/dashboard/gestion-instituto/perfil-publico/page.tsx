@@ -8,18 +8,24 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { updateInstitute } from '@/config/firebase';
+import { updateInstitute, uploadFileAndGetURL } from '@/config/firebase';
 import type { Institute, InstitutePublicProfile } from '@/types';
 import { Loader2, Save, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import Image from 'next/image';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const profileSchema = z.object({
-  bannerUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
+  bannerImage: z.instanceof(FileList).optional()
+    .refine(files => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es 5MB.`)
+    .refine(files => !files || files.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type), "Solo formatos .jpg, .jpeg, .png y .webp."),
   slogan: z.string().optional(),
   aboutUs: z.string().optional(),
   contactAddress: z.string().optional(),
@@ -30,14 +36,14 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export default function PublicProfileManagementPage() {
-  const { institute, instituteId, loading: authLoading } = useAuth();
+  const { institute, instituteId, loading: authLoading, reloadUser } = useAuth();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      bannerUrl: '',
+      bannerImage: undefined,
       slogan: '',
       aboutUs: '',
       contactAddress: '',
@@ -48,7 +54,11 @@ export default function PublicProfileManagementPage() {
 
   useEffect(() => {
     if (institute?.publicProfile) {
-      form.reset(institute.publicProfile);
+      // Don't set bannerImage here, as it's a file input
+      form.reset({
+        ...institute.publicProfile,
+        bannerImage: undefined,
+      });
     }
   }, [institute, form]);
 
@@ -59,7 +69,27 @@ export default function PublicProfileManagementPage() {
     }
     setIsSubmitting(true);
     try {
-      await updateInstitute(instituteId, { publicProfile: data });
+      let bannerUrl = institute?.publicProfile?.bannerUrl || '';
+
+      // Check if a new file is uploaded
+      if (data.bannerImage && data.bannerImage.length > 0) {
+        const file = data.bannerImage[0];
+        const storagePath = `institutes/${instituteId}/public/banner`;
+        bannerUrl = await uploadFileAndGetURL(file, storagePath);
+      }
+      
+      const profileData: InstitutePublicProfile = {
+        bannerUrl: bannerUrl,
+        slogan: data.slogan,
+        aboutUs: data.aboutUs,
+        contactAddress: data.contactAddress,
+        contactPhone: data.contactPhone,
+        contactEmail: data.contactEmail,
+      };
+
+      await updateInstitute(instituteId, { publicProfile: profileData });
+      await reloadUser(); // Reload user/institute context to get the latest data
+      
       toast({ title: 'Perfil Actualizado', description: 'La información pública del instituto ha sido guardada.' });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -109,10 +139,16 @@ export default function PublicProfileManagementPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
-            <FormField control={form.control} name="bannerUrl" render={({ field }) => (
+            <FormField control={form.control} name="bannerImage" render={({ field }) => (
               <FormItem>
-                <FormLabel>URL de Imagen de Banner</FormLabel>
-                <FormControl><Input placeholder="https://ejemplo.com/banner.png" {...field} /></FormControl>
+                <FormLabel>Imagen de Banner</FormLabel>
+                {institute?.publicProfile?.bannerUrl && (
+                    <div className="relative h-40 w-full rounded-md overflow-hidden border">
+                         <Image src={institute.publicProfile.bannerUrl} alt="Banner actual" fill className="object-cover" />
+                    </div>
+                )}
+                <FormControl><Input type="file" {...form.register('bannerImage')} /></FormControl>
+                <FormDescription>Sube una nueva imagen para reemplazar la actual. Tamaño máximo: 5MB.</FormDescription>
                 <FormMessage />
               </FormItem>
             )} />
@@ -160,3 +196,4 @@ export default function PublicProfileManagementPage() {
   );
 }
 
+    
