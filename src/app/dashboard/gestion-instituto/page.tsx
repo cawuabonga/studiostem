@@ -26,7 +26,7 @@ const instituteModules: {title: string; description: string; href: string; icon:
    {
     title: "Gestionar Galería de Imágenes",
     description: "Sube y organiza álbumes de fotos para mostrar la vida en el campus.",
-    href: "#", // To be implemented
+    href: "/dashboard/gestion-instituto/galeria",
     icon: GalleryIcon,
     permission: "admin:institute:manage",
   },

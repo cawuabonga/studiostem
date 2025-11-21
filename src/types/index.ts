@@ -132,6 +132,21 @@ export interface News {
   createdAt: Timestamp;
 }
 
+export interface Album {
+    id: string;
+    name: string;
+    description: string;
+    coverImageUrl?: string;
+    createdAt: Timestamp;
+}
+
+export interface Photo {
+    id: string;
+    albumId: string;
+    url: string;
+    createdAt: Timestamp;
+}
+
 
 export interface ProgramModule {
   name: string;
