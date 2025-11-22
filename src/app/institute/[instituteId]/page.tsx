@@ -4,6 +4,7 @@ import React from 'react';
 import { getInstitute, getPrograms, getInstitutes, getNewsList } from '@/config/firebase';
 import { notFound } from 'next/navigation';
 import { InstitutePageView } from '@/components/institute/InstitutePageView';
+import { Timestamp } from 'firebase/firestore';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
@@ -19,7 +20,14 @@ async function getInstituteData(instituteId: string) {
             return null;
         }
 
-        return { institute, programs, news: news.slice(0, 3) }; // Return only the 3 latest news
+        // Convert Firestore Timestamps to strings before passing to client component
+        const serializableNews = news.slice(0, 3).map(item => ({
+            ...item,
+            createdAt: (item.createdAt as Timestamp).toDate().toISOString(),
+        }));
+
+
+        return { institute, programs, news: serializableNews };
     } catch (error) {
         console.error("Error fetching institute page data:", error);
         return null;

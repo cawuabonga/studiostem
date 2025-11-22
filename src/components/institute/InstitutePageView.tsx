@@ -1,4 +1,5 @@
 
+
 "use client"; // This directive marks the component as a Client Component
 
 import React from 'react';
@@ -13,10 +14,15 @@ import { Button } from '@/components/ui/button';
 import { hslToHex } from '@/lib/utils';
 import type { Institute, Program, News } from '@/types';
 
+// The News type here will receive a string for createdAt
+interface SerializableNews extends Omit<News, 'createdAt'> {
+  createdAt: string;
+}
+
 interface InstitutePageViewProps {
     institute: Institute;
     programs: Program[];
-    news: News[];
+    news: SerializableNews[];
 }
 
 export function InstitutePageView({ institute, programs, news }: InstitutePageViewProps) {
@@ -151,7 +157,7 @@ export function InstitutePageView({ institute, programs, news }: InstitutePageVi
                                             </div>
                                         )}
                                         <CardHeader>
-                                            <CardDescription>{format(item.createdAt.toDate(), 'dd MMMM, yyyy', { locale: es })}</CardDescription>
+                                            <CardDescription>{format(new Date(item.createdAt), 'dd MMMM, yyyy', { locale: es })}</CardDescription>
                                             <CardTitle className="leading-tight">{item.title}</CardTitle>
                                         </CardHeader>
                                         <CardContent className="flex-grow">
