@@ -104,7 +104,7 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
               <FormControl>
                 <Input placeholder="https://ejemplo.com/imagen.png" {...field} />
               </FormControl>
-              <FormDescription>Esta imagen aparecerá en la página de inicio de sesión.</FormDescription>
+              <FormDescription>Esta imagen aparecerá en la página de inicio de sesión. Déjelo en blanco si no desea una imagen.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

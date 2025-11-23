@@ -40,7 +40,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, title }) => {
 
   const imageContainerClasses = {
     side: "w-full md:w-1/2 p-8 md:p-12",
-    center: "w-full max-w-lg mx-auto p-8 md:p-12",
+    center: "w-full max-w-lg mx-auto p-8 md:p-12 hidden", // Ocultar en modo centrado
   };
   
   const currentLayout = design?.layout || 'side';

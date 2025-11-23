@@ -3,6 +3,7 @@
 
 import { AddLoginImageForm } from "@/components/admin/AddLoginImageForm";
 import { LoginImagesTable } from "@/components/admin/LoginImagesTable";
+import { LoginDesignForm } from "@/components/superadmin/LoginDesignForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,13 +33,13 @@ export default function ManageLoginImagePage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Subir Nueva Imagen para el Login</CardTitle>
+          <CardTitle>Configuración de Diseño de Login</CardTitle>
           <CardDescription>
-            Sube imágenes que podrán ser utilizadas en la página de inicio de sesión.
+            Personaliza la apariencia de la página de inicio de sesión para todos los usuarios.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <AddLoginImageForm onImageUploaded={handleDataChange} />
+          <LoginDesignForm onSettingsSaved={handleDataChange} />
         </CardContent>
       </Card>
       
@@ -52,6 +53,8 @@ export default function ManageLoginImagePage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+           <AddLoginImageForm onImageUploaded={handleDataChange} />
+           <Separator className="my-6" />
           <LoginImagesTable key={refreshKey} onDataChange={handleDataChange} />
         </CardContent>
       </Card>
