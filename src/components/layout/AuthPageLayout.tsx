@@ -5,11 +5,10 @@ import { getLoginDesignSettings } from '@/config/firebase';
 import type { LoginDesign } from '@/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
-import { LoginPageImageDisplay } from '../common/LoginPageImageDisplay';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import AppLogo from '../common/AppLogo';
-import { Lock, Mail } from 'lucide-react';
+import Image from 'next/image';
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -34,26 +33,34 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
   if (loading) {
     return (
        <div className="min-h-screen flex items-center justify-center bg-background">
-         <Skeleton className="h-[600px] w-full max-w-4xl" />
+         <Skeleton className="h-[650px] w-full max-w-4xl" />
        </div>
     )
   }
   
-  const primaryColor = design?.backgroundColor || '#4f46e5'; // Un morado por defecto
+  const primaryColor = design?.backgroundColor || '#4f46e5';
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="relative w-full max-w-4xl h-[650px] flex shadow-2xl rounded-2xl overflow-hidden">
         
         {/* Left Panel */}
-        <div className="w-1/2 h-full hidden md:flex flex-col justify-between p-12 text-white" style={{ backgroundColor: primaryColor }}>
-            <div>
+        <div className="w-1/2 h-full hidden md:flex flex-col justify-between p-12 text-white relative" style={{ backgroundColor: primaryColor }}>
+            {design?.imageUrl && (
+              <Image 
+                src={design.imageUrl}
+                alt="Imagen de fondo del login"
+                fill
+                className="object-cover"
+              />
+            )}
+            <div className="absolute inset-0 bg-black/30"></div>
+            
+            <div className="relative z-10">
               <AppLogo className="text-white text-lg" />
             </div>
-            <div className="relative w-full h-64">
-                 <LoginPageImageDisplay imageUrl={design?.imageUrl} />
-            </div>
-             <div className="flex gap-4">
+           
+             <div className="relative z-10 flex gap-4">
                 <Button 
                     variant="ghost" 
                     className={cn(
