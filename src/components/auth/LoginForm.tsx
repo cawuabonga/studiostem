@@ -6,11 +6,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { GoogleSignInButton } from './GoogleSignInButton';
+import { Mail, Lock } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Dirección de correo inválida.' }),
@@ -41,10 +41,13 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Correo Electrónico</FormLabel>
-              <FormControl>
-                <Input type="email" placeholder="tu@email.com" {...field} />
-              </FormControl>
+              <FormLabel className="sr-only">Correo Electrónico</FormLabel>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <FormControl>
+                  <Input type="email" placeholder="Email" {...field} className="pl-10 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary" />
+                </FormControl>
+              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -54,37 +57,39 @@ export function LoginForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Contraseña</FormLabel>
-              <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
-              </FormControl>
+              <FormLabel className="sr-only">Contraseña</FormLabel>
+               <div className="relative">
+                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <FormControl>
+                  <Input type="password" placeholder="Contraseña" {...field} className="pl-10 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary"/>
+                </FormControl>
+               </div>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? 'Iniciando Sesión...' : 'Iniciar Sesión'}
-        </Button>
+
+        <div className="flex items-center justify-between">
+            <Link href="#" className="text-sm text-primary hover:underline">
+                ¿Olvidaste tu contraseña?
+            </Link>
+             <Button type="submit" className="rounded-full px-8" disabled={loading}>
+                {loading ? 'Iniciando...' : 'INICIAR SESIÓN'}
+            </Button>
+        </div>
         
         <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-white px-2 text-muted-foreground">
               O continuar con
             </span>
           </div>
         </div>
 
         <GoogleSignInButton />
-
-        <p className="text-center text-sm text-muted-foreground">
-          ¿No tienes una cuenta?{' '}
-          <Link href="/register" className="font-medium text-primary hover:underline">
-            Regístrate
-          </Link>
-        </p>
       </form>
     </Form>
   );
