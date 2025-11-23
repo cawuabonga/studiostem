@@ -15,11 +15,14 @@ import { saveLoginDesignSettings, getLoginDesignSettings } from '@/config/fireba
 import type { LoginDesign } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
+import { Slider } from '../ui/slider';
 
 const designSchema = z.object({
   title: z.string().optional(),
   slogan: z.string().optional(),
   textAlign: z.enum(['left', 'center', 'right']).optional(),
+  titleSize: z.enum(['text-2xl', 'text-3xl', 'text-4xl']).optional(),
+  sloganSize: z.enum(['text-base', 'text-lg', 'text-xl']).optional(),
   imageUrl: z.string().url({ message: "Debe ser una URL válida." }).or(z.literal('')),
   backgroundColor: z.string().min(1, "El color de fondo es requerido."),
   textColor: z.string().min(1, "El color de texto es requerido."),
@@ -43,6 +46,8 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
       title: 'SISTEMA TECNOLÓGICO DE EDUCACIÓN MODULAR',
       slogan: 'Una nueva forma de gestionar la educación.',
       textAlign: 'left',
+      titleSize: 'text-3xl',
+      sloganSize: 'text-lg',
       imageUrl: '',
       backgroundColor: '#1c3d5a',
       textColor: '#ffffff',
@@ -56,11 +61,12 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
       try {
         const settings = await getLoginDesignSettings();
         if (settings) {
-          // Ensure all optional string fields have a default empty string value
           form.reset({
             title: settings.title || '',
             slogan: settings.slogan || '',
             textAlign: settings.textAlign || 'left',
+            titleSize: settings.titleSize || 'text-3xl',
+            sloganSize: settings.sloganSize || 'text-lg',
             imageUrl: settings.imageUrl || '',
             backgroundColor: settings.backgroundColor || '#1c3d5a',
             textColor: settings.textColor || '#ffffff',
@@ -161,6 +167,46 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
             </FormItem>
           )}
         />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+            control={form.control}
+            name="titleSize"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Tamaño del Título</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="text-2xl">Normal</SelectItem>
+                        <SelectItem value="text-3xl">Grande</SelectItem>
+                        <SelectItem value="text-4xl">Extra Grande</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="sloganSize"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Tamaño del Eslogan</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                    <SelectContent>
+                        <SelectItem value="text-base">Normal</SelectItem>
+                        <SelectItem value="text-lg">Grande</SelectItem>
+                        <SelectItem value="text-xl">Extra Grande</SelectItem>
+                    </SelectContent>
+                </Select>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField

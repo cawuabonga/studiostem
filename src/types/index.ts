@@ -99,7 +99,10 @@ export interface LoginDesign {
   title?: string;
   slogan?: string;
   textAlign?: 'left' | 'center' | 'right';
+  titleSize?: 'text-2xl' | 'text-3xl' | 'text-4xl';
+  sloganSize?: 'text-base' | 'text-lg' | 'text-xl';
 }
+
 
 export interface LoginImage {
   id: string;
