@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
-import AppLogo from '../common/AppLogo';
 import Image from 'next/image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
@@ -50,14 +49,6 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
        </div>
     )
   }
-  
-  const primaryColor = design?.backgroundColor || '#1c3d5a';
-  const textColor = design?.textColor || '#ffffff';
-  const textAlignClass = {
-    left: 'items-start text-left',
-    center: 'items-center text-center',
-    right: 'items-end text-right',
-  }[design?.textAlign || 'left'];
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -78,17 +69,16 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
 
         {/* Right Panel - Form */}
         <div className="w-full h-full flex flex-col justify-center p-8 sm:p-12 overflow-y-auto">
-            <AppLogo className="mb-4 text-2xl" />
-            <h2 className="text-3xl font-bold font-headline text-gray-800">{design?.title || (formType === 'login' ? 'Bienvenido de Vuelta' : 'Crea tu Cuenta')}</h2>
-            <p className="text-muted-foreground mt-2 mb-8">
-              {design?.slogan}{' '}
+            <h1 className="text-3xl font-bold font-headline text-gray-800">{design?.title || 'SISTEMA TECNOLÓGICO DE EDUCACIÓN MODULAR'}</h1>
+            <p className="text-muted-foreground text-lg mt-2 mb-8">{design?.slogan || 'Plataforma Educativa'}</p>
+            {children}
+             <div className="text-center text-sm text-muted-foreground mt-6">
                 {formType === 'login' ? (
                     <>¿No tienes una cuenta? <Button variant="link" className="p-0 h-auto" onClick={() => router.push('/register')}>Crea una ahora.</Button></>
                 ) : (
                     <>¿Ya tienes una cuenta? <Button variant="link" className="p-0 h-auto" onClick={() => router.push('/')}>Inicia sesión.</Button></>
                 )}
-            </p>
-            {children}
+            </div>
             
              {institutes.length > 0 && (
               <div className="mt-12 text-center">
