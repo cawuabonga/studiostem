@@ -8,8 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
-import { User, Mail, Lock } from 'lucide-react';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 const registerSchema = z.object({
@@ -44,13 +42,10 @@ export function RegisterForm() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="sr-only">Nombre Completo</FormLabel>
-               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <FormLabel className="font-semibold">Nombre Completo</FormLabel>
                 <FormControl>
-                  <Input placeholder="Nombre Completo" {...field} className="pl-10 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary" />
+                  <Input placeholder="Tu Nombre Completo" {...field} className="h-12" />
                 </FormControl>
-              </div>
               <FormMessage />
             </FormItem>
           )}
@@ -60,13 +55,10 @@ export function RegisterForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="sr-only">Email</FormLabel>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <FormControl>
-                  <Input type="email" placeholder="Email" {...field} className="pl-10 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary"/>
-                </FormControl>
-              </div>
+              <FormLabel className="font-semibold">Correo Electrónico</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="tu@email.com" {...field} className="h-12"/>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -76,35 +68,20 @@ export function RegisterForm() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="sr-only">Contraseña</FormLabel>
-               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <FormLabel className="font-semibold">Contraseña</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="Contraseña" {...field} className="pl-10 border-0 border-b-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-primary"/>
+                  <Input type="password" placeholder="••••••••" {...field} className="h-12"/>
                 </FormControl>
-              </div>
               <FormMessage />
             </FormItem>
           )}
         />
-        <div className="flex justify-end">
-             <Button type="submit" className="rounded-full px-8" disabled={loading}>
-                {loading ? 'Creando...' : 'REGISTRARSE'}
+        <div className="space-y-4 pt-4">
+             <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+                {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </Button>
+            <GoogleSignInButton />
         </div>
-        
-         <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-2 text-muted-foreground">
-              O registrarse con
-            </span>
-          </div>
-        </div>
-
-        <GoogleSignInButton />
       </form>
     </Form>
   );

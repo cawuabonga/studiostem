@@ -32,17 +32,17 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
   
   if (loading) {
     return (
-       <div className="min-h-screen flex items-center justify-center bg-background">
+       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
          <Skeleton className="h-[650px] w-full max-w-4xl" />
        </div>
     )
   }
   
-  const primaryColor = design?.backgroundColor || '#4f46e5';
+  const primaryColor = design?.backgroundColor || '#1E3A8A';
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="relative w-full max-w-4xl h-[650px] flex shadow-2xl rounded-2xl overflow-hidden">
+      <div className="w-full max-w-4xl h-[650px] flex shadow-2xl rounded-lg overflow-hidden">
         
         {/* Left Panel */}
         <div className="w-1/2 h-full hidden md:flex flex-col justify-between p-12 text-white relative" style={{ backgroundColor: primaryColor }}>
@@ -51,55 +51,34 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
                 src={design.imageUrl}
                 alt="Imagen de fondo del login"
                 fill
-                className="object-cover"
+                className="object-cover opacity-20"
               />
             )}
-            <div className="absolute inset-0 bg-black/30"></div>
-            
             <div className="relative z-10">
-              <AppLogo className="text-white text-lg" />
+                <h1 className="text-4xl font-bold font-headline">STEM</h1>
+                <p className="text-lg mt-2">Sistema Tecnológico de Educación Modular</p>
             </div>
            
-             <div className="relative z-10 flex gap-4">
-                <Button 
-                    variant="ghost" 
-                    className={cn(
-                        "text-lg font-bold rounded-full px-8 py-6 transition-all duration-300", 
-                        formType === 'login' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    )}
-                    onClick={() => router.push('/')}
-                >
-                    INICIAR SESIÓN
-                </Button>
-                <Button 
-                    variant="ghost" 
-                     className={cn(
-                        "text-lg font-bold rounded-full px-8 py-6 transition-all duration-300", 
-                        formType === 'register' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'
-                    )}
-                    onClick={() => router.push('/register')}
-                >
-                    REGISTRARSE
-                </Button>
+             <div className="relative z-10">
+                <p className="text-lg font-bold">¡Bienvenido!</p>
+                <p className="text-sm text-white/80 mt-2">
+                    Gestiona tu educación, accede a tus cursos y mantente conectado con tu instituto.
+                </p>
             </div>
         </div>
 
         {/* Right Panel */}
         <div className="w-full md:w-1/2 h-full bg-white flex flex-col justify-center p-8 md:p-12">
-            {/* Curved border effect */}
-            <div className="absolute hidden md:block top-0 left-1/2 w-32 h-full bg-white transform -translate-x-1/2">
-                <div className="h-full w-full bg-gray-100 rounded-tr-[100px]"></div>
-            </div>
-             <div className="absolute hidden md:block top-0 left-1/2 w-32 h-full transform -translate-x-full">
-                <div className="h-full w-full bg-white rounded-tl-[100px]" style={{ backgroundColor: primaryColor }}></div>
-            </div>
-
-            <div className="relative z-10">
-                <AppLogo className="mb-4 text-center text-3xl" useAcronym={true} />
-                <h2 className="text-2xl font-bold text-center mb-2">{formType === 'login' ? 'Bienvenido de Vuelta' : 'Crea tu Cuenta'}</h2>
-                <p className="text-muted-foreground text-center mb-8">{formType === 'login' ? 'Inicia sesión para continuar' : 'Únete a nuestra plataforma'}</p>
-                {children}
-            </div>
+            <AppLogo className="mb-4 text-2xl" />
+            <h2 className="text-3xl font-bold font-headline text-gray-800">{formType === 'login' ? 'Bienvenido de Vuelta' : 'Crea tu Cuenta'}</h2>
+            <p className="text-muted-foreground mt-2 mb-8">
+                {formType === 'login' ? (
+                    <>¿No tienes una cuenta? <Button variant="link" className="p-0 h-auto" onClick={() => router.push('/register')}>Crea una ahora.</Button></>
+                ) : (
+                    <>¿Ya tienes una cuenta? <Button variant="link" className="p-0 h-auto" onClick={() => router.push('/')}>Inicia sesión.</Button></>
+                )}
+            </p>
+            {children}
         </div>
       </div>
     </div>
