@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -13,8 +14,12 @@ import { useToast } from '@/hooks/use-toast';
 import { saveLoginDesignSettings, getLoginDesignSettings } from '@/config/firebase';
 import type { LoginDesign } from '@/types';
 import { Skeleton } from '../ui/skeleton';
+import { Textarea } from '../ui/textarea';
 
 const designSchema = z.object({
+  title: z.string().optional(),
+  slogan: z.string().optional(),
+  textAlign: z.enum(['left', 'center', 'right']).optional(),
   imageUrl: z.string().url({ message: "Debe ser una URL válida." }).or(z.literal('')),
   backgroundColor: z.string().min(1, "El color de fondo es requerido."),
   textColor: z.string().min(1, "El color de texto es requerido."),
@@ -35,9 +40,12 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
   const form = useForm<DesignFormValues>({
     resolver: zodResolver(designSchema),
     defaultValues: {
+      title: 'SISTEMA TECNOLÓGICO DE EDUCACIÓN MODULAR',
+      slogan: 'Una nueva forma de gestionar la educación.',
+      textAlign: 'left',
       imageUrl: '',
-      backgroundColor: '#D5DAE8', // Default from globals.css
-      textColor: '#334155', // Default from globals.css
+      backgroundColor: '#1c3d5a',
+      textColor: '#ffffff',
       layout: 'side',
     },
   });
@@ -95,16 +103,51 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
+         <FormField
           control={form.control}
-          name="imageUrl"
+          name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>URL de la Imagen Principal</FormLabel>
+              <FormLabel>Título Principal</FormLabel>
               <FormControl>
-                <Input placeholder="https://ejemplo.com/imagen.png" {...field} />
+                <Textarea {...field} />
               </FormControl>
-              <FormDescription>Esta imagen aparecerá en la página de inicio de sesión. Déjelo en blanco si no desea una imagen.</FormDescription>
+              <FormDescription>El título principal que se muestra en el panel de la imagen.</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="slogan"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Eslogan / Subtítulo</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="textAlign"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Alineación del Texto</FormLabel>
+               <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccione una alineación" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="left">Izquierda</SelectItem>
+                  <SelectItem value="center">Centro</SelectItem>
+                  <SelectItem value="right">Derecha</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
@@ -120,7 +163,7 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
                 <FormControl>
                     <Input type="color" {...field} />
                 </FormControl>
-                <FormDescription>Color de fondo general de la página.</FormDescription>
+                <FormDescription>Color del panel de la imagen.</FormDescription>
                 <FormMessage />
                 </FormItem>
             )}
@@ -134,35 +177,12 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
                 <FormControl>
                     <Input type="color" {...field} />
                 </FormControl>
-                <FormDescription>Color para títulos y texto principal.</FormDescription>
+                <FormDescription>Color para títulos y subtítulos.</FormDescription>
                 <FormMessage />
                 </FormItem>
             )}
             />
         </div>
-
-        <FormField
-          control={form.control}
-          name="layout"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Estructura de la Página</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccione un diseño" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="side">Imagen a un lado</SelectItem>
-                  <SelectItem value="center">Contenido centrado</SelectItem>
-                </SelectContent>
-              </Select>
-               <FormDescription>Cambia la disposición de la imagen y el formulario de login.</FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <Button type="submit" disabled={loading}>
           {loading ? 'Guardando...' : 'Guardar Diseño'}

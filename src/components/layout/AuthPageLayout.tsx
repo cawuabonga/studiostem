@@ -1,15 +1,17 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { getLoginDesignSettings } from '@/config/firebase';
-import type { LoginDesign } from '@/types';
+import { getLoginDesignSettings, getInstitutes } from '@/config/firebase';
+import type { LoginDesign, Institute } from '@/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import AppLogo from '../common/AppLogo';
 import Image from 'next/image';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -18,17 +20,27 @@ interface AuthPageLayoutProps {
 
 const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) => {
   const [design, setDesign] = useState<LoginDesign | null>(null);
+  const [institutes, setInstitutes] = useState<Institute[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const fetchDesign = async () => {
+    const fetchInitialData = async () => {
       setLoading(true);
-      const settings = await getLoginDesignSettings();
-      setDesign(settings);
-      setLoading(false);
+      try {
+        const [settings, instituteData] = await Promise.all([
+          getLoginDesignSettings(),
+          getInstitutes()
+        ]);
+        setDesign(settings);
+        setInstitutes(instituteData);
+      } catch (error) {
+        console.error("Error fetching initial auth page data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchDesign();
+    fetchInitialData();
   }, []);
   
   if (loading) {
@@ -39,14 +51,20 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
     )
   }
   
-  const primaryColor = design?.backgroundColor || '#1E3A8A';
+  const primaryColor = design?.backgroundColor || '#1c3d5a';
+  const textColor = design?.textColor || '#ffffff';
+  const textAlignClass = {
+    left: 'items-start text-left',
+    center: 'items-center text-center',
+    right: 'items-end text-right',
+  }[design?.textAlign || 'left'];
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-6xl h-[750px] flex shadow-2xl rounded-lg overflow-hidden bg-white">
+      <div className="w-full max-w-6xl min-h-[750px] grid md:grid-cols-2 shadow-2xl rounded-lg overflow-hidden bg-white">
         
         {/* Left Panel - Image */}
-        <div className="w-1/2 h-full hidden md:block relative">
+        <div className="hidden md:block relative">
             {design?.imageUrl && (
               <Image 
                 src={design.imageUrl}
@@ -59,10 +77,11 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
         </div>
 
         {/* Right Panel - Form */}
-        <div className="w-full md:w-1/2 h-full flex flex-col justify-center p-8 md:p-16 overflow-y-auto">
+        <div className="w-full h-full flex flex-col justify-center p-8 sm:p-12 overflow-y-auto">
             <AppLogo className="mb-4 text-2xl" />
-            <h2 className="text-3xl font-bold font-headline text-gray-800">{formType === 'login' ? 'Bienvenido de Vuelta' : 'Crea tu Cuenta'}</h2>
+            <h2 className="text-3xl font-bold font-headline text-gray-800">{design?.title || (formType === 'login' ? 'Bienvenido de Vuelta' : 'Crea tu Cuenta')}</h2>
             <p className="text-muted-foreground mt-2 mb-8">
+              {design?.slogan}{' '}
                 {formType === 'login' ? (
                     <>¿No tienes una cuenta? <Button variant="link" className="p-0 h-auto" onClick={() => router.push('/register')}>Crea una ahora.</Button></>
                 ) : (
@@ -70,6 +89,32 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
                 )}
             </p>
             {children}
+            
+             {institutes.length > 0 && (
+              <div className="mt-12 text-center">
+                <p className="text-sm font-semibold text-gray-500 mb-4">INSTITUCIONES AFILIADAS</p>
+                <TooltipProvider>
+                  <div className="flex justify-center items-center gap-6 flex-wrap">
+                    {institutes.map(institute => (
+                      <Tooltip key={institute.id}>
+                        <TooltipTrigger>
+                           <Image 
+                              src={institute.logoUrl || `https://placehold.co/60x60.png?text=${institute.abbreviation}`} 
+                              alt={institute.name}
+                              width={48}
+                              height={48}
+                              className="h-12 w-12 object-contain rounded-md bg-gray-100 p-1 grayscale hover:grayscale-0 transition-all"
+                            />
+                        </TooltipTrigger>
+                         <TooltipContent>
+                          <p>{institute.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ))}
+                  </div>
+                </TooltipProvider>
+              </div>
+            )}
         </div>
       </div>
     </div>

@@ -92,10 +92,13 @@ export interface AccessState {
 
 
 export interface LoginDesign {
-  imageUrl: string;
-  backgroundColor: string;
-  textColor: string;
-  layout: 'side' | 'center';
+  imageUrl?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  layout?: 'side' | 'center';
+  title?: string;
+  slogan?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface LoginImage {
