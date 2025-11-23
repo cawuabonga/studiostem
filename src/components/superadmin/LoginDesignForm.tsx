@@ -56,7 +56,16 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
       try {
         const settings = await getLoginDesignSettings();
         if (settings) {
-          form.reset(settings);
+          // Ensure all optional string fields have a default empty string value
+          form.reset({
+            title: settings.title || '',
+            slogan: settings.slogan || '',
+            textAlign: settings.textAlign || 'left',
+            imageUrl: settings.imageUrl || '',
+            backgroundColor: settings.backgroundColor || '#1c3d5a',
+            textColor: settings.textColor || '#ffffff',
+            layout: settings.layout || 'side',
+          });
         }
       } catch (error) {
         toast({ title: "Error", description: "No se pudieron cargar las configuraciones de diseño existentes.", variant: "destructive" });
@@ -112,7 +121,7 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
               <FormControl>
                 <Textarea {...field} />
               </FormControl>
-              <FormDescription>El título principal que se muestra en el panel de la imagen.</FormDescription>
+              <FormDescription>El título que se muestra sobre la imagen.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -159,11 +168,10 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
             name="backgroundColor"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Color de Fondo</FormLabel>
+                <FormLabel>Color de Fondo (Panel Izquierdo)</FormLabel>
                 <FormControl>
                     <Input type="color" {...field} />
                 </FormControl>
-                <FormDescription>Color del panel de la imagen.</FormDescription>
                 <FormMessage />
                 </FormItem>
             )}
@@ -173,11 +181,10 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
             name="textColor"
             render={({ field }) => (
                 <FormItem>
-                <FormLabel>Color del Texto</FormLabel>
+                <FormLabel>Color del Texto (Panel Izquierdo)</FormLabel>
                 <FormControl>
                     <Input type="color" {...field} />
                 </FormControl>
-                <FormDescription>Color para títulos y subtítulos.</FormDescription>
                 <FormMessage />
                 </FormItem>
             )}
