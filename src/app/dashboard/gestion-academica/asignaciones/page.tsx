@@ -21,14 +21,16 @@ export default function AsignacionesPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [showAssignments, setShowAssignments] = useState(isCoordinator);
+  const [showAssignments, setShowAssignments] = useState(false);
 
   useEffect(() => {
-    if (instituteId && isFullAdmin) {
-        getPrograms(instituteId).then(setPrograms);
-    } else if (instituteId && isCoordinator && user?.programId) {
+    if (instituteId) {
         getPrograms(instituteId).then(allPrograms => {
-            setPrograms(allPrograms.filter(p => p.id === user.programId));
+            if (isCoordinator && user?.programId) {
+                setPrograms(allPrograms.filter(p => p.id === user.programId));
+            } else if (isFullAdmin) {
+                setPrograms(allPrograms);
+            }
         });
     }
   }, [instituteId, isFullAdmin, isCoordinator, user?.programId]);
@@ -36,7 +38,6 @@ export default function AsignacionesPage() {
   useEffect(() => {
     if (isCoordinator && user?.programId) {
         setSelectedProgramId(user.programId);
-        setShowAssignments(true);
     }
   }, [isCoordinator, user?.programId]);
 
@@ -61,13 +62,13 @@ export default function AsignacionesPage() {
           <CardTitle>Asignación de Unidades Didácticas</CardTitle>
           <CardDescription>
             {isCoordinator 
-             ? `Asigne docentes a las unidades didácticas de su programa para el año ${selectedYear}.`
+             ? `Asigne docentes a las unidades didácticas de su programa.`
              : 'Selecciona un programa de estudio y un año para asignar docentes a las unidades didácticas.'
             }
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-4">
                  <div className="space-y-2">
                     <Label htmlFor="program-select">Programa de Estudios</Label>
                     {isCoordinator ? (
@@ -94,11 +95,9 @@ export default function AsignacionesPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 {!isCoordinator && (
-                    <Button onClick={handleShowAssignments} disabled={!selectedProgramId || !selectedYear}>
-                        Cargar Tablero de Asignación
-                    </Button>
-                 )}
+                 <Button onClick={handleShowAssignments} disabled={!selectedProgramId || !selectedYear}>
+                    Cargar Tablero de Asignación
+                </Button>
             </div>
             
              {showAssignments && selectedProgramId && (
