@@ -1,11 +1,10 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import type { NonTeachingActivity, NonTeachingAssignment, UnitPeriod, Teacher } from '@/types';
+import type { NonTeachingActivity, NonTeachingAssignment, UnitPeriod, Unit, Assignment } from '@/types';
 import { getNonTeachingActivities, getNonTeachingAssignments, addNonTeachingAssignment, updateNonTeachingAssignment, deleteNonTeachingAssignment } from '@/config/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,15 +23,18 @@ import {
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TeacherWorkloadSummary } from './TeacherWorkloadSummary';
 
 interface NonTeachingAssignmentManagerProps {
     instituteId: string;
     teacherId: string;
     year: string;
     period: UnitPeriod;
+    allUnits: Unit[];
+    allAssignments: { 'MAR-JUL': Assignment; 'AGO-DIC': Assignment };
 }
 
-export function NonTeachingAssignmentManager({ instituteId, teacherId, year, period }: NonTeachingAssignmentManagerProps) {
+export function NonTeachingAssignmentManager({ instituteId, teacherId, year, period, allUnits, allAssignments }: NonTeachingAssignmentManagerProps) {
     const { toast } = useToast();
     const [assignments, setAssignments] = useState<NonTeachingAssignment[]>([]);
     const [activities, setActivities] = useState<NonTeachingActivity[]>([]);
@@ -61,6 +63,27 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    const { teachingHours, nonTeachingHours } = useMemo(() => {
+        const periodAssignments = allAssignments[period] || {};
+        const unitMap = new Map(allUnits.map(u => [u.id, u]));
+        
+        let calculatedTeachingHours = 0;
+        for(const unitId in periodAssignments) {
+            if (periodAssignments[unitId] === teacherId) {
+                const unit = unitMap.get(unitId);
+                if (unit && unit.period === period) {
+                    calculatedTeachingHours += (unit.theoreticalHours || 0) + (unit.practicalHours || 0);
+                }
+            }
+        }
+        
+        const calculatedNonTeachingHours = assignments.reduce((acc, curr) => acc + curr.assignedHours, 0);
+
+        return { teachingHours: calculatedTeachingHours, nonTeachingHours: calculatedNonTeachingHours };
+
+    }, [allAssignments, allUnits, period, teacherId, assignments]);
+
 
     const handleOpenDialog = (assignment?: NonTeachingAssignment) => {
         setCurrentAssignment(assignment || { teacherId, year, period, activityId: '', assignedHours: 0 });
@@ -117,11 +140,15 @@ export function NonTeachingAssignmentManager({ instituteId, teacherId, year, per
     };
 
     if (loading) {
-        return <Skeleton className="h-48 w-full" />;
+        return <Skeleton className="h-64 w-full" />;
     }
 
     return (
         <>
+            <TeacherWorkloadSummary
+                teachingHours={teachingHours}
+                nonTeachingHours={nonTeachingHours}
+            />
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>

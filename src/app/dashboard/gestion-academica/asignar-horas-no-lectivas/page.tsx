@@ -1,12 +1,11 @@
 
-
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getTeachers, getPrograms } from "@/config/firebase";
-import type { Teacher, UnitPeriod, Program } from "@/types";
+import { getTeachers, getPrograms, getUnits, getAllAssignmentsForYear } from "@/config/firebase";
+import type { Teacher, UnitPeriod, Program, Unit, Assignment } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -26,6 +25,8 @@ export default function AsignarHorasNoLectivasPage() {
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [allTeachers, setAllTeachers] = useState<Teacher[]>([]);
+  const [allUnits, setAllUnits] = useState<Unit[]>([]);
+  const [allAssignments, setAllAssignments] = useState<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }>({ 'MAR-JUL': {}, 'AGO-DIC': {} });
   const [loading, setLoading] = useState(true);
 
   const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
@@ -39,9 +40,11 @@ export default function AsignarHorasNoLectivasPage() {
     if (!instituteId) return;
     setLoading(true);
     try {
-      const [fetchedTeachers, fetchedPrograms] = await Promise.all([
+      const [fetchedTeachers, fetchedPrograms, fetchedUnits, fetchedAssignments] = await Promise.all([
         getTeachers(instituteId),
         getPrograms(instituteId),
+        getUnits(instituteId),
+        getAllAssignmentsForYear(instituteId, selectedYear),
       ]);
 
       if (isCoordinator && user?.programId) {
@@ -51,13 +54,15 @@ export default function AsignarHorasNoLectivasPage() {
       }
       
       setAllTeachers(fetchedTeachers);
+      setAllUnits(fetchedUnits);
+      setAllAssignments(fetchedAssignments);
 
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos iniciales.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast, isCoordinator, user?.programId]);
+  }, [instituteId, toast, isCoordinator, user?.programId, selectedYear]);
   
   useEffect(() => {
     if (canManage) {
@@ -165,6 +170,8 @@ export default function AsignarHorasNoLectivasPage() {
             teacherId={selectedTeacherId}
             year={selectedYear}
             period={selectedPeriod}
+            allUnits={allUnits}
+            allAssignments={allAssignments}
         />
       )}
     </div>
