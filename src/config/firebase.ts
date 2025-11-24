@@ -730,6 +730,39 @@ export const deleteNonTeachingAssignment = async (instituteId: string, assignmen
     await deleteDoc(assignmentRef);
 };
 
+export const saveNonTeachingAssignmentsForTeacher = async (
+    instituteId: string,
+    teacherId: string,
+    year: string,
+    period: UnitPeriod,
+    newAssignments: Omit<NonTeachingAssignment, 'id'>[]
+): Promise<void> => {
+    const batch = writeBatch(db);
+    const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
+
+    // First, delete all existing assignments for this teacher, year, and period
+    const q = query(
+        assignmentsCol,
+        where("teacherId", "==", teacherId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    const existingSnapshot = await getDocs(q);
+    existingSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    // Then, add the new assignments
+    newAssignments.forEach(assignmentData => {
+        if (assignmentData.assignedHours > 0) {
+            const newDocRef = doc(assignmentsCol);
+            batch.set(newDocRef, assignmentData);
+        }
+    });
+
+    await batch.commit();
+};
+
 
 // --- PAYMENTS ---
 export const addPaymentConcept = async (instituteId: string, data: Omit<PaymentConcept, 'id' | 'createdAt'>): Promise<void> => {
@@ -1736,3 +1769,4 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
 };
 
     
+
