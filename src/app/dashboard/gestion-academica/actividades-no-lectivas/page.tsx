@@ -1,11 +1,9 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getNonTeachingActivities, addNonTeachingActivity, updateNonTeachingActivity, deleteNonTeachingActivity } from "@/config/firebase";
 import type { NonTeachingActivity } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -14,11 +12,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, PlusCircle, Trash, Edit, ChevronDown } from "lucide-react";
+import { Loader2, PlusCircle, Trash, Edit, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ActivityAssignmentDetails } from "@/components/carga-horaria/ActivityAssignmentDetails";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 export default function NonTeachingActivitiesPage() {
   const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
@@ -27,9 +26,11 @@ export default function NonTeachingActivitiesPage() {
   
   const [activities, setActivities] = useState<NonTeachingActivity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentActivity, setCurrentActivity] = useState<Partial<NonTeachingActivity>>({});
+  const [selectedActivityForDetails, setSelectedActivityForDetails] = useState<NonTeachingActivity | null>(null);
 
   const canManage = hasPermission('academic:program:manage'); // Reuse a suitable high-level permission
 
@@ -56,10 +57,16 @@ export default function NonTeachingActivitiesPage() {
     }
   }, [instituteId, toast]);
 
-  const handleOpenDialog = (activity?: NonTeachingActivity) => {
+  const handleOpenFormDialog = (activity?: NonTeachingActivity) => {
     setCurrentActivity(activity || { name: '', description: '', isActive: true });
-    setIsDialogOpen(true);
+    setIsFormDialogOpen(true);
   };
+  
+  const handleOpenDetailsDialog = (activity: NonTeachingActivity) => {
+    setSelectedActivityForDetails(activity);
+    setIsDetailsDialogOpen(true);
+  };
+
 
   const handleSave = async () => {
     if (!instituteId || !currentActivity.name || !currentActivity.description) {
@@ -77,7 +84,7 @@ export default function NonTeachingActivitiesPage() {
         toast({ title: "Actividad creada", description: `"${currentActivity.name}" ha sido creada.` });
       }
       fetchActivities();
-      setIsDialogOpen(false);
+      setIsFormDialogOpen(false);
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
@@ -107,10 +114,10 @@ export default function NonTeachingActivitiesPage() {
           <div>
             <CardTitle>Gestionar Actividades No Lectivas</CardTitle>
             <CardDescription>
-              Crea el catálogo de actividades y expande cada una para ver los docentes asignados.
+              Crea el catálogo de actividades y consulta los docentes asignados por año.
             </CardDescription>
           </div>
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={() => handleOpenFormDialog()}>
             <PlusCircle className="mr-2 h-4 w-4"/>
             Añadir Actividad
           </Button>
@@ -121,40 +128,52 @@ export default function NonTeachingActivitiesPage() {
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
              </div>
-           ) : activities.length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-2">
-                    {activities.map(activity => (
-                        <AccordionItem key={activity.id} value={activity.id} className="border rounded-lg shadow-sm">
-                           <div className="flex items-center px-4 py-2">
-                                <AccordionTrigger className="flex-1 text-left hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                                    <div className="flex justify-between items-center w-full">
-                                        <div>
-                                            <p className="font-semibold">{activity.name}</p>
-                                            <p className="text-sm text-muted-foreground">{activity.description}</p>
-                                        </div>
-                                    </div>
-                                </AccordionTrigger>
-                                <div className="flex items-center gap-2 pl-4">
-                                     <Badge variant={activity.isActive ? 'default' : 'secondary'}>
-                                        {activity.isActive ? 'Activa' : 'Inactiva'}
-                                    </Badge>
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(activity)}><Edit className="h-4 w-4" /></Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(activity.id)}><Trash className="h-4 w-4" /></Button>
-                                </div>
-                           </div>
-                            <AccordionContent className="px-4 pb-4">
-                                <ActivityAssignmentDetails activityId={activity.id} />
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
-                </Accordion>
            ) : (
-                <p className="text-center text-muted-foreground py-8">No hay actividades no lectivas registradas.</p>
+             <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nombre de la Actividad</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {activities.length > 0 ? (
+                            activities.map(activity => (
+                                <TableRow key={activity.id}>
+                                    <TableCell>
+                                        <p className="font-semibold">{activity.name}</p>
+                                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                         <Badge variant={activity.isActive ? 'default' : 'secondary'}>
+                                            {activity.isActive ? 'Activa' : 'Inactiva'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm" onClick={() => handleOpenDetailsDialog(activity)} className="mr-2">
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            Ver Asignaciones
+                                        </Button>
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenFormDialog(activity)}><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(activity.id)}><Trash className="h-4 w-4" /></Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={3} className="h-24 text-center">No hay actividades no lectivas registradas.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+             </div>
            )}
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen}>
           <DialogContent>
               <DialogHeader>
                   <DialogTitle>{currentActivity.id ? 'Editar Actividad' : 'Nueva Actividad No Lectiva'}</DialogTitle>
@@ -185,6 +204,19 @@ export default function NonTeachingActivitiesPage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
+      
+      {selectedActivityForDetails && (
+         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+            <DialogContent className="max-w-4xl">
+                 <DialogHeader>
+                    <DialogTitle>Asignaciones para: {selectedActivityForDetails.name}</DialogTitle>
+                    <DialogDescription>Listado de docentes que tienen o han tenido esta actividad asignada, filtrado por año.</DialogDescription>
+                 </DialogHeader>
+                 <ActivityAssignmentDetails activityId={selectedActivityForDetails.id} />
+            </DialogContent>
+         </Dialog>
+      )}
+
     </div>
   );
 }

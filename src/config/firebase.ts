@@ -695,9 +695,13 @@ export const deleteNonTeachingActivity = async (instituteId: string, activityId:
 
 
 // --- NON-TEACHING ASSIGNMENTS ---
-export const getAssignmentsForActivity = async (instituteId: string, activityId: string): Promise<NonTeachingAssignment[]> => {
+export const getAssignmentsForActivity = async (instituteId: string, activityId: string, year: string): Promise<NonTeachingAssignment[]> => {
     const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
-    const q = query(assignmentsCol, where("activityId", "==", activityId), orderBy("year", "desc"));
+    const q = query(
+        assignmentsCol,
+        where("activityId", "==", activityId),
+        where("year", "==", year)
+    );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
@@ -1771,4 +1775,5 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
 };
 
     
+
 
