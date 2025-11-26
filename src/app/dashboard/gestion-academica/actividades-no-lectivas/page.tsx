@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getNonTeachingActivities, addNonTeachingActivity, updateNonTeachingActivity, deleteNonTeachingActivity } from "@/config/firebase";
 import type { NonTeachingActivity } from "@/types";
 import { useToast } from "@/hooks/use-toast";
@@ -13,10 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, PlusCircle, Trash, Edit } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Loader2, PlusCircle, Trash, Edit, ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ActivityAssignmentDetails } from "@/components/carga-horaria/ActivityAssignmentDetails";
 
 export default function NonTeachingActivitiesPage() {
   const { user, instituteId, loading: authLoading, hasPermission } = useAuth();
@@ -46,7 +48,7 @@ export default function NonTeachingActivitiesPage() {
     setLoading(true);
     try {
       const fetchedActivities = await getNonTeachingActivities(instituteId);
-      setActivities(fetchedActivities);
+      setActivities(fetchedActivities.sort((a,b) => a.name.localeCompare(b.name)));
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar las actividades.", variant: "destructive" });
     } finally {
@@ -105,7 +107,7 @@ export default function NonTeachingActivitiesPage() {
           <div>
             <CardTitle>Gestionar Actividades No Lectivas</CardTitle>
             <CardDescription>
-              Crea y administra el catálogo de actividades no lectivas que se pueden asignar al personal docente.
+              Crea el catálogo de actividades y expande cada una para ver los docentes asignados.
             </CardDescription>
           </div>
           <Button onClick={() => handleOpenDialog()}>
@@ -114,45 +116,40 @@ export default function NonTeachingActivitiesPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Nombre de la Actividad</TableHead>
-                        <TableHead>Descripción</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {loading ? (
-                        <TableRow><TableCell colSpan={4} className="h-24 text-center">Cargando...</TableCell></TableRow>
-                    ) : activities.length > 0 ? (
-                        activities.map(activity => (
-                            <TableRow key={activity.id}>
-                                <TableCell className="font-medium">{activity.name}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">{activity.description}</TableCell>
-                                <TableCell>
-                                    <Badge variant={activity.isActive ? 'default' : 'secondary'}>
-                                        {activity.isActive ? 'Activa' : 'Inactiva'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(activity)}>
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(activity.id)}>
-                                        <Trash className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                        ))
-                    ) : (
-                         <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay actividades registradas.</TableCell></TableRow>
-                    )}
-                </TableBody>
-            </Table>
-          </div>
+           {loading ? (
+             <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+             </div>
+           ) : activities.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full space-y-2">
+                    {activities.map(activity => (
+                        <AccordionItem key={activity.id} value={activity.id} className="border rounded-lg shadow-sm">
+                            <AccordionTrigger className="px-4 py-2 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                                <div className="flex justify-between items-center w-full">
+                                    <div className="text-left">
+                                        <p className="font-semibold">{activity.name}</p>
+                                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 pr-4">
+                                         <Badge variant={activity.isActive ? 'default' : 'secondary'}>
+                                            {activity.isActive ? 'Activa' : 'Inactiva'}
+                                        </Badge>
+                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenDialog(activity); }}><Edit className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(activity.id); }}><Trash className="h-4 w-4" /></Button>
+                                         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                                    </div>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-4 pb-4">
+                                <ActivityAssignmentDetails activityId={activity.id} />
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+           ) : (
+                <p className="text-center text-muted-foreground py-8">No hay actividades no lectivas registradas.</p>
+           )}
         </CardContent>
       </Card>
 

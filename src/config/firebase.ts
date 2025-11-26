@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -696,10 +695,13 @@ export const deleteNonTeachingActivity = async (instituteId: string, activityId:
 
 
 // --- NON-TEACHING ASSIGNMENTS ---
-export const addNonTeachingAssignment = async (instituteId: string, data: Omit<NonTeachingAssignment, 'id'>): Promise<void> => {
+export const getAssignmentsForActivity = async (instituteId: string, activityId: string): Promise<NonTeachingAssignment[]> => {
     const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
-    await addDoc(assignmentsCol, data);
+    const q = query(assignmentsCol, where("activityId", "==", activityId), orderBy("year", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
+
 
 export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
     const assignmentsCol = getSubCollectionRef(instituteId, 'nonTeachingAssignments');
