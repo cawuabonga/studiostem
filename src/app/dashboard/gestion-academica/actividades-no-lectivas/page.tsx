@@ -125,22 +125,23 @@ export default function NonTeachingActivitiesPage() {
                 <Accordion type="single" collapsible className="w-full space-y-2">
                     {activities.map(activity => (
                         <AccordionItem key={activity.id} value={activity.id} className="border rounded-lg shadow-sm">
-                            <AccordionTrigger className="px-4 py-2 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                                <div className="flex justify-between items-center w-full">
-                                    <div className="text-left">
-                                        <p className="font-semibold">{activity.name}</p>
-                                        <p className="text-sm text-muted-foreground">{activity.description}</p>
+                           <div className="flex items-center px-4 py-2">
+                                <AccordionTrigger className="flex-1 text-left hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                                    <div className="flex justify-between items-center w-full">
+                                        <div>
+                                            <p className="font-semibold">{activity.name}</p>
+                                            <p className="text-sm text-muted-foreground">{activity.description}</p>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 pr-4">
-                                         <Badge variant={activity.isActive ? 'default' : 'secondary'}>
-                                            {activity.isActive ? 'Activa' : 'Inactiva'}
-                                        </Badge>
-                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleOpenDialog(activity); }}><Edit className="h-4 w-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={(e) => { e.stopPropagation(); handleDelete(activity.id); }}><Trash className="h-4 w-4" /></Button>
-                                         <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-                                    </div>
+                                </AccordionTrigger>
+                                <div className="flex items-center gap-2 pl-4">
+                                     <Badge variant={activity.isActive ? 'default' : 'secondary'}>
+                                        {activity.isActive ? 'Activa' : 'Inactiva'}
+                                    </Badge>
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(activity)}><Edit className="h-4 w-4" /></Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(activity.id)}><Trash className="h-4 w-4" /></Button>
                                 </div>
-                            </AccordionTrigger>
+                           </div>
                             <AccordionContent className="px-4 pb-4">
                                 <ActivityAssignmentDetails activityId={activity.id} />
                             </AccordionContent>
