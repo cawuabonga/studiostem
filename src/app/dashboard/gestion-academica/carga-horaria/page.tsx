@@ -21,14 +21,16 @@ export default function CargaHorariaPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
   const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [showLoad, setShowLoad] = useState(isCoordinator);
+  const [showLoad, setShowLoad] = useState(false);
 
   useEffect(() => {
-    if (instituteId && isFullAdmin) {
-        getPrograms(instituteId).then(setPrograms);
-    } else if (instituteId && isCoordinator && user?.programId) {
+    if (instituteId && (isFullAdmin || isCoordinator)) {
         getPrograms(instituteId).then(allPrograms => {
-            setPrograms(allPrograms.filter(p => p.id === user.programId));
+            if (isCoordinator && user?.programId) {
+                setPrograms(allPrograms.filter(p => p.id === user.programId));
+            } else {
+                setPrograms(allPrograms);
+            }
         });
     }
   }, [instituteId, isFullAdmin, isCoordinator, user?.programId]);
@@ -36,7 +38,6 @@ export default function CargaHorariaPage() {
   useEffect(() => {
     if (isCoordinator && user?.programId) {
         setSelectedProgramId(user.programId);
-        setShowLoad(true);
     }
   }, [isCoordinator, user?.programId]);
 
@@ -67,7 +68,7 @@ export default function CargaHorariaPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end pt-4">
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-4">
                  <div className="space-y-2">
                     <Label htmlFor="program-select">Programa de Estudios</Label>
                      {isCoordinator ? (
@@ -94,11 +95,9 @@ export default function CargaHorariaPage() {
                         </SelectContent>
                     </Select>
                 </div>
-                 {!isCoordinator && (
-                    <Button onClick={handleShowLoad} disabled={!selectedProgramId || !selectedYear}>
-                        Consultar Carga Horaria
-                    </Button>
-                 )}
+                <Button onClick={handleShowLoad} disabled={!selectedProgramId || !selectedYear}>
+                    Consultar Carga Horaria
+                </Button>
             </div>
             
             {showLoad && selectedProgramId && (
