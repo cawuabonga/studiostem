@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -42,7 +43,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
             setPayments(fetchedPayments);
         } catch (error) {
             console.error(`Error fetching ${status} payments:`, error);
-            toast({ title: "Error", description: "No se pudieron cargar los pagos.", variant: "destructive" });
+            // toast({ title: "Error", description: "No se pudieron cargar los pagos.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -56,11 +57,11 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
         if (!instituteId) return;
         try {
             await updatePaymentStatus(instituteId, paymentId, 'Aprobado', { receiptNumber });
-            toast({ title: "Pago Aprobado", description: "El pago ha sido aprobado y se ha asignado el comprobante." });
+            // toast({ title: "Pago Aprobado", description: "El pago ha sido aprobado y se ha asignado el comprobante." });
             fetchPayments();
             setIsApproveOpen(false);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo aprobar el pago.", variant: "destructive" });
+            // toast({ title: "Error", description: "No se pudo aprobar el pago.", variant: "destructive" });
         }
     };
     
@@ -68,11 +69,11 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
         if (!instituteId) return;
         try {
             await updatePaymentStatus(instituteId, paymentId, 'Rechazado', { rejectionReason });
-            toast({ title: "Pago Rechazado", description: "El pago ha sido rechazado." });
+            // toast({ title: "Pago Rechazado", description: "El pago ha sido rechazado." });
             fetchPayments();
             setIsRejectOpen(false);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo rechazar el pago.", variant: "destructive" });
+            // toast({ title: "Error", description: "No se pudo rechazar el pago.", variant: "destructive" });
         }
     };
     

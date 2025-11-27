@@ -78,21 +78,21 @@ export function RegisterPaymentForm() {
 
   const onSubmit = async (data: PaymentFormValues) => {
     if (!user || !instituteId || !user.documentId) {
-      toast({ title: "Error", description: "No se pudo identificar al usuario o instituto. Asegúrate de que tu perfil esté vinculado.", variant: "destructive" });
+      // toast({ title: "Error", description: "No se pudo identificar al usuario o instituto. Asegúrate de que tu perfil esté vinculado.", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
       const { voucher, ...paymentData } = data;
       await registerPayment(instituteId, { ...paymentData, studentId: user.documentId!, studentName: user.displayName! }, voucher[0]);
-      toast({
-        title: '¡Pago Registrado!',
-        description: 'Tu pago ha sido enviado para validación. Puedes ver su estado en "Mi Historial de Pagos".',
-      });
+      // toast({
+      //   title: '¡Pago Registrado!',
+      //   description: 'Tu pago ha sido enviado para validación. Puedes ver su estado en "Mi Historial de Pagos".',
+      // });
       router.push('/dashboard/gestion-administrativa/mis-pagos');
     } catch (error: any) {
       console.error("Payment registration error:", error);
-      toast({ title: "Error", description: error.message || "No se pudo registrar el pago.", variant: "destructive" });
+      // toast({ title: "Error", description: error.message || "No se pudo registrar el pago.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

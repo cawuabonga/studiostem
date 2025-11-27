@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -48,10 +49,10 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
         ...(data.primaryColor && { primaryColor: hexToHsl(data.primaryColor) }),
       };
       await addInstitute(data.id, instituteData);
-      toast({
-        title: '¡Éxito!',
-        description: 'El instituto ha sido registrado correctamente.',
-      });
+      // toast({
+      //   title: '¡Éxito!',
+      //   description: 'El instituto ha sido registrado correctamente.',
+      // });
       form.reset();
       onInstituteAdded();
     } catch (error: any) {
@@ -62,11 +63,11 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
       } else if (error.message.includes('already exists')) {
         description = 'Un instituto con este ID ya existe. Por favor, elige otro.';
       }
-      toast({
-        title: 'Error',
-        description,
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description,
+      //   variant: 'destructive',
+      // });
     } finally {
       setLoading(false);
     }

@@ -64,26 +64,26 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Unidades");
         XLSX.writeFile(workbook, "plantilla_unidades_con_modulos.xlsx");
-        toast({
-            title: "Plantilla Descargada",
-            description: "Complete la plantilla con los datos de las unidades, incluyendo el código del módulo para cada una.",
-            duration: 7000
-        })
+        // toast({
+        //     title: "Plantilla Descargada",
+        //     description: "Complete la plantilla con los datos de las unidades, incluyendo el código del módulo para cada una.",
+        //     duration: 7000
+        // })
     };
 
     const handleUpload = async () => {
         if (!file || !selectedProgramId) {
-            toast({
-                title: 'Información Faltante',
-                description: 'Por favor, selecciona un programa de estudios y un archivo antes de subir.',
-                variant: 'destructive',
-            });
+            // toast({
+            //     title: 'Información Faltante',
+            //     description: 'Por favor, selecciona un programa de estudios y un archivo antes de subir.',
+            //     variant: 'destructive',
+            // });
             return;
         }
         
         const selectedProgram = programs.find(p => p.id === selectedProgramId);
         if (!selectedProgram) {
-             toast({ title: 'Error', description: 'Programa seleccionado no válido.', variant: 'destructive'});
+            //  toast({ title: 'Error', description: 'Programa seleccionado no válido.', variant: 'destructive'});
              return;
         }
 
@@ -123,10 +123,10 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
 
                 await bulkAddUnits(instituteId, unitsToUpload);
 
-                toast({
-                    title: '¡Éxito!',
-                    description: `${unitsToUpload.length} unidades han sido agregadas al programa.`,
-                });
+                // toast({
+                //     title: '¡Éxito!',
+                //     description: `${unitsToUpload.length} unidades han sido agregadas al programa.`,
+                // });
                 onUploadSuccess();
                 setFile(null);
                  const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement | null;
@@ -136,12 +136,12 @@ export function BulkUploadUnits({ instituteId, onUploadSuccess }: BulkUploadUnit
 
             } catch (error: any) {
                  console.error("Error en carga masiva:", error);
-                toast({
-                    title: 'Error en la Carga',
-                    description: error.message || 'Hubo un problema al procesar el archivo. Revisa el formato y los datos.',
-                    variant: 'destructive',
-                    duration: 8000
-                });
+                // toast({
+                //     title: 'Error en la Carga',
+                //     description: error.message || 'Hubo un problema al procesar el archivo. Revisa el formato y los datos.',
+                //     variant: 'destructive',
+                //     duration: 8000
+                // });
             } finally {
                 setLoading(false);
             }

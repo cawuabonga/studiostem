@@ -70,21 +70,21 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
         documentId: data.documentId,
       });
 
-      toast({
-        title: '¡Éxito!',
-        description: 'Tu perfil ha sido actualizado.',
-      });
+      // toast({
+      //   title: '¡Éxito!',
+      //   description: 'Tu perfil ha sido actualizado.',
+      // });
       
       await reloadUser();
       
       onClose();
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo actualizar tu perfil. Intenta de nuevo.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'No se pudo actualizar tu perfil. Intenta de nuevo.',
+      //   variant: 'destructive',
+      // });
     } finally {
       setIsSubmitting(false);
     }

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -42,7 +43,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
         try {
             const studentData = await getStudentProfile(instituteId, studentId);
             if (!studentData) {
-                toast({ title: "Error", description: "No se encontró al estudiante.", variant: "destructive" });
+                // toast({ title: "Error", description: "No se encontró al estudiante.", variant: "destructive" });
                 return;
             }
             setStudent(studentData);
@@ -62,7 +63,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
 
         } catch (error) {
             console.error("Error fetching data for matriculation sheet:", error);
-            toast({ title: "Error", description: "No se pudieron cargar los datos del estudiante.", variant: "destructive" });
+            // toast({ title: "Error", description: "No se pudieron cargar los datos del estudiante.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -123,17 +124,17 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
             
             await createMatriculations(instituteId, student.documentId, unitsToMatriculate, selectedYear);
             
-            toast({
-                title: "¡Matrícula Exitosa!",
-                description: `Se matriculó a ${student.fullName} en ${selectedUnits.size} unidades.`,
-            });
+            // toast({
+            //     title: "¡Matrícula Exitosa!",
+            //     description: `Se matriculó a ${student.fullName} en ${selectedUnits.size} unidades.`,
+            // });
             // Refetch data to update the view
             fetchData();
             setSelectedUnits(new Set());
 
         } catch (error) {
             console.error("Matriculation error:", error);
-            toast({ title: "Error en la Matrícula", description: "Ocurrió un error al procesar la matrícula.", variant: "destructive" });
+            // toast({ title: "Error en la Matrícula", description: "Ocurrió un error al procesar la matrícula.", variant: "destructive" });
         } finally {
             setIsMatriculating(false);
         }

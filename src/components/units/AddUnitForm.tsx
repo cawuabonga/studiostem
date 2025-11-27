@@ -91,10 +91,10 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
     setLoading(true);
     try {
       const newUnitId = await addUnit(instituteId, data);
-      toast({
-        title: '¡Éxito!',
-        description: 'La unidad didáctica ha sido registrada.',
-      });
+      // toast({
+      //   title: '¡Éxito!',
+      //   description: 'La unidad didáctica ha sido registrada.',
+      // });
       
       // Asynchronously generate and update the image URL without blocking the UI
       generateUnitImage({ unitName: data.name }).then(imageUrl => {
@@ -106,11 +106,11 @@ export function AddUnitForm({ instituteId, onUnitAdded }: AddUnitFormProps) {
       form.reset();
       onUnitAdded();
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'No se pudo registrar la unidad.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: error.message || 'No se pudo registrar la unidad.',
+      //   variant: 'destructive',
+      // });
     } finally {
       setLoading(false);
     }

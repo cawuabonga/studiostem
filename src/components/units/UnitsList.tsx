@@ -18,7 +18,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { generateUnitImage } from '@/ai/flows/generate-unit-image-flow';
@@ -95,11 +94,11 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
 
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar las unidades.",
-        variant: "destructive",
-      });
+      // toast({
+      //   title: "Error",
+      //   description: "No se pudieron cargar las unidades.",
+      //   variant: "destructive",
+      // });
     } finally {
       setLoading(false);
     }
@@ -124,20 +123,20 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
   };
 
   const handleRegenerateImage = async (unit: Unit) => {
-     toast({
-      title: "Función Desactivada",
-      description: "La generación de imágenes con IA está desactivada para controlar costos.",
-      variant: "default",
-    });
+    //  toast({
+    //   title: "Función Desactivada",
+    //   description: "La generación de imágenes con IA está desactivada para controlar costos.",
+    //   variant: "default",
+    // });
     // if (!instituteId) return;
     // setImageLoadingId(unit.id);
     // try {
     //     const imageUrl = await generateUnitImage({ unitName: unit.name });
     //     await updateUnitImage(instituteId, unit.id, imageUrl);
-    //     toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
+    //     // toast({ title: 'Imagen Generada', description: `Se ha generado una nueva imagen para ${unit.name}`});
     //     handleRefresh();
     // } catch (error) {
-    //     toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
+    //     // toast({ title: 'Error', description: 'No se pudo generar la imagen.', variant: 'destructive' });
     // } finally {
     //     setImageLoadingId(null);
     // }
@@ -147,10 +146,10 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     if (!instituteId) return;
     try {
         await duplicateUnit(instituteId, unitId);
-        toast({ title: 'Unidad Duplicada', description: 'La unidad didáctica se ha duplicado correctamente.' });
+        // toast({ title: 'Unidad Duplicada', description: 'La unidad didáctica se ha duplicado correctamente.' });
         handleRefresh();
     } catch (error: any) {
-        toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
+        // toast({ title: 'Error', description: `No se pudo duplicar la unidad: ${error.message}`, variant: 'destructive' });
     }
   };
   
@@ -158,13 +157,13 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     if (!instituteId || selectedUnitIds.size === 0) return;
     try {
         await bulkDeleteUnits(instituteId, Array.from(selectedUnitIds));
-        toast({
-            title: "Eliminación Exitosa",
-            description: `${selectedUnitIds.size} unidades han sido eliminadas.`,
-        });
+        // toast({
+        //     title: "Eliminación Exitosa",
+        //     description: `${selectedUnitIds.size} unidades han sido eliminadas.`,
+        // });
         handleRefresh();
     } catch (error) {
-        toast({ title: "Error", description: "No se pudieron eliminar las unidades seleccionadas.", variant: "destructive"});
+        // toast({ title: "Error", description: "No se pudieron eliminar las unidades seleccionadas.", variant: "destructive"});
     }
   };
 
@@ -345,3 +344,4 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     </TooltipProvider>
   );
 }
+

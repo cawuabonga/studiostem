@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -51,7 +52,7 @@ export function LinkProfileDialog({ isOpen, onClose, onProfileLinked, isModal = 
 
   const onSubmit = async (data: LinkProfileFormValues) => {
     if (!user) {
-        toast({ title: "Error", description: "No has iniciado sesión.", variant: "destructive" });
+        // toast({ title: "Error", description: "No has iniciado sesión.", variant: "destructive" });
         return;
     }
     
@@ -59,21 +60,21 @@ export function LinkProfileDialog({ isOpen, onClose, onProfileLinked, isModal = 
     try {
       const result = await linkUserToProfile(user.uid, data.documentId, data.email);
       
-      toast({
-        title: '¡Perfil Vinculado!',
-        description: `Tu cuenta ha sido vinculada al perfil de ${result.role} en ${result.instituteName}. Serás redirigido.`,
-        duration: 5000,
-      });
+      // toast({
+      //   title: '¡Perfil Vinculado!',
+      //   description: `Tu cuenta ha sido vinculada al perfil de ${result.role} en ${result.instituteName}. Serás redirigido.`,
+      //   duration: 5000,
+      // });
 
       onProfileLinked();
 
     } catch (error: any) {
       console.error('Error linking profile:', error);
-      toast({
-        title: 'Error al Vincular',
-        description: error.message || 'No se pudo encontrar un perfil con los datos proporcionados. Por favor, verifica la información o contacta a un administrador.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error al Vincular',
+      //   description: error.message || 'No se pudo encontrar un perfil con los datos proporcionados. Por favor, verifica la información o contacta a un administrador.',
+      //   variant: 'destructive',
+      // });
     } finally {
       setIsSubmitting(false);
     }

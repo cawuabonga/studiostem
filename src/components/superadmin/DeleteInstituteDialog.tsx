@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -34,20 +35,20 @@ export function DeleteInstituteDialog({ institute, isOpen, onClose }: DeleteInst
       // NOTE: This will only delete the institute document itself, not its subcollections.
       // A more robust solution would use a Cloud Function to recursively delete all sub-documents.
       await deleteInstitute(institute.id);
-      toast({
-        title: '¡Eliminado!',
-        description: 'El instituto ha sido eliminado. Sus datos internos (como usuarios, docentes) no se eliminan automáticamente.',
-        variant: 'default',
-        duration: 5000,
-      });
+      // toast({
+      //   title: '¡Eliminado!',
+      //   description: 'El instituto ha sido eliminado. Sus datos internos (como usuarios, docentes) no se eliminan automáticamente.',
+      //   variant: 'default',
+      //   duration: 5000,
+      // });
       onClose(true);
     } catch (error) {
       console.error('Error deleting institute:', error);
-      toast({
-        title: 'Error',
-        description: 'No se pudo eliminar el instituto. Intenta de nuevo.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'No se pudo eliminar el instituto. Intenta de nuevo.',
+      //   variant: 'destructive',
+      // });
       onClose(false);
     } finally {
       setIsDeleting(false);

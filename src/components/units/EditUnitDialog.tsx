@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -106,23 +107,23 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
 
   const onSubmit = async (data: EditUnitFormValues) => {
     if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
+        // toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
         return;
     }
     setIsSubmitting(true);
     try {
       await updateUnit(instituteId, unit.id, data);
-      toast({
-        title: '¡Éxito!',
-        description: 'La información de la unidad ha sido actualizada.',
-      });
+      // toast({
+      //   title: '¡Éxito!',
+      //   description: 'La información de la unidad ha sido actualizada.',
+      // });
       onClose(true); 
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo actualizar la unidad.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'No se pudo actualizar la unidad.',
+      //   variant: 'destructive',
+      // });
     } finally {
       setIsSubmitting(false);
     }
@@ -360,9 +361,7 @@ export function EditUnitDialog({ unit, isOpen, onClose }: EditUnitDialogProps) {
             </div>
             <DialogFooter className="pt-4">
               <DialogClose asChild>
-                <Button type="button" variant="outline" onClick={() => onClose()}>
-                  Cancelar
-                </Button>
+                <Button type="button" variant="outline" onClick={() => onClose()}>Cancelar</Button>
               </DialogClose>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}

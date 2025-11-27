@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -31,23 +32,23 @@ export function DeleteUnitDialog({ unit, isOpen, onClose }: DeleteUnitDialogProp
 
   const handleDelete = async () => {
     if (!instituteId) {
-        toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
+        // toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
         return;
     }
     setIsDeleting(true);
     try {
       await deleteUnit(instituteId, unit.id);
-      toast({
-        title: '¡Eliminada!',
-        description: 'La unidad didáctica ha sido eliminada.',
-      });
+      // toast({
+      //   title: '¡Eliminada!',
+      //   description: 'La unidad didáctica ha sido eliminada.',
+      // });
       onClose(true);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'No se pudo eliminar la unidad. Intenta de nuevo.',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'No se pudo eliminar la unidad. Intenta de nuevo.',
+      //   variant: 'destructive',
+      // });
       onClose(false);
     } finally {
       setIsDeleting(false);
