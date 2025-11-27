@@ -83,7 +83,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
     setIsDeleteDialogOpen(false);
     setSelectedProfile(null);
     if (updated) {
-      onDataChange();
+      fetchData(instituteId);
     }
   };
 
@@ -148,7 +148,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
             title: "Eliminación Exitosa",
             description: `${selectedProfileIds.size} perfiles han sido eliminados.`,
         });
-        onDataChange();
+        fetchData(instituteId);
     } catch (error) {
         toast({ title: "Error", description: "No se pudieron eliminar los perfiles seleccionados.", variant: "destructive"});
     }
@@ -289,28 +289,29 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
           </TableBody>
         </Table>
       </div>
-
-       <div className="flex items-center justify-end space-x-2 py-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-          disabled={currentPage === 1}
-        >
-          Anterior
-        </Button>
-        <span className="text-sm">
-            Página {currentPage} de {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-          disabled={currentPage === totalPages}
-        >
-          Siguiente
-        </Button>
-      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-end space-x-2 py-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Anterior
+          </Button>
+          <span className="text-sm">
+              Página {currentPage} de {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Siguiente
+          </Button>
+        </div>
+      )}
 
       {selectedProfile && isEditDialogOpen && (
         <EditStaffProfileDialog 
