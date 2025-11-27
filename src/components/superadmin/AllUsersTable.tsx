@@ -55,7 +55,8 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
     setIsEditDialogOpen(false);
     setSelectedUser(null);
     if (updated) {
-        fetchUsers(); // Refetch directly
+        fetchUsers();
+        onDataChange();
     }
   };
 

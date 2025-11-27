@@ -83,7 +83,8 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
     setIsDeleteDialogOpen(false);
     setSelectedProfile(null);
     if (updated) {
-      fetchData(instituteId); // Refetch directly
+      fetchData(instituteId);
+      onDataChange();
     }
   };
 
@@ -154,6 +155,8 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
     return <p className="text-center text-muted-foreground py-8">No hay perfiles de personal registrados.</p>;
   }
 
+  const isAllSelectedOnPage = paginatedProfiles.length > 0 && paginatedProfiles.every(p => selectedProfileIds.has(p.documentId));
+
   return (
     <>
        {canEdit && selectedProfileIds.size > 0 && (
@@ -216,9 +219,16 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
             <TableRow>
                <TableHead className="w-[50px]">
                 <Checkbox
-                    checked={selectedProfileIds.size === profiles.length && profiles.length > 0}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Seleccionar todas las filas"
+                    checked={isAllSelectedOnPage}
+                    onCheckedChange={(checked) => {
+                        const newSet = new Set(selectedProfileIds);
+                        paginatedProfiles.forEach(p => {
+                            if(checked) newSet.add(p.documentId);
+                            else newSet.delete(p.documentId);
+                        });
+                        setSelectedProfileIds(newSet);
+                    }}
+                    aria-label="Seleccionar todos en esta página"
                  />
               </TableHead>
               <TableHead>N° Documento</TableHead>

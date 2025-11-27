@@ -66,6 +66,7 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
   const [selectedEnvironment, setSelectedEnvironment] = useState<Environment | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
@@ -103,9 +104,13 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
     setIsFormOpen(true);
   };
   
-  const handleCloseForm = () => {
+  const handleCloseForm = (updated?: boolean) => {
     setIsFormOpen(false);
     setSelectedEnvironment(null);
+    if(updated) {
+        fetchData();
+        onDataChange();
+    }
   };
 
   const onSubmit = async (data: EnvironmentFormValues) => {
@@ -117,9 +122,7 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
             await addEnvironment(instituteId, data);
             toast({ title: "Ambiente Creado", description: "El nuevo ambiente ha sido registrado." });
         }
-        fetchData();
-        onDataChange();
-        handleCloseForm();
+        handleCloseForm(true);
     } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
     }
@@ -137,6 +140,7 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
         toast({ title: "Error", description: "No se pudo eliminar el ambiente.", variant: "destructive" });
     } finally {
         setIsDeleting(false);
+        setIsDeleteDialogOpen(false);
         setSelectedEnvironment(null);
     }
   };
@@ -180,7 +184,7 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleOpenForm(env)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => setSelectedEnvironment(env)} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {setSelectedEnvironment(env); setIsDeleteDialogOpen(true);}} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
@@ -220,14 +224,14 @@ export function EnvironmentManager({ instituteId, onDataChange }: EnvironmentMan
             </DialogContent>
         </Dialog>
         
-        <AlertDialog open={!!selectedEnvironment && !isFormOpen} onOpenChange={(open) => !open && setSelectedEnvironment(null)}>
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
                     <AlertDialogDescription>Esta acción eliminará el ambiente "{selectedEnvironment?.name}" y no se puede deshacer.</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setSelectedEnvironment(null)}>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
                     <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">{isDeleting ? 'Eliminando...' : 'Eliminar'}</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -61,8 +61,8 @@ export function InstitutesList({ onDataChange }: InstitutesListProps) {
     setIsDeleteDialogOpen(false);
     setSelectedInstitute(null);
     if (updated) {
-      fetchInstitutes();
       onDataChange();
+      fetchInstitutes();
     }
   };
 

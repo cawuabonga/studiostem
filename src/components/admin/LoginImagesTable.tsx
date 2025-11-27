@@ -52,10 +52,6 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
     fetchImages();
   }, [fetchImages]);
 
-  useEffect(() => {
-      fetchImages();
-  },[onDataChange, fetchImages]);
-
   const handleSetActive = async (imageUrl: string) => {
     try {
       await setActiveLoginImage(imageUrl);
@@ -63,8 +59,8 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
         title: "Imagen Activada",
         description: "La imagen de inicio de sesión ha sido actualizada.",
       });
-      setActiveImageUrl(imageUrl);
       onDataChange();
+      fetchImages();
     } catch (error) {
       toast({ title: "Error", description: "No se pudo activar la imagen.", variant: "destructive" });
     }
@@ -78,6 +74,7 @@ export function LoginImagesTable({ onDataChange }: LoginImagesTableProps) {
         description: "La imagen ha sido eliminada correctamente.",
       });
       onDataChange();
+      fetchImages();
     } catch (error) {
       toast({ title: "Error", description: "No se pudo eliminar la imagen.", variant: "destructive" });
     }

@@ -11,13 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { EditProgramDialog } from './EditProgramDialog';
 import { DeleteProgramDialog } from './DeleteProgramDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from '../ui/input';
 
 interface ProgramsListProps {
@@ -64,8 +57,8 @@ export function ProgramsList({ instituteId, onDataChange }: ProgramsListProps) {
     setIsDeleteDialogOpen(false);
     setSelectedProgram(null);
     if (updated) {
-      fetchPrograms(instituteId); // Directly refetch data
-      onDataChange(); // Propagate change if parent needs to know
+      onDataChange(); // This triggers the parent to refetch
+      fetchPrograms(instituteId); 
     }
   };
 
