@@ -64,8 +64,8 @@ export function ProgramsList({ instituteId, onDataChange }: ProgramsListProps) {
     setIsDeleteDialogOpen(false);
     setSelectedProgram(null);
     if (updated) {
-      fetchPrograms(instituteId);
-      onDataChange();
+      fetchPrograms(instituteId); // Directly refetch data
+      onDataChange(); // Propagate change if parent needs to know
     }
   };
 

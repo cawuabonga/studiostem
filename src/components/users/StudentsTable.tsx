@@ -98,7 +98,6 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     setIsEditDialogOpen(false);
     setSelectedProfile(null);
     if (updated) {
-        onDataChange();
         fetchData(instituteId);
     }
   };

@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -18,7 +17,7 @@ import { EditStaffProfileDialog } from '../users/EditStaffProfileDialog';
 import { DeleteStaffProfileDialog } from '../users/DeleteStaffProfileDialog';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
-
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface StaffTableProps {
     instituteId: string;
@@ -27,6 +26,7 @@ interface StaffTableProps {
 }
 
 const PAGE_SIZE = 10;
+const conditions = ['NOMBRADO', 'CONTRATADO'];
 
 export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode = false }: StaffTableProps) {
   const [profiles, setProfiles] = useState<StaffProfile[]>([]);
@@ -35,10 +35,14 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
   const [loading, setLoading] = useState(true);
   const [selectedProfile, setSelectedProfile] = useState<StaffProfile | null>(null);
   const [selectedProfileIds, setSelectedProfileIds] = useState<Set<string>>(new Set());
-
+  
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [filter, setFilter] = useState('');
+  
+  const [textFilter, setTextFilter] = useState('');
+  const [programFilter, setProgramFilter] = useState('all');
+  const [conditionFilter, setConditionFilter] = useState('all');
+
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { hasPermission } = useAuth();
@@ -72,23 +76,28 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
     if (instituteId) {
       fetchData(instituteId);
     }
-  }, [instituteId, fetchData, onDataChange]);
-
+  }, [instituteId, fetchData]);
+  
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
     setIsDeleteDialogOpen(false);
     setSelectedProfile(null);
     if (updated) {
-      onDataChange();
+      fetchData(instituteId); // Refetch directly
     }
   };
 
-  const filteredProfiles = useMemo(() =>
-    profiles.filter(profile =>
-        profile.displayName.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.documentId.toLowerCase().includes(filter.toLowerCase()) ||
-        profile.email.toLowerCase().includes(filter.toLowerCase())
-    ), [profiles, filter]);
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter(profile => {
+        const textMatch = profile.displayName.toLowerCase().includes(textFilter.toLowerCase()) ||
+                          profile.documentId.toLowerCase().includes(textFilter.toLowerCase()) ||
+                          profile.email.toLowerCase().includes(textFilter.toLowerCase());
+        const programMatch = programFilter === 'all' || profile.programId === programFilter;
+        const conditionMatch = conditionFilter === 'all' || profile.condition === conditionFilter;
+
+        return textMatch && programMatch && conditionMatch;
+    });
+  }, [profiles, textFilter, programFilter, conditionFilter]);
   
   const paginatedProfiles = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -124,7 +133,7 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
             title: "Eliminación Exitosa",
             description: `${selectedProfileIds.size} perfiles han sido eliminados.`,
         });
-        onDataChange();
+        fetchData(instituteId);
     } catch (error) {
         toast({ title: "Error", description: "No se pudieron eliminar los perfiles seleccionados.", variant: "destructive"});
     }
@@ -133,7 +142,7 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
   if (loading) {
     return (
       <div className="space-y-2">
-        <Skeleton className="h-10 w-1/3 mb-2" />
+        <Skeleton className="h-10 w-full mb-2" />
         {[...Array(5)].map((_, i) => (
           <Skeleton key={i} className="h-12 w-full" />
         ))}
@@ -172,16 +181,34 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
             </AlertDialog>
         </div>
       )}
-      <div className="mb-4">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
         <Input 
           placeholder="Buscar por nombre, documento o email..."
-          value={filter}
+          value={textFilter}
           onChange={(e) => {
-            setFilter(e.target.value);
+            setTextFilter(e.target.value);
             setCurrentPage(1);
           }}
           className="max-w-sm"
         />
+        <Select value={programFilter} onValueChange={(value) => {setProgramFilter(value); setCurrentPage(1);}}>
+            <SelectTrigger className="w-full sm:w-[240px]">
+                <SelectValue placeholder="Filtrar por programa..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todos los Programas</SelectItem>
+                {Array.from(programs.values()).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+            </SelectContent>
+        </Select>
+        <Select value={conditionFilter} onValueChange={(value) => {setConditionFilter(value); setCurrentPage(1);}}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filtrar por condición..." />
+            </SelectTrigger>
+            <SelectContent>
+                <SelectItem value="all">Todas las Condiciones</SelectItem>
+                {conditions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+        </Select>
       </div>
       <div className="rounded-md border">
         <Table>
