@@ -109,7 +109,8 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
 
   const handleRefresh = useCallback(() => {
      fetchData();
-  }, [fetchData]);
+     onDataChange();
+  }, [fetchData, onDataChange]);
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
@@ -117,7 +118,6 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     setSelectedUnit(null);
     if (updated) {
       handleRefresh();
-      onDataChange();
     }
   };
 
