@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -166,7 +167,7 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                     <FormItem>
                     <FormLabel>N° Documento</FormLabel>
                         <FormControl>
-                            <Input placeholder="12345678" {...field} disabled />
+                            <Input placeholder="12345678" {...field} />
                         </FormControl>
                     <FormMessage />
                     </FormItem>
