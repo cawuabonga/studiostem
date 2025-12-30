@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
 import type { Program, UnitPeriod } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
@@ -64,6 +64,8 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
+  const [isConsultingDni, setIsConsultingDni] = useState(false);
+
 
   useEffect(() => {
     if (instituteId) {
@@ -98,7 +100,35 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
             documentId: initialData.documentId,
         })
     }
-  }, [initialData, form])
+  }, [initialData, form]);
+
+  const handleDniLookup = async () => {
+    const dni = form.getValues('documentId');
+    if (dni.length !== 8) {
+        form.setError('documentId', { type: 'manual', message: 'El DNI debe tener 8 dígitos.' });
+        return;
+    }
+    setIsConsultingDni(true);
+    try {
+        const response = await fetch('/api/consult-dni', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dni }),
+        });
+        const result = await response.json();
+        if (result.success) {
+            form.setValue('firstName', result.data.firstName, { shouldValidate: true });
+            form.setValue('lastName', result.data.lastName, { shouldValidate: true });
+            toast({ title: 'Éxito', description: 'Datos del estudiante encontrados y rellenados.' });
+        } else {
+             toast({ title: 'Error en la Consulta', description: result.error, variant: 'destructive' });
+        }
+    } catch (error) {
+        toast({ title: 'Error de Red', description: 'No se pudo conectar con el servicio de consulta.', variant: 'destructive' });
+    } finally {
+        setIsConsultingDni(false);
+    }
+  };
 
   const onSubmit = async (data: AddStudentFormValues) => {
     setLoading(true);
@@ -166,9 +196,15 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>N° Documento</FormLabel>
-                        <FormControl>
-                            <Input placeholder="12345678" {...field} />
-                        </FormControl>
+                        <div className="flex gap-2">
+                             <FormControl>
+                                <Input placeholder="12345678" {...field} />
+                            </FormControl>
+                            <Button type="button" onClick={handleDniLookup} disabled={isConsultingDni}>
+                                {isConsultingDni ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
+                                <span className="ml-2 hidden sm:inline">Consultar DNI</span>
+                            </Button>
+                        </div>
                     <FormMessage />
                     </FormItem>
                 )}
@@ -351,5 +387,3 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
     </Form>
   );
 }
-
-    
