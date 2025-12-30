@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -803,8 +804,9 @@ export const deletePaymentConcept = async (instituteId: string, conceptId: strin
 
 export const registerPayment = async (
     instituteId: string, 
-    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt'>, 
-    voucherFile: File
+    data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'>, 
+    voucherFile: File,
+    options: { autoApprove?: boolean, receiptNumber?: string } = {}
 ): Promise<void> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
@@ -814,7 +816,9 @@ export const registerPayment = async (
     const paymentData: Omit<Payment, 'id'> = {
         ...data,
         voucherUrl: downloadURL,
-        status: 'Pendiente',
+        status: options.autoApprove ? 'Aprobado' : 'Pendiente',
+        receiptNumber: options.autoApprove ? options.receiptNumber : undefined,
+        processedAt: options.autoApprove ? Timestamp.now() : undefined,
         createdAt: Timestamp.now()
     };
     await setDoc(paymentDocRef, paymentData);
@@ -1775,5 +1779,6 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
 };
 
     
+
 
 

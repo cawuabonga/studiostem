@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -24,6 +24,13 @@ const adminModules: AdminModule[] = [
     href: "/dashboard/gestion-administrativa/tasas",
     icon: Banknote,
     permission: "admin:fees:manage",
+  },
+  {
+    title: "Registrar Pago de Estudiante",
+    description: "Busca un estudiante por DNI y registra un pago a su nombre.",
+    href: "/dashboard/gestion-administrativa/registrar-pago-tesoreria",
+    icon: PencilRuler,
+    permission: "admin:payments:validate",
   },
   {
     title: "Validación de Pagos",
