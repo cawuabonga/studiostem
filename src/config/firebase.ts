@@ -1782,3 +1782,4 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
 
 
 
+
