@@ -13,14 +13,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProfile } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { AddStudentForm } from '@/components/users/AddStudentForm';
 
 const searchSchema = z.object({
   documentId: z.string().min(8, { message: 'El DNI debe tener 8 caracteres.' }).max(8, { message: 'El DNI debe tener 8 caracteres.' }),
@@ -30,8 +22,6 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 
 export default function TreasuryPaymentRegistrationPage() {
   const [loading, setLoading] = useState(false);
-  const [showNewStudentDialog, setShowNewStudentDialog] = useState(false);
-  const [dniData, setDniData] = useState<{ firstName: string; lastName: string; documentId: string } | null>(null);
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -49,20 +39,13 @@ export default function TreasuryPaymentRegistrationPage() {
       if (studentProfile) {
         router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${studentProfile.documentId}`);
       } else {
-        // Consultar DNI aquí antes de abrir el diálogo
-        const response = await fetch('/api/consult-dni', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ dni: data.documentId }),
+        toast({
+            title: "Estudiante No Encontrado",
+            description: `No se encontró un estudiante con el DNI ${data.documentId}. Redirigiendo al formulario de registro.`,
+            duration: 5000,
         });
-        const result = await response.json();
-        if (result.success) {
-          setDniData({ ...result.data, documentId: data.documentId });
-        } else {
-          setDniData({ firstName: '', lastName: '', documentId: data.documentId });
-          toast({ title: 'Info', description: result.error || 'No se pudieron obtener los datos. Por favor, ingréselos manualmente.', variant: 'default' });
-        }
-        setShowNewStudentDialog(true);
+        // Redirect to the main student registration page
+        router.push('/dashboard/gestion-usuarios/registrar-estudiante');
       }
     } catch (error) {
       toast({ title: "Error", description: "Ocurrió un error al buscar al estudiante.", variant: "destructive" });
@@ -70,16 +53,9 @@ export default function TreasuryPaymentRegistrationPage() {
       setLoading(false);
     }
   };
-  
-  const handleProfileCreated = () => {
-    setShowNewStudentDialog(false);
-    const documentId = form.getValues('documentId');
-    router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${documentId}`);
-  };
 
   return (
-    <>
-      <Card className="max-w-xl mx-auto">
+    <Card className="max-w-xl mx-auto">
         <CardHeader>
           <CardTitle>Registrar Pago de Estudiante</CardTitle>
           <CardDescription>
@@ -109,25 +85,6 @@ export default function TreasuryPaymentRegistrationPage() {
             </form>
           </Form>
         </CardContent>
-      </Card>
-      
-      <Dialog open={showNewStudentDialog} onOpenChange={setShowNewStudentDialog}>
-        <DialogContent className="max-w-4xl">
-            <DialogHeader>
-                <DialogTitle>Estudiante No Encontrado</DialogTitle>
-                <DialogDescription>
-                    El DNI ingresado no corresponde a un estudiante registrado. Por favor, complete el siguiente formulario para crear su perfil.
-                </DialogDescription>
-            </DialogHeader>
-             {instituteId && dniData && (
-                <AddStudentForm
-                    instituteId={instituteId}
-                    onProfileCreated={handleProfileCreated}
-                    initialData={dniData}
-                />
-            )}
-        </DialogContent>
-      </Dialog>
-    </>
+    </Card>
   );
 }
