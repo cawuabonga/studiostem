@@ -15,10 +15,10 @@ export async function POST(req: NextRequest) {
     }
 
     const { dni } = validation.data;
-    const token = process.env.APIPERU_TOKEN;
+    const token = process.env.API_PERU_TOKEN;
 
     if (!token) {
-      console.error('APIPERU_TOKEN no está configurado en las variables de entorno.');
+      console.error('API_PERU_TOKEN no está configurado en las variables de entorno.');
       return NextResponse.json({ success: false, error: 'El servicio de consulta no está configurado en el servidor.' }, { status: 500 });
     }
 
@@ -34,6 +34,10 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
         const errorData = await response.json();
+        // Personaliza el mensaje si la API de apiperu.dev dice 'No se encontraron resultados'
+        if (errorData.message && errorData.message.includes('No se encontraron resultados')) {
+            return NextResponse.json({ success: false, error: 'No se encontraron datos para el DNI consultado.' }, { status: 404 });
+        }
         return NextResponse.json({ success: false, error: errorData.message || 'La consulta a la API externa falló.' }, { status: response.status });
     }
 

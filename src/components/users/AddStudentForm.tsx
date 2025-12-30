@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -12,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
 import type { Program, UnitPeriod } from '@/types';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
@@ -48,6 +47,7 @@ type AddStudentFormValues = z.infer<typeof addStudentSchema>;
 interface AddStudentFormProps {
   instituteId: string;
   onProfileCreated: () => void;
+  initialData?: { firstName: string; lastName: string; documentId: string } | null;
 }
 
 const fileToDataUri = (file: File): Promise<string> => {
@@ -59,10 +59,9 @@ const fileToDataUri = (file: File): Promise<string> => {
     });
 }
 
-export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentFormProps) {
+export function AddStudentForm({ instituteId, onProfileCreated, initialData = null }: AddStudentFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [isConsultingDni, setIsConsultingDni] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
 
   useEffect(() => {
@@ -74,9 +73,9 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
   const form = useForm<AddStudentFormValues>({
     resolver: zodResolver(addStudentSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
-      documentId: '',
+      firstName: initialData?.firstName || '',
+      lastName: initialData?.lastName || '',
+      documentId: initialData?.documentId || '',
       email: '',
       phone: '',
       address: '',
@@ -88,36 +87,17 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
       photoURL: undefined,
     },
   });
-
-  const handleDniLookup = async () => {
-      const dni = form.getValues('documentId');
-      if (dni.length !== 8) {
-          form.setError('documentId', { type: 'manual', message: 'El DNI debe tener 8 dígitos para la consulta.' });
-          return;
-      }
-      
-      setIsConsultingDni(true);
-      try {
-          const response = await fetch('/api/consult-dni', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ dni }),
-          });
-          const result = await response.json();
-          if (result.success) {
-              form.setValue('firstName', result.data.firstName, { shouldValidate: true });
-              form.setValue('lastName', result.data.lastName, { shouldValidate: true });
-              toast({ title: 'Éxito', description: 'Datos del estudiante encontrados.' });
-          } else {
-              toast({ title: 'Error en Consulta', description: result.error || 'No se pudieron obtener los datos.', variant: 'destructive' });
-          }
-      } catch (error) {
-          toast({ title: 'Error de Red', description: 'No se pudo conectar con el servicio de consulta.', variant: 'destructive' });
-      } finally {
-          setIsConsultingDni(false);
-      }
-  };
-
+  
+  useEffect(() => {
+    if(initialData) {
+        form.reset({
+            ...form.getValues(),
+            firstName: initialData.firstName,
+            lastName: initialData.lastName,
+            documentId: initialData.documentId,
+        })
+    }
+  }, [initialData, form])
 
   const onSubmit = async (data: AddStudentFormValues) => {
     setLoading(true);
@@ -185,14 +165,9 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>N° Documento</FormLabel>
-                    <div className="flex gap-2">
                         <FormControl>
-                            <Input placeholder="12345678" {...field} />
+                            <Input placeholder="12345678" {...field} disabled />
                         </FormControl>
-                         <Button type="button" onClick={handleDniLookup} disabled={isConsultingDni}>
-                            {isConsultingDni ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
-                        </Button>
-                    </div>
                     <FormMessage />
                     </FormItem>
                 )}

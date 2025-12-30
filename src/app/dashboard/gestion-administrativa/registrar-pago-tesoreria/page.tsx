@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -32,6 +31,7 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 export default function TreasuryPaymentRegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [showNewStudentDialog, setShowNewStudentDialog] = useState(false);
+  const [dniData, setDniData] = useState<{ firstName: string; lastName: string; documentId: string } | null>(null);
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -49,6 +49,19 @@ export default function TreasuryPaymentRegistrationPage() {
       if (studentProfile) {
         router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${studentProfile.documentId}`);
       } else {
+        // Consultar DNI aquí antes de abrir el diálogo
+        const response = await fetch('/api/consult-dni', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dni: data.documentId }),
+        });
+        const result = await response.json();
+        if (result.success) {
+          setDniData({ ...result.data, documentId: data.documentId });
+        } else {
+          setDniData({ firstName: '', lastName: '', documentId: data.documentId });
+          toast({ title: 'Info', description: result.error || 'No se pudieron obtener los datos. Por favor, ingréselos manualmente.', variant: 'default' });
+        }
         setShowNewStudentDialog(true);
       }
     } catch (error) {
@@ -106,10 +119,11 @@ export default function TreasuryPaymentRegistrationPage() {
                     El DNI ingresado no corresponde a un estudiante registrado. Por favor, complete el siguiente formulario para crear su perfil.
                 </DialogDescription>
             </DialogHeader>
-             {instituteId && (
+             {instituteId && dniData && (
                 <AddStudentForm
                     instituteId={instituteId}
                     onProfileCreated={handleProfileCreated}
+                    initialData={dniData}
                 />
             )}
         </DialogContent>
