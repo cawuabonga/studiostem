@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
 import type { Program, UnitPeriod } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
@@ -25,7 +25,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const addStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   lastName: z.string().min(2, { message: 'El apellido debe tener al menos 2 caracteres.' }),
-  documentId: z.string().min(8, { message: 'El documento de identidad debe tener al menos 8 caracteres.' }),
+  documentId: z.string().min(8, 'El DNI debe tener 8 dígitos.').max(8, 'El DNI debe tener 8 dígitos.'),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   address: z.string().min(5, { message: 'La dirección es requerida.' }).optional().or(z.literal('')),
@@ -62,6 +62,7 @@ const fileToDataUri = (file: File): Promise<string> => {
 export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isConsultingDni, setIsConsultingDni] = useState(false);
   const [programs, setPrograms] = useState<Program[]>([]);
 
   useEffect(() => {
@@ -87,6 +88,36 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
       photoURL: undefined,
     },
   });
+
+  const handleDniLookup = async () => {
+      const dni = form.getValues('documentId');
+      if (dni.length !== 8) {
+          form.setError('documentId', { type: 'manual', message: 'El DNI debe tener 8 dígitos para la consulta.' });
+          return;
+      }
+      
+      setIsConsultingDni(true);
+      try {
+          const response = await fetch('/api/consult-dni', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dni }),
+          });
+          const result = await response.json();
+          if (result.success) {
+              form.setValue('firstName', result.data.firstName, { shouldValidate: true });
+              form.setValue('lastName', result.data.lastName, { shouldValidate: true });
+              toast({ title: 'Éxito', description: 'Datos del estudiante encontrados.' });
+          } else {
+              toast({ title: 'Error en Consulta', description: result.error || 'No se pudieron obtener los datos.', variant: 'destructive' });
+          }
+      } catch (error) {
+          toast({ title: 'Error de Red', description: 'No se pudo conectar con el servicio de consulta.', variant: 'destructive' });
+      } finally {
+          setIsConsultingDni(false);
+      }
+  };
+
 
   const onSubmit = async (data: AddStudentFormValues) => {
     setLoading(true);
@@ -149,6 +180,26 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
+                control={form.control}
+                name="documentId"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>N° Documento</FormLabel>
+                    <div className="flex gap-2">
+                        <FormControl>
+                            <Input placeholder="12345678" {...field} />
+                        </FormControl>
+                         <Button type="button" onClick={handleDniLookup} disabled={isConsultingDni}>
+                            {isConsultingDni ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
+                        </Button>
+                    </div>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
             control={form.control}
             name="firstName"
             render={({ field }) => (
@@ -176,20 +227,7 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
             />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <FormField
-                control={form.control}
-                name="documentId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>N° Documento</FormLabel>
-                    <FormControl>
-                        <Input placeholder="12345678" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <FormField
                 control={form.control}
                 name="gender"
@@ -337,7 +375,5 @@ export function AddStudentForm({ instituteId, onProfileCreated }: AddStudentForm
     </Form>
   );
 }
-
-    
 
     
