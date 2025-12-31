@@ -1,11 +1,10 @@
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { getStudentProfile } from '@/config/firebase';
-import type { StudentProfile } from '@/types';
+import React, { useState, useEffect, Suspense } from 'react';
+import { getStudentProfile, getStaffProfileByDocumentId } from '@/config/firebase';
+import type { StudentProfile, StaffProfile } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TreasuryRegisterPaymentForm } from '@/components/payments/TreasuryRegisterPaymentForm';
@@ -13,19 +12,44 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-export default function TreasuryStudentPaymentPage() {
-  const { studentId } = useParams();
+type PayerProfile = (StudentProfile | StaffProfile) & { type: 'student' | 'staff' | 'external' };
+
+function TreasuryStudentPaymentPageContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
   const { instituteId } = useAuth();
-  const [student, setStudent] = useState<StudentProfile | null>(null);
+  
+  const documentId = params.studentId as string;
+  const payerType = searchParams.get('type') as 'student' | 'staff' | 'external';
+  const externalName = searchParams.get('name');
+
+  const [profile, setProfile] = useState<PayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (instituteId && studentId) {
-      getStudentProfile(instituteId, studentId as string)
-        .then(setStudent)
-        .finally(() => setLoading(false));
+    if (instituteId && documentId && payerType) {
+      setLoading(true);
+      if (payerType === 'external') {
+        setProfile({
+            documentId: documentId,
+            displayName: externalName || 'Pagador Externo',
+            fullName: externalName || 'Pagador Externo',
+            type: 'external'
+        } as any);
+        setLoading(false);
+      } else if (payerType === 'student') {
+        getStudentProfile(instituteId, documentId).then(p => {
+          if(p) setProfile({ ...p, type: 'student' });
+          setLoading(false);
+        });
+      } else if (payerType === 'staff') {
+        getStaffProfileByDocumentId(instituteId, documentId).then(p => {
+          if(p) setProfile({ ...p, type: 'staff' });
+          setLoading(false);
+        });
+      }
     }
-  }, [instituteId, studentId]);
+  }, [instituteId, documentId, payerType, externalName]);
 
   if (loading) {
     return (
@@ -36,8 +60,8 @@ export default function TreasuryStudentPaymentPage() {
     );
   }
 
-  if (!student) {
-    return <p>Estudiante no encontrado.</p>;
+  if (!profile) {
+    return <p>Perfil del pagador no encontrado.</p>;
   }
 
   return (
@@ -51,15 +75,25 @@ export default function TreasuryStudentPaymentPage() {
 
         <Card>
             <CardHeader>
-                <CardTitle>Nuevo Pago para: {student.fullName}</CardTitle>
+                <CardTitle>Nuevo Pago para: {profile.fullName || profile.displayName}</CardTitle>
                 <CardDescription>
                 Completa el formulario y adjunta el voucher para registrar y aprobar el pago.
                 </CardDescription>
             </CardHeader>
             <CardContent>
-                <TreasuryRegisterPaymentForm student={student} />
+                <TreasuryRegisterPaymentForm profile={profile} />
             </CardContent>
         </Card>
     </div>
   );
 }
+
+
+export default function TreasuryStudentPaymentPage() {
+    return (
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <TreasuryStudentPaymentPageContent />
+        </Suspense>
+    );
+}
+

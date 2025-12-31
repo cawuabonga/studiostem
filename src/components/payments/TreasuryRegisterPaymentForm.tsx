@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
 import { useRouter } from 'next/navigation';
-import type { PaymentConcept, StudentProfile } from '@/types';
+import type { PaymentConcept, StudentProfile, StaffProfile } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -37,11 +36,12 @@ const paymentSchema = z.object({
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
+type PayerProfile = (StudentProfile | StaffProfile) & { type: 'student' | 'staff' | 'external' };
 interface TreasuryRegisterPaymentFormProps {
-    student: StudentProfile;
+    profile: PayerProfile;
 }
 
-export function TreasuryRegisterPaymentForm({ student }: TreasuryRegisterPaymentFormProps) {
+export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPaymentFormProps) {
   const { user, instituteId } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
@@ -89,8 +89,9 @@ export function TreasuryRegisterPaymentForm({ student }: TreasuryRegisterPayment
         instituteId, 
         { 
             ...paymentData, 
-            studentId: student.documentId, 
-            studentName: student.fullName 
+            payerId: profile.documentId, 
+            payerName: (profile as StudentProfile).fullName || (profile as StaffProfile).displayName,
+            payerType: profile.type
         }, 
         voucher[0],
         {
@@ -100,7 +101,7 @@ export function TreasuryRegisterPaymentForm({ student }: TreasuryRegisterPayment
       );
       toast({
         title: '¡Pago Registrado y Aprobado!',
-        description: `El pago para ${student.fullName} ha sido guardado correctamente.`,
+        description: `El pago para ${profile.fullName || profile.displayName} ha sido guardado correctamente.`,
       });
       router.push('/dashboard/gestion-administrativa/validar-pagos');
     } catch (error: any) {

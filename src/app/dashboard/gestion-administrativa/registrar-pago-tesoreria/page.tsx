@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Loader2, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentProfile } from '@/config/firebase';
+import { getStudentProfile, getStaffProfileByDocumentId } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 
 const searchSchema = z.object({
   documentId: z.string().min(8, { message: 'El DNI debe tener 8 caracteres.' }).max(8, { message: 'El DNI debe tener 8 caracteres.' }),
@@ -25,6 +26,11 @@ export default function TreasuryPaymentRegistrationPage() {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
+  
+  const [isExternalPayerDialogOpen, setIsExternalPayerDialogOpen] = useState(false);
+  const [externalPayerDni, setExternalPayerDni] = useState('');
+  const [externalPayerName, setExternalPayerName] = useState('');
+
 
   const form = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
@@ -35,31 +41,52 @@ export default function TreasuryPaymentRegistrationPage() {
     if (!instituteId) return;
     setLoading(true);
     try {
+      // 1. Search for Student
       const studentProfile = await getStudentProfile(instituteId, data.documentId);
       if (studentProfile) {
-        router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${studentProfile.documentId}`);
-      } else {
-        toast({
-            title: "Estudiante No Encontrado",
-            description: `No se encontró un estudiante con el DNI ${data.documentId}. Redirigiendo al formulario de registro.`,
-            duration: 5000,
-        });
-        // Redirect to the main student registration page
-        router.push('/dashboard/gestion-usuarios/registrar-estudiante');
+        router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${studentProfile.documentId}?type=student`);
+        return;
       }
+
+      // 2. Search for Staff
+      const staffProfile = await getStaffProfileByDocumentId(instituteId, data.documentId);
+      if (staffProfile) {
+        router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${staffProfile.documentId}?type=staff`);
+        return;
+      }
+      
+      // 3. Not found, treat as External Payer
+      setExternalPayerDni(data.documentId);
+      setIsExternalPayerDialogOpen(true);
+      
     } catch (error) {
-      toast({ title: "Error", description: "Ocurrió un error al buscar al estudiante.", variant: "destructive" });
+      toast({ title: "Error", description: "Ocurrió un error al buscar el perfil.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleExternalPayerSubmit = () => {
+    if (!externalPayerName.trim()) {
+        toast({ title: 'Dato requerido', description: 'Por favor ingrese el nombre completo del pagador.', variant: 'destructive' });
+        return;
+    }
+    const queryParams = new URLSearchParams({
+        type: 'external',
+        name: externalPayerName,
+    }).toString();
+    
+    router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${externalPayerDni}?${queryParams}`);
+    setIsExternalPayerDialogOpen(false);
+  };
+
   return (
+    <>
     <Card className="max-w-xl mx-auto">
         <CardHeader>
-          <CardTitle>Registrar Pago de Estudiante</CardTitle>
+          <CardTitle>Registrar Pago</CardTitle>
           <CardDescription>
-            Ingresa el número de documento de identidad del estudiante para iniciar el registro de un nuevo pago.
+            Ingresa el DNI del pagador (estudiante, personal o externo) para iniciar el registro.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -70,7 +97,7 @@ export default function TreasuryPaymentRegistrationPage() {
                 name="documentId"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>DNI del Estudiante</FormLabel>
+                    <FormLabel>DNI del Pagador</FormLabel>
                     <FormControl>
                       <Input placeholder="Ingrese DNI..." {...field} />
                     </FormControl>
@@ -80,11 +107,36 @@ export default function TreasuryPaymentRegistrationPage() {
               />
               <Button type="submit" className="self-end" disabled={loading}>
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Buscar Estudiante
+                Buscar
               </Button>
             </form>
           </Form>
         </CardContent>
     </Card>
+
+    <Dialog open={isExternalPayerDialogOpen} onOpenChange={setIsExternalPayerDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Pagador Externo No Encontrado</DialogTitle>
+                <DialogDescription>
+                    El DNI {externalPayerDni} no está registrado como estudiante o personal. Por favor, ingrese el nombre completo para continuar con el registro del pago.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-2">
+                <Label htmlFor="external-name">Nombre Completo del Pagador</Label>
+                <Input 
+                    id="external-name"
+                    value={externalPayerName}
+                    onChange={(e) => setExternalPayerName(e.target.value)}
+                    placeholder="Nombres y Apellidos Completos"
+                />
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
+                <Button onClick={handleExternalPayerSubmit}>Continuar</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
