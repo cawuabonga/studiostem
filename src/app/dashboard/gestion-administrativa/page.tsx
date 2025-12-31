@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -26,7 +26,7 @@ const adminModules: AdminModule[] = [
     permission: "admin:fees:manage",
   },
   {
-    title: "Registrar Pago de Estudiante",
+    title: "Registrar Pago de Tesorería",
     description: "Busca un estudiante por DNI y registra un pago a su nombre.",
     href: "/dashboard/gestion-administrativa/registrar-pago-tesoreria",
     icon: PencilRuler,
@@ -37,6 +37,13 @@ const adminModules: AdminModule[] = [
     description: "Revisar, aprobar o rechazar los vouchers de pago registrados por los estudiantes.",
     href: "/dashboard/gestion-administrativa/validar-pagos",
     icon: CheckSquare,
+    permission: "admin:payments:validate",
+  },
+   {
+    title: "Reporte de Ingresos",
+    description: "Visualizar estadísticas, gráficos y reportes sobre los ingresos por pagos.",
+    href: "/dashboard/gestion-administrativa/reporte-pagos",
+    icon: BarChart2,
     permission: "admin:payments:validate",
   },
   {

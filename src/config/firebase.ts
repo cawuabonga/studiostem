@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -844,6 +843,20 @@ export const getPaymentsByStatus = async (instituteId: string, status: PaymentSt
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 };
+
+export const getApprovedPaymentsInDateRange = async (instituteId: string, from: Date, to: Date): Promise<Payment[]> => {
+    const paymentsCol = getSubCollectionRef(instituteId, 'payments');
+    const q = query(
+        paymentsCol,
+        where("status", "==", "Aprobado"),
+        where("processedAt", ">=", from),
+        where("processedAt", "<=", to),
+        orderBy("processedAt", "desc")
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+};
+
 
 export const updatePaymentStatus = async (
     instituteId: string, 
