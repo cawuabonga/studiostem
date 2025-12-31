@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -44,7 +45,7 @@ export function RejectPaymentDialog({ isOpen, onClose, payment, onConfirm }: Rej
         <DialogHeader>
           <DialogTitle>Rechazar Pago</DialogTitle>
           <DialogDescription>
-            Estás a punto de rechazar el pago para el estudiante <span className="font-bold">{payment.studentName}</span>. Por favor, especifica el motivo para que el estudiante pueda corregirlo.
+            Estás a punto de rechazar el pago para <span className="font-bold">{payment.payerName}</span>. Por favor, especifica el motivo para que la persona pueda corregirlo.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

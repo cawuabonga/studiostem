@@ -824,11 +824,11 @@ export const registerPayment = async (
     await setDoc(paymentDocRef, paymentData);
 }
 
-export const getStudentPaymentsByStatus = async (instituteId: string, studentId: string, status: PaymentStatus): Promise<Payment[]> => {
+export const getStudentPaymentsByStatus = async (instituteId: string, payerId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const q = query(
         paymentsCol,
-        where("studentId", "==", studentId),
+        where("payerId", "==", payerId),
         where("status", "==", status)
     );
     const snapshot = await getDocs(q);
@@ -1777,9 +1777,3 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
         }
     }
 };
-
-    
-
-
-
-

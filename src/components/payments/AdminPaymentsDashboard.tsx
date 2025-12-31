@@ -103,7 +103,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                 <TableHeader>
                     <TableRow>
                         <TableHead>Fecha de Pago</TableHead>
-                        <TableHead>Estudiante</TableHead>
+                        <TableHead>Pagador</TableHead>
                         <TableHead>Concepto</TableHead>
                         <TableHead>Monto</TableHead>
                         <TableHead>N° Operación</TableHead>
@@ -117,7 +117,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                     {payments.map(payment => (
                         <TableRow key={payment.id}>
                             <TableCell>{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell className="font-medium">{payment.studentName}</TableCell>
+                            <TableCell className="font-medium">{payment.payerName}</TableCell>
                             <TableCell>{payment.concept}</TableCell>
                             <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>
                             <TableCell>{payment.operationNumber}</TableCell>

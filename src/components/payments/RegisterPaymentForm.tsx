@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
 import { useRouter } from 'next/navigation';
-import type { PaymentConcept } from '@/types';
+import type { PaymentConcept, PayerType } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -84,7 +84,12 @@ export function RegisterPaymentForm() {
     setLoading(true);
     try {
       const { voucher, ...paymentData } = data;
-      await registerPayment(instituteId, { ...paymentData, studentId: user.documentId!, studentName: user.displayName! }, voucher[0]);
+      await registerPayment(instituteId, { 
+          ...paymentData, 
+          payerId: user.documentId,
+          payerName: user.displayName || 'Usuario Desconocido',
+          payerType: 'student' // Assuming this form is only for students
+      }, voucher[0]);
       // toast({
       //   title: '¡Pago Registrado!',
       //   description: 'Tu pago ha sido enviado para validación. Puedes ver su estado en "Mi Historial de Pagos".',

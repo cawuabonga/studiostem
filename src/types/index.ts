@@ -230,6 +230,7 @@ export interface NonTeachingAssignment {
 
 // --- PAYMENTS ---
 export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type PayerType = 'student' | 'staff' | 'external';
 
 export interface PaymentConcept {
   id: string;
@@ -242,9 +243,10 @@ export interface PaymentConcept {
 
 export interface Payment {
   id: string;
-  studentId: string;
-  studentName: string;
-  concept: string; // This will now be the name from PaymentConcept
+  payerId: string;
+  payerName: string;
+  payerType: PayerType;
+  concept: string; 
   amount: number;
   paymentDate: Timestamp;
   operationNumber: string;
@@ -252,8 +254,8 @@ export interface Payment {
   status: PaymentStatus;
   createdAt: Timestamp;
   processedAt?: Timestamp;
-  receiptNumber?: string; // Assigned by admin on approval
-  rejectionReason?: string; // Assigned by admin on rejection
+  receiptNumber?: string; 
+  rejectionReason?: string;
 }
 
 
@@ -581,5 +583,3 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
-
-    

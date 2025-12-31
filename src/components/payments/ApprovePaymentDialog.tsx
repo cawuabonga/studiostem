@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -45,9 +46,9 @@ export function ApprovePaymentDialog({ isOpen, onClose, payment, onConfirm }: Ap
         <DialogHeader>
           <DialogTitle>Aprobar Pago y Asignar Comprobante</DialogTitle>
           <DialogDescription>
-            Estás a punto de aprobar el pago de <span className="font-bold">S/ {payment.amount.toFixed(2)}</span> por el concepto de <span className="font-bold">"{payment.concept}"</span> para el estudiante <span className="font-bold">{payment.studentName}</span>.
+            Estás a punto de aprobar el pago de <span className="font-bold">S/ {payment.amount.toFixed(2)}</span> por el concepto de <span className="font-bold">"{payment.concept}"</span> para <span className="font-bold">{payment.payerName}</span>.
             <br />
-            Para continuar, ingresa el número del comprobante de pago físico que se le entregará al estudiante.
+            Para continuar, ingresa el número del comprobante de pago físico que se le entregará a la persona.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
