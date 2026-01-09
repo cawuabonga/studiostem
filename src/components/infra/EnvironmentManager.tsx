@@ -102,7 +102,7 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
 
   const handleOpenForm = (environment?: Environment) => {
     setSelectedEnvironment(environment || null);
-    form.reset(environment || { name: '', code: '', type: '', capacity: 0 });
+    form.reset(environment || { name: '', code: '', type: '', capacity: 0, floor: 0 });
     setIsFormOpen(true);
   };
   
