@@ -160,10 +160,6 @@
         {
           "fieldPath": "instituteId",
           "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "name",
-          "order": "ASCENDING"
         }
       ]
     }
