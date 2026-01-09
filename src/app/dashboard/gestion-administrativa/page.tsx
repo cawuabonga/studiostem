@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -51,6 +51,13 @@ const adminModules: AdminModule[] = [
     description: "Administra edificios, ambientes y el inventario de activos físicos del instituto.",
     href: "/dashboard/gestion-administrativa/infraestructura",
     icon: Building,
+    permission: "admin:infra:manage",
+  },
+   {
+    title: "Reporte de Inventario",
+    description: "Visualiza y filtra todo el inventario de activos físicos del instituto.",
+    href: "/dashboard/gestion-administrativa/reporte-inventario",
+    icon: Archive,
     permission: "admin:infra:manage",
   },
   {

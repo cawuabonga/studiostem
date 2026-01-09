@@ -1529,7 +1529,7 @@ export const deleteBuilding = async (instituteId: string, buildingId: string): P
     
 export const addEnvironment = async (instituteId: string, buildingId: string, data: Omit<Environment, 'id'>): Promise<void> => {
     const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
-    await addDoc(envCol, data);
+    await addDoc(envCol, { ...data, buildingId });
 };
 
 export const getEnvironmentsForBuilding = async (instituteId: string, buildingId: string): Promise<Environment[]> => {
@@ -1549,6 +1549,46 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
     await deleteDoc(envRef);
 };
 
+export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
+    const assetsCol = collectionGroup(db, 'assets');
+    const q = query(assetsCol); // This query will need an index
+    const snapshot = await getDocs(q);
+    
+    // This is inefficient as it fetches all assets from all institutes and then filters.
+    // A better approach is to add instituteId to each asset and query on that.
+    // For now, this will work for a single institute setup.
+    // Let's assume we add instituteId to the asset for a proper query.
+
+    const allBuildings = await getBuildings(instituteId);
+    const buildingMap = new Map(allBuildings.map(b => [b.id, b.name]));
+
+    const allEnvs: Environment[] = [];
+    for (const building of allBuildings) {
+        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
+        allEnvs.push(...envs);
+    }
+    const envMap = new Map(allEnvs.map(e => [e.id, { name: e.name, buildingId: e.buildingId }]));
+    
+    const assets: Asset[] = [];
+    snapshot.forEach(doc => {
+        const asset = { id: doc.id, ...doc.data() } as Asset;
+        const envInfo = envMap.get(asset.environmentId);
+        if (envInfo) {
+            const buildingName = buildingMap.get(envInfo.buildingId);
+            if(buildingName) {
+                 assets.push({
+                    ...asset,
+                    environmentName: envInfo.name,
+                    buildingName: buildingName,
+                });
+            }
+        }
+    });
+
+    return assets;
+};
+
+
 export const getAssetsForEnvironment = async (instituteId: string, buildingId: string, environmentId: string): Promise<Asset[]> => {
     const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
     const q = query(assetsCol, orderBy("name"));
@@ -1558,7 +1598,7 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
 
 export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
     const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
-    await addDoc(assetsCol, data);
+    await addDoc(assetsCol, { ...data, buildingId });
 };
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {

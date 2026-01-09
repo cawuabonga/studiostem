@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -201,6 +202,7 @@ export interface Teacher {
   specialty: string;
   active: boolean; // Could be derived from linked status or a specific field
   condition: 'NOMBRADO' | 'CONTRATADO';
+  programId: string;
   programName?: string;
 }
 
@@ -439,7 +441,8 @@ export interface Environment {
 
 export interface Asset {
     id: string;
-    environmentId: string; // Link to the parent environment
+    buildingId: string;
+    environmentId: string;
     name: string;
     codeOrSerial: string;
     type: 'Equipamiento Electrónico' | 'Mobiliario' | 'Material Didáctico' | 'Otro';
@@ -447,6 +450,9 @@ export interface Asset {
     status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
     acquisitionDate?: Timestamp;
     notes?: string;
+    // Denormalized data for reporting
+    environmentName?: string;
+    buildingName?: string;
 }
 
 
@@ -608,4 +614,5 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
 
