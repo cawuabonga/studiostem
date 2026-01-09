@@ -1536,7 +1536,7 @@ export const getEnvironmentsForBuilding = async (instituteId: string, buildingId
     const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
     const q = query(envCol, orderBy("name"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Environment));
+    return snapshot.docs.map(doc => ({ id: doc.id, buildingId: buildingId, ...doc.data() } as Environment));
 };
 
 export const updateEnvironment = async (instituteId: string, buildingId: string, envId: string, data: Partial<Environment>): Promise<void> => {
@@ -1562,13 +1562,13 @@ export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
     
     const assets: Asset[] = [];
     const assetsCollectionGroup = collectionGroup(db, 'assets');
-    const snapshot = await getDocs(assetsCollectionGroup);
+    const q = query(assetsCollectionGroup, where("instituteId", "==", instituteId));
+    const snapshot = await getDocs(q);
 
     snapshot.forEach(doc => {
         const assetData = doc.data() as Omit<Asset, 'id'>;
         const envInfo = envMap.get(assetData.environmentId);
         
-        // Ensure asset belongs to a known environment of the current institute
         if (envInfo) {
             const buildingName = buildingMap.get(envInfo.buildingId);
             if(buildingName) {
@@ -1596,7 +1596,7 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
 
 export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
     const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
-    await addDoc(assetsCol, { ...data, buildingId });
+    await addDoc(assetsCol, { ...data, instituteId });
 };
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
