@@ -1550,15 +1550,6 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 };
 
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
-    const assetsCol = collectionGroup(db, 'assets');
-    const q = query(assetsCol); // This query will need an index
-    const snapshot = await getDocs(q);
-    
-    // This is inefficient as it fetches all assets from all institutes and then filters.
-    // A better approach is to add instituteId to each asset and query on that.
-    // For now, this will work for a single institute setup.
-    // Let's assume we add instituteId to the asset for a proper query.
-
     const allBuildings = await getBuildings(instituteId);
     const buildingMap = new Map(allBuildings.map(b => [b.id, b.name]));
 
@@ -1570,16 +1561,23 @@ export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
     const envMap = new Map(allEnvs.map(e => [e.id, { name: e.name, buildingId: e.buildingId }]));
     
     const assets: Asset[] = [];
+    const assetsCollectionGroup = collectionGroup(db, 'assets');
+    const snapshot = await getDocs(assetsCollectionGroup);
+
     snapshot.forEach(doc => {
-        const asset = { id: doc.id, ...doc.data() } as Asset;
-        const envInfo = envMap.get(asset.environmentId);
+        const assetData = doc.data() as Omit<Asset, 'id'>;
+        const envInfo = envMap.get(assetData.environmentId);
+        
+        // Ensure asset belongs to a known environment of the current institute
         if (envInfo) {
             const buildingName = buildingMap.get(envInfo.buildingId);
             if(buildingName) {
                  assets.push({
-                    ...asset,
+                    id: doc.id,
+                    ...assetData,
                     environmentName: envInfo.name,
                     buildingName: buildingName,
+                    buildingId: envInfo.buildingId,
                 });
             }
         }
