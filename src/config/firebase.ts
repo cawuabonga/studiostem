@@ -1,10 +1,11 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1523,6 +1524,31 @@ export const deleteEnvironment = async (instituteId: string, envId: string): Pro
     const envRef = doc(db, 'institutes', instituteId, 'environments', envId);
     await deleteDoc(envRef);
 };
+
+// --- BUILDINGS (INFRASTRUCTURE) ---
+export const addBuilding = async (instituteId: string, data: Omit<Building, 'id'>): Promise<void> => {
+    const buildingsCol = getSubCollectionRef(instituteId, 'buildings');
+    await addDoc(buildingsCol, data);
+};
+
+export const getBuildings = async (instituteId: string): Promise<Building[]> => {
+    const buildingsCol = getSubCollectionRef(instituteId, 'buildings');
+    const q = query(buildingsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Building));
+};
+
+export const updateBuilding = async (instituteId: string, buildingId: string, data: Partial<Building>): Promise<void> => {
+    const buildingRef = doc(db, 'institutes', instituteId, 'buildings', buildingId);
+    await updateDoc(buildingRef, data);
+};
+
+export const deleteBuilding = async (instituteId: string, buildingId: string): Promise<void> => {
+    const buildingRef = doc(db, 'institutes', instituteId, 'buildings', buildingId);
+    // TODO: Consider deleting sub-collections (environments, assets) via a Cloud Function
+    await deleteDoc(buildingRef);
+};
+
     
 // --- SCHEDULE TEMPLATES ---
 export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
