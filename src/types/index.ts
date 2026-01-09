@@ -243,7 +243,7 @@ export interface PaymentConcept {
 
 export interface Payment {
   id: string;
-  payerId: string;
+  payerId: string; // documentId of the payer
   payerName: string;
   payerType: PayerType;
   concept: string; 
@@ -416,16 +416,41 @@ export interface MatriculationReportData {
     }[];
 }
 
+// --- INFRASTRUCTURE ---
 
-// --- HORARIOS / SCHEDULES ---
+export interface Building {
+  id: string;
+  name: string;
+  code: string;
+  location?: string;
+  floorCount?: number;
+  dimensions?: { width: number; length: number };
+}
+
 export interface Environment {
   id: string;
   name: string;
   code: string;
   type: 'Aula' | 'Laboratorio' | 'Oficina' | 'Auditorio' | 'Taller' | 'Otro';
   capacity: number;
+  buildingId: string; // Link to the parent building
+  floor?: number;
 }
 
+export interface Asset {
+    id: string;
+    environmentId: string; // Link to the parent environment
+    name: string;
+    codeOrSerial: string;
+    type: 'Equipamiento Electrónico' | 'Mobiliario' | 'Material Didáctico' | 'Otro';
+    quantity: number;
+    status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
+    acquisitionDate?: Timestamp;
+    notes?: string;
+}
+
+
+// --- SCHEDULES / HORARIOS ---
 export interface ScheduleBlock {
     id: string;
     dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes';
@@ -479,6 +504,7 @@ export type Permission =
   | 'admin:access-control:manage'
   | 'admin:attendance:report'
   | 'admin:institute:manage'
+  | 'admin:infra:manage'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
@@ -515,6 +541,17 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
     {
+        category: 'Gestión Administrativa',
+        description: 'Permisos para la gestión de tasas, pagos, infraestructura y control de acceso.',
+        permissions: [
+            { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
+            { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
+            { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
+            { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
+            { id: 'admin:infra:manage', label: 'Gestionar Infraestructura (Edificios, Ambientes, Activos)' },
+        ],
+    },
+    {
         category: 'Gestión Académica',
         description: 'Permisos relacionados con la administración de programas, unidades, asignaciones y matrículas.',
         permissions: [
@@ -529,21 +566,10 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'academic:load:view', label: 'Ver Dashboard de Carga Académica' },
         ],
     },
-    {
-        category: 'Gestión Administrativa',
-        description: 'Permisos para la gestión de tasas educativas, validación de pagos y control de acceso.',
-        permissions: [
-            { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
-            { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
-            { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
-            { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
-        ],
-    },
      {
         category: 'Planificación y Horarios',
         description: 'Permisos para gestionar ambientes, generar horarios y visualizar la carga horaria.',
         permissions: [
-            { id: 'planning:environment:manage', label: 'Gestionar Ambientes (aulas, laboratorios)' },
             { id: 'planning:schedule:manage', label: 'Generar y Gestionar Horarios' },
             { id: 'planning:schedule:view:own', label: 'Ver Mi Horario' },
         ],

@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2 } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -45,6 +45,13 @@ const adminModules: AdminModule[] = [
     href: "/dashboard/gestion-administrativa/reporte-pagos",
     icon: BarChart2,
     permission: "admin:payments:validate",
+  },
+  {
+    title: "Gestionar Infraestructura",
+    description: "Administra edificios, ambientes y el inventario de activos físicos del instituto.",
+    href: "/dashboard/gestion-administrativa/infraestructura",
+    icon: Building,
+    permission: "admin:infra:manage",
   },
   {
     title: "Control de Acceso (RFID)",

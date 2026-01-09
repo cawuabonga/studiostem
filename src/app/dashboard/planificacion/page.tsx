@@ -10,13 +10,6 @@ import type { Permission } from "@/types";
 
 const planningModules: { title: string; description: string; href: string; icon: React.ElementType; permission: Permission}[] = [
   {
-    title: "Gestionar Ambientes",
-    description: "Crear, editar y organizar las aulas, laboratorios y oficinas del instituto.",
-    href: "/dashboard/planificacion/ambientes",
-    icon: DoorClosed,
-    permission: "planning:environment:manage",
-  },
-  {
     title: "Configuración de Horarios",
     description: "Define las plantillas de horas y turnos para el generador de horarios.",
     href: "/dashboard/planificacion/configuracion-horario",
