@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
+import { EnvironmentManager } from './EnvironmentManager';
 
 const buildingSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -125,7 +126,7 @@ export function BuildingManager({ instituteId }: BuildingManagerProps) {
                     <div>
                         <CardTitle>Gestión de Infraestructura</CardTitle>
                         <CardDescription>
-                            Administre los edificios, pabellones y su contenido.
+                            Administre los edificios, pabellones y su contenido (ambientes y activos).
                         </CardDescription>
                     </div>
                      <Button onClick={() => handleOpenDialog()}>
@@ -153,19 +154,15 @@ export function BuildingManager({ instituteId }: BuildingManagerProps) {
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="p-4 bg-muted/30">
-                                         <div className="flex justify-between items-center mb-4">
-                                            <h4 className="font-semibold">Ambientes en este edificio</h4>
-                                            <div>
-                                                <Button variant="outline" size="sm" onClick={() => handleOpenDialog(building)} className="mr-2">
-                                                    <Edit className="mr-2 h-4 w-4" /> Editar Edificio
-                                                </Button>
-                                                <Button variant="destructive" size="sm" onClick={() => setDeletingBuilding(building)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Edificio
-                                                </Button>
-                                            </div>
+                                         <div className="flex justify-end items-center mb-4 gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => handleOpenDialog(building)}>
+                                                <Edit className="mr-2 h-4 w-4" /> Editar Edificio
+                                            </Button>
+                                            <Button variant="destructive" size="sm" onClick={() => setDeletingBuilding(building)}>
+                                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Edificio
+                                            </Button>
                                         </div>
-                                        {/* TODO: Add EnvironmentManager component here */}
-                                        <p className="text-muted-foreground text-center py-8">La gestión de ambientes y activos se implementará aquí próximamente.</p>
+                                        <EnvironmentManager instituteId={instituteId} buildingId={building.id} onDataChange={fetchData}/>
                                     </AccordionContent>
                                 </AccordionItem>
                             ))}
@@ -221,3 +218,5 @@ export function BuildingManager({ instituteId }: BuildingManagerProps) {
         </div>
     );
 }
+
+    

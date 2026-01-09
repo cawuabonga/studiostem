@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -421,7 +422,7 @@ export interface MatriculationReportData {
 export interface Building {
   id: string;
   name: string;
-  code: string;
+  code?: string;
   location?: string;
   floorCount?: number;
   dimensions?: { width: number; length: number };
@@ -510,7 +511,6 @@ export type Permission =
   | 'users:student:manage'
   // Planning & Schedules
   | 'planning:schedule:manage'
-  | 'planning:environment:manage'
   | 'planning:schedule:view:own'
   // SuperAdmin
   | 'superadmin:institute:manage'
@@ -609,3 +609,5 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
+    

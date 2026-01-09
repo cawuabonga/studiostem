@@ -1502,30 +1502,8 @@ export const getMatriculationReportData = async (
     };
 };
 
-// --- SCHEDULES / AMBIENTES ---
-export const addEnvironment = async (instituteId: string, data: Omit<Environment, 'id'>): Promise<void> => {
-    const envCol = getSubCollectionRef(instituteId, 'environments');
-    await addDoc(envCol, data);
-};
+// --- INFRASTRUCTURE ---
 
-export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
-    const envCol = getSubCollectionRef(instituteId, 'environments');
-    const q = query(envCol, orderBy("name"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Environment));
-};
-
-export const updateEnvironment = async (instituteId: string, envId: string, data: Partial<Environment>): Promise<void> => {
-    const envRef = doc(db, 'institutes', instituteId, 'environments', envId);
-    await updateDoc(envRef, data);
-};
-
-export const deleteEnvironment = async (instituteId: string, envId: string): Promise<void> => {
-    const envRef = doc(db, 'institutes', instituteId, 'environments', envId);
-    await deleteDoc(envRef);
-};
-
-// --- BUILDINGS (INFRASTRUCTURE) ---
 export const addBuilding = async (instituteId: string, data: Omit<Building, 'id'>): Promise<void> => {
     const buildingsCol = getSubCollectionRef(instituteId, 'buildings');
     await addDoc(buildingsCol, data);
@@ -1548,8 +1526,30 @@ export const deleteBuilding = async (instituteId: string, buildingId: string): P
     // TODO: Consider deleting sub-collections (environments, assets) via a Cloud Function
     await deleteDoc(buildingRef);
 };
-
     
+export const addEnvironment = async (instituteId: string, buildingId: string, data: Omit<Environment, 'id'>): Promise<void> => {
+    const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
+    await addDoc(envCol, data);
+};
+
+export const getEnvironmentsForBuilding = async (instituteId: string, buildingId: string): Promise<Environment[]> => {
+    const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
+    const q = query(envCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Environment));
+};
+
+export const updateEnvironment = async (instituteId: string, buildingId: string, envId: string, data: Partial<Environment>): Promise<void> => {
+    const envRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', envId);
+    await updateDoc(envRef, data);
+};
+
+export const deleteEnvironment = async (instituteId: string, buildingId: string, envId: string): Promise<void> => {
+    const envRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', envId);
+    await deleteDoc(envRef);
+};
+
+
 // --- SCHEDULE TEMPLATES ---
 export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
     const templatesCol = getSubCollectionRef(instituteId, 'scheduleTemplates');
@@ -1816,3 +1816,6 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
         }
     }
 };
+
+
+    
