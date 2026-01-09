@@ -1536,7 +1536,7 @@ export const getEnvironmentsForBuilding = async (instituteId: string, buildingId
     const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
     const q = query(envCol, orderBy("name"));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, buildingId: buildingId, ...doc.data() } as Environment));
+    return snapshot.docs.map(docSnap => ({ id: docSnap.id, buildingId, ...docSnap.data() } as Environment));
 };
 
 export const updateEnvironment = async (instituteId: string, buildingId: string, envId: string, data: Partial<Environment>): Promise<void> => {
@@ -1550,40 +1550,23 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 };
 
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
+    const allAssets: Asset[] = [];
     const allBuildings = await getBuildings(instituteId);
-    const buildingMap = new Map(allBuildings.map(b => [b.id, b.name]));
 
-    const allEnvs: Environment[] = [];
     for (const building of allBuildings) {
-        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
-        allEnvs.push(...envs);
-    }
-    const envMap = new Map(allEnvs.map(e => [e.id, { name: e.name, buildingId: e.buildingId }]));
-    
-    const assets: Asset[] = [];
-    const assetsCollectionGroup = collectionGroup(db, 'assets');
-    const q = query(assetsCollectionGroup, where("instituteId", "==", instituteId));
-    const snapshot = await getDocs(q);
-
-    snapshot.forEach(doc => {
-        const assetData = doc.data() as Omit<Asset, 'id'>;
-        const envInfo = envMap.get(assetData.environmentId);
-        
-        if (envInfo) {
-            const buildingName = buildingMap.get(envInfo.buildingId);
-            if(buildingName) {
-                 assets.push({
-                    id: doc.id,
-                    ...assetData,
-                    environmentName: envInfo.name,
-                    buildingName: buildingName,
-                    buildingId: envInfo.buildingId,
-                });
-            }
+        const allEnvironments = await getEnvironmentsForBuilding(instituteId, building.id);
+        for (const environment of allEnvironments) {
+            const assets = await getAssetsForEnvironment(instituteId, building.id, environment.id);
+            const assetsWithLocation = assets.map(asset => ({
+                ...asset,
+                buildingId: building.id,
+                buildingName: building.name,
+                environmentName: environment.name,
+            }));
+            allAssets.push(...assetsWithLocation);
         }
-    });
-
-    return assets;
+    }
+    return allAssets;
 };
 
 
