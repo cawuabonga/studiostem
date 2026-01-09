@@ -14,6 +14,7 @@ import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Archive, Building2, CheckCircle, Package, Wrench, XCircle } from 'lucide-react';
+import { AssetCharts } from './AssetCharts';
 
 const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
@@ -79,13 +80,33 @@ export function InventoryReportDashboard() {
         });
     }, [allAssets, buildingFilter, typeFilter, statusFilter, textFilter]);
 
-    const stats = useMemo(() => {
-        const total = filteredAssets.length;
-        const operative = filteredAssets.filter(a => a.status === 'Operativo').length;
-        const maintenance = filteredAssets.filter(a => a.status === 'En Mantenimiento').length;
-        const decommissioned = filteredAssets.filter(a => a.status === 'De Baja').length;
-        return { total, operative, maintenance, decommissioned };
+    const chartData = useMemo(() => {
+        const byType = filteredAssets.reduce((acc, asset) => {
+            acc[asset.type] = (acc[asset.type] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const byStatus = filteredAssets.reduce((acc, asset) => {
+            acc[asset.status] = (acc[asset.status] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            byType: Object.entries(byType).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value),
+            byStatus: Object.entries(byStatus).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value),
+        };
     }, [filteredAssets]);
+
+    const stats = useMemo(() => {
+        const total = chartData.byType.reduce((acc, item) => acc + item.value, 0);
+        return { 
+            total, 
+            operative: chartData.byStatus.find(s => s.name === 'Operativo')?.value || 0,
+            maintenance: chartData.byStatus.find(s => s.name === 'En Mantenimiento')?.value || 0,
+            decommissioned: chartData.byStatus.find(s => s.name === 'De Baja')?.value || 0,
+        };
+    }, [chartData]);
+
 
     if (loading) {
         return <Skeleton className="h-[60vh] w-full" />;
@@ -129,6 +150,8 @@ export function InventoryReportDashboard() {
                 <StatCard title="De Baja" value={stats.decommissioned} icon={XCircle} description="Activos dados de baja" />
             </div>
             
+            <AssetCharts data={chartData} />
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-3">
                      <Card>
