@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1547,6 +1547,28 @@ export const updateEnvironment = async (instituteId: string, buildingId: string,
 export const deleteEnvironment = async (instituteId: string, buildingId: string, envId: string): Promise<void> => {
     const envRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', envId);
     await deleteDoc(envRef);
+};
+
+export const getAssetsForEnvironment = async (instituteId: string, buildingId: string, environmentId: string): Promise<Asset[]> => {
+    const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
+    const q = query(assetsCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
+};
+
+export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
+    const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
+    await addDoc(assetsCol, data);
+};
+
+export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
+    const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId);
+    await updateDoc(assetRef, data);
+};
+
+export const deleteAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string): Promise<void> => {
+    const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId);
+    await deleteDoc(assetRef);
 };
 
 

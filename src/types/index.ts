@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -610,4 +609,3 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
     },
 ];
 
-    

@@ -9,7 +9,7 @@ import { getEnvironmentsForBuilding, addEnvironment, updateEnvironment, deleteEn
 import type { Environment } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, MoreHorizontal, PlusCircle } from 'lucide-react';
+import { Edit2, Trash2, MoreHorizontal, PlusCircle, Package } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -41,6 +41,7 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { AssetManager } from './AssetManager';
 
 const environmentTypes = ['Aula', 'Laboratorio', 'Oficina', 'Auditorio', 'Taller', 'Otro'];
 
@@ -69,6 +70,7 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAssetsOpen, setIsAssetsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
@@ -105,6 +107,11 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
     form.reset(environment || { name: '', code: '', type: '', capacity: 0, floor: 0 });
     setIsFormOpen(true);
   };
+
+  const handleOpenAssets = (environment: Environment) => {
+    setSelectedEnvironment(environment);
+    setIsAssetsOpen(true);
+  }
   
   const handleCloseForm = (updated?: boolean) => {
     setIsFormOpen(false);
@@ -187,6 +194,7 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleOpenAssets(env)}><Package className="mr-2 h-4 w-4" /> Gestionar Activos</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleOpenForm(env)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {setSelectedEnvironment(env); setIsDeleteDialogOpen(true);}} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -242,8 +250,24 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
             </AlertDialogContent>
         </AlertDialog>
 
+        {selectedEnvironment && (
+             <Dialog open={isAssetsOpen} onOpenChange={setIsAssetsOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Gestión de Activos para: {selectedEnvironment.name}</DialogTitle>
+                        <DialogDescription>
+                            Administre el inventario de mobiliario, equipos y otros activos de este ambiente.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <AssetManager 
+                        instituteId={instituteId} 
+                        buildingId={buildingId} 
+                        environmentId={selectedEnvironment.id}
+                    />
+                </DialogContent>
+            </Dialog>
+        )}
+
     </div>
   );
 }
-
-    
