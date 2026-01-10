@@ -6,18 +6,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAllAssets, getBuildings } from '@/config/firebase';
+import { getAllAssets, getBuildings, bulkUpdateAssetsStatus } from '@/config/firebase';
 import type { Asset, Building } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Archive, Building2, CheckCircle, Package, Wrench, XCircle } from 'lucide-react';
+import { Archive, Building2, CheckCircle, Package, Wrench, XCircle, Trash2 } from 'lucide-react';
 import { AssetCharts } from './AssetCharts';
+import { Checkbox } from '../ui/checkbox';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
-const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
+const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'] as const;
+type AssetStatus = typeof assetStatuses[number];
+
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description?: string }) => (
     <Card>
@@ -38,12 +42,15 @@ export function InventoryReportDashboard() {
     const [allAssets, setAllAssets] = useState<Asset[]>([]);
     const [buildings, setBuildings] = useState<Building[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
 
     // Filters
     const [buildingFilter, setBuildingFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [textFilter, setTextFilter] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -55,6 +62,7 @@ export function InventoryReportDashboard() {
             ]);
             setAllAssets(assetsData);
             setBuildings(buildingsData);
+            setSelectedAssetIds(new Set()); // Reset selection on fetch
         } catch (error) {
             console.error("Error fetching inventory data:", error);
             toast({ title: "Error", description: "No se pudieron cargar los datos del inventario.", variant: "destructive" });
@@ -106,6 +114,42 @@ export function InventoryReportDashboard() {
             decommissioned: chartData.byStatus.find(s => s.name === 'De Baja')?.value || 0,
         };
     }, [chartData]);
+    
+    const handleSelectAll = (checked: boolean | string) => {
+        if (checked) {
+            setSelectedAssetIds(new Set(filteredAssets.map(a => a.id)));
+        } else {
+            setSelectedAssetIds(new Set());
+        }
+    };
+    
+    const handleSelectOne = (assetId: string) => {
+        const newSet = new Set(selectedAssetIds);
+        if (newSet.has(assetId)) {
+            newSet.delete(assetId);
+        } else {
+            newSet.add(assetId);
+        }
+        setSelectedAssetIds(newSet);
+    };
+
+    const handleBulkStatusChange = async (newStatus: AssetStatus) => {
+        if (!instituteId || selectedAssetIds.size === 0) return;
+        setIsSubmitting(true);
+        try {
+            const assetsToUpdate = Array.from(selectedAssetIds).map(id => allAssets.find(a => a.id === id)).filter(Boolean) as Asset[];
+            await bulkUpdateAssetsStatus(instituteId, assetsToUpdate, newStatus);
+            toast({
+                title: "Actualización Exitosa",
+                description: `${selectedAssetIds.size} activos actualizados a "${newStatus}".`,
+            });
+            fetchData(); // Refreshes data and clears selection
+        } catch (error) {
+             toast({ title: "Error", description: "No se pudieron actualizar los activos.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
+    }
 
 
     if (loading) {
@@ -116,7 +160,7 @@ export function InventoryReportDashboard() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Reporte de Inventario de Activos</CardTitle>
+                    <CardTitle>Gestor y Reporte de Inventario</CardTitle>
                     <CardDescription>
                         Filtre y visualice todos los activos físicos registrados en el instituto.
                     </CardDescription>
@@ -156,13 +200,36 @@ export function InventoryReportDashboard() {
                 <div className="lg:col-span-3">
                      <Card>
                         <CardHeader>
-                            <CardTitle>Listado de Activos</CardTitle>
+                           <div className="flex items-center justify-between">
+                             <CardTitle>Listado de Activos</CardTitle>
+                             {selectedAssetIds.size > 0 && (
+                                <div className="flex items-center gap-4 bg-muted p-2 rounded-lg">
+                                    <p className="text-sm font-medium">{selectedAssetIds.size} seleccionado(s)</p>
+                                    <Select onValueChange={(value) => handleBulkStatusChange(value as AssetStatus)}>
+                                        <SelectTrigger className="w-[200px]">
+                                            <SelectValue placeholder="Cambiar estado..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {assetStatuses.map(status => (
+                                                <SelectItem key={status} value={status}>Marcar como {status}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                             )}
+                           </div>
                         </CardHeader>
                         <CardContent>
                            <div className="rounded-md border">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
+                                            <TableHead className="w-[50px]">
+                                                <Checkbox
+                                                    checked={selectedAssetIds.size === filteredAssets.length && filteredAssets.length > 0}
+                                                    onCheckedChange={handleSelectAll}
+                                                />
+                                            </TableHead>
                                             <TableHead>Activo</TableHead>
                                             <TableHead>Código/Serial</TableHead>
                                             <TableHead>Ubicación</TableHead>
@@ -172,7 +239,8 @@ export function InventoryReportDashboard() {
                                     </TableHeader>
                                     <TableBody>
                                         {filteredAssets.length > 0 ? filteredAssets.map(asset => (
-                                            <TableRow key={asset.id}>
+                                            <TableRow key={asset.id} data-state={selectedAssetIds.has(asset.id) && "selected"}>
+                                                <TableCell><Checkbox checked={selectedAssetIds.has(asset.id)} onCheckedChange={() => handleSelectOne(asset.id)} /></TableCell>
                                                 <TableCell className="font-medium">{asset.name}</TableCell>
                                                 <TableCell>{asset.codeOrSerial}</TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">{asset.buildingName} - {asset.environmentName}</TableCell>
@@ -181,7 +249,7 @@ export function InventoryReportDashboard() {
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center">No se encontraron activos con los filtros seleccionados.</TableCell>
+                                                <TableCell colSpan={6} className="h-24 text-center">No se encontraron activos con los filtros seleccionados.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>

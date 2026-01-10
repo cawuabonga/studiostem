@@ -1550,23 +1550,29 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 };
 
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
-    const allAssets: Asset[] = [];
+    const assetsCol = collectionGroup(db, 'assets');
+    const q = query(assetsCol, where("instituteId", "==", instituteId));
+    const snapshot = await getDocs(q);
+    
+    // For efficiency, let's pre-fetch all buildings and environments
     const allBuildings = await getBuildings(instituteId);
-
-    for (const building of allBuildings) {
-        const allEnvironments = await getEnvironmentsForBuilding(instituteId, building.id);
-        for (const environment of allEnvironments) {
-            const assets = await getAssetsForEnvironment(instituteId, building.id, environment.id);
-            const assetsWithLocation = assets.map(asset => ({
-                ...asset,
-                buildingId: building.id,
-                buildingName: building.name,
-                environmentName: environment.name,
-            }));
-            allAssets.push(...assetsWithLocation);
-        }
+    const buildingMap = new Map(allBuildings.map(b => [b.id, b.name]));
+    
+    const allEnvironments: Environment[] = [];
+    for(const building of allBuildings) {
+        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
+        allEnvironments.push(...envs);
     }
-    return allAssets;
+    const environmentMap = new Map(allEnvironments.map(e => [e.id, e.name]));
+    
+    return snapshot.docs.map(doc => {
+        const asset = { id: doc.id, ...doc.data() } as Asset;
+        return {
+            ...asset,
+            buildingName: buildingMap.get(asset.buildingId) || 'Desconocido',
+            environmentName: environmentMap.get(asset.environmentId) || 'Desconocido'
+        }
+    });
 };
 
 
@@ -1579,7 +1585,7 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
 
 export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
     const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
-    await addDoc(assetsCol, { ...data, instituteId });
+    await addDoc(assetsCol, { ...data, instituteId, buildingId, environmentId });
 };
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
@@ -1591,6 +1597,15 @@ export const deleteAsset = async (instituteId: string, buildingId: string, envir
     const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId);
     await deleteDoc(assetRef);
 };
+
+export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[], newStatus: string): Promise<void> => {
+    const batch = writeBatch(db);
+    assets.forEach(asset => {
+        const assetRef = doc(db, 'institutes', instituteId, 'buildings', asset.buildingId, 'environments', asset.environmentId, 'assets', asset.id);
+        batch.update(assetRef, { status: newStatus });
+    });
+    await batch.commit();
+}
 
 
 // --- SCHEDULE TEMPLATES ---
