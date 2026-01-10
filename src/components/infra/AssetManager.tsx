@@ -1,15 +1,16 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset } from '@/config/firebase';
-import type { Asset } from '@/types';
+import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset, getAssetHistory } from '@/config/firebase';
+import type { Asset, AssetHistoryLog } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Edit2, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit2, Trash2, History } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -46,6 +47,7 @@ import { Calendar } from '../ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
@@ -68,6 +70,35 @@ interface AssetManagerProps {
     environmentId: string;
 }
 
+const HistoryDialog = ({ logs, open, onOpenChange }: { logs: AssetHistoryLog[], open: boolean, onOpenChange: (open: boolean) => void }) => {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Historial de Cambios del Activo</DialogTitle>
+                </DialogHeader>
+                <div className="max-h-[60vh] overflow-y-auto pr-2">
+                    <ul className="space-y-4">
+                        {logs.map(log => (
+                            <li key={log.id} className="flex items-start gap-4">
+                                <div className="text-xs text-muted-foreground text-center">
+                                    <p>{format(log.timestamp.toDate(), 'dd/MM/yy')}</p>
+                                    <p>{format(log.timestamp.toDate(), 'HH:mm')}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium">{log.userName}</p>
+                                    <p className="text-sm text-muted-foreground">{log.details}</p>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+};
+
+
 export function AssetManager({ instituteId, buildingId, environmentId }: AssetManagerProps) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +106,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [historyLogs, setHistoryLogs] = useState<AssetHistoryLog[]>([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
 
   const form = useForm<AssetFormValues>({
@@ -111,6 +144,16 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     setIsFormOpen(true);
   };
   
+  const handleOpenHistory = async (asset: Asset) => {
+    try {
+        const logs = await getAssetHistory(instituteId, buildingId, environmentId, asset.id);
+        setHistoryLogs(logs);
+        setIsHistoryOpen(true);
+    } catch (error) {
+         toast({ title: "Error", description: "No se pudo cargar el historial del activo.", variant: "destructive" });
+    }
+  };
+
   const handleCloseForm = (updated?: boolean) => {
     setIsFormOpen(false);
     setSelectedAsset(null);
@@ -189,8 +232,16 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             <TableCell>{asset.quantity}</TableCell>
                             <TableCell>{asset.status}</TableCell>
                             <TableCell className="text-right">
-                               <Button variant="ghost" size="icon" onClick={() => handleOpenForm(asset)}><Edit2 className="h-4 w-4" /></Button>
-                               <Button variant="ghost" size="icon" className="text-destructive" onClick={() => { setSelectedAsset(asset); setIsDeleteDialogOpen(true);}}><Trash2 className="h-4 w-4" /></Button>
+                               <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleOpenHistory(asset)}><History className="mr-2 h-4 w-4" /> Ver Historial</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenForm(asset)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                        <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedAsset(asset); setIsDeleteDialogOpen(true);}}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                         </TableRow>
                         )) : (
@@ -215,7 +266,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             <FormField name="quantity" control={form.control} render={({ field }) => (<FormItem><FormLabel>Cantidad</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
                         </div>
                         <FormField name="status" control={form.control} render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetStatuses.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField name="acquisitionDate" control={form.control} render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP") : (<span>Seleccionar fecha</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                        <FormField name="acquisitionDate" control={form.control} render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : (<span>Seleccionar fecha</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                         <FormField name="notes" control={form.control} render={({ field }) => (<FormItem><FormLabel>Notas</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
@@ -238,6 +289,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <HistoryDialog logs={historyLogs} open={isHistoryOpen} onOpenChange={setIsHistoryOpen} />
     </div>
   );
 }

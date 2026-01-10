@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1504,6 +1504,11 @@ export const getMatriculationReportData = async (
 
 // --- INFRASTRUCTURE ---
 
+const addAssetHistoryLog = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, logData: Omit<AssetHistoryLog, 'id'>) => {
+    const historyCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId, 'history');
+    await addDoc(historyCol, logData);
+};
+
 export const addBuilding = async (instituteId: string, data: Omit<Building, 'id'>): Promise<void> => {
     const buildingsCol = getSubCollectionRef(instituteId, 'buildings');
     await addDoc(buildingsCol, data);
@@ -1551,7 +1556,6 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
     const buildings = await getBuildings(instituteId);
-    const buildingMap = new Map(buildings.map(b => [b.id, b.name]));
     let allAssets: Asset[] = [];
 
     for (const building of buildings) {
@@ -1577,12 +1581,46 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
 };
 
 export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
+    const user = auth.currentUser;
     const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
-    await addDoc(assetsCol, { ...data, instituteId, buildingId, environmentId });
+    const newDocRef = await addDoc(assetsCol, { ...data, instituteId, buildingId, environmentId });
+
+    if(user) {
+        await addAssetHistoryLog(instituteId, buildingId, environmentId, newDocRef.id, {
+            action: 'create',
+            userId: user.uid,
+            userName: user.displayName || 'Sistema',
+            timestamp: Timestamp.now(),
+            details: `Activo "${data.name}" creado.`,
+        });
+    }
 };
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
+    const user = auth.currentUser;
     const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId);
+    
+    if(user) {
+        const oldDataSnap = await getDoc(assetRef);
+        if (oldDataSnap.exists()) {
+             const oldData = oldDataSnap.data() as Asset;
+             const changes: string[] = [];
+             Object.keys(data).forEach(key => {
+                 if (oldData[key as keyof Asset] !== data[key as keyof Asset]) {
+                     changes.push(`${key}: de '${oldData[key as keyof Asset]}' a '${data[key as keyof Asset]}'`);
+                 }
+             });
+             if (changes.length > 0) {
+                 await addAssetHistoryLog(instituteId, buildingId, environmentId, assetId, {
+                    action: 'update',
+                    userId: user.uid,
+                    userName: user.displayName || 'Sistema',
+                    timestamp: Timestamp.now(),
+                    details: `Se actualizaron los campos: ${changes.join(', ')}.`,
+                });
+             }
+        }
+    }
     await updateDoc(assetRef, data);
 };
 
@@ -1592,28 +1630,36 @@ export const deleteAsset = async (instituteId: string, buildingId: string, envir
 };
 
 export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[], newStatus: string): Promise<void> => {
+    const user = auth.currentUser;
     const batch = writeBatch(db);
     assets.forEach(asset => {
         const assetRef = doc(db, 'institutes', instituteId, 'buildings', asset.buildingId, 'environments', asset.environmentId, 'assets', asset.id);
         batch.update(assetRef, { status: newStatus });
+        
+        if (user) {
+            const historyColRef = collection(assetRef, 'history');
+            const logDocRef = doc(historyColRef);
+            batch.set(logDocRef, {
+                action: 'status_change',
+                userId: user.uid,
+                userName: user.displayName || 'Sistema',
+                timestamp: Timestamp.now(),
+                details: `Estado cambiado a "${newStatus}" (actualización masiva).`,
+            });
+        }
     });
     await batch.commit();
 }
 
 export const moveAssets = async (instituteId: string, assetsToMove: Asset[], targetEnvironment: Environment): Promise<void> => {
+  const user = auth.currentUser;
   const batch = writeBatch(db);
 
   assetsToMove.forEach(asset => {
-    // Reference to the original asset document
     const originalAssetRef = doc(db, 'institutes', instituteId, 'buildings', asset.buildingId, 'environments', asset.environmentId, 'assets', asset.id);
-    
-    // Delete the original asset
     batch.delete(originalAssetRef);
 
-    // Reference for the new asset document in the target location
     const newAssetRef = doc(collection(db, 'institutes', instituteId, 'buildings', targetEnvironment.buildingId, 'environments', targetEnvironment.id, 'assets'));
-
-    // Create a new asset object, removing old location info and adding new
     const { id, buildingId, environmentId, buildingName, environmentName, ...assetData } = asset;
     const newAssetData = {
         ...assetData,
@@ -1621,13 +1667,30 @@ export const moveAssets = async (instituteId: string, assetsToMove: Asset[], tar
         buildingId: targetEnvironment.buildingId,
         environmentId: targetEnvironment.id,
     };
-    
-    // Create the new asset in the target location
     batch.set(newAssetRef, newAssetData);
+    
+     if (user) {
+        const historyColRef = collection(newAssetRef, 'history');
+        const logDocRef = doc(historyColRef);
+        batch.set(logDocRef, {
+            action: 'move',
+            userId: user.uid,
+            userName: user.displayName || 'Sistema',
+            timestamp: Timestamp.now(),
+            details: `Movido desde ${asset.buildingName} / ${asset.environmentName} a ${targetEnvironment.name}.`,
+        });
+    }
   });
 
   await batch.commit();
 };
+
+export const getAssetHistory = async (instituteId: string, buildingId: string, environmentId: string, assetId: string): Promise<AssetHistoryLog[]> => {
+    const historyCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId, 'history');
+    const q = query(historyCol, orderBy("timestamp", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetHistoryLog));
+}
 
 
 // --- SCHEDULE TEMPLATES ---

@@ -439,6 +439,18 @@ export interface Environment {
   floor?: number;
 }
 
+export type AssetAction = 'create' | 'update' | 'status_change' | 'move';
+
+export interface AssetHistoryLog {
+    id: string;
+    timestamp: Timestamp;
+    userId: string;
+    userName: string;
+    action: AssetAction;
+    details: string; // E.g., "Cambió el estado de 'Operativo' a 'En Mantenimiento'."
+}
+
+
 export interface Asset {
     id: string;
     buildingId: string;
@@ -614,5 +626,6 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
 
 
