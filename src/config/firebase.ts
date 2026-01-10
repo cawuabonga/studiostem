@@ -1550,29 +1550,22 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 };
 
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
-    const assetsCol = collectionGroup(db, 'assets');
-    const q = query(assetsCol, where("instituteId", "==", instituteId));
-    const snapshot = await getDocs(q);
-    
-    // For efficiency, let's pre-fetch all buildings and environments
-    const allBuildings = await getBuildings(instituteId);
-    const buildingMap = new Map(allBuildings.map(b => [b.id, b.name]));
-    
-    const allEnvironments: Environment[] = [];
-    for(const building of allBuildings) {
-        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
-        allEnvironments.push(...envs);
-    }
-    const environmentMap = new Map(allEnvironments.map(e => [e.id, e.name]));
-    
-    return snapshot.docs.map(doc => {
-        const asset = { id: doc.id, ...doc.data() } as Asset;
-        return {
-            ...asset,
-            buildingName: buildingMap.get(asset.buildingId) || 'Desconocido',
-            environmentName: environmentMap.get(asset.environmentId) || 'Desconocido'
+    const buildings = await getBuildings(instituteId);
+    const buildingMap = new Map(buildings.map(b => [b.id, b.name]));
+    let allAssets: Asset[] = [];
+
+    for (const building of buildings) {
+        const environments = await getEnvironmentsForBuilding(instituteId, building.id);
+        for (const environment of environments) {
+            const assets = await getAssetsForEnvironment(instituteId, building.id, environment.id);
+            allAssets = allAssets.concat(assets.map(asset => ({
+                ...asset,
+                buildingName: building.name,
+                environmentName: environment.name,
+            })));
         }
-    });
+    }
+    return allAssets;
 };
 
 
@@ -1606,6 +1599,35 @@ export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[
     });
     await batch.commit();
 }
+
+export const moveAssets = async (instituteId: string, assetsToMove: Asset[], targetEnvironment: Environment): Promise<void> => {
+  const batch = writeBatch(db);
+
+  assetsToMove.forEach(asset => {
+    // Reference to the original asset document
+    const originalAssetRef = doc(db, 'institutes', instituteId, 'buildings', asset.buildingId, 'environments', asset.environmentId, 'assets', asset.id);
+    
+    // Delete the original asset
+    batch.delete(originalAssetRef);
+
+    // Reference for the new asset document in the target location
+    const newAssetRef = doc(collection(db, 'institutes', instituteId, 'buildings', targetEnvironment.buildingId, 'environments', targetEnvironment.id, 'assets'));
+
+    // Create a new asset object, removing old location info and adding new
+    const { id, buildingId, environmentId, buildingName, environmentName, ...assetData } = asset;
+    const newAssetData = {
+        ...assetData,
+        instituteId,
+        buildingId: targetEnvironment.buildingId,
+        environmentId: targetEnvironment.id,
+    };
+    
+    // Create the new asset in the target location
+    batch.set(newAssetRef, newAssetData);
+  });
+
+  await batch.commit();
+};
 
 
 // --- SCHEDULE TEMPLATES ---

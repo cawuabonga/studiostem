@@ -6,17 +6,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAllAssets, getBuildings, bulkUpdateAssetsStatus } from '@/config/firebase';
-import type { Asset, Building } from '@/types';
+import { getAllAssets, getBuildings, bulkUpdateAssetsStatus, moveAssets } from '@/config/firebase';
+import type { Asset, Building, Environment } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Archive, Building2, CheckCircle, Package, Wrench, XCircle, Trash2 } from 'lucide-react';
+import { Archive, Building2, CheckCircle, Package, Wrench, XCircle, Trash2, Move } from 'lucide-react';
 import { AssetCharts } from './AssetCharts';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { MoveAssetsDialog } from './MoveAssetsDialog';
 
 const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'] as const;
@@ -50,6 +51,7 @@ export function InventoryReportDashboard() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [textFilter, setTextFilter] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
 
 
     const fetchData = useCallback(async () => {
@@ -150,6 +152,25 @@ export function InventoryReportDashboard() {
             setIsSubmitting(false);
         }
     }
+    
+    const handleMoveAssets = async (targetEnvironment: Environment) => {
+        if (!instituteId || selectedAssetIds.size === 0) return;
+        setIsSubmitting(true);
+        try {
+            const assetsToMove = Array.from(selectedAssetIds).map(id => allAssets.find(a => a.id === id)).filter(Boolean) as Asset[];
+            await moveAssets(instituteId, assetsToMove, targetEnvironment);
+            toast({
+                title: "Movimiento Exitoso",
+                description: `${assetsToMove.length} activos movidos a "${targetEnvironment.name}".`
+            });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error al Mover", description: "No se pudieron mover los activos.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+            setIsMoveDialogOpen(false);
+        }
+    }
 
 
     if (loading) {
@@ -203,8 +224,12 @@ export function InventoryReportDashboard() {
                            <div className="flex items-center justify-between">
                              <CardTitle>Listado de Activos</CardTitle>
                              {selectedAssetIds.size > 0 && (
-                                <div className="flex items-center gap-4 bg-muted p-2 rounded-lg">
+                                <div className="flex items-center gap-2 bg-muted p-2 rounded-lg">
                                     <p className="text-sm font-medium">{selectedAssetIds.size} seleccionado(s)</p>
+                                    <Button variant="outline" size="sm" onClick={() => setIsMoveDialogOpen(true)}>
+                                        <Move className="mr-2 h-4 w-4" />
+                                        Mover
+                                    </Button>
                                     <Select onValueChange={(value) => handleBulkStatusChange(value as AssetStatus)}>
                                         <SelectTrigger className="w-[200px]">
                                             <SelectValue placeholder="Cambiar estado..." />
@@ -259,6 +284,16 @@ export function InventoryReportDashboard() {
                     </Card>
                 </div>
             </div>
+             <MoveAssetsDialog 
+                isOpen={isMoveDialogOpen}
+                onClose={() => setIsMoveDialogOpen(false)}
+                onConfirm={handleMoveAssets}
+                buildings={buildings}
+                instituteId={instituteId!}
+                isSubmitting={isSubmitting}
+                assetCount={selectedAssetIds.size}
+            />
         </div>
     );
 }
+
