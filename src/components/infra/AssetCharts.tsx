@@ -103,7 +103,7 @@ export function AssetCharts({ data }: AssetChartsProps) {
                                     cursor={{ fill: 'hsl(var(--muted))' }}
                                     content={<ChartTooltipContent />}
                                 />
-                                <Bar dataKey="value" name="Cantidad" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="value" name="Cantidad" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
                             </BarChart>
                         </ChartContainer>
                     </ResponsiveContainer>
@@ -140,4 +140,3 @@ export function AssetCharts({ data }: AssetChartsProps) {
         </div>
     );
 }
-
