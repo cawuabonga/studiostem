@@ -13,11 +13,12 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Archive, Building2, CheckCircle, Package, Wrench, XCircle, Trash2, Move } from 'lucide-react';
+import { Archive, Building2, CheckCircle, Package, Wrench, XCircle, Trash2, Move, Printer } from 'lucide-react';
 import { AssetCharts } from './AssetCharts';
 import { Checkbox } from '../ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { MoveAssetsDialog } from './MoveAssetsDialog';
+import { PrintInventoryList } from './PrintInventoryList';
 
 const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'] as const;
@@ -38,7 +39,7 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
 );
 
 export function InventoryReportDashboard() {
-    const { instituteId } = useAuth();
+    const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     const [allAssets, setAllAssets] = useState<Asset[]>([]);
     const [buildings, setBuildings] = useState<Building[]>([]);
@@ -106,6 +107,39 @@ export function InventoryReportDashboard() {
             return matchesBuilding && matchesEnvironment && matchesType && matchesStatus && matchesText;
         });
     }, [allAssets, buildingFilter, environmentFilter, typeFilter, statusFilter, textFilter]);
+
+    const handlePrint = () => {
+        const printContent = document.getElementById('print-area')?.innerHTML;
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printContent) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Reporte de Inventario</title>
+                        ${styles}
+                         <style>
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                .no-print { display: none !important; }
+                                .page-break { page-break-after: always; }
+                            }
+                        </style>
+                    </head>
+                    <body>${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    };
 
     const chartData = useMemo(() => {
         const byType = filteredAssets.reduce((acc, asset) => {
@@ -232,6 +266,12 @@ export function InventoryReportDashboard() {
                             <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger id="status-filter"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{assetStatuses.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                         </div>
                      </div>
+                      <div className="flex justify-end mt-4">
+                        <Button onClick={handlePrint} variant="outline">
+                            <Printer className="mr-2 h-4 w-4" />
+                            Imprimir Vista Actual
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -320,10 +360,15 @@ export function InventoryReportDashboard() {
                 isSubmitting={isSubmitting}
                 assetCount={selectedAssetIds.size}
             />
+            <div id="print-area" className="hidden">
+                 <PrintInventoryList 
+                    assets={filteredAssets} 
+                    institute={institute}
+                    filters={{buildingFilter, environmentFilter, typeFilter, statusFilter, textFilter}}
+                    buildings={buildings}
+                    allEnvironments={environments}
+                 />
+            </div>
         </div>
     );
 }
-
-
-
-    
