@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getAllAssets, getBuildings, bulkUpdateAssetsStatus, moveAssets } from '@/config/firebase';
+import { getAllAssets, getBuildings, bulkUpdateAssetsStatus, moveAssets, getEnvironmentsForBuilding } from '@/config/firebase';
 import type { Asset, Building, Environment } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Input } from '../ui/input';
@@ -42,11 +42,14 @@ export function InventoryReportDashboard() {
     const { toast } = useToast();
     const [allAssets, setAllAssets] = useState<Asset[]>([]);
     const [buildings, setBuildings] = useState<Building[]>([]);
+    const [environments, setEnvironments] = useState<Environment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingEnvironments, setLoadingEnvironments] = useState(false);
     const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
 
     // Filters
     const [buildingFilter, setBuildingFilter] = useState('all');
+    const [environmentFilter, setEnvironmentFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');
     const [textFilter, setTextFilter] = useState('');
@@ -77,18 +80,32 @@ export function InventoryReportDashboard() {
         fetchData();
     }, [fetchData]);
 
+    useEffect(() => {
+        if (buildingFilter !== 'all' && instituteId) {
+            setLoadingEnvironments(true);
+            getEnvironmentsForBuilding(instituteId, buildingFilter)
+                .then(setEnvironments)
+                .catch(console.error)
+                .finally(() => setLoadingEnvironments(false));
+        } else {
+            setEnvironments([]);
+        }
+        setEnvironmentFilter('all'); // Reset environment filter when building changes
+    }, [buildingFilter, instituteId]);
+
     const filteredAssets = useMemo(() => {
         return allAssets.filter(asset => {
             const matchesBuilding = buildingFilter === 'all' || asset.buildingId === buildingFilter;
+            const matchesEnvironment = environmentFilter === 'all' || asset.environmentId === environmentFilter;
             const matchesType = typeFilter === 'all' || asset.type === typeFilter;
             const matchesStatus = statusFilter === 'all' || asset.status === statusFilter;
             const matchesText = textFilter === '' ||
                 asset.name.toLowerCase().includes(textFilter.toLowerCase()) ||
                 asset.codeOrSerial.toLowerCase().includes(textFilter.toLowerCase());
             
-            return matchesBuilding && matchesType && matchesStatus && matchesText;
+            return matchesBuilding && matchesEnvironment && matchesType && matchesStatus && matchesText;
         });
-    }, [allAssets, buildingFilter, typeFilter, statusFilter, textFilter]);
+    }, [allAssets, buildingFilter, environmentFilter, typeFilter, statusFilter, textFilter]);
 
     const chartData = useMemo(() => {
         const byType = filteredAssets.reduce((acc, asset) => {
@@ -187,22 +204,32 @@ export function InventoryReportDashboard() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                         <div className="space-y-1.5">
                             <Label htmlFor="text-filter">Búsqueda</Label>
                             <Input id="text-filter" placeholder="Buscar por nombre o código..." value={textFilter} onChange={e => setTextFilter(e.target.value)} />
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="building-filter">Edificio</Label>
-                            <Select value={buildingFilter} onValueChange={setBuildingFilter}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Edificios</SelectItem>{buildings.map(b=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+                            <Select value={buildingFilter} onValueChange={setBuildingFilter}><SelectTrigger id="building-filter"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Edificios</SelectItem>{buildings.map(b=><SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label htmlFor="environment-filter">Ambiente</Label>
+                            <Select value={environmentFilter} onValueChange={setEnvironmentFilter} disabled={buildingFilter === 'all' || loadingEnvironments}>
+                                <SelectTrigger id="environment-filter"><SelectValue placeholder={loadingEnvironments ? "Cargando..." : "Todos los Ambientes"} /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Ambientes</SelectItem>
+                                    {environments.map(e=><SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="space-y-1.5">
                             <Label htmlFor="type-filter">Tipo de Activo</Label>
-                            <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Tipos</SelectItem>{assetTypes.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+                            <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger id="type-filter"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Tipos</SelectItem>{assetTypes.map(t=><SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
                         </div>
                          <div className="space-y-1.5">
                             <Label htmlFor="status-filter">Estado</Label>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{assetStatuses.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger id="status-filter"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos los Estados</SelectItem>{assetStatuses.map(s=><SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select>
                         </div>
                      </div>
                 </CardContent>
@@ -297,3 +324,6 @@ export function InventoryReportDashboard() {
     );
 }
 
+
+
+    
