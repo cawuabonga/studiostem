@@ -450,15 +450,26 @@ export interface AssetHistoryLog {
     details: string; // E.g., "Cambió el estado de 'Operativo' a 'En Mantenimiento'."
 }
 
+export type AssetCategory = 'Equipamiento Electrónico' | 'Mobiliario' | 'Material Didáctico' | 'Otro';
+
+export interface AssetType {
+    id: string;
+    name: string;
+    code: string; // Código patrimonial base, e.g., 'S-ESC'
+    category: AssetCategory;
+    description?: string;
+    lastAssignedNumber: number; // Para el correlativo
+}
 
 export interface Asset {
     id: string;
     buildingId: string;
     environmentId: string;
-    name: string;
-    codeOrSerial: string;
-    type: 'Equipamiento Electrónico' | 'Mobiliario' | 'Material Didáctico' | 'Otro';
-    quantity: number;
+    assetTypeId: string; // Link to the AssetType in the catalog
+    name: string; // Denormalized from AssetType
+    code: string; // Código patrimonial completo, e.g., 'S-ESC-0001'
+    type: AssetCategory; // Denormalized from AssetType
+    quantity: 1; // For individual assets, this is always 1
     status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
     acquisitionDate?: Timestamp;
     notes?: string;
@@ -626,6 +637,4 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
-
-
 

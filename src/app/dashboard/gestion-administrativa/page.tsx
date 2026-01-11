@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive, Library } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -45,6 +45,13 @@ const adminModules: AdminModule[] = [
     href: "/dashboard/gestion-administrativa/reporte-pagos",
     icon: BarChart2,
     permission: "admin:payments:validate",
+  },
+  {
+    title: "Catálogo de Activos",
+    description: "Administra los tipos de bienes (mobiliario, equipos) que posee el instituto.",
+    href: "/dashboard/gestion-administrativa/catalogo-activos",
+    icon: Library,
+    permission: "admin:infra:manage",
   },
   {
     title: "Gestionar Infraestructura",

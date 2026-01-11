@@ -49,13 +49,11 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
+// El schema se simplificará, ya que muchos campos se autocompletarán desde el catálogo
 const assetSchema = z.object({
-  name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  codeOrSerial: z.string().min(1, { message: 'El código o serial es requerido.' }),
-  type: z.string({ required_error: 'Debe seleccionar un tipo.' }),
+  assetTypeId: z.string().min(1, 'Debe seleccionar un tipo de activo del catálogo.'),
   quantity: z.coerce.number().min(1, 'La cantidad debe ser al menos 1.'),
   status: z.enum(assetStatuses as [string, ...string[]], { required_error: 'Debe seleccionar un estado.' }),
   acquisitionDate: z.date().optional(),
@@ -132,10 +130,10 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
 
   const handleOpenForm = (asset?: Asset) => {
     setSelectedAsset(asset || null);
+    // Este formulario se simplificará en la Fase 2 para usar el catálogo.
+    // Por ahora, lo mantenemos como está, pero la lógica de guardado cambiará.
     form.reset({
-      name: asset?.name || '',
-      codeOrSerial: asset?.codeOrSerial || '',
-      type: asset?.type || '',
+      assetTypeId: asset?.assetTypeId || '',
       quantity: asset?.quantity || 1,
       status: asset?.status || 'Operativo',
       acquisitionDate: asset?.acquisitionDate?.toDate(),
@@ -163,22 +161,9 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   };
 
   const onSubmit = async (data: AssetFormValues) => {
-    try {
-        const dataToSave = {
-            ...data,
-            environmentId,
-        };
-        if (selectedAsset) {
-            await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, dataToSave);
-            toast({ title: "Activo Actualizado" });
-        } else {
-            await addAsset(instituteId, buildingId, environmentId, dataToSave);
-            toast({ title: "Activo Creado" });
-        }
-        handleCloseForm(true);
-    } catch (error: any) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-    }
+      toast({ title: "Próximamente", description: "La creación y edición se integrarán con el catálogo en la siguiente fase." });
+      return;
+    // Lógica futura que usará el catálogo
   };
   
   const handleDelete = async () => {
@@ -216,9 +201,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                     <TableHeader className="sticky top-0 bg-background">
                         <TableRow>
                         <TableHead>Nombre</TableHead>
-                        <TableHead>Código/Serial</TableHead>
+                        <TableHead>Código</TableHead>
                         <TableHead>Tipo</TableHead>
-                        <TableHead>Cant.</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
@@ -227,9 +211,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                         {assets.length > 0 ? assets.map((asset) => (
                         <TableRow key={asset.id}>
                             <TableCell className="font-medium">{asset.name}</TableCell>
-                            <TableCell>{asset.codeOrSerial}</TableCell>
+                            <TableCell>{asset.code}</TableCell>
                             <TableCell>{asset.type}</TableCell>
-                            <TableCell>{asset.quantity}</TableCell>
                             <TableCell>{asset.status}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
@@ -257,23 +240,9 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                 <DialogHeader>
                     <DialogTitle>{selectedAsset ? 'Editar Activo' : 'Nuevo Activo'}</DialogTitle>
                 </DialogHeader>
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                        <FormField name="name" control={form.control} render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} placeholder="Ej: Proyector Epson" /></FormControl><FormMessage /></FormItem>)} />
-                        <FormField name="codeOrSerial" control={form.control} render={({ field }) => (<FormItem><FormLabel>Código o N° de Serie</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormField name="type" control={form.control} render={({ field }) => (<FormItem><FormLabel>Tipo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                            <FormField name="quantity" control={form.control} render={({ field }) => (<FormItem><FormLabel>Cantidad</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        </div>
-                        <FormField name="status" control={form.control} render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetStatuses.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                        <FormField name="acquisitionDate" control={form.control} render={({ field }) => (<FormItem className="flex flex-col"><FormLabel>Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : (<span>Seleccionar fecha</span>)}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
-                        <FormField name="notes" control={form.control} render={({ field }) => (<FormItem><FormLabel>Notas</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
-                        <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
-                            <Button type="submit">Guardar</Button>
-                        </DialogFooter>
-                    </form>
-                </Form>
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                    La creación y edición de activos se realizará a través del nuevo Catálogo de Activos en la siguiente fase de implementación.
+                </p>
             </DialogContent>
         </Dialog>
         
