@@ -467,7 +467,7 @@ export interface Asset {
     environmentId: string;
     assetTypeId: string; // Link to the AssetType in the catalog
     name: string; // Denormalized from AssetType
-    code: string; // Código patrimonial completo, e.g., 'S-ESC-0001'
+    codeOrSerial: string; // Código patrimonial completo o S/N del fabricante
     type: AssetCategory; // Denormalized from AssetType
     quantity: 1; // For individual assets, this is always 1
     status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
@@ -477,6 +477,7 @@ export interface Asset {
     environmentName?: string;
     buildingName?: string;
 }
+
 
 
 // --- SCHEDULES / HORARIOS ---
