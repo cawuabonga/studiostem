@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,7 +21,6 @@ import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
 
-// These should probably live in a config file or be fetched, but for now, they are here.
 const assetGroups: AssetGroup[] = ["MAQUINARIAS, EQUIPOS Y MOBILIARIO", "VEHICULOS", "OTROS"];
 const assetClasses: AssetClass[] = ["EQUIPO", "MOBILIARIO", "VEHICULO", "TERRENO"];
 
@@ -37,9 +36,12 @@ type FormValues = z.infer<typeof assetTypeSchema>;
 
 interface AssetCatalogManagerProps {
     instituteId: string;
+    onDataChange: () => void;
 }
 
-export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
+const PAGE_SIZE = 20;
+
+export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogManagerProps) {
   const { toast } = useToast();
   const [assetTypes, setAssetTypes] = useState<AssetType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,8 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAssetType, setEditingAssetType] = useState<AssetType | null>(null);
   const [deletingAssetType, setDeletingAssetType] = useState<AssetType | null>(null);
+  const [filter, setFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(assetTypeSchema),
@@ -97,6 +101,7 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
         toast({ title: "Tipo de Activo Creado" });
       }
       fetchData();
+      onDataChange();
       handleDialogClose();
     } catch (error: any) {
       toast({ title: "Error al guardar", description: error.message, variant: "destructive" });
@@ -111,6 +116,7 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
         await deleteAssetType(instituteId, deletingAssetType.id);
         toast({ title: "Tipo de Activo Eliminado" });
         fetchData();
+        onDataChange();
     } catch (error: any) {
         toast({ title: "Error al eliminar", description: "No se puede eliminar un tipo de activo que ya está en uso.", variant: "destructive" });
     } finally {
@@ -118,10 +124,24 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
     }
   };
 
+  const filteredAssetTypes = useMemo(() => {
+    return assetTypes.filter(asset => 
+      asset.name.toLowerCase().includes(filter.toLowerCase()) ||
+      asset.patrimonialCode.toLowerCase().includes(filter.toLowerCase())
+    );
+  }, [assetTypes, filter]);
+
+  const paginatedAssetTypes = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredAssetTypes.slice(start, start + PAGE_SIZE);
+  }, [filteredAssetTypes, currentPage]);
+
+  const totalPages = Math.ceil(filteredAssetTypes.length / PAGE_SIZE);
+
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-row items-start sm:items-center justify-between gap-4">
             <div>
                 <CardTitle>Catálogo de Bienes Patrimoniales</CardTitle>
                 <CardDescription>
@@ -130,10 +150,21 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
             </div>
             <Button onClick={() => handleOpenDialog()}>
                 <PlusCircle className="mr-2 h-4 w-4"/>
-                Añadir Bien al Catálogo
+                Añadir Bien
             </Button>
         </CardHeader>
         <CardContent>
+            <div className="mb-4">
+                <Input 
+                    placeholder="Buscar por denominación o código..."
+                    value={filter}
+                    onChange={(e) => {
+                        setFilter(e.target.value);
+                        setCurrentPage(1);
+                    }}
+                    className="max-w-sm"
+                />
+            </div>
              <div className="rounded-md border">
                 <Table>
                     <TableHeader>
@@ -148,8 +179,8 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                     <TableBody>
                         {loading ? (
                             <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                        ) : assetTypes.length > 0 ? (
-                            assetTypes.map(assetType => (
+                        ) : paginatedAssetTypes.length > 0 ? (
+                            paginatedAssetTypes.map(assetType => (
                                 <TableRow key={assetType.id}>
                                     <TableCell className="font-medium">
                                         <p>{assetType.name}</p>
@@ -159,21 +190,30 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                                     <TableCell>{assetType.group}</TableCell>
                                     <TableCell>{assetType.class}</TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(assetType)}>
-                                            <Edit className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeletingAssetType(assetType)}>
-                                            <Trash className="h-4 w-4" />
-                                        </Button>
+                                        <div className="inline-flex items-center">
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(assetType)}>
+                                                <Edit className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setDeletingAssetType(assetType)}>
+                                                <Trash className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay bienes registrados en el catálogo.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay bienes que coincidan con la búsqueda.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
              </div>
+             {totalPages > 1 && (
+                <div className="flex items-center justify-end space-x-2 py-4">
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>Anterior</Button>
+                    <span className="text-sm">Página {currentPage} de {totalPages}</span>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Siguiente</Button>
+                </div>
+            )}
         </CardContent>
       </Card>
 

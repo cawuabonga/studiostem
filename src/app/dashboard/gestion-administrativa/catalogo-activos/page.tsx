@@ -3,7 +3,6 @@
 
 import { AssetCatalogManager } from "@/components/infra/AssetCatalogManager";
 import { BulkUploadAssetTypes } from "@/components/infra/BulkUploadAssetTypes";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,28 +31,22 @@ export default function CatalogoActivosPage() {
 
     return (
         <div className="space-y-6">
-            <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="item-1">
-                    <AccordionTrigger className="text-lg font-semibold flex items-center gap-2">
-                        <Upload className="h-5 w-5"/> Carga Masiva del Catálogo
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Carga por Lotes desde Excel</CardTitle>
-                                <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={handleDataChange} />
-                            </CardContent>
-                        </Card>
-                    </AccordionContent>
-                </AccordionItem>
-            </Accordion>
-            
+            <AssetCatalogManager key={refreshKey} instituteId={instituteId} onDataChange={handleDataChange} />
+
             <Separator />
 
-            <AssetCatalogManager key={refreshKey} instituteId={instituteId} />
+             <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-2">
+                        <Upload className="h-5 w-5"/>
+                        <CardTitle>Carga Masiva del Catálogo desde Excel</CardTitle>
+                    </div>
+                    <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={handleDataChange} />
+                </CardContent>
+            </Card>
         </div>
     );
 }
