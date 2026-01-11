@@ -51,6 +51,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Label } from '@/components/ui/label';
+import { Timestamp } from 'firebase/firestore';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -140,6 +141,12 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   const selectedAssetTypeId = form.watch('assetTypeId');
   const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
+  
+  const generatedAssetCode = useMemo(() => {
+    if (!selectedAssetTypeDetails) return '';
+    const nextNumber = (selectedAssetTypeDetails.lastAssignedNumber || 0) + 1;
+    return `${selectedAssetTypeDetails.code}-${String(nextNumber).padStart(4, '0')}`;
+  }, [selectedAssetTypeDetails]);
 
 
   const handleOpenForm = (asset?: Asset) => {
@@ -326,13 +333,13 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                         )}/>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Código Patrimonial Base</Label>
-                                <Input value={selectedAssetTypeDetails?.code || ''} disabled className="mt-2" />
-                            </div>
                              <div>
                                 <Label>Categoría</Label>
                                 <Input value={selectedAssetTypeDetails?.category || ''} disabled className="mt-2" />
+                            </div>
+                            <div>
+                                <Label>Código a Generar</Label>
+                                <Input value={selectedAsset ? selectedAsset.codeOrSerial : generatedAssetCode} disabled className="mt-2 font-mono" />
                             </div>
                         </div>
                         
