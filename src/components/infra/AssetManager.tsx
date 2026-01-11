@@ -10,7 +10,7 @@ import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset, getAssetHi
 import type { Asset, AssetHistoryLog, AssetType } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Edit2, Trash2, History, Loader2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Edit2, Trash2, History, Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,6 +49,7 @@ import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -108,6 +109,9 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const [historyLogs, setHistoryLogs] = useState<AssetHistoryLog[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
+  
+  // State for the combobox
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -132,6 +136,10 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+  
+  const selectedAssetTypeId = form.watch('assetTypeId');
+  const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
+
 
   const handleOpenForm = (asset?: Asset) => {
     setSelectedAsset(asset || null);
@@ -180,12 +188,12 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
             toast({ title: "Activo Actualizado" });
         } else {
             // Create logic
-            await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, {
+            const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, {
                 status: data.status,
                 acquisitionDate: data.acquisitionDate ? Timestamp.fromDate(data.acquisitionDate) : undefined,
                 notes: data.notes
             });
-            toast({ title: "Activo Añadido", description: "El nuevo activo ha sido registrado con un código único." });
+             toast({ title: "Activo Añadido", description: `El nuevo activo ha sido registrado con el código: ${newAssetId}` });
         }
         handleCloseForm(true);
     } catch (error: any) {
@@ -272,25 +280,66 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                         <FormField control={form.control} name="assetTypeId" render={({ field }) => (
-                            <FormItem>
+                            <FormItem className="flex flex-col">
                                 <FormLabel>Tipo de Activo</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!!selectedAsset}>
+                                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                <PopoverTrigger asChild>
                                     <FormControl>
-                                        <SelectTrigger><SelectValue placeholder="Seleccione un tipo del catálogo..." /></SelectTrigger>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                        disabled={!!selectedAsset}
+                                    >
+                                        {field.value ? assetTypes.find((t) => t.id === field.value)?.name : "Seleccione un tipo del catálogo..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
                                     </FormControl>
-                                    <SelectContent>
-                                        {assetTypes.map(t => <SelectItem key={t.id} value={t.id}>{t.name} ({t.code})</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                    <Command>
+                                    <CommandInput placeholder="Buscar tipo de activo..." />
+                                    <CommandList>
+                                        <CommandEmpty>No se encontró el tipo de activo.</CommandEmpty>
+                                        <CommandGroup>
+                                        {assetTypes.map((t) => (
+                                            <CommandItem
+                                            value={t.name}
+                                            key={t.id}
+                                            onSelect={() => {
+                                                form.setValue("assetTypeId", t.id)
+                                                setComboboxOpen(false)
+                                            }}
+                                            >
+                                            <Check className={cn("mr-2 h-4 w-4", t.id === field.value ? "opacity-100" : "opacity-0")} />
+                                            {t.name}
+                                            </CommandItem>
+                                        ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                                </Popover>
                                 <FormMessage />
                             </FormItem>
                         )}/>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <Label>Código Patrimonial Base</Label>
+                                <Input value={selectedAssetTypeDetails?.code || ''} disabled className="mt-2" />
+                            </div>
+                             <div>
+                                <Label>Categoría</Label>
+                                <Input value={selectedAssetTypeDetails?.category || ''} disabled className="mt-2" />
+                            </div>
+                        </div>
                         
                         <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Estado</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <Select onValueChange={field.onChange} value={field.value}>
                                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                                     <SelectContent>{assetStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                                 </Select>
