@@ -148,7 +148,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   const selectedAssetTypeId = form.watch('assetTypeId');
   const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
-  const dynamicFields = selectedAssetTypeDetails ? characteristicsFields[selectedAssetTypeDetails.class] : [];
+  const dynamicFields = selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] || [] : [];
   const nextAssetCode = selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '';
 
 
@@ -374,7 +374,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        {dynamicFields.length > 0 && (
+                        {dynamicFields && dynamicFields.length > 0 && (
                             <div className="space-y-4 pt-4 border-t">
                                 <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
                                 <div className="grid grid-cols-2 gap-4">
