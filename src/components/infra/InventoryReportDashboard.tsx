@@ -322,6 +322,7 @@ export function InventoryReportDashboard() {
                                                     onCheckedChange={handleSelectAll}
                                                 />
                                             </TableHead>
+                                            <TableHead className="w-[40px]">N°</TableHead>
                                             <TableHead>Activo</TableHead>
                                             <TableHead>Código/Serial</TableHead>
                                             <TableHead>Ubicación</TableHead>
@@ -330,9 +331,10 @@ export function InventoryReportDashboard() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredAssets.length > 0 ? filteredAssets.map(asset => (
+                                        {filteredAssets.length > 0 ? filteredAssets.map((asset, index) => (
                                             <TableRow key={asset.id} data-state={selectedAssetIds.has(asset.id) && "selected"}>
                                                 <TableCell><Checkbox checked={selectedAssetIds.has(asset.id)} onCheckedChange={() => handleSelectOne(asset.id)} /></TableCell>
+                                                <TableCell className="text-center text-muted-foreground">{index + 1}</TableCell>
                                                 <TableCell className="font-medium">{asset.name}</TableCell>
                                                 <TableCell>{asset.codeOrSerial}</TableCell>
                                                 <TableCell className="text-xs text-muted-foreground">{asset.buildingName} - {asset.environmentName}</TableCell>
@@ -341,7 +343,7 @@ export function InventoryReportDashboard() {
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="h-24 text-center">No se encontraron activos con los filtros seleccionados.</TableCell>
+                                                <TableCell colSpan={7} className="h-24 text-center">No se encontraron activos con los filtros seleccionados.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
