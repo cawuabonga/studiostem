@@ -1566,7 +1566,7 @@ export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'i
     await addDoc(assetTypesCol, { ...data, lastAssignedNumber: 0 });
 };
 
-export const bulkAddAssetTypes = async (instituteId: string, assetTypes: Omit<AssetType, 'id'>[]) => {
+export const bulkAddAssetTypes = async (instituteId: string, assetTypes: Omit<AssetType, 'id' | 'lastAssignedNumber'>[]) => {
     const batch = writeBatch(db);
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
     assetTypes.forEach(assetTypeData => {
@@ -1613,7 +1613,7 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
 };
 
-export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, assetTypeId: string, data: Omit<Asset, 'id' | 'assetTypeId' | 'name' | 'codeOrSerial' | 'type'>): Promise<string> => {
+export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, assetTypeId: string, data: Partial<Omit<Asset, 'id' | 'assetTypeId' | 'name' | 'codeOrSerial' | 'type'>>) => {
     const user = auth.currentUser;
     const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
     
@@ -1643,7 +1643,7 @@ export const addAsset = async (instituteId: string, buildingId: string, environm
             instituteId,
             buildingId,
             environmentId,
-        };
+        } as Omit<Asset, 'id'>;
         transaction.set(newAssetRef, newAssetData);
         
         if (user) {

@@ -480,6 +480,7 @@ export interface Asset {
     // Denormalized data for reporting
     environmentName?: string;
     buildingName?: string;
+    instituteId: string;
 }
 
 

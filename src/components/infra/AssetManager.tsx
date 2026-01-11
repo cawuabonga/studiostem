@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset, getAssetHistory, getAssetTypes } from '@/config/firebase';
-import type { Asset, AssetHistoryLog, AssetType } from '@/types';
+import type { Asset, AssetHistoryLog, AssetType, AssetClass } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Edit2, Trash2, History, Loader2, ChevronsUpDown, Check } from 'lucide-react';
@@ -54,11 +54,13 @@ import { Label } from '@/components/ui/label';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
+// Base schema
 const assetSchema = z.object({
   assetTypeId: z.string().min(1, 'Debe seleccionar un tipo de activo del catálogo.'),
   status: z.enum(assetStatuses as [string, ...string[]], { required_error: 'Debe seleccionar un estado.' }),
   acquisitionDate: z.date().optional(),
   notes: z.string().optional(),
+  characteristics: z.record(z.string()).optional(),
 });
 
 type AssetFormValues = z.infer<typeof assetSchema>;
@@ -68,6 +70,13 @@ interface AssetManagerProps {
     buildingId: string;
     environmentId: string;
 }
+
+const characteristicsFields: Record<AssetClass, string[]> = {
+    "VEHICULO": ["marca", "modelo", "tipo", "color", "numero_serie", "placa_matricula", "año_fabricacion"],
+    "EQUIPO": ["marca", "modelo", "tipo", "color", "numero_serie"],
+    "MOBILIARIO": ["tipo", "material", "color", "dimension"],
+    "TERRENO": ["area", "ubicacion"],
+};
 
 const HistoryDialog = ({ logs, open, onOpenChange }: { logs: AssetHistoryLog[], open: boolean, onOpenChange: (open: boolean) => void }) => {
     return (
@@ -111,7 +120,6 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
   
-  // State for the combobox
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
   const form = useForm<AssetFormValues>({
@@ -140,6 +148,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   const selectedAssetTypeId = form.watch('assetTypeId');
   const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
+  const dynamicFields = selectedAssetTypeDetails ? characteristicsFields[selectedAssetTypeDetails.class] : [];
+  const nextAssetCode = selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '';
 
 
   const handleOpenForm = (asset?: Asset) => {
@@ -149,6 +159,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
       status: asset?.status || 'Operativo',
       acquisitionDate: asset?.acquisitionDate?.toDate(),
       notes: asset?.notes || '',
+      characteristics: asset?.characteristics || {},
     });
     setIsFormOpen(true);
   };
@@ -180,19 +191,19 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         }
         
         if (selectedAsset) {
-            // Edit logic
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
                 ...data,
                 name: selectedAssetType.name,
-                type: selectedAssetType.class
+                type: selectedAssetType.class,
+                characteristics: data.characteristics
             });
             toast({ title: "Activo Actualizado" });
         } else {
-            // Create logic
             const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, {
                 status: data.status,
                 acquisitionDate: data.acquisitionDate,
-                notes: data.notes
+                notes: data.notes,
+                characteristics: data.characteristics,
             });
              toast({ title: "Activo Añadido", description: `El nuevo activo ha sido registrado con el código: ${newAssetId}` });
         }
@@ -274,12 +285,12 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         </div>
       
         <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-            <DialogContent>
+            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{selectedAsset ? 'Editar Activo' : 'Nuevo Activo'}</DialogTitle>
                 </DialogHeader>
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 flex-1 overflow-y-auto pr-2">
                         <FormField control={form.control} name="assetTypeId" render={({ field }) => (
                             <FormItem className="flex flex-col">
                                 <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
@@ -325,14 +336,14 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             </FormItem>
                         )}/>
 
-                        <div className="grid grid-cols-2 gap-4">
-                             <div>
+                         <div className="grid grid-cols-2 gap-4">
+                            <div>
                                 <Label>Clase</Label>
                                 <Input value={selectedAssetTypeDetails?.class || ''} disabled className="mt-2" />
                             </div>
                             <div>
-                                <Label>Código Patrimonial</Label>
-                                <Input value={selectedAsset ? selectedAsset.codeOrSerial : (selectedAssetTypeDetails?.patrimonialCode || '')} disabled className="mt-2 font-mono" />
+                                <Label>Código a Generar</Label>
+                                <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
                             </div>
                         </div>
                         
@@ -363,11 +374,33 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
+                        {dynamicFields.length > 0 && (
+                            <div className="space-y-4 pt-4 border-t">
+                                <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {dynamicFields.map(fieldName => (
+                                        <FormField
+                                            key={fieldName}
+                                            control={form.control}
+                                            name={`characteristics.${fieldName}` as any}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="capitalize">{fieldName.replace('_', ' ')}</FormLabel>
+                                                    <FormControl><Input {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <FormField control={form.control} name="notes" render={({ field }) => (
                             <FormItem><FormLabel>Notas (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                         )}/>
                         
-                        <DialogFooter>
+                        <DialogFooter className="sticky bottom-0 bg-background pt-4">
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
