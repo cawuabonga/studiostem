@@ -1566,6 +1566,16 @@ export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'i
     await addDoc(assetTypesCol, { ...data, lastAssignedNumber: 0 });
 };
 
+export const bulkAddAssetTypes = async (instituteId: string, assetTypes: Omit<AssetType, 'id'>[]) => {
+    const batch = writeBatch(db);
+    const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
+    assetTypes.forEach(assetTypeData => {
+        const docRef = doc(assetTypesCol, assetTypeData.patrimonialCode); // Use patrimonial code as ID
+        batch.set(docRef, { ...assetTypeData, lastAssignedNumber: 0 }, { merge: true }); // Use merge to update if exists
+    });
+    await batch.commit();
+};
+
 export const updateAssetType = async (instituteId: string, assetTypeId: string, data: Partial<AssetType>): Promise<void> => {
     const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
     await updateDoc(assetTypeRef, data);
@@ -1617,7 +1627,7 @@ export const addAsset = async (instituteId: string, buildingId: string, environm
         const assetTypeData = assetTypeDoc.data() as AssetType;
 
         const newNumber = (assetTypeData.lastAssignedNumber || 0) + 1;
-        newAssetCode = `${assetTypeData.code}-${String(newNumber).padStart(4, '0')}`;
+        newAssetCode = `${assetTypeData.patrimonialCode}-${String(newNumber).padStart(4, '0')}`;
         
         transaction.update(assetTypeRef, { lastAssignedNumber: newNumber });
 
@@ -1628,7 +1638,7 @@ export const addAsset = async (instituteId: string, buildingId: string, environm
             ...data,
             assetTypeId,
             name: assetTypeData.name,
-            type: assetTypeData.category,
+            type: assetTypeData.class,
             codeOrSerial: newAssetCode,
             instituteId,
             buildingId,
