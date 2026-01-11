@@ -50,6 +50,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
+import { Label } from '@/components/ui/label';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
