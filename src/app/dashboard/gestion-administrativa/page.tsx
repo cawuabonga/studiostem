@@ -47,7 +47,7 @@ const adminModules: AdminModule[] = [
     permission: "admin:payments:validate",
   },
   {
-    title: "Catálogo de Activos",
+    title: "Catálogo de Bienes",
     description: "Administra los tipos de bienes (mobiliario, equipos) que posee el instituto.",
     href: "/dashboard/gestion-administrativa/catalogo-activos",
     icon: Library,

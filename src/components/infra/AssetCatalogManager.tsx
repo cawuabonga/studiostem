@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getAssetTypes, addAssetType, updateAssetType, deleteAssetType } from '@/config/firebase';
-import type { AssetType, AssetCategory } from '@/types';
+import type { AssetType, AssetGroup, AssetClass } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -21,12 +21,15 @@ import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
 
-const assetCategories: AssetCategory[] = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
+// These should probably live in a config file or be fetched, but for now, they are here.
+const assetGroups: AssetGroup[] = ["MAQUINARIAS, EQUIPOS Y MOBILIARIO", "VEHICULOS", "OTROS"];
+const assetClasses: AssetClass[] = ["EQUIPO", "MOBILIARIO", "VEHICULO", "TERRENO"];
 
 const assetTypeSchema = z.object({
-  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
-  code: z.string().min(1, 'El código es requerido.'),
-  category: z.enum(assetCategories as [string, ...string[]], { required_error: 'Debe seleccionar una categoría.' }),
+  name: z.string().min(3, 'La denominación debe tener al menos 3 caracteres.'),
+  patrimonialCode: z.string().min(1, 'El código es requerido.'),
+  group: z.enum(assetGroups as [string, ...string[]], { required_error: 'Debe seleccionar un grupo.' }),
+  class: z.enum(assetClasses as [string, ...string[]], { required_error: 'Debe seleccionar una clase.' }),
   description: z.string().optional(),
 });
 
@@ -70,8 +73,9 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
     setEditingAssetType(assetType || null);
     form.reset({
         name: assetType?.name || '', 
-        code: assetType?.code || '',
-        category: assetType?.category || undefined,
+        patrimonialCode: assetType?.patrimonialCode || '',
+        group: assetType?.group || undefined,
+        class: assetType?.class || undefined,
         description: assetType?.description || '',
     });
     setIsDialogOpen(true);
@@ -119,14 +123,14 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
             <div>
-                <CardTitle>Catálogo de Activos</CardTitle>
+                <CardTitle>Catálogo de Bienes Patrimoniales</CardTitle>
                 <CardDescription>
                 Gestione los tipos de bienes estandarizados para el inventario de su instituto.
                 </CardDescription>
             </div>
             <Button onClick={() => handleOpenDialog()}>
                 <PlusCircle className="mr-2 h-4 w-4"/>
-                Añadir Tipo de Activo
+                Añadir Bien al Catálogo
             </Button>
         </CardHeader>
         <CardContent>
@@ -134,15 +138,16 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nombre</TableHead>
+                            <TableHead>Denominación</TableHead>
                             <TableHead>Código Patrimonial</TableHead>
-                            <TableHead>Categoría</TableHead>
+                            <TableHead>Grupo</TableHead>
+                            <TableHead>Clase</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                         ) : assetTypes.length > 0 ? (
                             assetTypes.map(assetType => (
                                 <TableRow key={assetType.id}>
@@ -150,8 +155,9 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                                         <p>{assetType.name}</p>
                                         <p className="text-xs text-muted-foreground">{assetType.description}</p>
                                     </TableCell>
-                                    <TableCell><Badge variant="secondary">{assetType.code}</Badge></TableCell>
-                                    <TableCell>{assetType.category}</TableCell>
+                                    <TableCell><Badge variant="secondary">{assetType.patrimonialCode}</Badge></TableCell>
+                                    <TableCell>{assetType.group}</TableCell>
+                                    <TableCell>{assetType.class}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(assetType)}>
                                             <Edit className="h-4 w-4" />
@@ -163,7 +169,7 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay tipos de activo registrados.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay bienes registrados en el catálogo.</TableCell></TableRow>
                         )}
                     </TableBody>
                 </Table>
@@ -174,14 +180,17 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>
               <DialogHeader>
-                  <DialogTitle>{editingAssetType ? 'Editar' : 'Nuevo'} Tipo de Activo</DialogTitle>
+                  <DialogTitle>{editingAssetType ? 'Editar' : 'Nuevo'} Bien Patrimonial</DialogTitle>
               </DialogHeader>
                <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4 py-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre del Bien</FormLabel><FormControl><Input {...field} placeholder="Ej: Silla de Escritorio Ergonómica" /></FormControl><FormMessage /></FormItem>)}/>
+                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Denominación del Bien</FormLabel><FormControl><Input {...field} placeholder="Ej: Silla de Escritorio Ergonómica" /></FormControl><FormMessage /></FormItem>)}/>
                         <div className="grid grid-cols-2 gap-4">
-                            <FormField control={form.control} name="code" render={({ field }) => (<FormItem><FormLabel>Código Patrimonial Base</FormLabel><FormControl><Input {...field} placeholder="Ej: S-ESC" /></FormControl><FormMessage /></FormItem>)}/>
-                            <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoría</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name="patrimonialCode" render={({ field }) => (<FormItem><FormLabel>Código Patrimonial</FormLabel><FormControl><Input {...field} placeholder="Ej: 06420001" /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="group" render={({ field }) => (<FormItem><FormLabel>Grupo</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetGroups.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                             <FormField control={form.control} name="class" render={({ field }) => (<FormItem><FormLabel>Clase</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger></FormControl><SelectContent>{assetClasses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                         </div>
                         <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descripción (Opcional)</FormLabel><FormControl><Textarea {...field} placeholder="Cualquier detalle adicional sobre este tipo de bien."/></FormControl><FormMessage /></FormItem>)}/>
                         
@@ -202,7 +211,7 @@ export function AssetCatalogManager({ instituteId }: AssetCatalogManagerProps) {
                 <AlertDialogHeader>
                     <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
                     <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Se eliminará el tipo de activo "{deletingAssetType?.name}". No podrá eliminarlo si ya existen activos de este tipo en el inventario.
+                        Esta acción no se puede deshacer. Se eliminará el bien "{deletingAssetType?.name}" del catálogo. No podrá eliminarlo si ya existen activos de este tipo en el inventario.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

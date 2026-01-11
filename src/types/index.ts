@@ -450,13 +450,16 @@ export interface AssetHistoryLog {
     details: string; // E.g., "Cambió el estado de 'Operativo' a 'En Mantenimiento'."
 }
 
-export type AssetCategory = 'Equipamiento Electrónico' | 'Mobiliario' | 'Material Didáctico' | 'Otro';
+export type AssetGroup = "MAQUINARIAS, EQUIPOS Y MOBILIARIO" | "VEHICULOS" | "OTROS";
+export type AssetClass = "EQUIPO" | "MOBILIARIO" | "VEHICULO" | "TERRENO";
+
 
 export interface AssetType {
     id: string;
-    name: string;
-    code: string; // Código patrimonial base, e.g., 'S-ESC'
-    category: AssetCategory;
+    name: string; // Denominación
+    patrimonialCode: string; // Código Patrimonial
+    group: AssetGroup;
+    class: AssetClass;
     description?: string;
     lastAssignedNumber: number; // Para el correlativo
 }
@@ -466,13 +469,14 @@ export interface Asset {
     buildingId: string;
     environmentId: string;
     assetTypeId: string; // Link to the AssetType in the catalog
-    name: string; // Denormalized from AssetType
+    name: string; // Denormalized from AssetType: Denominación
     codeOrSerial: string; // Código patrimonial completo o S/N del fabricante
-    type: AssetCategory; // Denormalized from AssetType
+    type: AssetClass; // Denormalized from AssetType
     quantity: 1; // For individual assets, this is always 1
     status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
     acquisitionDate?: Timestamp;
     notes?: string;
+    characteristics?: Record<string, any>; // For dynamic fields: marca, modelo, etc.
     // Denormalized data for reporting
     environmentName?: string;
     buildingName?: string;
