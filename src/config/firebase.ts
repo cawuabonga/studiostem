@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1554,6 +1554,29 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
     await deleteDoc(envRef);
 };
 
+export const getAssetTypes = async (instituteId: string): Promise<AssetType[]> => {
+    const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
+    const q = query(assetTypesCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
+};
+
+export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id'>): Promise<void> => {
+    const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
+    await addDoc(assetTypesCol, { ...data, lastAssignedNumber: 0 });
+};
+
+export const updateAssetType = async (instituteId: string, assetTypeId: string, data: Partial<AssetType>): Promise<void> => {
+    const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
+    await updateDoc(assetTypeRef, data);
+};
+
+export const deleteAssetType = async (instituteId: string, assetTypeId: string): Promise<void> => {
+    const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
+    // Add logic here to check if any asset uses this type before deleting.
+    await deleteDoc(assetTypeRef);
+};
+
 export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
     const buildings = await getBuildings(instituteId);
     let allAssets: Asset[] = [];
@@ -1580,21 +1603,55 @@ export const getAssetsForEnvironment = async (instituteId: string, buildingId: s
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Asset));
 };
 
-export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, data: Omit<Asset, 'id'>): Promise<void> => {
+export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, assetTypeId: string, data: Omit<Asset, 'id' | 'assetTypeId' | 'name' | 'codeOrSerial' | 'type'>): Promise<string> => {
     const user = auth.currentUser;
-    const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
-    const newDocRef = await addDoc(assetsCol, { ...data, instituteId, buildingId, environmentId });
+    const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
+    
+    let newAssetCode = '';
 
-    if(user) {
-        await addAssetHistoryLog(instituteId, buildingId, environmentId, newDocRef.id, {
-            action: 'create',
-            userId: user.uid,
-            userName: user.displayName || 'Sistema',
-            timestamp: Timestamp.now(),
-            details: `Activo "${data.name}" creado.`,
-        });
-    }
+    await runTransaction(db, async (transaction) => {
+        const assetTypeDoc = await transaction.get(assetTypeRef);
+        if (!assetTypeDoc.exists()) {
+            throw new Error("AssetType not found");
+        }
+        const assetTypeData = assetTypeDoc.data() as AssetType;
+
+        const newNumber = (assetTypeData.lastAssignedNumber || 0) + 1;
+        newAssetCode = `${assetTypeData.code}-${String(newNumber).padStart(4, '0')}`;
+        
+        transaction.update(assetTypeRef, { lastAssignedNumber: newNumber });
+
+        const assetsCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets');
+        const newAssetRef = doc(assetsCol);
+        
+        const newAssetData: Omit<Asset, 'id'> = {
+            ...data,
+            assetTypeId,
+            name: assetTypeData.name,
+            type: assetTypeData.category,
+            codeOrSerial: newAssetCode,
+            instituteId,
+            buildingId,
+            environmentId,
+        };
+        transaction.set(newAssetRef, newAssetData);
+        
+        if (user) {
+            const historyColRef = collection(newAssetRef, 'history');
+            const logDocRef = doc(historyColRef);
+            transaction.set(logDocRef, {
+                action: 'create',
+                userId: user.uid,
+                userName: user.displayName || 'Sistema',
+                timestamp: Timestamp.now(),
+                details: `Activo "${newAssetData.name}" (${newAssetCode}) creado.`,
+            });
+        }
+    });
+    
+    return newAssetCode;
 };
+
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
     const user = auth.currentUser;
