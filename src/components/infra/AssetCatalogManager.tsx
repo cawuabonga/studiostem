@@ -64,29 +64,31 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     resolver: zodResolver(assetTypeSchema),
   });
 
-  const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
+  const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first', newFilter: string = filter) => {
     setLoading(true);
-    let newPageHistory = [...pageHistory];
     let cursor: DocumentSnapshot | null | undefined = null;
 
     if (direction === 'next' && lastVisible) {
         cursor = lastVisible;
         setPage(prev => prev + 1);
-        newPageHistory.push(lastVisible);
+        setPageHistory(prev => [...prev, lastVisible]);
     } else if (direction === 'prev') {
-        setPage(prev => Math.max(1, prev - 1));
-        cursor = pageHistory[page - 2];
-        newPageHistory = pageHistory.slice(0, page - 1);
-    } else { // first page
+        const newPage = page > 1 ? page - 1 : 1;
+        setPage(newPage);
+        cursor = newPage > 1 ? pageHistory[newPage - 1] : null;
+        setPageHistory(prev => prev.slice(0, newPage));
+    } else { // 'first' or new search
         setPage(1);
         cursor = null;
-        newPageHistory = [null];
+        setPageHistory([null]);
     }
-    
-    setPageHistory(newPageHistory);
 
     try {
-        const result = await getAssetTypes(instituteId, { limit: PAGE_SIZE, startAfter: cursor });
+        const result = await getAssetTypes(instituteId, {
+            limit: PAGE_SIZE,
+            startAfter: cursor,
+            search: newFilter,
+        });
         setAssetTypes(result.data);
         setLastVisible(result.lastVisible || null);
     } catch (error) {
@@ -95,12 +97,18 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     } finally {
         setLoading(false);
     }
-}, [instituteId, toast, lastVisible, page, pageHistory]);
+}, [instituteId, toast, page, lastVisible, pageHistory, filter]);
 
-useEffect(() => {
+
+ useEffect(() => {
+    fetchData('first', filter);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
+
+  useEffect(() => {
     fetchData('first');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [instituteId]); // Only refetch on institute change
+  }, [instituteId]);
 
   const handleOpenDialog = (assetType?: AssetType) => {
     setEditingAssetType(assetType || null);
@@ -129,7 +137,7 @@ useEffect(() => {
         await addAssetType(instituteId, data);
         toast({ title: "Tipo de Activo Creado" });
       }
-      fetchData();
+      fetchData('first');
       onDataChange();
       handleDialogClose();
     } catch (error: any) {
@@ -144,7 +152,7 @@ useEffect(() => {
     try {
         await deleteAssetType(instituteId, deletingAssetType.id);
         toast({ title: "Tipo de Activo Eliminado" });
-        fetchData();
+        fetchData('first');
         onDataChange();
     } catch (error: any) {
         toast({ title: "Error al eliminar", description: "No se puede eliminar un tipo de activo que ya está en uso.", variant: "destructive" });
@@ -153,16 +161,8 @@ useEffect(() => {
     }
   };
 
-  const filteredAssetTypes = useMemo(() => {
-    if (!assetTypes) return [];
-    return assetTypes.filter(asset => 
-      asset.name.toLowerCase().includes(filter.toLowerCase()) ||
-      asset.patrimonialCode.toLowerCase().includes(filter.toLowerCase())
-    );
-  }, [assetTypes, filter]);
-  
   const handleNextPage = () => {
-      if (lastVisible) {
+      if (lastVisible || assetTypes.length === PAGE_SIZE) {
           fetchData('next');
       }
   }
@@ -211,8 +211,8 @@ useEffect(() => {
                     <TableBody>
                         {loading ? (
                             <TableRow><TableCell colSpan={5}><Skeleton className="h-20 w-full" /></TableCell></TableRow>
-                        ) : filteredAssetTypes.length > 0 ? (
-                            filteredAssetTypes.map(assetType => (
+                        ) : assetTypes.length > 0 ? (
+                            assetTypes.map(assetType => (
                                 <TableRow key={assetType.id}>
                                     <TableCell><Badge variant="secondary">{assetType.patrimonialCode}</Badge></TableCell>
                                     <TableCell className="font-medium">
@@ -240,8 +240,9 @@ useEffect(() => {
                 </Table>
              </div>
              <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page === 1}>Anterior</Button>
-                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!lastVisible || assetTypes.length < PAGE_SIZE}>Siguiente</Button>
+                <span className="text-sm text-muted-foreground">Página {page}</span>
+                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page === 1 || loading}>Anterior</Button>
+                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!lastVisible || assetTypes.length < PAGE_SIZE || loading}>Siguiente</Button>
             </div>
         </CardContent>
       </Card>
