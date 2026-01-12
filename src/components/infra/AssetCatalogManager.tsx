@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -63,7 +62,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     resolver: zodResolver(assetTypeSchema),
   });
 
- const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
+  const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
     if (!instituteId) return;
     setLoading(true);
     
@@ -89,8 +88,8 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
 
     try {
         const result = await getAssetTypes(instituteId, {
+            startAfter: cursor || undefined,
             limit: PAGE_SIZE,
-            startAfter: cursor,
             search: filter,
         });
         setAssetTypes(result.data);
@@ -101,11 +100,10 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     } finally {
         setLoading(false);
     }
-}, [instituteId, toast, page, lastVisible, pageHistory, filter]);
+  }, [instituteId, toast, page, lastVisible, pageHistory, filter]);
 
   useEffect(() => {
     fetchData('first');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
 
