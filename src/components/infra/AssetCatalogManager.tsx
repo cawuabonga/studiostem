@@ -20,8 +20,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Trash, Edit, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
-import { Separator } from '../ui/separator';
-import { BulkUploadAssetTypes } from './BulkUploadAssetTypes';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
 const assetGroups: AssetGroup[] = ["MAQUINARIAS, EQUIPOS Y MOBILIARIO", "VEHICULOS", "OTROS"];
@@ -92,8 +90,12 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
             limit: PAGE_SIZE,
             search: filter,
         });
-        setAssetTypes(result.data);
-        setLastVisible(result.lastVisible || null);
+        setAssetTypes(result);
+        if (result.length === PAGE_SIZE) {
+            // This is a simplified way to handle pagination "next" button.
+            // A more robust implementation would fetch one extra item to see if there's a next page.
+            // For now, we assume if we get a full page, there might be more.
+        }
     } catch (error) {
         console.error("Error fetching asset types:", error);
         toast({ title: "Error", description: "No se pudieron cargar los tipos de activo.", variant: "destructive" });
@@ -159,7 +161,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
   };
 
   const handleNextPage = () => {
-      if (lastVisible || assetTypes.length === PAGE_SIZE) {
+      if (assetTypes.length === PAGE_SIZE) {
           fetchData('next');
       }
   }
@@ -239,7 +241,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
              <div className="flex items-center justify-end space-x-2 py-4">
                 <span className="text-sm text-muted-foreground">Página {page}</span>
                 <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page === 1 || loading}>Anterior</Button>
-                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!lastVisible || assetTypes.length < PAGE_SIZE || loading}>Siguiente</Button>
+                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={assetTypes.length < PAGE_SIZE || loading}>Siguiente</Button>
             </div>
         </CardContent>
       </Card>
