@@ -54,50 +54,52 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
   const [deletingAssetType, setDeletingAssetType] = useState<AssetType | null>(null);
   const [filter, setFilter] = useState('');
   
-  const [firstVisible, setFirstVisible] = useState<DocumentSnapshot | null>(null);
   const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageCursors, setPageCursors] = useState<(DocumentSnapshot|null)[]>([null]);
+  const [page, setPage] = useState(1);
+  const [pageHistory, setPageHistory] = useState<(DocumentSnapshot | null)[]>([null]);
 
 
-  const fetchData = useCallback(async (page: 'first' | 'next' | 'prev' = 'first') => {
+  const form = useForm<FormValues>({
+    resolver: zodResolver(assetTypeSchema),
+  });
+
+  const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
     setLoading(true);
-    try {
-      let cursor;
-      if (page === 'next') {
+    let newPageHistory = [...pageHistory];
+    let cursor: DocumentSnapshot | null | undefined = null;
+
+    if (direction === 'next' && lastVisible) {
         cursor = lastVisible;
-      } else if (page === 'prev') {
-        // For 'prev', we need to query backwards, which is complex.
-        // A simpler approach for now is to refetch from the cursor of the previous page.
-        cursor = pageCursors[currentPage - 2];
-        if (currentPage > 1) {
-            setCurrentPage(p => p - 1);
-        }
-      } else {
-         setCurrentPage(1);
-         setPageCursors([null]);
-      }
-
-      const { data, nextCursor, prevCursor } = await getAssetTypes(instituteId, { page, limit: PAGE_SIZE, cursor: page === 'prev' ? pageCursors[currentPage - 2] : lastVisible! });
-
-      setAssetTypes(data);
-      if(page === 'next' && nextCursor) {
-        setPageCursors(prev => [...prev, nextCursor]);
-      }
-      setLastVisible(nextCursor || null);
-      setFirstVisible(prevCursor || null);
-      
-    } catch (error) {
-      console.error("Error fetching asset types:", error);
-      toast({ title: "Error", description: "No se pudieron cargar los tipos de activo.", variant: "destructive" });
-    } finally {
-      setLoading(false);
+        setPage(prev => prev + 1);
+        newPageHistory.push(lastVisible);
+    } else if (direction === 'prev') {
+        setPage(prev => Math.max(1, prev - 1));
+        cursor = pageHistory[page - 2];
+        newPageHistory = pageHistory.slice(0, page - 1);
+    } else { // first page
+        setPage(1);
+        cursor = null;
+        newPageHistory = [null];
     }
-  }, [instituteId, toast, lastVisible, currentPage, pageCursors]);
+    
+    setPageHistory(newPageHistory);
 
-  useEffect(() => {
+    try {
+        const result = await getAssetTypes(instituteId, { limit: PAGE_SIZE, startAfter: cursor });
+        setAssetTypes(result.data);
+        setLastVisible(result.lastVisible || null);
+    } catch (error) {
+        console.error("Error fetching asset types:", error);
+        toast({ title: "Error", description: "No se pudieron cargar los tipos de activo.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
+}, [instituteId, toast, lastVisible, page, pageHistory]);
+
+useEffect(() => {
     fetchData('first');
-  }, [instituteId]); // Removed fetchData from deps to avoid re-running on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [instituteId]); // Only refetch on institute change
 
   const handleOpenDialog = (assetType?: AssetType) => {
     setEditingAssetType(assetType || null);
@@ -159,13 +161,12 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
   
   const handleNextPage = () => {
       if (lastVisible) {
-          setCurrentPage(p => p + 1);
           fetchData('next');
       }
   }
   
   const handlePrevPage = () => {
-      if (currentPage > 1) {
+      if (page > 1) {
           fetchData('prev');
       }
   }
@@ -237,8 +238,8 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                 </Table>
              </div>
              <div className="flex items-center justify-end space-x-2 py-4">
-                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>Anterior</Button>
-                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={assetTypes.length < PAGE_SIZE}>Siguiente</Button>
+                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={page === 1}>Anterior</Button>
+                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={!lastVisible || assetTypes.length < PAGE_SIZE}>Siguiente</Button>
             </div>
         </CardContent>
       </Card>
@@ -254,7 +255,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
             <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
         </CardHeader>
         <CardContent>
-            <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={fetchData} />
+            <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={() => fetchData('first')} />
         </CardContent>
     </Card>
 
