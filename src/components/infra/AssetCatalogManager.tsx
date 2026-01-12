@@ -288,21 +288,6 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
             </AlertDialogContent>
         </AlertDialog>
 
-        <Separator />
-
-        <Card>
-            <CardHeader>
-                <div className="flex items-center gap-2">
-                    <Upload className="h-5 w-5"/>
-                    <CardTitle>Carga Masiva del Catálogo desde Excel</CardTitle>
-                </div>
-                <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={() => fetchData('first')} />
-            </CardContent>
-        </Card>
-
     </div>
   );
 }
