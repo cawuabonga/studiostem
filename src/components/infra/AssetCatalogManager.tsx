@@ -103,8 +103,9 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     }
 }, [instituteId, toast, page, lastVisible, pageHistory, filter]);
 
- useEffect(() => {
+  useEffect(() => {
     fetchData('first');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
 
@@ -245,21 +246,6 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
         </CardContent>
       </Card>
       
-      <Separator />
-
-      <Card>
-        <CardHeader>
-            <div className="flex items-center gap-2">
-                <Upload className="h-5 w-5"/>
-                <CardTitle>Carga Masiva del Catálogo desde Excel</CardTitle>
-            </div>
-            <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={() => fetchData('first')} />
-        </CardContent>
-    </Card>
-
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>
               <DialogHeader>
@@ -303,6 +289,22 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+
+        <Separator />
+
+        <Card>
+            <CardHeader>
+                <div className="flex items-center gap-2">
+                    <Upload className="h-5 w-5"/>
+                    <CardTitle>Carga Masiva del Catálogo desde Excel</CardTitle>
+                </div>
+                <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={() => fetchData('first')} />
+            </CardContent>
+        </Card>
+
     </div>
   );
 }
