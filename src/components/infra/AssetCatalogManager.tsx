@@ -64,20 +64,25 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     resolver: zodResolver(assetTypeSchema),
   });
 
-  const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first', newFilter: string = filter) => {
+ const fetchData = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
+    if (!instituteId) return;
     setLoading(true);
+    
     let cursor: DocumentSnapshot | null | undefined = null;
+    let newPage = page;
 
-    if (direction === 'next' && lastVisible) {
+    if (direction === 'next') {
         cursor = lastVisible;
-        setPage(prev => prev + 1);
+        newPage = page + 1;
+        setPage(newPage);
         setPageHistory(prev => [...prev, lastVisible]);
     } else if (direction === 'prev') {
-        const newPage = page > 1 ? page - 1 : 1;
+        newPage = page > 1 ? page - 1 : 1;
         setPage(newPage);
         cursor = newPage > 1 ? pageHistory[newPage - 1] : null;
         setPageHistory(prev => prev.slice(0, newPage));
-    } else { // 'first' or new search
+    } else { // 'first'
+        newPage = 1;
         setPage(1);
         cursor = null;
         setPageHistory([null]);
@@ -87,7 +92,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
         const result = await getAssetTypes(instituteId, {
             limit: PAGE_SIZE,
             startAfter: cursor,
-            search: newFilter,
+            search: filter,
         });
         setAssetTypes(result.data);
         setLastVisible(result.lastVisible || null);
@@ -99,16 +104,10 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
     }
 }, [instituteId, toast, page, lastVisible, pageHistory, filter]);
 
-
  useEffect(() => {
-    fetchData('first', filter);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchData('first');
   }, [filter]);
 
-  useEffect(() => {
-    fetchData('first');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [instituteId]);
 
   const handleOpenDialog = (assetType?: AssetType) => {
     setEditingAssetType(assetType || null);
