@@ -59,7 +59,6 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
   const [page, setPage] = useState(1);
   const [pageHistory, setPageHistory] = useState<(DocumentSnapshot | null)[]>([null]);
 
-
   const form = useForm<FormValues>({
     resolver: zodResolver(assetTypeSchema),
   });
