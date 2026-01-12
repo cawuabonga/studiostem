@@ -17,9 +17,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash, Edit, Upload } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from '../ui/badge';
+import { Separator } from '../ui/separator';
+import { BulkUploadAssetTypes } from './BulkUploadAssetTypes';
+import type { DocumentSnapshot } from 'firebase/firestore';
 
 const assetGroups: AssetGroup[] = ["MAQUINARIAS, EQUIPOS Y MOBILIARIO", "VEHICULOS", "OTROS"];
 const assetClasses: AssetClass[] = ["EQUIPO", "MOBILIARIO", "VEHICULO", "TERRENO"];
@@ -50,28 +53,51 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
   const [editingAssetType, setEditingAssetType] = useState<AssetType | null>(null);
   const [deletingAssetType, setDeletingAssetType] = useState<AssetType | null>(null);
   const [filter, setFilter] = useState('');
-  const [currentPage, setCurrentPage] = useState(1);
   
-  const form = useForm<FormValues>({
-    resolver: zodResolver(assetTypeSchema),
-  });
+  const [firstVisible, setFirstVisible] = useState<DocumentSnapshot | null>(null);
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageCursors, setPageCursors] = useState<(DocumentSnapshot|null)[]>([null]);
 
-  const fetchData = useCallback(async () => {
+
+  const fetchData = useCallback(async (page: 'first' | 'next' | 'prev' = 'first') => {
     setLoading(true);
     try {
-      const fetchedData = await getAssetTypes(instituteId);
-      setAssetTypes(fetchedData);
+      let cursor;
+      if (page === 'next') {
+        cursor = lastVisible;
+      } else if (page === 'prev') {
+        // For 'prev', we need to query backwards, which is complex.
+        // A simpler approach for now is to refetch from the cursor of the previous page.
+        cursor = pageCursors[currentPage - 2];
+        if (currentPage > 1) {
+            setCurrentPage(p => p - 1);
+        }
+      } else {
+         setCurrentPage(1);
+         setPageCursors([null]);
+      }
+
+      const { data, nextCursor, prevCursor } = await getAssetTypes(instituteId, { page, limit: PAGE_SIZE, cursor: page === 'prev' ? pageCursors[currentPage - 2] : lastVisible! });
+
+      setAssetTypes(data);
+      if(page === 'next' && nextCursor) {
+        setPageCursors(prev => [...prev, nextCursor]);
+      }
+      setLastVisible(nextCursor || null);
+      setFirstVisible(prevCursor || null);
+      
     } catch (error) {
       console.error("Error fetching asset types:", error);
       toast({ title: "Error", description: "No se pudieron cargar los tipos de activo.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [instituteId, toast]);
+  }, [instituteId, toast, lastVisible, currentPage, pageCursors]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData('first');
+  }, [instituteId]); // Removed fetchData from deps to avoid re-running on every render
 
   const handleOpenDialog = (assetType?: AssetType) => {
     setEditingAssetType(assetType || null);
@@ -130,13 +156,19 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
       asset.patrimonialCode.toLowerCase().includes(filter.toLowerCase())
     );
   }, [assetTypes, filter]);
-
-  const paginatedAssetTypes = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredAssetTypes.slice(start, start + PAGE_SIZE);
-  }, [filteredAssetTypes, currentPage]);
-
-  const totalPages = Math.ceil(filteredAssetTypes.length / PAGE_SIZE);
+  
+  const handleNextPage = () => {
+      if (lastVisible) {
+          setCurrentPage(p => p + 1);
+          fetchData('next');
+      }
+  }
+  
+  const handlePrevPage = () => {
+      if (currentPage > 1) {
+          fetchData('prev');
+      }
+  }
 
   return (
     <div className="space-y-4">
@@ -158,10 +190,7 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                 <Input 
                     placeholder="Buscar por denominación o código..."
                     value={filter}
-                    onChange={(e) => {
-                        setFilter(e.target.value);
-                        setCurrentPage(1);
-                    }}
+                    onChange={(e) => setFilter(e.target.value)}
                     className="max-w-sm"
                 />
             </div>
@@ -169,8 +198,8 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Denominación</TableHead>
                             <TableHead>Código Patrimonial</TableHead>
+                            <TableHead>Denominación</TableHead>
                             <TableHead>Grupo</TableHead>
                             <TableHead>Clase</TableHead>
                             <TableHead className="text-right">Acciones</TableHead>
@@ -178,15 +207,15 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                     </TableHeader>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                        ) : paginatedAssetTypes.length > 0 ? (
-                            paginatedAssetTypes.map(assetType => (
+                            <TableRow><TableCell colSpan={5}><Skeleton className="h-20 w-full" /></TableCell></TableRow>
+                        ) : filteredAssetTypes.length > 0 ? (
+                            filteredAssetTypes.map(assetType => (
                                 <TableRow key={assetType.id}>
+                                    <TableCell><Badge variant="secondary">{assetType.patrimonialCode}</Badge></TableCell>
                                     <TableCell className="font-medium">
                                         <p>{assetType.name}</p>
                                         <p className="text-xs text-muted-foreground">{assetType.description}</p>
                                     </TableCell>
-                                    <TableCell><Badge variant="secondary">{assetType.patrimonialCode}</Badge></TableCell>
                                     <TableCell>{assetType.group}</TableCell>
                                     <TableCell>{assetType.class}</TableCell>
                                     <TableCell className="text-right">
@@ -207,15 +236,27 @@ export function AssetCatalogManager({ instituteId, onDataChange }: AssetCatalogM
                     </TableBody>
                 </Table>
              </div>
-             {totalPages > 1 && (
-                <div className="flex items-center justify-end space-x-2 py-4">
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>Anterior</Button>
-                    <span className="text-sm">Página {currentPage} de {totalPages}</span>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Siguiente</Button>
-                </div>
-            )}
+             <div className="flex items-center justify-end space-x-2 py-4">
+                <Button variant="outline" size="sm" onClick={handlePrevPage} disabled={currentPage === 1}>Anterior</Button>
+                <Button variant="outline" size="sm" onClick={handleNextPage} disabled={assetTypes.length < PAGE_SIZE}>Siguiente</Button>
+            </div>
         </CardContent>
       </Card>
+      
+      <Separator />
+
+      <Card>
+        <CardHeader>
+            <div className="flex items-center gap-2">
+                <Upload className="h-5 w-5"/>
+                <CardTitle>Carga Masiva del Catálogo desde Excel</CardTitle>
+            </div>
+            <CardDescription>Este proceso permite agregar o actualizar el catálogo completo de bienes patrimoniales desde un archivo Excel.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <BulkUploadAssetTypes instituteId={instituteId} onUploadSuccess={fetchData} />
+        </CardContent>
+    </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
           <DialogContent>

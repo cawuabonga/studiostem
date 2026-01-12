@@ -3,7 +3,7 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType } from '@/types';
 
@@ -1554,11 +1554,31 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
     await deleteDoc(envRef);
 };
 
-export const getAssetTypes = async (instituteId: string): Promise<AssetType[]> => {
+export const getAssetTypes = async (instituteId: string, options?: { page: 'first' | 'next' | 'prev', limit?: number, cursor?: DocumentSnapshot }): Promise<{data: AssetType[], nextCursor?: DocumentSnapshot, prevCursor?: DocumentSnapshot}> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
-    const q = query(assetTypesCol, orderBy("name"));
+    const pageSize = options?.limit || 20;
+
+    let q;
+    
+    if (options?.page === 'next' && options.cursor) {
+        q = query(assetTypesCol, orderBy("patrimonialCode"), startAfter(options.cursor), limit(pageSize));
+    } else if (options?.page === 'prev' && options.cursor) {
+        q = query(assetTypesCol, orderBy("patrimonialCode", "desc"), startAfter(options.cursor), limit(pageSize));
+    } else {
+        q = query(assetTypesCol, orderBy("patrimonialCode"), limit(pageSize));
+    }
+
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
+    
+    if (options?.page === 'prev') {
+        data.reverse(); // Reverse the array to maintain ascending order
+    }
+
+    const nextCursor = snapshot.docs[snapshot.docs.length - 1];
+    const prevCursor = snapshot.docs[0];
+    
+    return { data, nextCursor, prevCursor };
 };
 
 export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id'>): Promise<void> => {

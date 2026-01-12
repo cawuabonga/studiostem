@@ -51,6 +51,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Label } from '@/components/ui/label';
+import { Timestamp } from 'firebase/firestore';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -124,17 +125,18 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
+    defaultValues: { characteristics: {} }
   });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [fetchedAssets, fetchedAssetTypes] = await Promise.all([
+      const [fetchedAssets, fetchedAssetTypesData] = await Promise.all([
           getAssetsForEnvironment(instituteId, buildingId, environmentId),
-          getAssetTypes(instituteId),
+          getAssetTypes(instituteId, { page: 'first', limit: 9999 }), // Fetch all for combobox
       ]);
       setAssets(fetchedAssets);
-      setAssetTypes(fetchedAssetTypes);
+      setAssetTypes(fetchedAssetTypesData.data);
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
     } finally {
@@ -148,8 +150,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   const selectedAssetTypeId = form.watch('assetTypeId');
   const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
-  const dynamicFields = selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] || [] : [];
-  const nextAssetCode = selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '';
+  const dynamicFields = useMemo(() => selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] : [], [selectedAssetTypeDetails]);
+  const nextAssetCode = useMemo(() => selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '', [selectedAssetTypeDetails]);
 
 
   const handleOpenForm = (asset?: Asset) => {
@@ -190,21 +192,21 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
             throw new Error("El tipo de activo seleccionado no es válido.");
         }
         
+        const dataToSave = {
+            ...data,
+            acquisitionDate: data.acquisitionDate ? Timestamp.fromDate(data.acquisitionDate) : undefined,
+            characteristics: data.characteristics
+        };
+
         if (selectedAsset) {
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
-                ...data,
+                ...dataToSave,
                 name: selectedAssetType.name,
                 type: selectedAssetType.class,
-                characteristics: data.characteristics
             });
             toast({ title: "Activo Actualizado" });
         } else {
-            const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, {
-                status: data.status,
-                acquisitionDate: data.acquisitionDate,
-                notes: data.notes,
-                characteristics: data.characteristics,
-            });
+            const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, dataToSave);
              toast({ title: "Activo Añadido", description: `El nuevo activo ha sido registrado con el código: ${newAssetId}` });
         }
         handleCloseForm(true);
@@ -374,7 +376,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        {dynamicFields && dynamicFields.length > 0 && (
+                        {dynamicFields.length > 0 && (
                             <div className="space-y-4 pt-4 border-t">
                                 <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
                                 <div className="grid grid-cols-2 gap-4">
@@ -385,7 +387,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                             name={`characteristics.${fieldName}` as any}
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="capitalize">{fieldName.replace('_', ' ')}</FormLabel>
+                                                    <FormLabel className="capitalize">{fieldName.replace(/_/g, ' ')}</FormLabel>
                                                     <FormControl><Input {...field} /></FormControl>
                                                     <FormMessage />
                                                 </FormItem>
