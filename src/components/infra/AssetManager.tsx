@@ -18,6 +18,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -122,6 +123,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const { toast } = useToast();
   
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -131,12 +133,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [fetchedAssets, fetchedAssetTypesData] = await Promise.all([
-          getAssetsForEnvironment(instituteId, buildingId, environmentId),
-          getAssetTypes(instituteId, { page: 'first', limit: 9999 }), // Fetch all for combobox
-      ]);
+      const fetchedAssets = await getAssetsForEnvironment(instituteId, buildingId, environmentId)
       setAssets(fetchedAssets);
-      setAssetTypes(fetchedAssetTypesData.data);
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
     } finally {
@@ -148,9 +146,36 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     fetchData();
   }, [fetchData]);
   
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+        if (instituteId && (search || comboboxOpen)) { // Fetch on open as well
+            try {
+                const fetchedAssetTypes = await getAssetTypes(instituteId, { search });
+                setAssetTypes(fetchedAssetTypes);
+            } catch (error) {
+                console.error("Error searching asset types:", error);
+            }
+        } else {
+            setAssetTypes([]); // Clear results when not searching/open
+        }
+    }, 300); // Debounce time
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search, instituteId, comboboxOpen]);
+
   const selectedAssetTypeId = form.watch('assetTypeId');
-  const selectedAssetTypeDetails = useMemo(() => assetTypes.find(t => t.id === selectedAssetTypeId), [assetTypes, selectedAssetTypeId]);
-  const dynamicFields = useMemo(() => selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] : [], [selectedAssetTypeDetails]);
+  const selectedAssetTypeDetails = useMemo(() => {
+    // Search in the full list if available, otherwise just what's loaded
+    // This ensures that when editing, the details are found even if not in the current search result
+    const allKnownTypes = [...assetTypes];
+    if (selectedAsset && !allKnownTypes.find(t => t.id === selectedAsset.assetTypeId)) {
+        allKnownTypes.push({ id: selectedAsset.assetTypeId, name: selectedAsset.name, class: selectedAsset.type } as AssetType);
+    }
+    return allKnownTypes.find(t => t.id === selectedAssetTypeId);
+  }, [assetTypes, selectedAssetTypeId, selectedAsset]);
+  
+  const dynamicFields = useMemo(() => (selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] : []) || [], [selectedAssetTypeDetails]);
+
   const nextAssetCode = useMemo(() => selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '', [selectedAssetTypeDetails]);
 
 
@@ -179,6 +204,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const handleCloseForm = (updated?: boolean) => {
     setIsFormOpen(false);
     setSelectedAsset(null);
+    setSearch('');
     if(updated) {
         fetchData();
     }
@@ -187,8 +213,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const onSubmit = async (data: AssetFormValues) => {
     setIsSubmitting(true);
     try {
-        const selectedAssetType = assetTypes.find(t => t.id === data.assetTypeId);
-        if (!selectedAssetType) {
+        if (!selectedAssetTypeDetails) {
             throw new Error("El tipo de activo seleccionado no es válido.");
         }
         
@@ -201,8 +226,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         if (selectedAsset) {
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
                 ...dataToSave,
-                name: selectedAssetType.name,
-                type: selectedAssetType.class,
+                name: selectedAssetTypeDetails.name,
+                type: selectedAssetTypeDetails.class,
             });
             toast({ title: "Activo Actualizado" });
         } else {
@@ -305,14 +330,16 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
                                         disabled={!!selectedAsset}
                                     >
-                                        {field.value ? assetTypes.find((t) => t.id === field.value)?.name : "Seleccione un tipo del catálogo..."}
+                                        <span className="truncate">
+                                            {selectedAssetTypeDetails?.name || "Seleccione un tipo del catálogo..."}
+                                        </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                     </FormControl>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                     <Command>
-                                    <CommandInput placeholder="Buscar tipo de activo..." />
+                                    <CommandInput placeholder="Buscar tipo de activo..." onValueChange={setSearch} />
                                     <CommandList>
                                         <CommandEmpty>No se encontró el tipo de activo.</CommandEmpty>
                                         <CommandGroup>

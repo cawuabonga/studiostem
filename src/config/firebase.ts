@@ -1554,36 +1554,27 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
     await deleteDoc(envRef);
 };
 
-export const getAssetTypes = async (instituteId: string, options?: { page: 'first' | 'next' | 'prev', limit?: number, cursor?: DocumentSnapshot }): Promise<{data: AssetType[], nextCursor?: DocumentSnapshot, prevCursor?: DocumentSnapshot}> => {
+export const getAssetTypes = async (instituteId: string, options?: { search?: string, limit?: number }): Promise<AssetType[]> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
     const pageSize = options?.limit || 20;
 
-    let q;
-    
-    if (options?.page === 'next' && options.cursor) {
-        q = query(assetTypesCol, orderBy("patrimonialCode"), startAfter(options.cursor), limit(pageSize));
-    } else if (options?.page === 'prev' && options.cursor) {
-        q = query(assetTypesCol, orderBy("patrimonialCode", "desc"), startAfter(options.cursor), limit(pageSize));
-    } else {
-        q = query(assetTypesCol, orderBy("patrimonialCode"), limit(pageSize));
+    let queries = [];
+    if (options?.search) {
+        const searchQuery = options.search.toLowerCase();
+        queries.push(where('name', '>=', searchQuery));
+        queries.push(where('name', '<=', searchQuery + '\uf8ff'));
     }
+    
+    const q = query(assetTypesCol, ...queries, orderBy("name"), limit(pageSize));
 
     const snapshot = await getDocs(q);
-    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
-    
-    if (options?.page === 'prev') {
-        data.reverse(); // Reverse the array to maintain ascending order
-    }
-
-    const nextCursor = snapshot.docs[snapshot.docs.length - 1];
-    const prevCursor = snapshot.docs[0];
-    
-    return { data, nextCursor, prevCursor };
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
 };
 
-export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id'>): Promise<void> => {
+export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id' | 'lastAssignedNumber'>): Promise<void> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
-    await addDoc(assetTypesCol, { ...data, lastAssignedNumber: 0 });
+    const docRef = doc(assetTypesCol, data.patrimonialCode); // Use patrimonial code as ID
+    await setDoc(docRef, { ...data, lastAssignedNumber: 0 }, { merge: true });
 };
 
 export const bulkAddAssetTypes = async (instituteId: string, assetTypes: Omit<AssetType, 'id' | 'lastAssignedNumber'>[]) => {
