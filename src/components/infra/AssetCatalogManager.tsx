@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -153,6 +154,7 @@ useEffect(() => {
   };
 
   const filteredAssetTypes = useMemo(() => {
+    if (!assetTypes) return [];
     return assetTypes.filter(asset => 
       asset.name.toLowerCase().includes(filter.toLowerCase()) ||
       asset.patrimonialCode.toLowerCase().includes(filter.toLowerCase())
