@@ -1554,13 +1554,13 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
     await deleteDoc(envRef);
 };
 
-export const getAssetTypes = async (instituteId: string, options?: { search?: string, limit?: number }): Promise<AssetType[]> => {
+export const getAssetTypes = async (instituteId: string, options?: { search?: string; limit?: number }): Promise<AssetType[]> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
     const pageSize = options?.limit || 20;
 
-    let queries = [];
+    let queries: any[] = [];
     if (options?.search) {
-        const searchQuery = options.search.toLowerCase();
+        const searchQuery = options.search;
         queries.push(where('name', '>=', searchQuery));
         queries.push(where('name', '<=', searchQuery + '\uf8ff'));
     }
@@ -1569,6 +1569,13 @@ export const getAssetTypes = async (instituteId: string, options?: { search?: st
 
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
+};
+
+
+export const getAssetTypeById = async (instituteId: string, assetTypeId: string): Promise<AssetType | null> => {
+    const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
+    const docSnap = await getDoc(assetTypeRef);
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as AssetType : null;
 };
 
 export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id' | 'lastAssignedNumber'>): Promise<void> => {

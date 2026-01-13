@@ -6,7 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset, getAssetHistory, getAssetTypes } from '@/config/firebase';
+import { getAssetsForEnvironment, addAsset, updateAsset, deleteAsset, getAssetHistory, getAssetTypes, getAssetTypeById } from '@/config/firebase';
 import type { Asset, AssetHistoryLog, AssetType, AssetClass } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -124,6 +124,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [search, setSearch] = useState('');
+  const [selectedAssetTypeDetails, setSelectedAssetTypeDetails] = useState<AssetType | null>(null);
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -148,15 +149,13 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-        if (instituteId && (search.length > 1 || comboboxOpen)) {
+        if (instituteId && comboboxOpen) {
             try {
                 const fetchedAssetTypes = await getAssetTypes(instituteId, { search });
                 setAssetTypes(fetchedAssetTypes);
             } catch (error) {
                 console.error("Error searching asset types:", error);
             }
-        } else {
-            setAssetTypes([]);
         }
     }, 300);
 
@@ -165,9 +164,17 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
 
   const selectedAssetTypeId = form.watch('assetTypeId');
   
-  const selectedAssetTypeDetails = useMemo(() => {
-    return assetTypes.find(t => t.id === selectedAssetTypeId);
-  }, [assetTypes, selectedAssetTypeId]);
+  useEffect(() => {
+    const fetchDetails = async () => {
+        if (selectedAssetTypeId) {
+            const details = await getAssetTypeById(instituteId, selectedAssetTypeId);
+            setSelectedAssetTypeDetails(details);
+        } else {
+            setSelectedAssetTypeDetails(null);
+        }
+    }
+    fetchDetails();
+  }, [selectedAssetTypeId, instituteId])
   
   const dynamicFields = useMemo(() => {
     if (!selectedAssetTypeDetails) return [];
@@ -181,21 +188,30 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   }, [selectedAssetTypeDetails]);
 
 
-  const handleOpenForm = (asset?: Asset) => {
+  const handleOpenForm = async (asset?: Asset) => {
     setSelectedAsset(asset || null);
-    form.reset({
-      assetTypeId: asset?.assetTypeId || '',
-      status: asset?.status || 'Operativo',
-      acquisitionDate: asset?.acquisitionDate?.toDate(),
-      notes: asset?.notes || '',
-      characteristics: asset?.characteristics || {},
-    });
-    // If editing, fetch the specific asset type to populate the form
     if (asset) {
-        getAssetTypes(instituteId, { search: asset.assetTypeId }).then(types => {
-            if (types.length > 0) {
-                setAssetTypes(types);
-            }
+        // If editing, fetch the specific asset type to pre-populate everything
+        const details = await getAssetTypeById(instituteId, asset.assetTypeId);
+        setSelectedAssetTypeDetails(details);
+        setSearch(details?.name || '');
+        form.reset({
+            assetTypeId: asset.assetTypeId,
+            status: asset.status,
+            acquisitionDate: asset.acquisitionDate?.toDate(),
+            notes: asset.notes || '',
+            characteristics: asset.characteristics || {},
+        });
+    } else {
+        // If new, reset everything
+        setSelectedAssetTypeDetails(null);
+        setSearch('');
+        form.reset({
+            assetTypeId: '',
+            status: 'Operativo',
+            acquisitionDate: undefined,
+            notes: '',
+            characteristics: {},
         });
     }
     setIsFormOpen(true);
@@ -223,10 +239,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const onSubmit = async (data: AssetFormValues) => {
     setIsSubmitting(true);
     try {
-        // Re-fetch the selected asset type to ensure data is fresh, especially if it wasn't in the initial search
-        const currentSelectedType = (await getAssetTypes(instituteId, { search: data.assetTypeId }))[0];
-
-        if (!currentSelectedType) {
+        if (!selectedAssetTypeDetails) {
             throw new Error("El tipo de activo seleccionado no es válido o no se encontró.");
         }
         
@@ -239,8 +252,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         if (selectedAsset) {
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
                 ...dataToSave,
-                name: currentSelectedType.name,
-                type: currentSelectedType.class,
+                name: selectedAssetTypeDetails.name,
+                type: selectedAssetTypeDetails.class,
             });
             toast({ title: "Activo Actualizado" });
         } else {
@@ -345,7 +358,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         disabled={!!selectedAsset}
                                     >
                                         <span className="truncate">
-                                            {assetTypes.find(t => t.id === field.value)?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
+                                            {selectedAssetTypeDetails?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
                                         </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
