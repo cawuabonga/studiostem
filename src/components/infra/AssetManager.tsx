@@ -148,7 +148,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-        if (instituteId && (search || comboboxOpen)) { // Fetch on open as well
+        if (instituteId && (search.length > 1 || comboboxOpen)) {
             try {
                 const fetchedAssetTypes = await getAssetTypes(instituteId, { search });
                 setAssetTypes(fetchedAssetTypes);
@@ -156,27 +156,29 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                 console.error("Error searching asset types:", error);
             }
         } else {
-            setAssetTypes([]); // Clear results when not searching/open
+            setAssetTypes([]);
         }
-    }, 300); // Debounce time
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [search, instituteId, comboboxOpen]);
 
   const selectedAssetTypeId = form.watch('assetTypeId');
-  const selectedAssetTypeDetails = useMemo(() => {
-    // Search in the full list if available, otherwise just what's loaded
-    // This ensures that when editing, the details are found even if not in the current search result
-    const allKnownTypes = [...assetTypes];
-    if (selectedAsset && !allKnownTypes.find(t => t.id === selectedAsset.assetTypeId)) {
-        allKnownTypes.push({ id: selectedAsset.assetTypeId, name: selectedAsset.name, class: selectedAsset.type } as AssetType);
-    }
-    return allKnownTypes.find(t => t.id === selectedAssetTypeId);
-  }, [assetTypes, selectedAssetTypeId, selectedAsset]);
   
-  const dynamicFields = useMemo(() => (selectedAssetTypeDetails?.class ? characteristicsFields[selectedAssetTypeDetails.class] : []) || [], [selectedAssetTypeDetails]);
+  const selectedAssetTypeDetails = useMemo(() => {
+    return assetTypes.find(t => t.id === selectedAssetTypeId);
+  }, [assetTypes, selectedAssetTypeId]);
+  
+  const dynamicFields = useMemo(() => {
+    if (!selectedAssetTypeDetails) return [];
+    return characteristicsFields[selectedAssetTypeDetails.class] || [];
+  }, [selectedAssetTypeDetails]);
 
-  const nextAssetCode = useMemo(() => selectedAssetTypeDetails ? `${selectedAssetTypeDetails.patrimonialCode}-${String((selectedAssetTypeDetails.lastAssignedNumber || 0) + 1).padStart(4, '0')}` : '', [selectedAssetTypeDetails]);
+  const nextAssetCode = useMemo(() => {
+    if (!selectedAssetTypeDetails) return '';
+    const newNumber = (selectedAssetTypeDetails.lastAssignedNumber || 0) + 1;
+    return `${selectedAssetTypeDetails.patrimonialCode}-${String(newNumber).padStart(4, '0')}`;
+  }, [selectedAssetTypeDetails]);
 
 
   const handleOpenForm = (asset?: Asset) => {
@@ -188,6 +190,14 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
       notes: asset?.notes || '',
       characteristics: asset?.characteristics || {},
     });
+    // If editing, fetch the specific asset type to populate the form
+    if (asset) {
+        getAssetTypes(instituteId, { search: asset.assetTypeId }).then(types => {
+            if (types.length > 0) {
+                setAssetTypes(types);
+            }
+        });
+    }
     setIsFormOpen(true);
   };
   
@@ -213,8 +223,11 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const onSubmit = async (data: AssetFormValues) => {
     setIsSubmitting(true);
     try {
-        if (!selectedAssetTypeDetails) {
-            throw new Error("El tipo de activo seleccionado no es válido.");
+        // Re-fetch the selected asset type to ensure data is fresh, especially if it wasn't in the initial search
+        const currentSelectedType = (await getAssetTypes(instituteId, { search: data.assetTypeId }))[0];
+
+        if (!currentSelectedType) {
+            throw new Error("El tipo de activo seleccionado no es válido o no se encontró.");
         }
         
         const dataToSave = {
@@ -226,8 +239,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         if (selectedAsset) {
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
                 ...dataToSave,
-                name: selectedAssetTypeDetails.name,
-                type: selectedAssetTypeDetails.class,
+                name: currentSelectedType.name,
+                type: currentSelectedType.class,
             });
             toast({ title: "Activo Actualizado" });
         } else {
@@ -296,6 +309,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                         <DropdownMenuItem onClick={() => handleOpenHistory(asset)}><History className="mr-2 h-4 w-4" /> Ver Historial</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => handleOpenForm(asset)}><Edit2 className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                                         <DropdownMenuItem className="text-destructive" onClick={() => { setSelectedAsset(asset); setIsDeleteDialogOpen(true);}}><Trash2 className="mr-2 h-4 w-4" /> Eliminar</DropdownMenuItem>
@@ -331,7 +345,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         disabled={!!selectedAsset}
                                     >
                                         <span className="truncate">
-                                            {selectedAssetTypeDetails?.name || "Seleccione un tipo del catálogo..."}
+                                            {assetTypes.find(t => t.id === field.value)?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
                                         </span>
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
@@ -339,13 +353,13 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                     <Command>
-                                    <CommandInput placeholder="Buscar tipo de activo..." onValueChange={setSearch} />
+                                    <CommandInput placeholder="Buscar por código o nombre..." onValueChange={setSearch} />
                                     <CommandList>
-                                        <CommandEmpty>No se encontró el tipo de activo.</CommandEmpty>
+                                        <CommandEmpty>No se encontraron resultados.</CommandEmpty>
                                         <CommandGroup>
                                         {assetTypes.map((t) => (
                                             <CommandItem
-                                            value={t.name}
+                                            value={t.id}
                                             key={t.id}
                                             onSelect={() => {
                                                 form.setValue("assetTypeId", t.id)
@@ -368,7 +382,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                          <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <Label>Clase</Label>
-                                <Input value={selectedAssetTypeDetails?.class || ''} disabled className="mt-2" />
+                                <Input value={selectedAssetTypeDetails?.class || selectedAsset?.type || ''} disabled className="mt-2" />
                             </div>
                             <div>
                                 <Label>Código a Generar</Label>
