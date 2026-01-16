@@ -150,7 +150,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     const delayDebounceFn = setTimeout(async () => {
         if (instituteId && comboboxOpen) {
             try {
-                const fetchedAssetTypes = await getAssetTypes(instituteId, { search, limit: 100 });
+                const fetchedAssetTypes = await getAssetTypes(instituteId, { search: search.toUpperCase(), limit: 100 });
                 setAssetTypes(fetchedAssetTypes);
             } catch (error) {
                 console.error("Error searching asset types:", error);
@@ -333,145 +333,84 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         </div>
       
         <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-            <DialogContent className="max-w-6xl">
+            <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle>{selectedAsset ? 'Editar Activo' : 'Nuevo Activo'}</DialogTitle>
                 </DialogHeader>
-                 <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="col-span-1 md:col-span-2">
-                                <FormField control={form.control} name="assetTypeId" render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
-                                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                                        <PopoverTrigger asChild>
-                                            <FormControl>
-                                            <Button
-                                                variant="outline"
-                                                role="combobox"
-                                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                                disabled={!!selectedAsset}
-                                            >
-                                                <span className="truncate">
-                                                    {selectedAssetTypeDetails?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
-                                                </span>
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                            </Button>
-                                            </FormControl>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                            <Command>
-                                            <CommandInput placeholder="Buscar por código o nombre..." onValueChange={setSearch} />
-                                            <CommandList>
-                                                <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-                                                <CommandGroup>
-                                                {assetTypes.map((t) => (
-                                                    <CommandItem
-                                                    value={t.name}
-                                                    key={t.id}
-                                                    onSelect={() => {
-                                                        form.setValue("assetTypeId", t.id)
-                                                        setSearch(t.name)
-                                                        setComboboxOpen(false)
-                                                    }}
-                                                    >
-                                                    <Check className={cn("mr-2 h-4 w-4", t.id === field.value ? "opacity-100" : "opacity-0")} />
-                                                    {t.name}
-                                                    </CommandItem>
-                                                ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 overflow-y-auto -mx-6 px-6 py-4 space-y-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div className="col-span-1 lg:col-span-2">
+                                    <FormField control={form.control} name="assetTypeId" render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
+                                            <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                            <PopoverTrigger asChild>
+                                                <FormControl>
+                                                <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")} disabled={!!selectedAsset}>
+                                                    <span className="truncate">{selectedAssetTypeDetails?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}</span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                                </FormControl>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                                <Command><CommandInput placeholder="Buscar por código o nombre..." onValueChange={setSearch} /><CommandList><CommandEmpty>No se encontraron resultados.</CommandEmpty><CommandGroup>
+                                                    {assetTypes.map((t) => (<CommandItem value={t.name} key={t.id} onSelect={() => { form.setValue("assetTypeId", t.id); setSearch(t.name); setComboboxOpen(false); }}>
+                                                        <Check className={cn("mr-2 h-4 w-4", t.id === field.value ? "opacity-100" : "opacity-0")} />{t.name}</CommandItem>))}
+                                                </CommandGroup></CommandList></Command>
+                                            </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                </div>
+                                <div>
+                                    <Label>Clase</Label>
+                                    <Input value={selectedAssetTypeDetails?.class || selectedAsset?.type || ''} disabled className="mt-2" />
+                                </div>
                             </div>
-                            <div>
-                                <Label>Clase</Label>
-                                <Input value={selectedAssetTypeDetails?.class || selectedAsset?.type || ''} disabled className="mt-2" />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <Label>Código a Generar</Label>
+                                    <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
+                                </div>
+                                <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{assetStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name="acquisitionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="mb-2">Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                             </div>
-                        </div>
-
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <Label>Código a Generar</Label>
-                                <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
-                            </div>
-                            <FormField control={form.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Estado</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent>{assetStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                                </Select>
-                                <FormMessage />
-                                </FormItem>
-                            )}/>
-                            <FormField control={form.control} name="acquisitionDate" render={({ field }) => (
-                                <FormItem className="flex flex-col">
-                                <FormLabel className="mb-2">Fecha de Adquisición</FormLabel>
-                                <Popover><PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent></Popover>
-                                <FormMessage />
-                                </FormItem>
-                            )}/>
-                        </div>
-                        
-                         <Separator className="my-4" />
-
-                         <div className="pt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                            <div className="col-span-1 lg:col-span-8">
-                                <div className="space-y-2">
-                                    <Label className="font-medium">Características Específicas</Label>
-                                    <div className="rounded-md border bg-muted/30 p-4 mt-2">
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                            {allCharacteristicsFields.map(fieldName => (
-                                                <FormField
-                                                    key={fieldName}
-                                                    control={form.control}
-                                                    name={`characteristics.${fieldName}` as any}
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
-                                                            <FormControl><Input {...field} /></FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            ))}
+                            <Separator />
+                            <div className="pt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="col-span-12 lg:col-span-8">
+                                    <div className="space-y-2">
+                                        <Label className="font-medium">Características Específicas</Label>
+                                        <div className="rounded-md border bg-muted/30 p-4 mt-2">
+                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                                                {allCharacteristicsFields.map(fieldName => (<FormField key={fieldName} control={form.control} name={`characteristics.${fieldName}` as any} render={({ field }) => (<FormItem><FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div className="col-span-1 lg:col-span-4">
-                                <div className="space-y-2 h-full flex flex-col">
-                                    <Label className="font-medium">Notas (Opcional)</Label>
-                                    <Card className="flex-grow mt-2">
-                                        <CardContent className="p-0 h-full">
-                                            <FormField control={form.control} name="notes" render={({ field }) => (
-                                                <FormItem className="h-full">
-                                                    <FormControl>
-                                                        <Textarea {...field} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}/>
-                                        </CardContent>
-                                    </Card>
+                                <div className="col-span-12 lg:col-span-4">
+                                    <div className="space-y-2 h-full flex flex-col">
+                                        <Label className="font-medium">Notas (Opcional)</Label>
+                                        <Card className="flex-grow mt-2">
+                                            <CardContent className="p-0 h-full">
+                                                <FormField control={form.control} name="notes" render={({ field }) => (
+                                                    <FormItem className="h-full">
+                                                        <FormControl>
+                                                            <Textarea {...field} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}/>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        
-                        <DialogFooter className="sticky bottom-0 bg-background pt-4">
+
+                        <DialogFooter className="pt-4 mt-auto flex-shrink-0">
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
                             <Button type="submit" disabled={isSubmitting}>
                                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
@@ -500,6 +439,3 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     </div>
   );
 }
-
-
-    
