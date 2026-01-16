@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -73,12 +72,10 @@ interface AssetManagerProps {
     environmentId: string;
 }
 
-const characteristicsFields: Record<AssetClass, string[]> = {
-    "VEHICULO": ["marca", "modelo", "tipo", "color", "numero_serie", "placa_matricula", "año_fabricacion"],
-    "EQUIPO": ["marca", "modelo", "tipo", "color", "numero_serie"],
-    "MOBILIARIO": ["tipo", "material", "color", "dimension"],
-    "TERRENO": ["area", "ubicacion"],
-};
+const allCharacteristicsFields = [
+    "marca", "modelo", "tipo", "color", "numero_serie", "placa_matricula", "año_fabricacion", "material", "dimension", "area", "ubicacion"
+];
+
 
 const HistoryDialog = ({ logs, open, onOpenChange }: { logs: AssetHistoryLog[], open: boolean, onOpenChange: (open: boolean) => void }) => {
     return (
@@ -176,11 +173,6 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     fetchDetails();
   }, [selectedAssetTypeId, instituteId])
   
-  const dynamicFields = useMemo(() => {
-    if (!selectedAssetTypeDetails) return [];
-    return characteristicsFields[selectedAssetTypeDetails.class] || [];
-  }, [selectedAssetTypeDetails]);
-
   const nextAssetCode = useMemo(() => {
     if (!selectedAssetTypeDetails) return '';
     const newNumber = (selectedAssetTypeDetails.lastAssignedNumber || 0) + 1;
@@ -372,10 +364,11 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         <CommandGroup>
                                         {assetTypes.map((t) => (
                                             <CommandItem
-                                            value={t.id}
+                                            value={t.name}
                                             key={t.id}
                                             onSelect={() => {
                                                 form.setValue("assetTypeId", t.id)
+                                                setSearch(t.name)
                                                 setComboboxOpen(false)
                                             }}
                                             >
@@ -430,27 +423,25 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        {dynamicFields.length > 0 && (
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    {dynamicFields.map(fieldName => (
-                                        <FormField
-                                            key={fieldName}
-                                            control={form.control}
-                                            name={`characteristics.${fieldName}` as any}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="capitalize">{fieldName.replace(/_/g, ' ')}</FormLabel>
-                                                    <FormControl><Input {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    ))}
-                                </div>
+                        <div className="space-y-4 pt-4 border-t">
+                            <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {allCharacteristicsFields.map(fieldName => (
+                                    <FormField
+                                        key={fieldName}
+                                        control={form.control}
+                                        name={`characteristics.${fieldName}` as any}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
+                                                <FormControl><Input {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                ))}
                             </div>
-                        )}
+                        </div>
 
                         <FormField control={form.control} name="notes" render={({ field }) => (
                             <FormItem><FormLabel>Notas (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>

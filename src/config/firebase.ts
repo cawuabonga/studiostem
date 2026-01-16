@@ -1557,20 +1557,16 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 export const getAssetTypes = async (instituteId: string, options?: { search?: string; limit?: number }): Promise<AssetType[]> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
     const pageSize = options?.limit || 20;
-
-    let queries: any[] = [];
+    const queries: any[] = [];
     if (options?.search) {
-        const searchQuery = options.search;
+        const searchQuery = options.search.toUpperCase(); // Normalize search to uppercase
         queries.push(where('name', '>=', searchQuery));
         queries.push(where('name', '<=', searchQuery + '\uf8ff'));
     }
-    
     const q = query(assetTypesCol, ...queries, orderBy("name"), limit(pageSize));
-
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
 };
-
 
 export const getAssetTypeById = async (instituteId: string, assetTypeId: string): Promise<AssetType | null> => {
     const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
