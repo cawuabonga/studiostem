@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -6,15 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getApprovedPaymentsInDateRange } from '@/config/firebase';
-import type { Payment } from '@/types';
+import { getApprovedPaymentsInDateRange, getPaymentConcepts } from '@/config/firebase';
+import type { Payment, PaymentConcept } from '@/types';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
-import { subDays, startOfMonth, endOfMonth, startOfToday } from 'date-fns';
-import { DollarSign, Receipt, BarChart, TrendingUp } from 'lucide-react';
+import { startOfMonth, endOfMonth } from 'date-fns';
+import { DollarSign, Receipt, BarChart, TrendingUp, Printer } from 'lucide-react';
 import { RevenueByConceptChart } from './RevenueByConceptChart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from 'date-fns';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Button } from '../ui/button';
+import { PrintPaymentsReport } from './PrintPaymentsReport';
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description?: string }) => (
     <Card>
@@ -31,15 +35,19 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
 
 
 export function PaymentsReportDashboard() {
-    const { instituteId } = useAuth();
+    const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
     const [loading, setLoading] = useState(true);
 
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
     });
+    
+    const [dniSearch, setDniSearch] = useState('');
+    const [conceptSearch, setConceptSearch] = useState('all');
 
     const fetchData = useCallback(async () => {
         if (!instituteId || !dateRange?.from || !dateRange?.to) {
@@ -48,8 +56,12 @@ export function PaymentsReportDashboard() {
         }
         setLoading(true);
         try {
-            const fetchedPayments = await getApprovedPaymentsInDateRange(instituteId, dateRange.from, dateRange.to);
+             const [fetchedPayments, fetchedConcepts] = await Promise.all([
+                getApprovedPaymentsInDateRange(instituteId, dateRange.from, dateRange.to),
+                getPaymentConcepts(instituteId)
+            ]);
             setPayments(fetchedPayments);
+            setConcepts(fetchedConcepts);
         } catch (error) {
             console.error("Error fetching payments report:", error);
             toast({ title: "Error", description: "No se pudieron cargar los datos del reporte.", variant: "destructive" });
@@ -62,12 +74,20 @@ export function PaymentsReportDashboard() {
         fetchData();
     }, [fetchData]);
     
+    const filteredPayments = useMemo(() => {
+        return payments.filter(p => {
+            const matchesDni = dniSearch === '' || p.payerId.includes(dniSearch);
+            const matchesConcept = conceptSearch === 'all' || p.concept === conceptSearch;
+            return matchesDni && matchesConcept;
+        });
+    }, [payments, dniSearch, conceptSearch]);
+
     const stats = useMemo(() => {
-        const totalRevenue = payments.reduce((sum, p) => sum + p.amount, 0);
-        const totalPayments = payments.length;
+        const totalRevenue = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
+        const totalPayments = filteredPayments.length;
         const avgPayment = totalPayments > 0 ? totalRevenue / totalPayments : 0;
 
-        const revenueByConcept = payments.reduce((acc, p) => {
+        const revenueByConcept = filteredPayments.reduce((acc, p) => {
             acc[p.concept] = (acc[p.concept] || 0) + p.amount;
             return acc;
         }, {} as Record<string, number>);
@@ -83,25 +103,80 @@ export function PaymentsReportDashboard() {
                 .map(([name, total]) => ({ name, total }))
                 .sort((a,b) => b.total - a.total),
         };
-    }, [payments]);
+    }, [filteredPayments]);
 
-    const recentPayments = useMemo(() => payments.slice(0, 5), [payments]);
+    const recentPayments = useMemo(() => filteredPayments.slice(0, 5), [filteredPayments]);
+
+    const handlePrint = () => {
+        const printContent = document.getElementById('print-area')?.innerHTML;
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printContent) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Reporte de Ingresos</title>
+                        ${styles}
+                         <style>
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                                .print-block { display: block !important; }
+                            }
+                        </style>
+                    </head>
+                    <body>${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    };
 
 
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader className="flex-col md:flex-row md:justify-between md:items-center">
-                    <div>
-                        <CardTitle>Reporte de Ingresos</CardTitle>
-                        <CardDescription>
-                            Filtra por fecha para analizar los ingresos de tu instituto.
-                        </CardDescription>
-                    </div>
-                    <div className="pt-4 md:pt-0">
-                        <DateRangePicker date={dateRange} onDateChange={setDateRange} />
-                    </div>
+                <CardHeader>
+                    <CardTitle>Reporte de Ingresos</CardTitle>
+                    <CardDescription>
+                        Filtra por fecha para analizar los ingresos de tu instituto.
+                    </CardDescription>
                 </CardHeader>
+                <CardContent className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label htmlFor="date-range">Rango de Fechas</Label>
+                            <DateRangePicker id="date-range" date={dateRange} onDateChange={setDateRange} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="dni-search">Buscar por DNI</Label>
+                            <Input id="dni-search" placeholder="Filtrar por DNI..." value={dniSearch} onChange={e => setDniSearch(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="concept-search">Filtrar por Concepto</Label>
+                            <Select value={conceptSearch} onValueChange={setConceptSearch}>
+                                <SelectTrigger id="concept-search"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los conceptos</SelectItem>
+                                    {concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                     </div>
+                      <div className="flex justify-end mt-4">
+                        <Button onClick={handlePrint} variant="outline">
+                            <Printer className="mr-2 h-4 w-4" />
+                            Imprimir Reporte
+                        </Button>
+                    </div>
+                </CardContent>
             </Card>
 
             {loading ? (
@@ -182,6 +257,15 @@ export function PaymentsReportDashboard() {
                         )}
                     </CardContent>
                 </Card>
+            </div>
+            <div id="print-area" className="hidden">
+                 <PrintPaymentsReport 
+                    payments={filteredPayments} 
+                    stats={stats} 
+                    filters={{ dateRange, dniSearch, conceptSearch }}
+                    institute={institute}
+                    concepts={concepts}
+                />
             </div>
         </div>
     );

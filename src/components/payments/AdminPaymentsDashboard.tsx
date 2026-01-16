@@ -1,11 +1,9 @@
-
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import type { Payment, PaymentStatus } from '@/types';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import type { Payment, PaymentStatus, PaymentConcept } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getPaymentsByStatus, updatePaymentStatus } from '@/config/firebase';
+import { getPaymentsByStatus, updatePaymentStatus, getPaymentConcepts } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,9 +13,12 @@ import { format } from 'date-fns';
 import { Eye, Check, X, Info } from 'lucide-react';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
-import { Card } from '../ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Image from 'next/image';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 
 interface AdminPaymentsDashboardProps {
@@ -29,18 +30,25 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [payments, setPayments] = useState<Payment[]>([]);
+    const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [isApproveOpen, setIsApproveOpen] = useState(false);
     const [isRejectOpen, setIsRejectOpen] = useState(false);
     const [viewingVoucherUrl, setViewingVoucherUrl] = useState<string | null>(null);
+    const [dniSearch, setDniSearch] = useState('');
+    const [conceptSearch, setConceptSearch] = useState('all');
 
     const fetchPayments = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const fetchedPayments = await getPaymentsByStatus(instituteId, status);
+            const [fetchedPayments, fetchedConcepts] = await Promise.all([
+                getPaymentsByStatus(instituteId, status),
+                getPaymentConcepts(instituteId) // Fetch all for filtering
+            ]);
             setPayments(fetchedPayments);
+            setConcepts(fetchedConcepts);
         } catch (error) {
             console.error(`Error fetching ${status} payments:`, error);
             // toast({ title: "Error", description: "No se pudieron cargar los pagos.", variant: "destructive" });
@@ -77,6 +85,14 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
         }
     };
     
+     const filteredPayments = useMemo(() => {
+        return payments.filter(p => {
+            const matchesDni = dniSearch === '' || p.payerId.includes(dniSearch);
+            const matchesConcept = conceptSearch === 'all' || p.concept === conceptSearch;
+            return matchesDni && matchesConcept;
+        });
+    }, [payments, dniSearch, conceptSearch]);
+
     const renderTable = () => {
          if (loading) {
             return (
@@ -88,12 +104,12 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
             );
         }
 
-        if (payments.length === 0) {
+        if (filteredPayments.length === 0) {
             return (
                 <div className="text-center p-10 text-muted-foreground">
                     <Info className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium">No hay pagos</h3>
-                    <p className="mt-1 text-sm">No se encontraron pagos con el estado "{status}".</p>
+                    <p className="mt-1 text-sm">No se encontraron pagos con los filtros actuales.</p>
                 </div>
             )
         }
@@ -103,7 +119,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                 <TableHeader>
                     <TableRow>
                         <TableHead>Fecha de Pago</TableHead>
-                        <TableHead>Pagador</TableHead>
+                        <TableHead>Pagador (DNI)</TableHead>
                         <TableHead>Concepto</TableHead>
                         <TableHead>Monto</TableHead>
                         <TableHead>N° Operación</TableHead>
@@ -114,10 +130,13 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {payments.map(payment => (
+                    {filteredPayments.map(payment => (
                         <TableRow key={payment.id}>
                             <TableCell>{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</TableCell>
-                            <TableCell className="font-medium">{payment.payerName}</TableCell>
+                            <TableCell className="font-medium">
+                                {payment.payerName}
+                                <p className="text-xs text-muted-foreground font-mono">{payment.payerId}</p>
+                            </TableCell>
                             <TableCell>{payment.concept}</TableCell>
                             <TableCell>S/ {payment.amount.toFixed(2)}</TableCell>
                             <TableCell>{payment.operationNumber}</TableCell>
@@ -147,6 +166,37 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
 
     return (
         <>
+             <Card className="mb-6">
+                <CardHeader>
+                    <CardTitle>Filtros de Búsqueda</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 space-y-2">
+                        <Label htmlFor="dni-search">Buscar por DNI del Pagador</Label>
+                        <Input 
+                            id="dni-search"
+                            placeholder="Ingrese DNI..."
+                            value={dniSearch}
+                            onChange={(e) => setDniSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <Label htmlFor="concept-search">Filtrar por Concepto</Label>
+                        <Select value={conceptSearch} onValueChange={setConceptSearch}>
+                            <SelectTrigger id="concept-search">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los Conceptos</SelectItem>
+                                {concepts.map(c => (
+                                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
+
             <Card>
                 <div className="rounded-md border overflow-auto">
                    {renderTable()}
