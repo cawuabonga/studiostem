@@ -53,6 +53,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Label } from '@/components/ui/label';
 import { Timestamp } from 'firebase/firestore';
 import { Card, CardContent } from '../ui/card';
+import { Separator } from '../ui/separator';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -338,8 +339,8 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="col-span-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="col-span-1 md:col-span-2">
                                 <FormField control={form.control} name="assetTypeId" render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
@@ -394,7 +395,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             </div>
                         </div>
 
-                         <div className="grid grid-cols-3 gap-4">
+                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <Label>Código a Generar</Label>
                                 <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
@@ -425,12 +426,14 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        <div className="pt-4 grid grid-cols-12 gap-6">
-                            <div className="col-span-8">
+                         <Separator className="my-4" />
+
+                         <div className="pt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="col-span-1 lg:col-span-8">
                                 <div className="space-y-2">
                                     <Label className="font-medium">Características Específicas</Label>
                                     <div className="rounded-md border bg-muted/30 p-4 mt-2">
-                                        <div className="grid grid-cols-4 gap-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                             {allCharacteristicsFields.map(fieldName => (
                                                 <FormField
                                                     key={fieldName}
@@ -449,13 +452,13 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                     </div>
                                 </div>
                             </div>
-                            <div className="col-span-4">
-                                <div className="space-y-2">
+                            <div className="col-span-1 lg:col-span-4">
+                                <div className="space-y-2 h-full flex flex-col">
                                     <Label className="font-medium">Notas (Opcional)</Label>
-                                    <Card className="h-full mt-2">
-                                        <CardContent className="p-0">
+                                    <Card className="flex-grow mt-2">
+                                        <CardContent className="p-0 h-full">
                                             <FormField control={form.control} name="notes" render={({ field }) => (
-                                                <FormItem>
+                                                <FormItem className="h-full">
                                                     <FormControl>
                                                         <Textarea {...field} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
                                                     </FormControl>
@@ -497,5 +500,6 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     </div>
   );
 }
+
 
     
