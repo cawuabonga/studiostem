@@ -52,6 +52,7 @@ import { es } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Label } from '@/components/ui/label';
 import { Timestamp } from 'firebase/firestore';
+import { Separator } from '../ui/separator';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -423,9 +424,11 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        <div className="space-y-4 pt-4 border-t">
-                            <h3 className="text-sm font-medium text-muted-foreground">Características Específicas</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <Separator className="my-4"/>
+
+                        <div className="space-y-2">
+                           <h3 className="font-medium text-sm">Características Específicas</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 rounded-md border bg-muted/30 p-4">
                                 {allCharacteristicsFields.map(fieldName => (
                                     <FormField
                                         key={fieldName}
@@ -476,3 +479,5 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     </div>
   );
 }
+
+    
