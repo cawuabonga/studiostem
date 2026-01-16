@@ -36,6 +36,7 @@ import {
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogHeader,
+  AlertDialogFooter,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -423,12 +424,11 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        <Separator />
-                        
-                        <div className="space-y-2">
+                         <div className="space-y-4">
+                           <Separator />
                            <h3 className="font-medium text-sm">Características Específicas</h3>
                            <div className="rounded-md border bg-muted/30 p-4">
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     {allCharacteristicsFields.map(fieldName => (
                                         <FormField
                                             key={fieldName}
@@ -481,5 +481,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     </div>
   );
 }
+
+    
 
     
