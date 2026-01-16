@@ -35,8 +35,8 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogHeader,
   AlertDialogFooter,
+  AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -149,7 +149,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     const delayDebounceFn = setTimeout(async () => {
         if (instituteId && comboboxOpen) {
             try {
-                const fetchedAssetTypes = await getAssetTypes(instituteId, { search });
+                const fetchedAssetTypes = await getAssetTypes(instituteId, { search, limit: 100 });
                 setAssetTypes(fetchedAssetTypes);
             } catch (error) {
                 console.error("Error searching asset types:", error);
@@ -332,72 +332,73 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         </div>
       
         <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-            <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-5xl">
                 <DialogHeader>
                     <DialogTitle>{selectedAsset ? 'Editar Activo' : 'Nuevo Activo'}</DialogTitle>
                 </DialogHeader>
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 flex-1 overflow-y-auto pr-2">
-                        <FormField control={form.control} name="assetTypeId" render={({ field }) => (
-                            <FormItem className="flex flex-col">
-                                <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
-                                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button
-                                        variant="outline"
-                                        role="combobox"
-                                        className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
-                                        disabled={!!selectedAsset}
-                                    >
-                                        <span className="truncate">
-                                            {selectedAssetTypeDetails?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
-                                        </span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                    <Command>
-                                    <CommandInput placeholder="Buscar por código o nombre..." onValueChange={setSearch} />
-                                    <CommandList>
-                                        <CommandEmpty>No se encontraron resultados.</CommandEmpty>
-                                        <CommandGroup>
-                                        {assetTypes.map((t) => (
-                                            <CommandItem
-                                            value={t.name}
-                                            key={t.id}
-                                            onSelect={() => {
-                                                form.setValue("assetTypeId", t.id)
-                                                setSearch(t.name)
-                                                setComboboxOpen(false)
-                                            }}
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="md:col-span-2">
+                                <FormField control={form.control} name="assetTypeId" render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
+                                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                className={cn("w-full justify-between", !field.value && "text-muted-foreground")}
+                                                disabled={!!selectedAsset}
                                             >
-                                            <Check className={cn("mr-2 h-4 w-4", t.id === field.value ? "opacity-100" : "opacity-0")} />
-                                            {t.name}
-                                            </CommandItem>
-                                        ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                                </Popover>
-                                <FormMessage />
-                            </FormItem>
-                        )}/>
-
-                         <div className="grid grid-cols-2 gap-4">
+                                                <span className="truncate">
+                                                    {selectedAssetTypeDetails?.name || selectedAsset?.name || "Seleccione un tipo del catálogo..."}
+                                                </span>
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                            <Command>
+                                            <CommandInput placeholder="Buscar por código o nombre..." onValueChange={setSearch} />
+                                            <CommandList>
+                                                <CommandEmpty>No se encontraron resultados.</CommandEmpty>
+                                                <CommandGroup>
+                                                {assetTypes.map((t) => (
+                                                    <CommandItem
+                                                    value={t.name}
+                                                    key={t.id}
+                                                    onSelect={() => {
+                                                        form.setValue("assetTypeId", t.id)
+                                                        setSearch(t.name)
+                                                        setComboboxOpen(false)
+                                                    }}
+                                                    >
+                                                    <Check className={cn("mr-2 h-4 w-4", t.id === field.value ? "opacity-100" : "opacity-0")} />
+                                                    {t.name}
+                                                    </CommandItem>
+                                                ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                            </div>
                             <div>
                                 <Label>Clase</Label>
                                 <Input value={selectedAssetTypeDetails?.class || selectedAsset?.type || ''} disabled className="mt-2" />
                             </div>
+                        </div>
+
+                         <div className="grid grid-cols-3 gap-4">
                             <div>
                                 <Label>Código a Generar</Label>
                                 <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
                             </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
                             <FormField control={form.control} name="status" render={({ field }) => (
                                 <FormItem>
                                 <FormLabel>Estado</FormLabel>
@@ -424,11 +425,11 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                         <div className="space-y-4">
+                         <div className="space-y-4 pt-4">
                            <Separator />
                            <h3 className="font-medium text-sm">Características Específicas</h3>
                            <div className="rounded-md border bg-muted/30 p-4">
-                                <div className="grid grid-cols-3 gap-4">
+                                <div className="grid grid-cols-5 gap-4">
                                     {allCharacteristicsFields.map(fieldName => (
                                         <FormField
                                             key={fieldName}
@@ -446,7 +447,6 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                 </div>
                             </div>
                         </div>
-
 
                         <FormField control={form.control} name="notes" render={({ field }) => (
                             <FormItem><FormLabel>Notas (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
@@ -481,7 +481,5 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
     </div>
   );
 }
-
-    
 
     
