@@ -805,13 +805,16 @@ export const deletePaymentConcept = async (instituteId: string, conceptId: strin
 export const registerPayment = async (
     instituteId: string, 
     data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'>, 
-    voucherFile: File,
+    voucherFile?: File,
     options: { autoApprove?: boolean, receiptNumber?: string } = {}
 ): Promise<void> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
 
-    const downloadURL = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
+    let downloadURL = '';
+    if (voucherFile) {
+        downloadURL = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${paymentDocRef.id}`);
+    }
     
     const paymentData: Omit<Payment, 'id'> = {
         ...data,

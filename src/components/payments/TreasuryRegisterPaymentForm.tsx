@@ -26,13 +26,15 @@ const paymentSchema = z.object({
   concept: z.string({ required_error: 'Debe seleccionar un concepto.' }).min(1, 'Debe seleccionar un concepto.'),
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor a cero.'),
   paymentDate: z.date({ required_error: 'La fecha de pago es requerida.' }),
-  operationNumber: z.string().min(4, 'El número de operación es requerido.'),
-  receiptNumber: z.string().min(1, 'El número de comprobante es requerido.'),
-  voucher: z.instanceof(FileList)
-    .refine(files => files?.length === 1, 'Se requiere la foto del voucher.')
-    .refine(files => files?.[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 5MB.`)
-    .refine(files => ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type), "Solo se aceptan formatos .jpg, .jpeg, .png y .webp."),
+  receiptNumber: z.string().optional(),
+  voucher: z.instanceof(FileList).optional()
+    .refine(files => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 5MB.`)
+    .refine(
+      files => !files || files.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
+      "Solo se aceptan formatos .jpg, .jpeg, .png y .webp."
+    ),
 });
+
 
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
@@ -64,7 +66,6 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
     defaultValues: {
       concept: "",
       amount: 0,
-      operationNumber: '',
       receiptNumber: '',
       paymentDate: new Date(),
       voucher: undefined,
@@ -93,7 +94,7 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
             payerName: (profile as StudentProfile).fullName || (profile as StaffProfile).displayName,
             payerType: profile.type
         }, 
-        voucher[0],
+        voucher?.[0],
         {
             autoApprove: true,
             receiptNumber: data.receiptNumber
@@ -153,49 +154,36 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
           />
         </div>
         
-        <div className="grid md:grid-cols-2 gap-4">
-             <FormField
-                control={form.control}
-                name="paymentDate"
-                render={({ field }) => (
-                    <FormItem className="flex flex-col pt-2">
-                        <FormLabel className="mb-2">Fecha del Pago</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? ( format(field.value, "PPP") ) : ( <span>Seleccione la fecha del voucher</span> )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("2020-01-01")} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
-             <FormField
-                control={form.control}
-                name="operationNumber"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Número de Operación (Voucher)</FormLabel>
-                    <FormControl><Input {...field} /></FormControl>
+        <FormField
+            control={form.control}
+            name="paymentDate"
+            render={({ field }) => (
+                <FormItem className="flex flex-col pt-2">
+                    <FormLabel className="mb-2">Fecha del Pago</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                {field.value ? ( format(field.value, "PPP") ) : ( <span>Seleccione la fecha del voucher</span> )}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("2020-01-01")} initialFocus />
+                        </PopoverContent>
+                    </Popover>
                     <FormMessage />
                 </FormItem>
-                )}
-            />
-        </div>
-
+            )}
+        />
+            
          <FormField
             control={form.control}
             name="receiptNumber"
             render={({ field }) => (
             <FormItem>
-                <FormLabel>Número de Comprobante Institucional</FormLabel>
+                <FormLabel>Comprobante de banco o boleta electronica</FormLabel>
                 <FormControl><Input placeholder="Ej: B001-0012345" {...field} /></FormControl>
                 <FormMessage />
             </FormItem>
