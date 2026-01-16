@@ -52,7 +52,7 @@ import { es } from 'date-fns/locale';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '../ui/command';
 import { Label } from '@/components/ui/label';
 import { Timestamp } from 'firebase/firestore';
-import { Separator } from '../ui/separator';
+import { Card, CardContent } from '../ui/card';
 
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'];
 
@@ -332,14 +332,14 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         </div>
       
         <Dialog open={isFormOpen} onOpenChange={handleCloseForm}>
-            <DialogContent className="max-w-5xl">
+            <DialogContent className="max-w-6xl">
                 <DialogHeader>
                     <DialogTitle>{selectedAsset ? 'Editar Activo' : 'Nuevo Activo'}</DialogTitle>
                 </DialogHeader>
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="md:col-span-2">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="col-span-2">
                                 <FormField control={form.control} name="assetTypeId" render={({ field }) => (
                                     <FormItem className="flex flex-col">
                                         <FormLabel>Tipo de Activo (Bien del Catálogo)</FormLabel>
@@ -425,32 +425,48 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                         <div className="space-y-4 pt-4">
-                           <Separator />
-                           <h3 className="font-medium text-sm">Características Específicas</h3>
-                           <div className="rounded-md border bg-muted/30 p-4">
-                                <div className="grid grid-cols-5 gap-4">
-                                    {allCharacteristicsFields.map(fieldName => (
-                                        <FormField
-                                            key={fieldName}
-                                            control={form.control}
-                                            name={`characteristics.${fieldName}` as any}
-                                            render={({ field }) => (
+                        <div className="pt-4 grid grid-cols-12 gap-6">
+                            <div className="col-span-8">
+                                <div className="space-y-2">
+                                    <Label className="font-medium">Características Específicas</Label>
+                                    <div className="rounded-md border bg-muted/30 p-4 mt-2">
+                                        <div className="grid grid-cols-4 gap-4">
+                                            {allCharacteristicsFields.map(fieldName => (
+                                                <FormField
+                                                    key={fieldName}
+                                                    control={form.control}
+                                                    name={`characteristics.${fieldName}` as any}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
+                                                            <FormControl><Input {...field} /></FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="col-span-4">
+                                <div className="space-y-2">
+                                    <Label className="font-medium">Notas (Opcional)</Label>
+                                    <Card className="h-full mt-2">
+                                        <CardContent className="p-0">
+                                            <FormField control={form.control} name="notes" render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
-                                                    <FormControl><Input {...field} /></FormControl>
+                                                    <FormControl>
+                                                        <Textarea {...field} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
+                                                    </FormControl>
                                                     <FormMessage />
                                                 </FormItem>
-                                            )}
-                                        />
-                                    ))}
+                                            )}/>
+                                        </CardContent>
+                                    </Card>
                                 </div>
                             </div>
                         </div>
-
-                        <FormField control={form.control} name="notes" render={({ field }) => (
-                            <FormItem><FormLabel>Notas (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                        )}/>
                         
                         <DialogFooter className="sticky bottom-0 bg-background pt-4">
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
