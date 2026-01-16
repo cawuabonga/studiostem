@@ -126,7 +126,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, onGrade
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="px-4 pb-4">
-                                    <div className="rounded-md border">
+                                    <div className="rounded-md border overflow-auto">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>

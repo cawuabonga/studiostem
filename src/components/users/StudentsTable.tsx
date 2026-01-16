@@ -190,7 +190,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             </SelectContent>
         </Select>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

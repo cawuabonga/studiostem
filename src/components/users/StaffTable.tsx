@@ -213,7 +213,7 @@ export function StaffTable({ instituteId, onDataChange, isAttendanceReportMode =
             </SelectContent>
         </Select>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

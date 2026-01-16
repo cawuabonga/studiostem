@@ -312,7 +312,7 @@ export function InventoryReportDashboard() {
                            </div>
                         </CardHeader>
                         <CardContent>
-                           <div className="rounded-md border">
+                           <div className="rounded-md border overflow-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>

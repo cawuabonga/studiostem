@@ -152,31 +152,33 @@ export function PaymentsReportDashboard() {
                     </CardHeader>
                      <CardContent>
                         {loading ? <Skeleton className="h-80 w-full" /> : (
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Pagador</TableHead>
-                                        <TableHead>Concepto</TableHead>
-                                        <TableHead className="text-right">Monto</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {recentPayments.length > 0 ? recentPayments.map(p => (
-                                        <TableRow key={p.id}>
-                                            <TableCell>
-                                                <div className="font-medium">{p.payerName}</div>
-                                                <div className="text-xs text-muted-foreground">{format(p.paymentDate.toDate(), 'dd/MM/yy')}</div>
-                                            </TableCell>
-                                            <TableCell>{p.concept}</TableCell>
-                                            <TableCell className="text-right">S/ {p.amount.toFixed(2)}</TableCell>
-                                        </TableRow>
-                                    )) : (
+                             <div className="overflow-auto rounded-md border">
+                                 <Table>
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableCell colSpan={3} className="h-24 text-center">No hay pagos aprobados en este período.</TableCell>
+                                            <TableHead>Pagador</TableHead>
+                                            <TableHead>Concepto</TableHead>
+                                            <TableHead className="text-right">Monto</TableHead>
                                         </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {recentPayments.length > 0 ? recentPayments.map(p => (
+                                            <TableRow key={p.id}>
+                                                <TableCell>
+                                                    <div className="font-medium">{p.payerName}</div>
+                                                    <div className="text-xs text-muted-foreground">{format(p.paymentDate.toDate(), 'dd/MM/yy')}</div>
+                                                </TableCell>
+                                                <TableCell>{p.concept}</TableCell>
+                                                <TableCell className="text-right">S/ {p.amount.toFixed(2)}</TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow>
+                                                <TableCell colSpan={3} className="h-24 text-center">No hay pagos aprobados en este período.</TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                             </div>
                         )}
                     </CardContent>
                 </Card>

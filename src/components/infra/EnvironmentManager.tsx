@@ -167,7 +167,7 @@ export function EnvironmentManager({ instituteId, buildingId, onDataChange }: En
                 Añadir Ambiente
             </Button>
         </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

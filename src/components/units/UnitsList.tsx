@@ -237,7 +237,7 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
             </AlertDialog>
         </div>
       )}
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -344,4 +344,3 @@ export function UnitsList({ instituteId, filters, onDataChange }: UnitsListProps
     </TooltipProvider>
   );
 }
-

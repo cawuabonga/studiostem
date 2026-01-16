@@ -145,7 +145,7 @@ export function AccessPointManager() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
             <TableHeader>
                 <TableRow>

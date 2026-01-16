@@ -82,7 +82,7 @@ export function InstitutesList({ onDataChange }: InstitutesListProps) {
 
   return (
     <>
-      <div className="rounded-md border relative">
+      <div className="rounded-md border relative overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

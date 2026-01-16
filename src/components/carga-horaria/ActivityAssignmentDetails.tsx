@@ -121,7 +121,7 @@ export function ActivityAssignmentDetails({ activityId }: ActivityAssignmentDeta
                                         <CardTitle className="text-lg">{program?.name || 'Programa Desconocido'}</CardTitle>
                                      </CardHeader>
                                      <CardContent>
-                                        <div className="rounded-md border">
+                                        <div className="rounded-md border overflow-auto">
                                             <Table>
                                                 <TableHeader>
                                                     <TableRow>

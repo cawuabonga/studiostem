@@ -233,7 +233,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
                     </div>
 
                     {selectedSemester && (
-                        <div>
+                        <div className="rounded-md border overflow-auto">
                              <Table>
                                 <TableHeader>
                                     <TableRow>

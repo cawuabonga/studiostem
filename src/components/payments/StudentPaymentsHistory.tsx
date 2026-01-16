@@ -83,7 +83,7 @@ export function StudentPaymentsHistory({ status }: StudentPaymentsHistoryProps) 
     return (
         <>
         <Card>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>

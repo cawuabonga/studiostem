@@ -148,7 +148,7 @@ export function AdminPaymentsDashboard({ status }: AdminPaymentsDashboardProps) 
     return (
         <>
             <Card>
-                <div className="rounded-md">
+                <div className="rounded-md border overflow-auto">
                    {renderTable()}
                 </div>
             </Card>

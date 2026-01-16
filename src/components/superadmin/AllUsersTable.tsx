@@ -92,7 +92,7 @@ export function AllUsersTable({ onDataChange }: AllUsersTableProps) {
           className="max-w-sm"
         />
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>

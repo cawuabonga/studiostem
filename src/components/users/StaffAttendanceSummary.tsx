@@ -83,7 +83,7 @@ export function StaffAttendanceSummary({ logs }: StaffAttendanceSummaryProps) {
                     <StatCard title="Días Trabajados" value={String(totalDaysWorked)} icon={Calendar} />
                     <StatCard title="Promedio Diario" value={totalDaysWorked > 0 ? `${Math.floor((totalMinutesInRange / totalDaysWorked) / 60)}h ${Math.round((totalMinutesInRange / totalDaysWorked) % 60)}m` : '0h 0m'} icon={Hourglass} />
                 </div>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -115,4 +115,3 @@ export function StaffAttendanceSummary({ logs }: StaffAttendanceSummaryProps) {
         </Card>
     );
 }
-
