@@ -35,7 +35,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -424,27 +423,30 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                             )}/>
                         </div>
                         
-                        <Separator className="my-4"/>
-
+                        <Separator />
+                        
                         <div className="space-y-2">
                            <h3 className="font-medium text-sm">Características Específicas</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 rounded-md border bg-muted/30 p-4">
-                                {allCharacteristicsFields.map(fieldName => (
-                                    <FormField
-                                        key={fieldName}
-                                        control={form.control}
-                                        name={`characteristics.${fieldName}` as any}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
-                                                <FormControl><Input {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                ))}
+                           <div className="rounded-md border bg-muted/30 p-4">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {allCharacteristicsFields.map(fieldName => (
+                                        <FormField
+                                            key={fieldName}
+                                            control={form.control}
+                                            name={`characteristics.${fieldName}` as any}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel>
+                                                    <FormControl><Input {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
+
 
                         <FormField control={form.control} name="notes" render={({ field }) => (
                             <FormItem><FormLabel>Notas (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
