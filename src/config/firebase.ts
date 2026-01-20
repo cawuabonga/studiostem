@@ -1,5 +1,4 @@
 
-
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -1349,17 +1348,37 @@ export const deleteRole = async (instituteId: string, roleId: string): Promise<v
     await deleteDoc(roleRef);
 };
 
-export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Permission[] | null> => {
+export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Record<Permission, boolean> | null> => {
     if (roleId === 'student') {
-        return ['student:unit:view', 'student:grades:view', 'student:payments:manage'];
+        const permissions: Partial<Record<Permission, boolean>> = {
+            'student:unit:view': true,
+            'student:grades:view': true,
+            'student:payments:manage': true,
+        };
+        return permissions as Record<Permission, boolean>;
     }
     if (roleId === 'teacher') {
-        return ['teacher:unit:view'];
+         const permissions: Partial<Record<Permission, boolean>> = {
+            'teacher:unit:view': true
+        };
+        return permissions as Record<Permission, boolean>;
     }
+    
     const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
     const docSnap = await getDoc(roleRef);
     if (docSnap.exists()) {
-        return (docSnap.data() as Role).permissions;
+        const roleData = docSnap.data() as Role;
+        const permissions = roleData.permissions;
+
+        // Backward compatibility: convert array to map if necessary
+        if (Array.isArray(permissions)) {
+            const permissionsMap: Record<Permission, boolean> = {};
+            (permissions as Permission[]).forEach(p => {
+                permissionsMap[p] = true;
+            });
+            return permissionsMap;
+        }
+        return permissions;
     }
     return null;
 }

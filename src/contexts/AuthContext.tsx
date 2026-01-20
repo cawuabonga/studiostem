@@ -122,12 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const baseUserData = userDocSnap.data() as AppUser;
     let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid, permissions: [] };
 
-    if (baseUserData.instituteId) {
+    if (baseUserData.instituteId && baseUserData.roleId) {
         finalUser.instituteId = baseUserData.instituteId;
-        if(baseUserData.roleId) {
-             const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
-             const permissionsArray = permissionsMap ? Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[] : [];
-             finalUser.permissions = permissionsArray;
+        const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
+        if (permissionsMap) {
+            finalUser.permissions = Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[];
         }
 
         if (baseUserData.documentId) {

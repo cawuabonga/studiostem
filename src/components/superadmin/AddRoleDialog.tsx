@@ -26,7 +26,6 @@ import { PERMISSIONS_CONFIG } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 const addRoleSchema = z.object({
-  id: z.string().optional(),
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   description: z.string().min(10, 'La descripción debe tener al menos 10 caracteres.'),
   permissions: z.array(z.string()).refine(value => value.some(item => item), {
@@ -60,11 +59,15 @@ export function AddRoleDialog({ isOpen, onClose, instituteId, existingRole }: Ad
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && existingRole) {
+        // Handle both old (array) and new (map) permission structures
+        const permissionsAsArray = Array.isArray(existingRole.permissions)
+            ? existingRole.permissions
+            : Object.keys(existingRole.permissions).filter(key => existingRole.permissions[key as Permission]);
+
         form.reset({
-          id: existingRole.id,
           name: existingRole.name,
           description: existingRole.description,
-          permissions: existingRole.permissions,
+          permissions: permissionsAsArray as string[],
         });
       } else {
         form.reset({
@@ -79,20 +82,26 @@ export function AddRoleDialog({ isOpen, onClose, instituteId, existingRole }: Ad
 
   const onSubmit = async (data: AddRoleFormValues) => {
     setIsSubmitting(true);
+    
+    // Always convert permissions array from form to a map for Firestore
+    const permissionsMap = data.permissions.reduce((acc, perm) => {
+        acc[perm as Permission] = true;
+        return acc;
+    }, {} as Record<Permission, boolean>);
+
     try {
       if (isEditMode && existingRole) {
         await updateRole(instituteId, existingRole.id, {
             name: data.name,
             description: data.description,
-            permissions: data.permissions as Permission[]
+            permissions: permissionsMap
         });
         toast({ title: 'Éxito', description: 'El rol ha sido actualizado.' });
       } else {
-        const roleId = data.name.toLowerCase().replace(/\s+/g, '_');
         await addRole(instituteId, {
             name: data.name,
             description: data.description,
-            permissions: data.permissions as Permission[]
+            permissions: permissionsMap
         });
         toast({ title: 'Éxito', description: 'El rol ha sido creado.' });
       }
