@@ -1,10 +1,190 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // --- Helper Functions ---
+    function isSuperAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+
+    function isUserAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasPermission(permission) {
+      let user = getUserData();
+      return user.instituteId != null && user.roleId != null &&
+            get(/databases/$(database)/documents/institutes/$(user.instituteId)/roles/$(user.roleId))
+            .data.permissions[permission] == true;
+    }
+
+    function isOwner(userDocId) {
+        let user = getUserData();
+        return user.documentId == userDocId;
+    }
+
+    function isUserOfInstitute(instituteId) {
+        let user = getUserData();
+        return user.instituteId == instituteId;
+    }
+    
+    // Default deny all reads and writes
     match /{document=**} {
-      // IMPORTANT: This rule allows read/write access for development purposes.
-      // You MUST secure these rules before deploying to production.
-      allow read, write: if request.time < timestamp.date(2024, 12, 31);
+      allow read, write: if false;
+    }
+
+    // --- Global Config ---
+    match /config/{document=**} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+    }
+    
+    // --- Users Collection ---
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId || isSuperAdmin();
+      allow write: if request.auth.uid == userId || isSuperAdmin();
+    }
+    
+    // --- Institutes Collection ---
+    match /institutes/{instituteId} {
+      allow read: if true;
+      allow create, update, delete: if isSuperAdmin();
+      
+      // --- Institute Subcollections ---
+
+      match /staffProfiles/{profileId} {
+        allow read: if isUserOfInstitute(instituteId);
+        allow write: if hasPermission('users:staff:manage');
+      }
+
+      match /studentProfiles/{profileId} {
+        allow read: if isUserOfInstitute(instituteId);
+        allow write: if hasPermission('users:student:manage');
+      }
+      
+      match /roles/{roleId} {
+        allow read: if isUserOfInstitute(instituteId);
+        allow write: if isSuperAdmin();
+      }
+
+      match /programs/{docId} {
+        allow read: if isUserOfInstitute(instituteId);
+        allow write: if hasPermission('academic:program:manage');
+      }
+
+      match /unidadesDidacticas/{unitId} {
+        allow read: if isUserOfInstitute(instituteId);
+        allow create, update, delete: if hasPermission('academic:program:manage');
+
+        match /data/{docId} {
+             allow read: if isUserOfInstitute(instituteId);
+             allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage');
+        }
+        
+        match /weeklyPlanner/{docId} {
+            allow read: if isUserOfInstitute(instituteId);
+            allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage');
+        }
+        
+        match /achievementIndicators/{docId} {
+            allow read: if isUserOfInstitute(instituteId);
+            allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage');
+        }
+      }
+
+      match /matriculations/{recordId} {
+         allow read: if isOwner(resource.data.studentId) || hasPermission('academic:enrollment:manage');
+         allow create, update, delete: if hasPermission('academic:enrollment:manage');
+      }
+      
+      match /academicRecords/{recordId} {
+         allow read: if isOwner(resource.data.studentId) || hasPermission('teacher:unit:view');
+         allow create, update, delete: if hasPermission('teacher:unit:view');
+      }
+      
+      match /attendance/{docId} {
+         allow read, write: if hasPermission('teacher:unit:view');
+      }
+      
+      match /assignments/{docId} {
+          allow read, write: if hasPermission('academic:assignment:manage');
+      }
+
+      match /nonTeachingActivities/{docId} {
+          allow read, write: if hasPermission('academic:program:manage');
+      }
+
+      match /nonTeachingAssignments/{docId} {
+          allow read, write: if hasPermission('academic:assignment:manage');
+      }
+      
+      match /paymentConcepts/{docId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:fees:manage');
+      }
+
+      match /payments/{docId} {
+          allow read: if isOwner(resource.data.payerId) || hasPermission('admin:payments:validate');
+          allow create: if isOwner(request.resource.data.payerId) || hasPermission('admin:payments:validate');
+          allow update: if hasPermission('admin:payments:validate');
+      }
+
+      match /accessPoints/{docId} {
+          allow read, write: if hasPermission('admin:access-control:manage');
+      }
+
+      match /accessPoints/{apId}/accessLogs/{logId} {
+        allow read: if hasPermission('admin:access-control:manage') || isOwner(resource.data.userDocumentId);
+        allow write: if false; 
+      }
+      
+      match /news/{docId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:institute:manage');
+      }
+
+      match /albums/{albumId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:institute:manage');
+
+          match /photos/{photoId} {
+            allow read: if true;
+            allow write: if hasPermission('admin:institute:manage');
+          }
+      }
+      
+      match /scheduleTemplates/{docId} {
+          allow read, write: if hasPermission('planning:schedule:manage');
+      }
+
+      match /schedules/{docId} {
+          allow read, write: if hasPermission('planning:schedule:manage');
+      }
+
+      match /buildings/{docId} {
+          allow read, write: if hasPermission('admin:infra:manage');
+      }
+
+       match /buildings/{buildingId}/environments/{envId} {
+          allow read, write: if hasPermission('admin:infra:manage');
+      }
+
+       match /buildings/{buildingId}/environments/{envId}/assets/{assetId} {
+          allow read, write: if hasPermission('admin:infra:manage');
+           match /history/{logId} {
+            allow read, write: if hasPermission('admin:infra:manage');
+          }
+      }
+
+       match /assetTypes/{docId} {
+          allow read, write: if hasPermission('admin:infra:manage');
+      }
     }
   }
 }
