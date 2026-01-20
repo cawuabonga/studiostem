@@ -1,4 +1,3 @@
-
 "use client";
 
 import { AddStudentForm } from "@/components/users/AddStudentForm";
@@ -7,16 +6,28 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { Upload } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 
 export default function RegistrarEstudiantePage() {
-    const { instituteId } = useAuth();
+    const { instituteId, user, loading, hasPermission } = useAuth();
+    const router = useRouter();
     const [dataVersion, setDataVersion] = useState(0);
+
+    useEffect(() => {
+        if (!loading && !hasPermission('users:student:manage')) {
+            router.push('/dashboard');
+        }
+    }, [user, loading, hasPermission, router]);
 
     const handleDataChange = () => {
         setDataVersion(prev => prev + 1);
     };
+    
+    if (loading || !hasPermission('users:student:manage')) {
+        return <p>Cargando o no autorizado...</p>;
+    }
     
     if (!instituteId) return <p>Cargando...</p>;
 
