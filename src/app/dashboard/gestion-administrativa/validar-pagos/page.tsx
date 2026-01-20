@@ -5,8 +5,24 @@ import { AdminPaymentsDashboard } from "@/components/payments/AdminPaymentsDashb
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PaymentStatus } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function ValidatePaymentsPage() {
+    const { user, loading, hasPermission } = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!loading && !hasPermission('admin:payments:validate')) {
+            router.push('/dashboard');
+        }
+    }, [user, loading, hasPermission, router]);
+
+    if (loading || !hasPermission('admin:payments:validate')) {
+        return <p>Cargando o no autorizado...</p>;
+    }
+
 
     return (
         <div className="space-y-6">

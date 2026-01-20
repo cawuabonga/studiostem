@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,13 +25,19 @@ type SearchFormValues = z.infer<typeof searchSchema>;
 
 export default function TreasuryPaymentRegistrationPage() {
   const [loading, setLoading] = useState(false);
-  const { instituteId } = useAuth();
+  const { user, instituteId, hasPermission, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const router = useRouter();
   
   const [isExternalPayerDialogOpen, setIsExternalPayerDialogOpen] = useState(false);
   const [externalPayerDni, setExternalPayerDni] = useState('');
   const [externalPayerName, setExternalPayerName] = useState('');
+
+  useEffect(() => {
+    if (!authLoading && !hasPermission('admin:payments:validate')) {
+      router.push('/dashboard');
+    }
+  }, [authLoading, hasPermission, router]);
 
 
   const form = useForm<SearchFormValues>({
@@ -81,6 +87,10 @@ export default function TreasuryPaymentRegistrationPage() {
     router.push(`/dashboard/gestion-administrativa/registrar-pago-tesoreria/${externalPayerDni}?${queryParams}`);
     setIsExternalPayerDialogOpen(false);
   };
+  
+   if (authLoading || !hasPermission('admin:payments:validate')) {
+    return <p>Cargando o no autorizado...</p>;
+  }
 
   return (
     <>

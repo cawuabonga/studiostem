@@ -88,7 +88,8 @@ export function RegisterPaymentForm() {
           ...paymentData, 
           payerId: user.documentId,
           payerName: user.displayName || 'Usuario Desconocido',
-          payerType: 'student' // Assuming this form is only for students
+          payerType: 'student', // Assuming this form is only for students
+          payerAuthUid: user.uid,
       }, voucher[0]);
       // toast({
       //   title: '¡Pago Registrado!',

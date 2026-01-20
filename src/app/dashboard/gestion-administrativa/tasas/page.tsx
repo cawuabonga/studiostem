@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -114,7 +115,7 @@ export default function TasasPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-auto">
             <Table>
                 <TableHeader>
                     <TableRow>

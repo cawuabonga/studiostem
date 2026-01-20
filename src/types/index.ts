@@ -248,6 +248,7 @@ export interface Payment {
   payerId: string; // documentId of the payer
   payerName: string;
   payerType: PayerType;
+  payerAuthUid: string; // UID of user who registered the payment.
   concept: string; 
   amount: number;
   paymentDate: Timestamp;
@@ -563,7 +564,7 @@ export interface Role {
   id: string; // e.g., "admin_custom", "contador_jr"
   name: string; // e.g., "Administrador Custom", "Contador Junior"
   description: string;
-  permissions: Permission[];
+  permissions: Record<Permission, boolean>;
 }
 
 export const PERMISSIONS_CONFIG: { category: string; description: string; permissions: { id: Permission; label: string }[] }[] = [

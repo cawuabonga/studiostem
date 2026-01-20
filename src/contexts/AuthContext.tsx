@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program } from '@/types';
@@ -124,8 +125,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (baseUserData.instituteId) {
         finalUser.instituteId = baseUserData.instituteId;
         if(baseUserData.roleId) {
-             const permissions = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
-             finalUser.permissions = permissions || [];
+             const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
+             const permissionsArray = permissionsMap ? Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[] : [];
+             finalUser.permissions = permissionsArray;
         }
 
         if (baseUserData.documentId) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -82,7 +83,7 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
   }, [selectedConceptName, paymentConcepts, form]);
 
   const onSubmit = async (data: PaymentFormValues) => {
-    if (!instituteId) return;
+    if (!instituteId || !user) return;
     setLoading(true);
     try {
       const { voucher, ...paymentData } = data;
@@ -92,7 +93,8 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
             ...paymentData, 
             payerId: profile.documentId, 
             payerName: (profile as StudentProfile).fullName || (profile as StaffProfile).displayName,
-            payerType: profile.type
+            payerType: profile.type,
+            payerAuthUid: user.uid,
         }, 
         voucher?.[0],
         {
