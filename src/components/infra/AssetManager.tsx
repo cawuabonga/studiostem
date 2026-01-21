@@ -385,7 +385,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                         <Label className="font-medium">Características Específicas</Label>
                                         <div className="rounded-md border bg-muted/30 p-4 mt-2">
                                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                                                {allCharacteristicsFields.map(fieldName => (<FormField key={fieldName} control={form.control} name={`characteristics.${fieldName}` as any} render={({ field }) => (<FormItem><FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>))}
+                                                {allCharacteristicsFields.map(fieldName => (<FormField key={fieldName} control={form.control} name={`characteristics.${fieldName}` as any} render={({ field }) => (<FormItem><FormLabel className="capitalize text-xs">{fieldName.replace(/_/g, ' ')}</FormLabel><FormControl><Input {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)}/>))}
                                             </div>
                                         </div>
                                     </div>
@@ -398,7 +398,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                                 <FormField control={form.control} name="notes" render={({ field }) => (
                                                     <FormItem className="h-full">
                                                         <FormControl>
-                                                            <Textarea {...field} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
+                                                            <Textarea {...field} value={field.value || ''} className="h-full min-h-[160px] border-0 focus-visible:ring-0 resize-none" placeholder="Añadir observaciones..."/>
                                                         </FormControl>
                                                         <FormMessage />
                                                     </FormItem>
