@@ -1,4 +1,5 @@
 
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -94,14 +95,22 @@ export const updateUserProfile = async (data: { displayName?: string | null; pho
 
 
 // --- Institute Management (for SuperAdmins) ---
-export const addInstitute = async (instituteId: string, data: Omit<Institute, 'id'>): Promise<void> => {
+export const addInstitute = async (instituteId: string, data: Omit<Institute, 'id' | 'logoUrl'>, logoFile?: File): Promise<void> => {
     const instituteRef = doc(db, 'institutes', instituteId);
     const docSnap = await getDoc(instituteRef);
     if (docSnap.exists()) {
         throw new Error(`Institute with ID "${instituteId}" already exists.`);
     }
-    await setDoc(instituteRef, data);
+
+    let logoUrl = '';
+    if (logoFile) {
+        const storagePath = `institutes/${instituteId}/logo`;
+        logoUrl = await uploadFileAndGetURL(logoFile, storagePath);
+    }
+
+    await setDoc(instituteRef, { ...data, logoUrl });
 };
+
 
 export const getInstitutes = async (): Promise<Institute[]> => {
     const institutesCol = collection(db, 'institutes');
@@ -127,13 +136,20 @@ export const getInstituteLoginPageImage = async (): Promise<string | null> => {
     return loginDesign?.imageUrl || null;
 }
 
-export const updateInstitute = async (instituteId: string, data: Partial<Omit<Institute, 'id'>>): Promise<void> => {
-    const updateData = { ...data };
+export const updateInstitute = async (instituteId: string, data: Partial<Omit<Institute, 'id' | 'logoUrl'>>, logoFile?: File): Promise<void> => {
+    const updateData: { [key: string]: any } = { ...data };
+
+    if (logoFile) {
+        const storagePath = `institutes/${instituteId}/logo`;
+        updateData.logoUrl = await uploadFileAndGetURL(logoFile, storagePath);
+    }
+
     if (updateData.publicProfile) {
       updateData.publicProfile = { ...updateData.publicProfile };
     }
     await updateDoc(doc(db, 'institutes', instituteId), updateData);
 };
+
 
 export const deleteInstitute = async (instituteId: string): Promise<void> => {
     const instituteRef = doc(db, 'institutes', instituteId);

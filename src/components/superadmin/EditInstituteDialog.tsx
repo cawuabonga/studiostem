@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect } from 'react';
@@ -16,15 +17,19 @@ import {
   DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Institute } from '@/types';
 import { updateInstitute } from '@/config/firebase';
 import { hexToHsl, hslToHex } from '@/lib/utils';
+import Image from 'next/image';
+
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
 
 const editInstituteSchema = z.object({
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  logoUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
+  logo: z.instanceof(FileList).optional(),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Debe ser un color hexadecimal válido.' }).optional().or(z.literal('')),
 });
 
@@ -44,7 +49,7 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
     resolver: zodResolver(editInstituteSchema),
     defaultValues: {
       name: institute?.name || '',
-      logoUrl: institute?.logoUrl || '',
+      logo: undefined,
       primaryColor: institute?.primaryColor ? hslToHex(institute.primaryColor) : '#000000',
     },
   });
@@ -53,7 +58,7 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
     if (institute && isOpen) {
       form.reset({
         name: institute.name,
-        logoUrl: institute.logoUrl || '',
+        logo: undefined,
         primaryColor: institute.primaryColor ? hslToHex(institute.primaryColor) : '#000000',
       });
     }
@@ -62,13 +67,15 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
   const onSubmit = async (data: EditInstituteFormValues) => {
     setIsSubmitting(true);
     try {
-      const updateData: Partial<Institute> = {
-          name: data.name,
-          logoUrl: data.logoUrl,
-          primaryColor: data.primaryColor ? hexToHsl(data.primaryColor) : undefined
+      const { logo, ...restOfData } = data;
+      const logoFile = logo?.[0];
+      
+      const updateData: Partial<Omit<Institute, 'id' | 'logoUrl'>> = {
+          name: restOfData.name,
+          primaryColor: restOfData.primaryColor ? hexToHsl(restOfData.primaryColor) : undefined
       };
       
-      await updateInstitute(institute.id, updateData);
+      await updateInstitute(institute.id, updateData, logoFile);
 
       toast({
         title: '¡Éxito!',
@@ -113,13 +120,19 @@ export function EditInstituteDialog({ institute, isOpen, onClose }: EditInstitut
             />
             <FormField
                 control={form.control}
-                name="logoUrl"
+                name="logo"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>URL del Logo</FormLabel>
+                    <FormLabel>Logo del Instituto</FormLabel>
+                    {institute.logoUrl && (
+                        <div className="relative h-20 w-20 rounded-md overflow-hidden border">
+                            <Image src={institute.logoUrl} alt="Logo actual" fill className="object-contain" data-ai-hint="company logo" />
+                        </div>
+                    )}
                     <FormControl>
-                    <Input placeholder="https://ejemplo.com/logo.png" {...field} />
+                        <Input type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml" {...form.register('logo')} />
                     </FormControl>
+                    <FormDescription>Sube un nuevo logo para reemplazar el actual.</FormDescription>
                     <FormMessage />
                 </FormItem>
                 )}

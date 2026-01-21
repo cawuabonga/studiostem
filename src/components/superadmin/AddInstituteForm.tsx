@@ -13,10 +13,15 @@ import { useToast } from '@/hooks/use-toast';
 import { addInstitute } from '@/config/firebase';
 import { hexToHsl } from '@/lib/utils';
 
+const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
+const ACCEPTED_LOGO_TYPES = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+
 const addInstituteSchema = z.object({
   id: z.string().min(3, { message: 'El ID debe tener al menos 3 caracteres.' }).regex(/^[a-z0-9-]+$/, 'El ID solo puede contener letras minúsculas, números y guiones.'),
   name: z.string().min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
-  logoUrl: z.string().url({ message: 'Debe ser una URL válida.' }).optional().or(z.literal('')),
+  logo: z.instanceof(FileList).optional()
+    .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_LOGO_SIZE, `El tamaño máximo es de 2MB.`)
+    .refine(files => !files || files.length === 0 || ACCEPTED_LOGO_TYPES.includes(files[0]?.type), "Solo se aceptan formatos .jpeg, .png, .webp y .svg."),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/, { message: 'Debe ser un color hexadecimal válido.' }).optional().or(z.literal('')),
 });
 
@@ -35,7 +40,7 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
     defaultValues: {
       id: '',
       name: '',
-      logoUrl: '',
+      logo: undefined,
       primaryColor: '#1E3A8A', // Default color in HEX
     },
   });
@@ -43,16 +48,19 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
   const onSubmit = async (data: AddInstituteFormValues) => {
     setLoading(true);
     try {
+      const { logo, ...rest } = data;
+      const logoFile = logo?.[0];
+
       const instituteData = {
-        name: data.name,
-        ...(data.logoUrl && { logoUrl: data.logoUrl }),
-        ...(data.primaryColor && { primaryColor: hexToHsl(data.primaryColor) }),
+        name: rest.name,
+        ...(rest.primaryColor && { primaryColor: hexToHsl(rest.primaryColor) }),
       };
-      await addInstitute(data.id, instituteData);
-      // toast({
-      //   title: '¡Éxito!',
-      //   description: 'El instituto ha sido registrado correctamente.',
-      // });
+
+      await addInstitute(rest.id, instituteData, logoFile);
+      toast({
+        title: '¡Éxito!',
+        description: 'El instituto ha sido registrado correctamente.',
+      });
       form.reset();
       onInstituteAdded();
     } catch (error: any) {
@@ -63,11 +71,11 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
       } else if (error.message.includes('already exists')) {
         description = 'Un instituto con este ID ya existe. Por favor, elige otro.';
       }
-      // toast({
-      //   title: 'Error',
-      //   description,
-      //   variant: 'destructive',
-      // });
+      toast({
+        title: 'Error',
+        description,
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -109,17 +117,17 @@ export function AddInstituteForm({ onInstituteAdded }: AddInstituteFormProps) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
-                control={form.control}
-                name="logoUrl"
-                render={({ field }) => (
+              control={form.control}
+              name="logo"
+              render={({ field }) => (
                 <FormItem>
-                    <FormLabel>URL del Logo</FormLabel>
-                    <FormControl>
-                    <Input placeholder="https://ejemplo.com/logo.png" {...field} />
-                    </FormControl>
-                    <FormMessage />
+                  <FormLabel>Logo del Instituto</FormLabel>
+                  <FormControl>
+                    <Input type="file" accept="image/png, image/jpeg, image/webp, image/svg+xml" {...form.register('logo')} />
+                  </FormControl>
+                  <FormMessage />
                 </FormItem>
-                )}
+              )}
             />
             <FormField
                 control={form.control}
