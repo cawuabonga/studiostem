@@ -1018,48 +1018,71 @@ export const createDelivery = async (instituteId: string, deliveryData: Omit<Del
     if (!user) throw new Error("Usuario no autenticado.");
 
     await runTransaction(db, async (transaction) => {
+        // --- READ PHASE ---
         const counterRef = doc(db, 'institutes', instituteId, 'counters', 'deliveries');
         const counterSnap = await transaction.get(counterRef);
+
+        const itemRefs = deliveryData.items.map(item => 
+            doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId)
+        );
+        const itemDocs = await Promise.all(itemRefs.map(ref => transaction.get(ref)));
         
+        // --- VALIDATION & LOGIC PHASE (in memory) ---
         const newCount = (counterSnap.data()?.count || 0) + 1;
         const year = new Date().getFullYear();
         const deliveryCode = `ENT-${year}-${String(newCount).padStart(4, '0')}`;
+
+        const stockUpdates: { itemRef: any, newStock: number }[] = [];
+        for (const [index, itemDoc] of itemDocs.entries()) {
+            const requestedItem = deliveryData.items[index];
+            if (!itemDoc.exists()) {
+                throw new Error(`El insumo "${requestedItem.name}" ya no existe en el catálogo.`);
+            }
+            const currentStock = itemDoc.data().stock || 0;
+            const newStock = currentStock - requestedItem.quantity;
+            if (newStock < 0) {
+                throw new Error(`Stock insuficiente para "${itemDoc.data().name}". Stock actual: ${currentStock}, Solicitado: ${requestedItem.quantity}.`);
+            }
+            stockUpdates.push({ itemRef: itemRefs[index], newStock });
+        }
         
+        // --- WRITE PHASE ---
+        // 1. Update counter
         transaction.set(counterRef, { count: newCount }, { merge: true });
 
+        // 2. Create Delivery document
         const deliveryCol = getSubCollectionRef(instituteId, 'deliveries');
         const newDeliveryRef = doc(deliveryCol);
-        
         transaction.set(newDeliveryRef, {
             ...deliveryData,
             code: deliveryCode,
             deliveryDate: Timestamp.now(),
         });
         
-        for (const item of deliveryData.items) {
-            const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
-            const itemDoc = await transaction.get(itemRef);
-            if (!itemDoc.exists()) {
-                throw new Error(`El insumo "${item.name}" ya no existe en el catálogo.`);
-            }
-            const currentStock = itemDoc.data().stock || 0;
-            const newStock = currentStock - item.quantity;
-            
-            if (newStock < 0) {
-                throw new Error(`Stock insuficiente para "${item.name}". Stock actual: ${currentStock}, Solicitado: ${item.quantity}.`);
-            }
-            
-            transaction.update(itemRef, { stock: newStock });
+        // 3. Update stock and create history for each item
+        for (const [index, update] of stockUpdates.entries()) {
+            const requestedItem = deliveryData.items[index];
+            transaction.update(update.itemRef, { stock: update.newStock });
 
-            const historyCol = collection(itemRef, 'stockHistory');
+            const historyCol = collection(update.itemRef, 'stockHistory');
             const historyDocRef = doc(historyCol);
             transaction.set(historyDocRef, {
                 timestamp: Timestamp.now(),
                 userId: user.uid,
                 userName: user.displayName || 'Sistema',
-                change: -item.quantity,
-                newStock: newStock,
+                change: -requestedItem.quantity,
+                newStock: update.newStock,
                 notes: `Entrega ${deliveryCode} a ${deliveryData.recipientName}`,
+            });
+        }
+        
+        // 4. (Optional) Update original request status if it came from one
+        if (deliveryData.originRequestId) {
+            const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', deliveryData.originRequestId);
+            transaction.update(requestRef, {
+                status: 'Entregado',
+                processedAt: Timestamp.now(),
+                deliveredBy: user.uid
             });
         }
     });
@@ -1070,17 +1093,19 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
     if (!user) throw new Error("Usuario no autenticado.");
 
     const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', requestId);
-    const requestDoc = await getDoc(requestRef);
-    if (!requestDoc.exists()) {
-        throw new Error("El pedido no existe.");
-    }
-    const requestData = requestDoc.data() as SupplyRequest;
     
     if (newStatus === 'Entregado') {
+        const requestDoc = await getDoc(requestRef);
+        if (!requestDoc.exists()) {
+            throw new Error("El pedido no existe.");
+        }
+        const requestData = requestDoc.data() as SupplyRequest;
+
         if (requestData.status === 'Entregado') {
             throw new Error("Este pedido ya ha sido marcado como entregado.");
         }
         
+        // This function will now handle everything atomically
         await createDelivery(instituteId, {
             recipientId: requestData.requesterId,
             recipientName: requestData.requesterName,
@@ -1091,13 +1116,7 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
             deliveredByName: user.displayName || 'Sistema',
         });
         
-        await updateDoc(requestRef, {
-            status: 'Entregado',
-            processedAt: Timestamp.now(),
-            deliveredBy: user.uid
-        });
-
-    } else {
+    } else { // For 'Aprobado' or 'Rechazado'
         const updateData: any = {
             status: newStatus,
             processedAt: Timestamp.now(),
@@ -1106,6 +1125,7 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
         await updateDoc(requestRef, updateData);
     }
 };
+
 
 // --- ACADEMIC & MATRICULATION TYPES ---
 
@@ -2299,3 +2319,6 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
     
 
 
+
+
+    
