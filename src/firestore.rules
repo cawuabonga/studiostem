@@ -192,6 +192,11 @@ service cloud.firestore {
        match /supplyCatalog/{itemId} {
           allow read: if isUserOfInstitute(instituteId);
           allow write: if hasPermission('admin:supplies:manage');
+
+          match /stockHistory/{logId} {
+            allow read, create: if hasPermission('admin:supplies:manage');
+            allow update, delete: if false; // History should be immutable
+          }
       }
 
        match /supplyRequests/{requestId} {
