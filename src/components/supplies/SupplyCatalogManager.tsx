@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getSupplyCatalog, addSupplyItem, updateSupplyItem, deleteSupplyItem } from '@/config/firebase';
-import type { SupplyItem, SupplyUnitOfMeasure } from '@/types';
+import type { SupplyItem, SupplyUnitOfMeasure, SupplyCategory } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -21,13 +22,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, PlusCircle, Trash, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-const unitsOfMeasure: SupplyUnitOfMeasure[] = ['Unidad', 'Caja', 'Paquete', 'Resma', 'Galón'];
+const unitsOfMeasure: SupplyUnitOfMeasure[] = ['Unidad', 'Caja', 'Paquete', 'Resma', 'Galón', 'Kilo', 'Metro', 'Litro'];
+const categories: SupplyCategory[] = ['Oficina', 'Aseo', 'Bebidas', 'Snacks', 'Accesorios', 'Otro'];
 
 const supplyItemSchema = z.object({
+  code: z.string().min(1, 'El código es requerido.'),
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
   description: z.string().optional(),
   unitOfMeasure: z.enum(unitsOfMeasure, { required_error: 'Debe seleccionar una unidad de medida.' }),
-  category: z.string().optional(),
+  category: z.enum(categories).optional(),
 });
 
 type FormValues = z.infer<typeof supplyItemSchema>;
@@ -62,7 +65,7 @@ export function SupplyCatalogManager() {
 
   const handleOpenDialog = (item?: SupplyItem) => {
     setEditingItem(item || null);
-    form.reset(item || { name: '', description: '', category: '' });
+    form.reset(item || { code: '', name: '', description: '', category: undefined });
     setIsDialogOpen(true);
   };
 
@@ -116,6 +119,7 @@ export function SupplyCatalogManager() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Código</TableHead>
                   <TableHead>Nombre del Insumo</TableHead>
                   <TableHead>Unidad de Medida</TableHead>
                   <TableHead>Categoría</TableHead>
@@ -124,10 +128,11 @@ export function SupplyCatalogManager() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                    <TableRow><TableCell colSpan={4}><Skeleton className="h-20 w-full" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5}><Skeleton className="h-20 w-full" /></TableCell></TableRow>
                 ) : catalog.length > 0 ? (
                     catalog.map(item => (
                         <TableRow key={item.id}>
+                            <TableCell className="font-mono">{item.code}</TableCell>
                             <TableCell className="font-medium">{item.name}</TableCell>
                             <TableCell>{item.unitOfMeasure}</TableCell>
                             <TableCell>{item.category || 'N/A'}</TableCell>
@@ -138,7 +143,7 @@ export function SupplyCatalogManager() {
                         </TableRow>
                     ))
                 ) : (
-                    <TableRow><TableCell colSpan={4} className="h-24 text-center">No hay insumos en el catálogo. Añada el primero.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={5} className="h-24 text-center">No hay insumos en el catálogo. Añada el primero.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -153,11 +158,14 @@ export function SupplyCatalogManager() {
               </DialogHeader>
                <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleSave)} className="space-y-4 py-4">
-                        <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={form.control} name="code" render={({ field }) => (<FormItem><FormLabel>Código</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                        </div>
                         <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descripción (Opcional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)}/>
                         <div className="grid grid-cols-2 gap-4">
-                            <FormField control={form.control} name="unitOfMeasure" render={({ field }) => (<FormItem><FormLabel>Unidad de Medida</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{unitsOfMeasure.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                            <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoría (Opcional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name="unitOfMeasure" render={({ field }) => (<FormItem><FormLabel>Unidad de Medida</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger></FormControl><SelectContent>{unitsOfMeasure.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoría</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger></FormControl><SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
                         </div>
                         <DialogFooter>
                             <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>

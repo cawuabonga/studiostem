@@ -264,14 +264,16 @@ export interface Payment {
 
 
 // --- SUPPLIES & INVENTORY ---
-export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón';
+export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón' | 'Kilo' | 'Metro' | 'Litro';
+export type SupplyCategory = 'Oficina' | 'Aseo' | 'Bebidas' | 'Snacks' | 'Accesorios' | 'Otro';
 
 export interface SupplyItem {
     id: string;
+    code: string;
     name: string;
     description?: string;
     unitOfMeasure: SupplyUnitOfMeasure;
-    category?: string;
+    category?: SupplyCategory;
     stock: number;
 }
 
