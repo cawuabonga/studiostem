@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { SupplyRequest, SupplyRequestStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSupplyRequestsByStatus, updateSupplyRequest } from '@/config/firebase';
+import { getSupplyRequestsByStatus } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,8 @@ import { Label } from '../ui/label';
 import { ApproveRequestDialog } from './ApproveRequestDialog';
 import { RejectRequestDialog } from './RejectRequestDialog';
 import { DeliverRequestDialog } from './DeliverRequestDialog';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
 
 interface AdminSupplyRequestsListProps {
     status: SupplyRequestStatus;
@@ -94,7 +96,7 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                     </TableHeader>
                     <TableBody>
                         {filteredRequests.map(req => (
-                            <TableRow key={req.id}>
+                            <TableRow key={req.id} className="bg-card">
                                 <TableCell className="font-mono">{req.code}</TableCell>
                                 <TableCell className="text-xs">{format(req.createdAt.toDate(), 'dd/MM/yy HH:mm')}</TableCell>
                                 <TableCell>{req.requesterName}</TableCell>
@@ -112,14 +114,30 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                                 </TableCell>
                                 <TableCell className="text-right">
                                     {status === 'Pendiente' && (
-                                        <div className="space-x-2">
-                                            <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setSelectedRequest(req); setIsApproveOpen(true); }}>
-                                                <Check className="mr-2 h-4 w-4"/> Aprobar
-                                            </Button>
-                                            <Button size="sm" variant="destructive" onClick={() => { setSelectedRequest(req); setIsRejectOpen(true); }}>
-                                                <X className="mr-2 h-4 w-4"/> Rechazar
-                                            </Button>
-                                        </div>
+                                        <TooltipProvider>
+                                            <div className="space-x-1">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-green-600 hover:bg-green-100 hover:text-green-700" onClick={() => { setSelectedRequest(req); setIsApproveOpen(true); }}>
+                                                            <Check className="h-5 w-5"/>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Aprobar Pedido</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="text-red-600 hover:bg-red-100 hover:text-red-700" onClick={() => { setSelectedRequest(req); setIsRejectOpen(true); }}>
+                                                            <X className="h-5 w-5"/>
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Rechazar Pedido</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                        </TooltipProvider>
                                     )}
                                     {status === 'Aprobado' && (
                                         <Button size="sm" onClick={() => { setSelectedRequest(req); setIsDeliverOpen(true); }}>
