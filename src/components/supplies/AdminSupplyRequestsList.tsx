@@ -1,18 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { SupplyRequest, SupplyRequestStatus } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSupplyRequestsByStatus, updateSupplyRequestStatus } from '@/config/firebase';
+import { getSupplyRequestsByStatus, updateSupplyRequest } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Check, X, Truck, Info, Loader2 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { ApproveRequestDialog } from './ApproveRequestDialog';
+import { RejectRequestDialog } from './RejectRequestDialog';
+import { DeliverRequestDialog } from './DeliverRequestDialog';
 
 interface AdminSupplyRequestsListProps {
     status: SupplyRequestStatus;
@@ -23,8 +25,13 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
     const { toast } = useToast();
     const [requests, setRequests] = useState<SupplyRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState<string | null>(null); // track loading for a specific request
-    const [rejectionReason, setRejectionReason] = useState('');
+    const [selectedRequest, setSelectedRequest] = useState<SupplyRequest | null>(null);
+    
+    const [isApproveOpen, setIsApproveOpen] = useState(false);
+    const [isRejectOpen, setIsRejectOpen] = useState(false);
+    const [isDeliverOpen, setIsDeliverOpen] = useState(false);
+    
+    const [filter, setFilter] = useState('');
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -41,21 +48,13 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
 
     useEffect(() => { fetchData() }, [fetchData]);
 
-    const handleUpdateStatus = async (requestId: string, newStatus: SupplyRequestStatus, extraData?: any) => {
-        if (!instituteId) return;
-        setActionLoading(requestId);
-        try {
-            await updateSupplyRequestStatus(instituteId, requestId, newStatus, extraData);
-            toast({ title: "Estado Actualizado", description: "El estado del pedido ha sido actualizado." });
-            fetchData(); // Refresh the list
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message, variant: "destructive" });
-        } finally {
-            setActionLoading(null);
-            setRejectionReason('');
-        }
-    };
-    
+    const filteredRequests = useMemo(() => {
+        return requests.filter(req => 
+            req.requesterName.toLowerCase().includes(filter.toLowerCase()) ||
+            (req.code || '').toLowerCase().includes(filter.toLowerCase())
+        );
+    }, [requests, filter]);
+
     if (loading) {
         return <Skeleton className="h-48 w-full" />;
     }
@@ -71,71 +70,93 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
     }
     
     return (
-        <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Solicitante</TableHead>
-                        <TableHead>Insumos</TableHead>
-                        {status === 'Rechazado' && <TableHead>Motivo</TableHead>}
-                        <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {requests.map(req => (
-                        <TableRow key={req.id}>
-                            <TableCell className="text-xs">{format(req.createdAt.toDate(), 'dd/MM/yy HH:mm')}</TableCell>
-                            <TableCell>{req.requesterName}</TableCell>
-                            <TableCell>
-                                <ul className="list-disc list-inside">
-                                    {req.items.map(item => (
-                                        <li key={item.itemId}>{item.quantity} x {item.name}</li>
-                                    ))}
-                                </ul>
-                            </TableCell>
-                             {status === 'Rechazado' && <TableCell className="text-xs text-destructive">{req.rejectionReason}</TableCell>}
-                            <TableCell className="text-right">
-                                {actionLoading === req.id ? <Loader2 className="animate-spin" /> : (
-                                    <div className="space-x-2">
-                                        {status === 'Pendiente' && (
-                                            <>
-                                                <Button size="sm" variant="outline" className="text-green-600" onClick={() => handleUpdateStatus(req.id, 'Aprobado')}>
-                                                    <Check className="mr-2 h-4 w-4"/> Aprobar
-                                                </Button>
-                                                <AlertDialog>
-                                                    <AlertDialogTrigger asChild>
-                                                        <Button size="sm" variant="destructive"><X className="mr-2 h-4 w-4"/> Rechazar</Button>
-                                                    </AlertDialogTrigger>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>Rechazar Pedido</AlertDialogTitle>
-                                                            <AlertDialogDescription>Por favor, ingrese el motivo del rechazo.</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <div className="py-4">
-                                                            <Label htmlFor="reason">Motivo</Label>
-                                                            <Input id="reason" value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} />
-                                                        </div>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleUpdateStatus(req.id, 'Rechazado', { rejectionReason })}>Confirmar Rechazo</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </>
-                                        )}
-                                        {status === 'Aprobado' && (
-                                             <Button size="sm" variant="default" onClick={() => handleUpdateStatus(req.id, 'Entregado')}>
-                                                <Truck className="mr-2 h-4 w-4"/> Marcar como Entregado
-                                            </Button>
-                                        )}
-                                    </div>
-                                )}
-                            </TableCell>
+        <>
+            <div className="mb-4">
+                <Label htmlFor="search-requests">Buscar por solicitante o código</Label>
+                <Input 
+                    id="search-requests"
+                    placeholder="Escriba para filtrar..."
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    className="max-w-sm mt-1"
+                />
+            </div>
+            <div className="rounded-md border">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Código</TableHead>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Solicitante</TableHead>
+                            <TableHead>Insumos</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                        {filteredRequests.map(req => (
+                            <TableRow key={req.id}>
+                                <TableCell className="font-mono">{req.code}</TableCell>
+                                <TableCell className="text-xs">{format(req.createdAt.toDate(), 'dd/MM/yy HH:mm')}</TableCell>
+                                <TableCell>{req.requesterName}</TableCell>
+                                <TableCell>
+                                    <ul className="list-disc list-inside text-sm">
+                                        {req.items.map(item => (
+                                            <li key={item.itemId}>
+                                                {item.requestedQuantity} x {item.name}
+                                                {item.approvedQuantity !== undefined && item.approvedQuantity !== item.requestedQuantity && (
+                                                    <span className="text-xs font-bold text-blue-600"> (Aprobado: {item.approvedQuantity})</span>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    {status === 'Pendiente' && (
+                                        <div className="space-x-2">
+                                            <Button size="sm" variant="outline" className="text-green-600" onClick={() => { setSelectedRequest(req); setIsApproveOpen(true); }}>
+                                                <Check className="mr-2 h-4 w-4"/> Aprobar
+                                            </Button>
+                                            <Button size="sm" variant="destructive" onClick={() => { setSelectedRequest(req); setIsRejectOpen(true); }}>
+                                                <X className="mr-2 h-4 w-4"/> Rechazar
+                                            </Button>
+                                        </div>
+                                    )}
+                                    {status === 'Aprobado' && (
+                                        <Button size="sm" onClick={() => { setSelectedRequest(req); setIsDeliverOpen(true); }}>
+                                            <Truck className="mr-2 h-4 w-4"/> Entregar (PECOSA)
+                                        </Button>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+            
+            {selectedRequest && isApproveOpen && (
+                <ApproveRequestDialog
+                    isOpen={isApproveOpen}
+                    onClose={() => setIsApproveOpen(false)}
+                    request={selectedRequest}
+                    onConfirm={() => { setIsApproveOpen(false); fetchData(); }}
+                />
+            )}
+             {selectedRequest && isRejectOpen && (
+                <RejectRequestDialog
+                    isOpen={isRejectOpen}
+                    onClose={() => setIsRejectOpen(false)}
+                    request={selectedRequest}
+                    onConfirm={() => { setIsRejectOpen(false); fetchData(); }}
+                />
+            )}
+             {selectedRequest && isDeliverOpen && (
+                <DeliverRequestDialog
+                    isOpen={isDeliverOpen}
+                    onClose={() => setIsDeliverOpen(false)}
+                    request={selectedRequest}
+                    onConfirm={() => { setIsDeliverOpen(false); fetchData(); }}
+                />
+            )}
+        </>
     )
 }
