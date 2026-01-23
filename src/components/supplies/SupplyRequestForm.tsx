@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -71,14 +72,21 @@ export function SupplyRequestForm() {
     };
     
     const handleSubmitRequest = async () => {
-        if (requestItems.size === 0 || !instituteId || !user?.documentId) {
-            toast({ title: "Pedido Vacío", description: "Añada al menos un insumo a su pedido o asegúrese de que su perfil esté correctamente vinculado.", variant: "destructive"});
+        if (requestItems.size === 0 || !instituteId || !user) {
+            toast({ title: "Pedido Vacío", description: "Añada al menos un insumo a su pedido.", variant: "destructive"});
             return;
         }
+
+        const requesterIdentifier = user.documentId || user.uid;
+        if (!requesterIdentifier) {
+            toast({ title: "Error de Usuario", description: "No se pudo identificar al solicitante. Por favor, vuelva a iniciar sesión.", variant: "destructive"});
+            return;
+        }
+        
         setIsSubmitting(true);
         try {
             await createSupplyRequest(instituteId, {
-                requesterId: user.documentId,
+                requesterId: requesterIdentifier,
                 requesterName: user.displayName || 'Usuario desconocido',
                 requesterAuthUid: user.uid,
                 items: Array.from(requestItems.values())
