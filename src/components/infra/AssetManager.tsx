@@ -69,12 +69,16 @@ const assetSchema = z.object({
     tipo: z.string().optional(),
     color: z.string().optional(),
     numero_serie: z.string().optional(),
-    placa_matricula: z.string().optional(),
-    año_fabricacion: z.string().optional(),
-    material: z.string().optional(),
+    numero_motor: z.string().optional(),
+    numero_chasis: z.string().optional(),
     dimension: z.string().optional(),
-    area: z.string().optional(),
-    ubicacion: z.string().optional(),
+    raza: z.string().optional(),
+    especie: z.string().optional(),
+    placa_matricula: z.string().optional(),
+    edad: z.string().optional(),
+    pais: z.string().optional(),
+    año_fabricacion: z.string().optional(),
+    otros: z.string().optional(),
   }).optional(),
 });
 
@@ -88,7 +92,7 @@ interface AssetManagerProps {
 }
 
 const allCharacteristicsFields = [
-    "marca", "modelo", "tipo", "color", "numero_serie", "placa_matricula", "año_fabricacion", "material", "dimension", "area", "ubicacion"
+    "marca", "modelo", "tipo", "color", "numero_serie", "numero_motor", "numero_chasis", "dimension", "raza", "especie", "placa_matricula", "edad", "pais", "año_fabricacion", "otros"
 ];
 
 
@@ -129,7 +133,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<AssetHistoryLog[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
@@ -263,7 +267,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
         const dataToSave: Partial<Omit<Asset, 'id' | 'name' | 'type' | 'codeOrSerial'>> = {
             assetTypeId: data.assetTypeId,
             status: data.status,
-            notes: data.notes,
+            notes: data.notes || '',
             characteristics: cleanedCharacteristics,
         };
         
@@ -404,7 +408,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                     <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
                                 </div>
                                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{assetStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name="acquisitionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="mb-2">Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus captionLayout="dropdown-buttons" fromYear={1990} toYear={new Date().getFullYear()} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name="acquisitionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="mb-2">Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} captionLayout="dropdown-buttons" fromYear={1990} toYear={new Date().getFullYear()} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                             </div>
                             <Separator />
                             <div className="pt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
