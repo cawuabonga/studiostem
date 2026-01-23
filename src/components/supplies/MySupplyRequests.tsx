@@ -32,13 +32,14 @@ export function MySupplyRequests() {
     const [loading, setLoading] = useState(true);
 
     const fetchData = useCallback(async () => {
-        if (!instituteId || !user?.documentId) {
+        const requesterId = user?.documentId || user?.uid;
+        if (!instituteId || !requesterId) {
             setLoading(false);
             return;
         }
         setLoading(true);
         try {
-            const fetchedRequests = await getRequestsForUser(instituteId, user.documentId);
+            const fetchedRequests = await getRequestsForUser(instituteId, requesterId);
             setRequests(fetchedRequests);
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar tus pedidos.", variant: "destructive" });
