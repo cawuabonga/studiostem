@@ -133,7 +133,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [historyLogs, setHistoryLogs] = useState<AssetHistoryLog[]>([]);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const { toast } = useToast();
