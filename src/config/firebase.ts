@@ -853,14 +853,31 @@ export const getStudentPaymentsByStatus = async (instituteId: string, payerId: s
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
 };
 
-export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus): Promise<Payment[]> => {
+export const getPaymentsByStatus = async (
+    instituteId: string, 
+    status: PaymentStatus,
+    options: { lastVisible?: DocumentSnapshot } = {}
+): Promise<{ payments: Payment[], newLastVisible: DocumentSnapshot | null }> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
-    const q = query(
-        paymentsCol,
-        where("status", "==", status)
-    );
+    
+    const q_parts: any[] = [
+        where("status", "==", status),
+        orderBy("createdAt", "desc"),
+        limit(20)
+    ];
+
+    if (options.lastVisible) {
+        q_parts.push(startAfter(options.lastVisible));
+    }
+    
+    const q = query(paymentsCol, ...q_parts);
+
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+    
+    const payments = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+    const newLastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+    
+    return { payments, newLastVisible };
 };
 
 export const getApprovedPaymentsInDateRange = async (instituteId: string, from: Date, to: Date): Promise<Payment[]> => {
@@ -881,7 +898,7 @@ export const updatePaymentStatus = async (
     instituteId: string, 
     paymentId: string, 
     status: PaymentStatus,
-    extraData: { receiptNumber?: string; rejectionReason?: string } = {}
+    extraData: { receiptNumber?: string; rejectionReason?: string; annulmentReason?: string; } = {}
 ): Promise<void> => {
     const paymentRef = doc(db, 'institutes', instituteId, 'payments', paymentId);
     const updateData: any = {

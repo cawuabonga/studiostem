@@ -231,7 +231,7 @@ export interface NonTeachingAssignment {
 
 
 // --- PAYMENTS ---
-export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado';
+export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Anulado';
 export type PayerType = 'student' | 'staff' | 'external';
 
 export interface PaymentConcept {
@@ -259,6 +259,7 @@ export interface Payment {
   processedAt?: Timestamp;
   receiptNumber?: string; 
   rejectionReason?: string;
+  annulmentReason?: string;
 }
 
 
@@ -644,4 +645,3 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
-

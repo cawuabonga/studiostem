@@ -30,15 +30,16 @@ export default function ValidatePaymentsPage() {
                 <CardHeader>
                     <CardTitle>Gestión de Pagos de Estudiantes</CardTitle>
                     <CardDescription>
-                       Revisa los pagos pendientes, consulta el historial de pagos aprobados y los que han sido rechazados.
+                       Revisa los pagos pendientes, consulta el historial de pagos aprobados y los que han sido rechazados o anulados.
                     </CardDescription>
                 </CardHeader>
             </Card>
              <Tabs defaultValue="Pendiente" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="Pendiente">Pendientes de Verificación</TabsTrigger>
                     <TabsTrigger value="Aprobado">Aprobados</TabsTrigger>
                     <TabsTrigger value="Rechazado">Rechazados</TabsTrigger>
+                    <TabsTrigger value="Anulado">Anulados</TabsTrigger>
                 </TabsList>
                 <TabsContent value="Pendiente">
                    <AdminPaymentsDashboard status="Pendiente" key="Pendiente" />
@@ -48,6 +49,9 @@ export default function ValidatePaymentsPage() {
                 </TabsContent>
                 <TabsContent value="Rechazado">
                     <AdminPaymentsDashboard status="Rechazado" key="Rechazado" />
+                </TabsContent>
+                 <TabsContent value="Anulado">
+                    <AdminPaymentsDashboard status="Anulado" key="Anulado" />
                 </TabsContent>
             </Tabs>
         </div>
