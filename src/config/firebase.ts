@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -695,7 +695,7 @@ export const addNonTeachingActivity = async (instituteId: string, data: Omit<Non
 
 export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
     const activitiesCol = getSubCollectionRef(instituteId, 'nonTeachingActivities');
-    const snapshot = await getDocs(activitiesCol);
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingActivity));
 };
 
@@ -908,6 +908,30 @@ export const updatePaymentStatus = async (
     };
     await updateDoc(paymentRef, updateData);
 };
+
+// --- SUPPLIES / ABASTECIMIENTO ---
+export const getSupplyCatalog = async (instituteId: string): Promise<SupplyItem[]> => {
+    const catalogCol = getSubCollectionRef(instituteId, 'supplyCatalog');
+    const q = query(catalogCol, orderBy("name"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplyItem));
+}
+
+export const addSupplyItem = async (instituteId: string, data: Omit<SupplyItem, 'id' | 'stock'>): Promise<void> => {
+    const catalogCol = getSubCollectionRef(instituteId, 'supplyCatalog');
+    await addDoc(catalogCol, { ...data, stock: 0 }); // Initialize stock at 0
+}
+
+export const updateSupplyItem = async (instituteId: string, itemId: string, data: Partial<Omit<SupplyItem, 'id' | 'stock'>>): Promise<void> => {
+    const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', itemId);
+    await updateDoc(itemRef, data);
+}
+
+export const deleteSupplyItem = async (instituteId: string, itemId: string): Promise<void> => {
+    const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', itemId);
+    // TODO: Add check if item is in stock before deleting
+    await deleteDoc(itemRef);
+}
 
 
 // --- ACADEMIC & MATRICULATION TYPES ---
@@ -1652,7 +1676,7 @@ export const updateAssetType = async (instituteId: string, assetTypeId: string, 
 
 export const deleteAssetType = async (instituteId: string, assetTypeId: string): Promise<void> => {
     const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
-    // Add logic here to check if any asset uses this type before deleting.
+    // TODO: Add logic here to check if any asset uses this type before deleting.
     await deleteDoc(assetTypeRef);
 };
 

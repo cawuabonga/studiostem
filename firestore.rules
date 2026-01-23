@@ -188,6 +188,11 @@ service cloud.firestore {
        match /assetTypes/{docId} {
           allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
       }
+      
+       match /supplyCatalog/{itemId} {
+          allow read: if isUserOfInstitute(instituteId);
+          allow write: if hasPermission('admin:supplies:manage');
+      }
     }
   }
 }

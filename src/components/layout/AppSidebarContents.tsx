@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -42,17 +42,19 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view'] },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage'] },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
     
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
 
-    // Student
+    // Student & General Staff
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, permission: 'student:unit:view' },
     { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, permission: 'student:grades:view' },
     { href: '/dashboard/gestion-administrativa/mis-pagos', label: 'Mis Pagos', icon: History, permission: 'student:payments:manage' },
+    { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: Pencil, permission: 'user:supplies:request' },
+    { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: Package, permission: 'user:supplies:request' },
 ];
 
 

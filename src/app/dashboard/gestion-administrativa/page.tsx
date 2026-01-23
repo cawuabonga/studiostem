@@ -67,6 +67,13 @@ const adminModules: AdminModule[] = [
     icon: Archive,
     permission: "admin:infra:manage",
   },
+   {
+    title: "Gestionar Abastecimiento",
+    description: "Administra el catálogo de insumos, stock y gestiona los pedidos del personal.",
+    href: "/dashboard/gestion-administrativa/abastecimiento",
+    icon: Archive,
+    permission: 'admin:supplies:manage',
+  },
   {
     title: "Control de Acceso (RFID)",
     description: "Monitorear y ver los registros de entrada y salida del personal y estudiantes.",

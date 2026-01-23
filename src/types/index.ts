@@ -485,6 +485,38 @@ export interface Asset {
     instituteId: string;
 }
 
+// --- SUPPLIES & INVENTORY ---
+export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón';
+
+export interface SupplyItem {
+    id: string;
+    name: string;
+    description?: string;
+    unitOfMeasure: SupplyUnitOfMeasure;
+    category?: string;
+    stock: number; // Denormalized current stock for quick access
+}
+
+export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado';
+
+export interface RequestedSupplyItem {
+    itemId: string;
+    name: string;
+    quantity: number;
+    unitOfMeasure: SupplyUnitOfMeasure;
+}
+
+export interface SupplyRequest {
+    id: string;
+    requesterId: string; // User's documentId
+    requesterName: string;
+    status: SupplyRequestStatus;
+    items: RequestedSupplyItem[];
+    createdAt: Timestamp;
+    processedAt?: Timestamp;
+    rejectionReason?: string;
+    deliveredBy?: string; // UID of admin who delivered
+}
 
 
 // --- SCHEDULES / HORARIOS ---
@@ -542,12 +574,15 @@ export type Permission =
   | 'admin:attendance:report'
   | 'admin:institute:manage'
   | 'admin:infra:manage'
+  | 'admin:supplies:manage'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
   // Planning & Schedules
   | 'planning:schedule:manage'
   | 'planning:schedule:view:own'
+  // User-specific actions
+  | 'user:supplies:request'
   // SuperAdmin
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
@@ -585,6 +620,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
             { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
             { id: 'admin:infra:manage', label: 'Gestionar Infraestructura (Edificios, Ambientes, Activos)' },
+            { id: 'admin:supplies:manage', label: 'Gestionar Abastecimiento e Insumos' },
         ],
     },
     {
@@ -619,19 +655,14 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
     {
-        category: 'Docente',
-        description: 'Permisos básicos para el rol de docente.',
+        category: 'Acciones de Personal',
+        description: 'Permisos para acciones que el personal y estudiantes pueden realizar.',
         permissions: [
-            { id: 'teacher:unit:view', label: 'Ver y Gestionar sus Unidades Asignadas' },
-        ],
-    },
-    {
-        category: 'Estudiante',
-        description: 'Permisos básicos para el rol de estudiante.',
-        permissions: [
+            { id: 'teacher:unit:view', label: 'Ver sus Unidades Asignadas' },
             { id: 'student:unit:view', label: 'Ver sus Unidades Matriculadas' },
             { id: 'student:grades:view', label: 'Ver sus Calificaciones' },
             { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
+            { id: 'user:supplies:request', label: 'Solicitar Insumos' },
         ],
     },
      {
