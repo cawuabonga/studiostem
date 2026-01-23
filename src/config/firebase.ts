@@ -974,14 +974,56 @@ export const getSupplyItemHistory = async (instituteId: string, itemId: string):
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockHistoryLog));
 };
 
-export const createSupplyRequest = async (instituteId: string, requestData: Omit<SupplyRequest, 'id' | 'createdAt' | 'status'>): Promise<void> => {
+export const getNextRequestCode = async (instituteId: string): Promise<string> => {
+    const counterRef = doc(db, 'institutes', instituteId, 'counters', 'supplyRequests');
+    let newCount = 1;
+    await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+        newCount = (counterSnap.data()?.count || 0) + 1;
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+    });
+    const year = new Date().getFullYear();
+    return `PED-${year}-${String(newCount).padStart(4, '0')}`;
+}
+
+export const createSupplyRequest = async (instituteId: string, requestData: Omit<SupplyRequest, 'id' | 'createdAt' | 'status' | 'code'>): Promise<void> => {
     const requestsCol = getSubCollectionRef(instituteId, 'supplyRequests');
+    const code = await getNextRequestCode(instituteId);
     await addDoc(requestsCol, {
         ...requestData,
+        code,
         status: 'Pendiente',
         createdAt: Timestamp.now(),
     });
 };
+
+export const createDirectApprovedRequest = async (
+    instituteId: string, 
+    requestData: Omit<SupplyRequest, 'id' | 'createdAt' | 'status' | 'code'>
+) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuario no autenticado.");
+
+    const requestsCol = getSubCollectionRef(instituteId, 'supplyRequests');
+    const code = await getNextRequestCode(instituteId);
+
+    const newRequest: Omit<SupplyRequest, 'id'> = {
+        ...requestData,
+        items: requestData.items.map(item => ({
+            ...item,
+            approvedQuantity: item.requestedQuantity // In a direct request, requested and approved are the same
+        })),
+        code,
+        status: 'Aprobado', // Pre-approved
+        createdAt: Timestamp.now(),
+        approvedById: user.uid, // The admin is the approver
+        approvedByName: user.displayName || 'Sistema',
+        processedAt: Timestamp.now(), // Processed immediately
+    };
+
+    await addDoc(requestsCol, newRequest);
+};
+
 
 export const getRequestsForUser = async (instituteId: string, requesterId: string): Promise<SupplyRequest[]> => {
     const requestsCol = getSubCollectionRef(instituteId, 'supplyRequests');
@@ -1005,90 +1047,17 @@ export const getSupplyRequestsByStatus = async (instituteId: string, status: Sup
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplyRequest));
 };
 
-export const getNextDeliveryCode = async (instituteId: string): Promise<string> => {
-    const counterRef = doc(db, 'institutes', instituteId, 'counters', 'deliveries');
-    const counterSnap = await getDoc(counterRef);
-    const newCount = (counterSnap.data()?.count || 0) + 1;
-    const year = new Date().getFullYear();
-    return `ENT-${year}-${String(newCount).padStart(4, '0')}`;
-}
-
-export const createDelivery = async (instituteId: string, deliveryData: Omit<Delivery, 'id' | 'code' | 'deliveryDate'>): Promise<void> => {
-    const user = auth.currentUser;
-    if (!user) throw new Error("Usuario no autenticado.");
-
-    await runTransaction(db, async (transaction) => {
-        // --- READ PHASE ---
-        const counterRef = doc(db, 'institutes', instituteId, 'counters', 'deliveries');
-        const counterSnap = await transaction.get(counterRef);
-
-        const itemRefs = deliveryData.items.map(item => 
-            doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId)
-        );
-        const itemDocs = await Promise.all(itemRefs.map(ref => transaction.get(ref)));
-        
-        // --- VALIDATION & LOGIC PHASE (in memory) ---
-        const newCount = (counterSnap.data()?.count || 0) + 1;
-        const year = new Date().getFullYear();
-        const deliveryCode = `ENT-${year}-${String(newCount).padStart(4, '0')}`;
-
-        const stockUpdates: { itemRef: any, newStock: number }[] = [];
-        for (const [index, itemDoc] of itemDocs.entries()) {
-            const requestedItem = deliveryData.items[index];
-            if (!itemDoc.exists()) {
-                throw new Error(`El insumo "${requestedItem.name}" ya no existe en el catálogo.`);
-            }
-            const currentStock = itemDoc.data().stock || 0;
-            const newStock = currentStock - requestedItem.quantity;
-            if (newStock < 0) {
-                throw new Error(`Stock insuficiente para "${itemDoc.data().name}". Stock actual: ${currentStock}, Solicitado: ${requestedItem.quantity}.`);
-            }
-            stockUpdates.push({ itemRef: itemRefs[index], newStock });
-        }
-        
-        // --- WRITE PHASE ---
-        // 1. Update counter
-        transaction.set(counterRef, { count: newCount }, { merge: true });
-
-        // 2. Create Delivery document
-        const deliveryCol = getSubCollectionRef(instituteId, 'deliveries');
-        const newDeliveryRef = doc(deliveryCol);
-        transaction.set(newDeliveryRef, {
-            ...deliveryData,
-            code: deliveryCode,
-            deliveryDate: Timestamp.now(),
-        });
-        
-        // 3. Update stock and create history for each item
-        for (const [index, update] of stockUpdates.entries()) {
-            const requestedItem = deliveryData.items[index];
-            transaction.update(update.itemRef, { stock: update.newStock });
-
-            const historyCol = collection(update.itemRef, 'stockHistory');
-            const historyDocRef = doc(historyCol);
-            transaction.set(historyDocRef, {
-                timestamp: Timestamp.now(),
-                userId: user.uid,
-                userName: user.displayName || 'Sistema',
-                change: -requestedItem.quantity,
-                newStock: update.newStock,
-                notes: `Entrega ${deliveryCode} a ${deliveryData.recipientName}`,
-            });
-        }
-        
-        // 4. (Optional) Update original request status if it came from one
-        if (deliveryData.originRequestId) {
-            const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', deliveryData.originRequestId);
-            transaction.update(requestRef, {
-                status: 'Entregado',
-                processedAt: Timestamp.now(),
-                deliveredBy: user.uid
-            });
-        }
-    });
+export const updateSupplyRequest = async (instituteId: string, requestId: string, data: Partial<SupplyRequest>): Promise<void> => {
+    const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', requestId);
+    const updateData = { ...data };
+    if (data.status) {
+        updateData.processedAt = Timestamp.now();
+    }
+    await updateDoc(requestRef, updateData);
 };
 
-export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, newStatus: SupplyRequestStatus, extraData: { rejectionReason?: string } = {}): Promise<void> => {
+
+export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, newStatus: SupplyRequestStatus, extraData: { rejectionReason?: string; pecosaCode?: string; } = {}): Promise<void> => {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuario no autenticado.");
 
@@ -1101,22 +1070,50 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
         }
         const requestData = requestDoc.data() as SupplyRequest;
 
-        if (requestData.status === 'Entregado') {
-            throw new Error("Este pedido ya ha sido marcado como entregado.");
+        if (requestData.status !== 'Aprobado') {
+            throw new Error("Solo se pueden entregar pedidos que han sido aprobados.");
         }
-        
-        // This function will now handle everything atomically
-        await createDelivery(instituteId, {
-            recipientId: requestData.requesterId,
-            recipientName: requestData.requesterName,
-            items: requestData.items,
-            originRequestId: requestId,
-            notes: `Entrega basada en el pedido #${requestId.substring(0, 5)}...`,
-            deliveredById: user.uid,
-            deliveredByName: user.displayName || 'Sistema',
+        if (requestData.status === 'Entregado') {
+             throw new Error("Este pedido ya ha sido marcado como entregado.");
+        }
+
+        await runTransaction(db, async (transaction) => {
+            // Validate stock and prepare updates
+            for (const item of requestData.items) {
+                const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
+                const itemDoc = await transaction.get(itemRef);
+                if (!itemDoc.exists()) throw new Error(`Insumo ${item.name} no encontrado.`);
+                const currentStock = itemDoc.data().stock || 0;
+                const quantityToDeliver = item.approvedQuantity ?? item.requestedQuantity;
+                if (currentStock < quantityToDeliver) {
+                    throw new Error(`Stock insuficiente para "${item.name}". Stock: ${currentStock}, Solicitado: ${quantityToDeliver}.`);
+                }
+                const newStock = currentStock - quantityToDeliver;
+                transaction.update(itemRef, { stock: newStock });
+
+                const historyCol = collection(itemRef, 'stockHistory');
+                const historyDocRef = doc(historyCol);
+                transaction.set(historyDocRef, {
+                    timestamp: Timestamp.now(),
+                    userId: user.uid,
+                    userName: user.displayName || 'Sistema',
+                    change: -quantityToDeliver,
+                    newStock: newStock,
+                    notes: `Entrega pedido ${requestData.code} a ${requestData.requesterName}`,
+                });
+            }
+
+            // Update request status
+            transaction.update(requestRef, {
+                status: 'Entregado',
+                processedAt: Timestamp.now(),
+                deliveredById: user.uid,
+                deliveredByName: user.displayName,
+                pecosaCode: extraData.pecosaCode || null
+            });
         });
         
-    } else { // For 'Aprobado' or 'Rechazado'
+    } else { // For 'Rechazado' or other simple status changes
         const updateData: any = {
             status: newStatus,
             processedAt: Timestamp.now(),
@@ -2320,5 +2317,7 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
 
 
 
+
+    
 
     
