@@ -199,17 +199,11 @@ service cloud.firestore {
           }
       }
 
-       match /supplyRequests/{requestId} {
+      match /supplyRequests/{requestId} {
         allow read: if (isUserOfInstitute(instituteId) && resource.data.requesterId == getUserData().documentId) || hasPermission('admin:supplies:manage');
         allow create: if isUserOfInstitute(instituteId) && request.auth.uid == request.resource.data.requesterAuthUid;
         allow update: if hasPermission('admin:supplies:manage');
         allow delete: if hasPermission('admin:supplies:manage');
-      }
-      
-      match /deliveries/{deliveryId} {
-        allow read: if hasPermission('admin:supplies:manage') || hasPermission('admin:deliveries:view');
-        allow create: if hasPermission('admin:supplies:manage');
-        allow update, delete: if false; // Deliveries are immutable
       }
 
       match /counters/{counterId} {

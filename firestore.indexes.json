@@ -166,16 +166,6 @@
           "order": "DESCENDING"
         }
       ]
-    },
-    {
-      "collectionGroup": "deliveries",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "deliveryDate",
-          "order": "DESCENDING"
-        }
-      ]
     }
   ],
   "fieldOverrides": []

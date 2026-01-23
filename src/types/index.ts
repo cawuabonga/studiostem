@@ -298,36 +298,18 @@ export interface RequestedSupplyItem {
 
 export interface SupplyRequest {
     id: string;
+    code: string; // e.g., PED-2024-0001
     requesterId: string; // User's documentId
     requesterName: string;
     requesterAuthUid: string; // UID of user who made the request
     status: SupplyRequestStatus;
     items: RequestedSupplyItem[];
     createdAt: Timestamp;
-    processedAt?: Timestamp;
+    processedAt?: Timestamp; // Date of approval or rejection
     rejectionReason?: string;
-    deliveredBy?: string; // UID of admin who delivered
-}
-
-export interface DeliveryItem {
-    itemId: string;
-    name: string;
-    quantity: number;
-    unitOfMeasure: SupplyUnitOfMeasure;
-}
-
-export interface Delivery {
-    id: string;
-    code: string; // e.g., ENT-2024-0001
-    pecosaCode?: string; // Optional user-entered code
-    deliveryDate: Timestamp;
-    recipientId: string; // documentId of staff
-    recipientName: string;
-    items: DeliveryItem[];
-    originRequestId?: string; // ID of the SupplyRequest if it exists
-    notes?: string;
-    deliveredById: string; // UID of the admin who delivered
-    deliveredByName: string;
+    deliveredById?: string; // UID of admin who delivered
+    deliveredByName?: string;
+    pecosaCode?: string; // Optional code for the final delivery document
 }
 
 

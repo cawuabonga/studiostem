@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -6,7 +7,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { SupplyRequestStatus } from '@/types';
 import { AdminSupplyRequestsList } from './AdminSupplyRequestsList';
-import { AdminDeliveriesList } from './AdminDeliveriesList';
 
 export function SupplyRequestManager() {
     return (
@@ -23,7 +23,7 @@ export function SupplyRequestManager() {
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="Pendiente">Pendientes</TabsTrigger>
                     <TabsTrigger value="Aprobado">Aprobados</TabsTrigger>
-                    <TabsTrigger value="Entregado">Entregas (PECOSAS)</TabsTrigger>
+                    <TabsTrigger value="Entregado">Entregados</TabsTrigger>
                     <TabsTrigger value="Rechazado">Rechazados</TabsTrigger>
                 </TabsList>
                 <TabsContent value="Pendiente">
@@ -33,7 +33,7 @@ export function SupplyRequestManager() {
                     <AdminSupplyRequestsList status="Aprobado" key="Aprobado" />
                 </TabsContent>
                  <TabsContent value="Entregado">
-                    <AdminDeliveriesList />
+                    <AdminSupplyRequestsList status="Entregado" key="Entregado" />
                 </TabsContent>
                 <TabsContent value="Rechazado">
                     <AdminSupplyRequestsList status="Rechazado" key="Rechazado" />
