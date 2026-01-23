@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -695,7 +695,7 @@ export const addNonTeachingActivity = async (instituteId: string, data: Omit<Non
 
 export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
     const activitiesCol = getSubCollectionRef(instituteId, 'nonTeachingActivities');
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(query(activitiesCol));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingActivity));
 };
 
@@ -931,7 +931,44 @@ export const deleteSupplyItem = async (instituteId: string, itemId: string): Pro
     const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', itemId);
     // TODO: Add check if item is in stock before deleting
     await deleteDoc(itemRef);
-}
+};
+
+export const updateStock = async (instituteId: string, itemId: string, quantityChange: number, notes?: string): Promise<void> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuario no autenticado.");
+
+    const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', itemId);
+    const historyCol = collection(itemRef, 'stockHistory');
+
+    await runTransaction(db, async (transaction) => {
+        const itemDoc = await transaction.get(itemRef);
+        if (!itemDoc.exists()) {
+            throw new Error("El insumo no existe en el catálogo.");
+        }
+
+        const currentStock = itemDoc.data().stock || 0;
+        const newStock = currentStock + quantityChange;
+
+        transaction.update(itemRef, { stock: newStock });
+
+        const historyDocRef = doc(historyCol);
+        transaction.set(historyDocRef, {
+            timestamp: Timestamp.now(),
+            userId: user.uid,
+            userName: user.displayName || 'Sistema',
+            change: quantityChange,
+            newStock: newStock,
+            notes: notes || (quantityChange > 0 ? 'Entrada de stock' : 'Salida de stock'),
+        });
+    });
+};
+
+export const getSupplyItemHistory = async (instituteId: string, itemId: string): Promise<StockHistoryLog[]> => {
+    const historyCol = collection(db, 'institutes', instituteId, 'supplyCatalog', itemId, 'stockHistory');
+    const q = query(historyCol, orderBy("timestamp", "desc"), limit(50));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StockHistoryLog));
+};
 
 
 // --- ACADEMIC & MATRICULATION TYPES ---

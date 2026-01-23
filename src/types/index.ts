@@ -494,7 +494,17 @@ export interface SupplyItem {
     description?: string;
     unitOfMeasure: SupplyUnitOfMeasure;
     category?: string;
-    stock: number; // Denormalized current stock for quick access
+    stock: number;
+}
+
+export interface StockHistoryLog {
+    id: string;
+    timestamp: Timestamp;
+    userId: string;
+    userName: string;
+    change: number; // e.g., +50 or -5
+    newStock: number;
+    notes?: string; // e.g., "Compra OC-123" or "Entrega a Juan Perez"
 }
 
 export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado';
