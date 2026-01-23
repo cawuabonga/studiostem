@@ -246,25 +246,40 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
   const onSubmit = async (data: AssetFormValues) => {
     setIsSubmitting(true);
     try {
-        if (!selectedAssetTypeDetails) {
+        if (!selectedAssetTypeDetails && !selectedAsset) {
             throw new Error("El tipo de activo seleccionado no es válido o no se encontró.");
         }
         
-        const dataToSave = {
-            ...data,
-            acquisitionDate: data.acquisitionDate ? Timestamp.fromDate(data.acquisitionDate) : undefined,
-            characteristics: data.characteristics
+        const finalAssetTypeDetails = selectedAssetTypeDetails || await getAssetTypeById(instituteId, selectedAsset!.assetTypeId);
+        if (!finalAssetTypeDetails) {
+            throw new Error("No se pudieron cargar los detalles del tipo de activo.");
+        }
+
+        // Clean characteristics object to remove any keys with undefined, null or empty string values.
+        const cleanedCharacteristics = data.characteristics ? Object.fromEntries(
+            Object.entries(data.characteristics).filter(([, value]) => value != null && value !== '')
+        ) : {};
+        
+        const dataToSave: Partial<Omit<Asset, 'id' | 'name' | 'type' | 'codeOrSerial'>> = {
+            assetTypeId: data.assetTypeId,
+            status: data.status,
+            notes: data.notes,
+            characteristics: cleanedCharacteristics,
         };
+        
+        if (data.acquisitionDate) {
+            dataToSave.acquisitionDate = Timestamp.fromDate(data.acquisitionDate);
+        }
 
         if (selectedAsset) {
             await updateAsset(instituteId, buildingId, environmentId, selectedAsset.id, {
                 ...dataToSave,
-                name: selectedAssetTypeDetails.name,
-                type: selectedAssetTypeDetails.class,
+                name: finalAssetTypeDetails.name,
+                type: finalAssetTypeDetails.class,
             });
             toast({ title: "Activo Actualizado" });
         } else {
-            const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, dataToSave);
+            const newAssetId = await addAsset(instituteId, buildingId, environmentId, data.assetTypeId, dataToSave as Partial<Omit<Asset, 'id' | 'name' | 'type' | 'codeOrSerial'>>);
              toast({ title: "Activo Añadido", description: `El nuevo activo ha sido registrado con el código: ${newAssetId}` });
         }
         handleCloseForm(true);
@@ -389,7 +404,7 @@ export function AssetManager({ instituteId, buildingId, environmentId }: AssetMa
                                     <Input value={selectedAsset ? selectedAsset.codeOrSerial : nextAssetCode} disabled className="mt-2 font-mono" />
                                 </div>
                                 <FormField control={form.control} name="status" render={({ field }) => (<FormItem><FormLabel>Estado</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{assetStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)}/>
-                                <FormField control={form.control} name="acquisitionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="mb-2">Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
+                                <FormField control={form.control} name="acquisitionDate" render={({ field }) => (<FormItem className="flex flex-col"><FormLabel className="mb-2">Fecha de Adquisición</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus captionLayout="dropdown-buttons" fromYear={1990} toYear={new Date().getFullYear()} /></PopoverContent></Popover><FormMessage /></FormItem>)}/>
                             </div>
                             <Separator />
                             <div className="pt-4 grid grid-cols-1 lg:grid-cols-12 gap-6">
