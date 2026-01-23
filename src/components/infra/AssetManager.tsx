@@ -63,8 +63,21 @@ const assetSchema = z.object({
   status: z.enum(assetStatuses as [string, ...string[]], { required_error: 'Debe seleccionar un estado.' }),
   acquisitionDate: z.date().optional(),
   notes: z.string().optional(),
-  characteristics: z.record(z.string()).optional(),
+  characteristics: z.object({
+    marca: z.string().optional(),
+    modelo: z.string().optional(),
+    tipo: z.string().optional(),
+    color: z.string().optional(),
+    numero_serie: z.string().optional(),
+    placa_matricula: z.string().optional(),
+    año_fabricacion: z.string().optional(),
+    material: z.string().optional(),
+    dimension: z.string().optional(),
+    area: z.string().optional(),
+    ubicacion: z.string().optional(),
+  }).optional(),
 });
+
 
 type AssetFormValues = z.infer<typeof assetSchema>;
 
