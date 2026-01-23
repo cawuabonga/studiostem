@@ -17,9 +17,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
     
-    function isStaffOfInstitute(instituteId) {
-        let user = getUserData();
-        return user.instituteId == instituteId && user.role in ['Admin', 'Coordinator', 'Teacher'];
+    function hasPermission(permission) {
+      let user = getUserData();
+      // 1. Ensure user has an institute and a roleId
+      return user.instituteId != null && user.roleId != null &&
+            // 2. Get the specific role document from the user's institute
+            get(/databases/$(database)/documents/institutes/$(user.instituteId)/roles/$(user.roleId))
+            // 3. Check if the permission key exists and is true in the permissions map
+            .data.permissions[permission] == true;
     }
 
     function isOwner(userDocId) {
@@ -39,79 +44,164 @@ service cloud.firestore {
 
     // --- Global Config ---
     match /config/{document=**} {
-        // Public read for login design settings
         allow read: if true;
-        // Only SuperAdmins can modify global configurations
         allow write: if isSuperAdmin();
     }
     
     // --- Users Collection ---
     match /users/{userId} {
-      // Any user can read their own data.
-      allow read: if request.auth.uid == userId;
-      // Users can update their own profile, SuperAdmins can update any profile.
+      allow read: if request.auth.uid == userId || isSuperAdmin();
       allow write: if request.auth.uid == userId || isSuperAdmin();
     }
     
     // --- Institutes Collection ---
     match /institutes/{instituteId} {
-      // Anyone can read institute basic info (name, logo)
       allow read: if true;
-      // Only SuperAdmins can create, update, or delete institutes
       allow create, update, delete: if isSuperAdmin();
       
       // --- Institute Subcollections ---
 
-      // Any authenticated user can attempt to read profiles for linking
-      match /(staffProfiles|studentProfiles)/{profileId} {
-        allow read: if isUserAuthenticated();
-        allow write: if isStaffOfInstitute(instituteId);
+      match /staffProfiles/{profileId} {
+        allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+        allow write: if hasPermission('users:staff:manage') || isSuperAdmin();
+      }
+
+      match /studentProfiles/{profileId} {
+        allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+        allow write: if hasPermission('users:student:manage') || isSuperAdmin();
       }
       
-      // Any user of the institute can read roles.
       match /roles/{roleId} {
-        allow read: if isUserOfInstitute(instituteId);
-        allow write: if isSuperAdmin(); // Role definition managed by SuperAdmins
+        allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+        allow write: if isSuperAdmin();
       }
 
-      // Read access to units and programs is public for any user in the institute
-      match /(unidadesDidacticas|programs)/{docId} {
-        allow read: if isUserOfInstitute(instituteId);
-        allow write: if isStaffOfInstitute(instituteId);
+      match /programs/{docId} {
+        allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+        allow write: if hasPermission('academic:program:manage') || isSuperAdmin();
       }
 
-      // Rules for matriculations and academic records
-      match /(matriculations|academicRecords)/{recordId} {
-         allow read: if isOwner(resource.data.studentId) || isStaffOfInstitute(instituteId);
-         allow create, update, delete: if isStaffOfInstitute(instituteId);
+      match /unidadesDidacticas/{unitId} {
+        allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+        allow create, update, delete: if hasPermission('academic:program:manage') || hasPermission('academic:unit:manage:own') || isSuperAdmin();
+
+        match /data/{docId} {
+             allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+             allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage') || isSuperAdmin();
+        }
+        
+        match /weeklyPlanner/{docId} {
+            allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+            allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage') || isSuperAdmin();
+        }
+        
+        match /achievementIndicators/{docId} {
+            allow read: if isUserOfInstitute(instituteId) || isSuperAdmin();
+            allow write: if hasPermission('teacher:unit:view') || hasPermission('academic:program:manage') || isSuperAdmin();
+        }
       }
 
-      // Rules for attendance
+      match /matriculations/{recordId} {
+         allow read: if isOwner(resource.data.studentId) || hasPermission('academic:enrollment:manage') || isSuperAdmin();
+         allow create, update, delete: if hasPermission('academic:enrollment:manage') || isSuperAdmin();
+      }
+      
+      match /academicRecords/{recordId} {
+         allow read: if isOwner(resource.data.studentId) || hasPermission('teacher:unit:view') || isSuperAdmin();
+         allow create, update, delete: if hasPermission('teacher:unit:view') || isSuperAdmin();
+      }
+      
       match /attendance/{docId} {
-         allow read, write: if isStaffOfInstitute(instituteId);
+         allow read, write: if hasPermission('teacher:unit:view') || isSuperAdmin();
       }
       
-      // Rules for weekly planner and syllabus
-      match /unidadesDidacticas/{unitId}/{collection}/{docId} {
-        allow read: if isUserOfInstitute(instituteId);
-        allow write: if isStaffOfInstitute(instituteId);
-      }
-      
-      // Rules for assignments (teaching and non-teaching)
-      match /(assignments|nonTeachingActivities|nonTeachingAssignments)/{docId} {
-          allow read, write: if isStaffOfInstitute(instituteId);
+      match /assignments/{docId} {
+          allow read, write: if hasPermission('academic:assignment:manage') || isSuperAdmin();
       }
 
-      // Rules for payments
-      match /paymentConcepts/{docId} {
-          allow read: if isUserOfInstitute(instituteId);
-          allow write: if isStaffOfInstitute(instituteId);
+      match /nonTeachingActivities/{docId} {
+          allow read, write: if hasPermission('academic:program:manage') || isSuperAdmin();
       }
+
+      match /nonTeachingAssignments/{docId} {
+          allow read, write: if hasPermission('academic:assignment:manage') || isSuperAdmin();
+      }
+      
+      match /paymentConcepts/{docId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:fees:manage') || isSuperAdmin();
+      }
+
       match /payments/{docId} {
-          allow read: if isOwner(resource.data.studentId) || isStaffOfInstitute(instituteId);
-          allow create: if isOwner(request.resource.data.studentId);
-          allow update: if isStaffOfInstitute(instituteId);
+          allow read: if isOwner(resource.data.payerId) || hasPermission('admin:payments:validate') || isSuperAdmin();
+          allow create: if isOwner(request.resource.data.payerId) || hasPermission('admin:payments:validate') || isSuperAdmin();
+          allow update: if hasPermission('admin:payments:validate') || isSuperAdmin();
+      }
+
+      match /accessPoints/{docId} {
+          allow read, write: if hasPermission('admin:access-control:manage') || isSuperAdmin();
+      }
+
+      match /accessPoints/{apId}/accessLogs/{logId} {
+        allow read: if hasPermission('admin:access-control:manage') || isOwner(resource.data.userDocumentId) || isSuperAdmin();
+        allow write: if false; 
+      }
+      
+      match /news/{docId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:institute:manage') || isSuperAdmin();
+      }
+
+      match /albums/{albumId} {
+          allow read: if true;
+          allow write: if hasPermission('admin:institute:manage') || isSuperAdmin();
+
+          match /photos/{photoId} {
+            allow read: if true;
+            allow write: if hasPermission('admin:institute:manage') || isSuperAdmin();
+          }
+      }
+      
+      match /scheduleTemplates/{docId} {
+          allow read, write: if hasPermission('planning:schedule:manage') || isSuperAdmin();
+      }
+
+      match /schedules/{docId} {
+          allow read, write: if hasPermission('planning:schedule:manage') || isSuperAdmin();
+      }
+
+      match /buildings/{docId} {
+          allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
+      }
+
+       match /buildings/{buildingId}/environments/{envId} {
+          allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
+      }
+
+       match /buildings/{buildingId}/environments/{envId}/assets/{assetId} {
+          allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
+           match /history/{logId} {
+            allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
+          }
+      }
+
+       match /assetTypes/{docId} {
+          allow read, write: if hasPermission('admin:infra:manage') || isSuperAdmin();
+      }
+      
+       match /supplyCatalog/{itemId} {
+          allow read: if isUserOfInstitute(instituteId);
+          allow write: if hasPermission('admin:supplies:manage');
+      }
+
+       match /supplyRequests/{requestId} {
+        allow read: if (isUserOfInstitute(instituteId) && resource.data.requesterId == getUserData().documentId) || hasPermission('admin:supplies:manage');
+        allow create: if isUserOfInstitute(instituteId) && request.auth.uid == request.resource.data.requesterAuthUid;
+        allow update: if hasPermission('admin:supplies:manage');
+        allow delete: if hasPermission('admin:supplies:manage');
       }
     }
   }
 }
+
+    

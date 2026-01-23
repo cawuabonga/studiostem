@@ -263,6 +263,51 @@ export interface Payment {
 }
 
 
+// --- SUPPLIES & INVENTORY ---
+export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón';
+
+export interface SupplyItem {
+    id: string;
+    name: string;
+    description?: string;
+    unitOfMeasure: SupplyUnitOfMeasure;
+    category?: string;
+    stock: number;
+}
+
+export interface StockHistoryLog {
+    id: string;
+    timestamp: Timestamp;
+    userId: string;
+    userName: string;
+    change: number; // e.g., +50 or -5
+    newStock: number;
+    notes?: string; // e.g., "Compra OC-123" or "Entrega a Juan Perez"
+}
+
+export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado';
+
+export interface RequestedSupplyItem {
+    itemId: string;
+    name: string;
+    quantity: number;
+    unitOfMeasure: SupplyUnitOfMeasure;
+}
+
+export interface SupplyRequest {
+    id: string;
+    requesterId: string; // User's documentId
+    requesterName: string;
+    requesterAuthUid: string; // UID of user who made the request
+    status: SupplyRequestStatus;
+    items: RequestedSupplyItem[];
+    createdAt: Timestamp;
+    processedAt?: Timestamp;
+    rejectionReason?: string;
+    deliveredBy?: string; // UID of admin who delivered
+}
+
+
 // --- ACADEMIC & MATRICULATION TYPES ---
 
 export interface AcademicPeriodSettings {
@@ -485,48 +530,6 @@ export interface Asset {
     instituteId: string;
 }
 
-// --- SUPPLIES & INVENTORY ---
-export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón';
-
-export interface SupplyItem {
-    id: string;
-    name: string;
-    description?: string;
-    unitOfMeasure: SupplyUnitOfMeasure;
-    category?: string;
-    stock: number;
-}
-
-export interface StockHistoryLog {
-    id: string;
-    timestamp: Timestamp;
-    userId: string;
-    userName: string;
-    change: number; // e.g., +50 or -5
-    newStock: number;
-    notes?: string; // e.g., "Compra OC-123" or "Entrega a Juan Perez"
-}
-
-export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado';
-
-export interface RequestedSupplyItem {
-    itemId: string;
-    name: string;
-    quantity: number;
-    unitOfMeasure: SupplyUnitOfMeasure;
-}
-
-export interface SupplyRequest {
-    id: string;
-    requesterId: string; // User's documentId
-    requesterName: string;
-    status: SupplyRequestStatus;
-    items: RequestedSupplyItem[];
-    createdAt: Timestamp;
-    processedAt?: Timestamp;
-    rejectionReason?: string;
-    deliveredBy?: string; // UID of admin who delivered
-}
 
 
 // --- SCHEDULES / HORARIOS ---
@@ -686,3 +689,5 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
+    
