@@ -1025,11 +1025,11 @@ export const createDirectApprovedRequest = async (
 };
 
 
-export const getRequestsForUser = async (instituteId: string, requesterId: string): Promise<SupplyRequest[]> => {
+export const getRequestsForUser = async (instituteId: string, requesterAuthUid: string): Promise<SupplyRequest[]> => {
     const requestsCol = getSubCollectionRef(instituteId, 'supplyRequests');
     const q = query(
         requestsCol, 
-        where("requesterId", "==", requesterId), 
+        where("requesterAuthUid", "==", requesterAuthUid), 
         orderBy("createdAt", "desc")
     );
     const snapshot = await getDocs(q);

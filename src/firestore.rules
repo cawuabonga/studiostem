@@ -200,7 +200,7 @@ service cloud.firestore {
       }
 
       match /supplyRequests/{requestId} {
-        allow read: if (isUserOfInstitute(instituteId) && resource.data.requesterId == getUserData().documentId) || hasPermission('admin:supplies:manage');
+        allow read: if request.auth.uid == resource.data.requesterAuthUid || hasPermission('admin:supplies:manage');
         allow create: if isUserOfInstitute(instituteId) && request.auth.uid == request.resource.data.requesterAuthUid;
         allow update: if hasPermission('admin:supplies:manage');
         allow delete: if hasPermission('admin:supplies:manage');
