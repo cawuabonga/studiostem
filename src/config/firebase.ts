@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1005,67 +1005,107 @@ export const getSupplyRequestsByStatus = async (instituteId: string, status: Sup
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplyRequest));
 };
 
+export const getNextDeliveryCode = async (instituteId: string): Promise<string> => {
+    const counterRef = doc(db, 'institutes', instituteId, 'counters', 'deliveries');
+    const counterSnap = await getDoc(counterRef);
+    const newCount = (counterSnap.data()?.count || 0) + 1;
+    const year = new Date().getFullYear();
+    return `ENT-${year}-${String(newCount).padStart(4, '0')}`;
+}
+
+export const createDelivery = async (instituteId: string, deliveryData: Omit<Delivery, 'id' | 'code' | 'deliveryDate'>): Promise<void> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("Usuario no autenticado.");
+
+    await runTransaction(db, async (transaction) => {
+        const counterRef = doc(db, 'institutes', instituteId, 'counters', 'deliveries');
+        const counterSnap = await transaction.get(counterRef);
+        
+        const newCount = (counterSnap.data()?.count || 0) + 1;
+        const year = new Date().getFullYear();
+        const deliveryCode = `ENT-${year}-${String(newCount).padStart(4, '0')}`;
+        
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+
+        const deliveryCol = getSubCollectionRef(instituteId, 'deliveries');
+        const newDeliveryRef = doc(deliveryCol);
+        
+        transaction.set(newDeliveryRef, {
+            ...deliveryData,
+            code: deliveryCode,
+            deliveryDate: Timestamp.now(),
+        });
+        
+        for (const item of deliveryData.items) {
+            const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
+            const itemDoc = await transaction.get(itemRef);
+            if (!itemDoc.exists()) {
+                throw new Error(`El insumo "${item.name}" ya no existe en el catálogo.`);
+            }
+            const currentStock = itemDoc.data().stock || 0;
+            const newStock = currentStock - item.quantity;
+            
+            if (newStock < 0) {
+                throw new Error(`Stock insuficiente para "${item.name}". Stock actual: ${currentStock}, Solicitado: ${item.quantity}.`);
+            }
+            
+            transaction.update(itemRef, { stock: newStock });
+
+            const historyCol = collection(itemRef, 'stockHistory');
+            const historyDocRef = doc(historyCol);
+            transaction.set(historyDocRef, {
+                timestamp: Timestamp.now(),
+                userId: user.uid,
+                userName: user.displayName || 'Sistema',
+                change: -item.quantity,
+                newStock: newStock,
+                notes: `Entrega ${deliveryCode} a ${deliveryData.recipientName}`,
+            });
+        }
+    });
+};
+
 export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, newStatus: SupplyRequestStatus, extraData: { rejectionReason?: string } = {}): Promise<void> => {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuario no autenticado.");
 
     const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', requestId);
-
-    await runTransaction(db, async (transaction) => {
-        const requestDoc = await transaction.get(requestRef);
-        if (!requestDoc.exists()) {
-            throw new Error("El pedido no existe.");
+    const requestDoc = await getDoc(requestRef);
+    if (!requestDoc.exists()) {
+        throw new Error("El pedido no existe.");
+    }
+    const requestData = requestDoc.data() as SupplyRequest;
+    
+    if (newStatus === 'Entregado') {
+        if (requestData.status === 'Entregado') {
+            throw new Error("Este pedido ya ha sido marcado como entregado.");
         }
         
-        if (newStatus === 'Entregado') {
-            const requestData = requestDoc.data() as SupplyRequest;
-            if (requestData.status === 'Entregado') {
-                throw new Error("Este pedido ya ha sido marcado como entregado.");
-            }
+        await createDelivery(instituteId, {
+            recipientId: requestData.requesterId,
+            recipientName: requestData.requesterName,
+            items: requestData.items,
+            originRequestId: requestId,
+            notes: `Entrega basada en el pedido #${requestId.substring(0, 5)}...`,
+            deliveredById: user.uid,
+            deliveredByName: user.displayName || 'Sistema',
+        });
+        
+        await updateDoc(requestRef, {
+            status: 'Entregado',
+            processedAt: Timestamp.now(),
+            deliveredBy: user.uid
+        });
 
-            for (const item of requestData.items) {
-                const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
-                const itemDoc = await transaction.get(itemRef);
-                if (!itemDoc.exists()) {
-                    throw new Error(`El insumo "${item.name}" ya no existe en el catálogo.`);
-                }
-                const currentStock = itemDoc.data().stock || 0;
-                const newStock = currentStock - item.quantity;
-                
-                if (newStock < 0) {
-                    throw new Error(`Stock insuficiente para "${item.name}". Stock actual: ${currentStock}, Solicitado: ${item.quantity}.`);
-                }
-                
-                transaction.update(itemRef, { stock: newStock });
-
-                const historyCol = collection(itemRef, 'stockHistory');
-                const historyDocRef = doc(historyCol);
-                transaction.set(historyDocRef, {
-                    timestamp: Timestamp.now(),
-                    userId: user.uid,
-                    userName: user.displayName || 'Sistema',
-                    change: -item.quantity,
-                    newStock: newStock,
-                    notes: `Entrega por pedido #${requestId.substring(0, 5)}... a ${requestData.requesterName}`,
-                });
-            }
-             transaction.update(requestRef, {
-                status: 'Entregado',
-                processedAt: Timestamp.now(),
-                deliveredBy: user.uid,
-            });
-
-        } else {
-            const updateData: any = {
-                status: newStatus,
-                processedAt: Timestamp.now(),
-                ...extraData
-            };
-            transaction.update(requestRef, updateData);
-        }
-    });
+    } else {
+        const updateData: any = {
+            status: newStatus,
+            processedAt: Timestamp.now(),
+            ...extraData
+        };
+        await updateDoc(requestRef, updateData);
+    }
 };
-
 
 // --- ACADEMIC & MATRICULATION TYPES ---
 
@@ -2257,4 +2297,5 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
     
 
     
+
 

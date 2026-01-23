@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getSupplyCatalog, getStaffProfiles, createDelivery } from '@/config/firebase';
+import { getSupplyCatalog, getStaffProfiles, createDelivery, getNextDeliveryCode } from '@/config/firebase';
 import type { SupplyItem, RequestedSupplyItem, StaffProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { Label } from '../ui/label';
 
 export function DirectDeliveryForm() {
     const { instituteId, user } = useAuth();
@@ -33,17 +34,22 @@ export function DirectDeliveryForm() {
     
     const [popoverOpen, setPopoverOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    const [nextCode, setNextCode] = useState('');
+    const [pecosaCode, setPecosaCode] = useState('');
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const [fetchedItems, fetchedStaff] = await Promise.all([
+            const [fetchedItems, fetchedStaff, fetchedNextCode] = await Promise.all([
                 getSupplyCatalog(instituteId),
-                getStaffProfiles(instituteId)
+                getStaffProfiles(instituteId),
+                getNextDeliveryCode(instituteId)
             ]);
             setCatalog(fetchedItems);
             setAllStaff(fetchedStaff);
+            setNextCode(fetchedNextCode);
         } catch (error) {
             toast({ title: "Error", description: "No se pudo cargar el catálogo o el personal.", variant: "destructive" });
         } finally {
@@ -95,6 +101,7 @@ export function DirectDeliveryForm() {
                 notes: 'Entrega directa en almacén.',
                 deliveredById: user.uid,
                 deliveredByName: user.displayName || 'Sistema',
+                pecosaCode: pecosaCode,
             });
             
             toast({ title: "Entrega Registrada", description: "La entrega se ha guardado y el stock ha sido actualizado." });
@@ -121,39 +128,49 @@ export function DirectDeliveryForm() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                <div className="max-w-sm space-y-2">
-                     <label className="font-medium text-sm">Personal que recibe</label>
-                    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" className="w-full justify-between">
-                                <span className="truncate">{selectedStaff?.displayName || "Seleccione un personal..."}</span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
-                            <Command>
-                                <CommandInput placeholder="Buscar personal..." />
-                                <CommandList>
-                                <CommandEmpty>No se encontró personal.</CommandEmpty>
-                                <CommandGroup>
-                                    {allStaff.map(staff => (
-                                        <CommandItem
-                                            key={staff.documentId}
-                                            value={staff.displayName}
-                                            onSelect={() => {
-                                                setSelectedStaff(staff);
-                                                setPopoverOpen(false);
-                                            }}
-                                        >
-                                             <Check className={cn("mr-2 h-4 w-4", selectedStaff?.documentId === staff.documentId ? "opacity-100" : "opacity-0")} />
-                                            {staff.displayName}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <label className="font-medium text-sm">Personal que recibe</label>
+                        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between">
+                                    <span className="truncate">{selectedStaff?.displayName || "Seleccione un personal..."}</span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                                <Command>
+                                    <CommandInput placeholder="Buscar personal..." />
+                                    <CommandList>
+                                    <CommandEmpty>No se encontró personal.</CommandEmpty>
+                                    <CommandGroup>
+                                        {allStaff.map(staff => (
+                                            <CommandItem
+                                                key={staff.documentId}
+                                                value={staff.displayName}
+                                                onSelect={() => {
+                                                    setSelectedStaff(staff);
+                                                    setPopoverOpen(false);
+                                                }}
+                                            >
+                                                <Check className={cn("mr-2 h-4 w-4", selectedStaff?.documentId === staff.documentId ? "opacity-100" : "opacity-0")} />
+                                                {staff.displayName}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="delivery-code">Código de Entrega (Autogenerado)</Label>
+                        <Input id="delivery-code" value={nextCode} disabled />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="pecosa-code">Código PECOSA (Opcional)</Label>
+                        <Input id="pecosa-code" value={pecosaCode} onChange={(e) => setPecosaCode(e.target.value)} placeholder="Ej: PECOSA-001-2024" />
+                    </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">

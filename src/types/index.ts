@@ -319,6 +319,7 @@ export interface DeliveryItem {
 export interface Delivery {
     id: string;
     code: string; // e.g., ENT-2024-0001
+    pecosaCode?: string; // Optional user-entered code
     deliveryDate: Timestamp;
     recipientId: string; // documentId of staff
     recipientName: string;
