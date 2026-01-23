@@ -1005,7 +1005,7 @@ export const getSupplyRequestsByStatus = async (instituteId: string, status: Sup
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplyRequest));
 };
 
-export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, status: SupplyRequestStatus, extraData: { rejectionReason?: string } = {}): Promise<void> => {
+export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, newStatus: SupplyRequestStatus, extraData: { rejectionReason?: string } = {}): Promise<void> => {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuario no autenticado.");
 
@@ -1016,17 +1016,13 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
         if (!requestDoc.exists()) {
             throw new Error("El pedido no existe.");
         }
-        const requestData = requestDoc.data() as SupplyRequest;
+        
+        if (newStatus === 'Entregado') {
+            const requestData = requestDoc.data() as SupplyRequest;
+            if (requestData.status === 'Entregado') {
+                throw new Error("Este pedido ya ha sido marcado como entregado.");
+            }
 
-        const updateData: any = {
-            status,
-            processedAt: Timestamp.now(),
-            ...extraData,
-        };
-
-        if (status === 'Entregado') {
-            updateData.deliveredBy = user.uid;
-            
             for (const item of requestData.items) {
                 const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
                 const itemDoc = await transaction.get(itemRef);
@@ -1053,9 +1049,20 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
                     notes: `Entrega por pedido #${requestId.substring(0, 5)}... a ${requestData.requesterName}`,
                 });
             }
+             transaction.update(requestRef, {
+                status: 'Entregado',
+                processedAt: Timestamp.now(),
+                deliveredBy: user.uid,
+            });
+
+        } else {
+            const updateData: any = {
+                status: newStatus,
+                processedAt: Timestamp.now(),
+                ...extraData
+            };
+            transaction.update(requestRef, updateData);
         }
-        
-        transaction.update(requestRef, updateData);
     });
 };
 
@@ -2250,3 +2257,4 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
     
 
     
+
