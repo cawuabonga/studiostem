@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getSupplyCatalog, getStaffProfiles, createDirectSupplyRequest } from '@/config/firebase';
-import type { SupplyItem, RequestedSupplyItem, StaffProfile } from '@/types';
+import { getSupplyCatalog, getStaffProfiles, createDirectApprovedRequest } from '@/config/firebase';
+import type { SupplyItem, SupplyRequestItem, StaffProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '../ui/skeleton';
@@ -27,7 +28,7 @@ export function DirectDeliveryForm() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [requestItems, setRequestItems] = useState<Map<string, RequestedSupplyItem>>(new Map());
+    const [requestItems, setRequestItems] = useState<Map<string, SupplyRequestItem>>(new Map());
     const [selectedStaff, setSelectedStaff] = useState<StaffProfile | null>(null);
     
     const [popoverOpen, setPopoverOpen] = useState(false);
@@ -54,11 +55,11 @@ export function DirectDeliveryForm() {
 
     const handleAddItem = (item: SupplyItem) => {
         if (requestItems.has(item.id)) return;
-        const newItem: RequestedSupplyItem = {
+        const newItem: SupplyRequestItem = {
             itemId: item.id,
             name: item.name,
             unitOfMeasure: item.unitOfMeasure,
-            quantity: 1
+            requestedQuantity: 1,
         };
         const newItems = new Map(requestItems);
         newItems.set(item.id, newItem);
@@ -75,7 +76,7 @@ export function DirectDeliveryForm() {
         const item = requestItems.get(itemId);
         if (item) {
             const newItems = new Map(requestItems);
-            newItems.set(itemId, { ...item, quantity: Math.max(1, quantity) });
+            newItems.set(itemId, { ...item, requestedQuantity: Math.max(1, quantity) });
             setRequestItems(newItems);
         }
     };
@@ -87,7 +88,7 @@ export function DirectDeliveryForm() {
         }
         setIsSubmitting(true);
         try {
-            await createDirectSupplyRequest(instituteId, {
+            await createDirectApprovedRequest(instituteId, {
                 requesterId: selectedStaff.documentId,
                 requesterName: selectedStaff.displayName,
                 requesterAuthUid: user.uid, // The admin is creating this on their behalf
@@ -185,7 +186,7 @@ export function DirectDeliveryForm() {
                                         <TableRow key={item.itemId}>
                                             <TableCell>{item.name}</TableCell>
                                             <TableCell className="w-[100px]">
-                                                <Input type="number" min="1" value={item.quantity} onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value, 10))} className="h-8"/>
+                                                <Input type="number" min="1" value={item.requestedQuantity} onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value, 10))} className="h-8"/>
                                             </TableCell>
                                             <TableCell className="text-right w-[50px]">
                                                 <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => handleRemoveItem(item.itemId)}><Trash2 className="h-4 w-4"/></Button>
@@ -209,3 +210,4 @@ export function DirectDeliveryForm() {
         </Card>
     );
 }
+    

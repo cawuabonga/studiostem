@@ -287,13 +287,14 @@ export interface StockHistoryLog {
     notes?: string; // e.g., "Compra OC-123" or "Entrega a Juan Perez"
 }
 
-export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado';
+export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado' | 'Anulado';
 
-export interface RequestedSupplyItem {
+export interface SupplyRequestItem {
     itemId: string;
     name: string;
-    quantity: number;
     unitOfMeasure: SupplyUnitOfMeasure;
+    requestedQuantity: number;
+    approvedQuantity?: number; // Set on approval
 }
 
 export interface SupplyRequest {
@@ -303,11 +304,13 @@ export interface SupplyRequest {
     requesterName: string;
     requesterAuthUid: string; // UID of user who made the request
     status: SupplyRequestStatus;
-    items: RequestedSupplyItem[];
+    items: SupplyRequestItem[];
     createdAt: Timestamp;
-    processedAt?: Timestamp; // Date of approval or rejection
+    processedAt?: Timestamp; // Date of approval, rejection or delivery
     rejectionReason?: string;
-    deliveredById?: string; // UID of admin who delivered
+    approvedById?: string;
+    approvedByName?: string;
+    deliveredById?: string;
     deliveredByName?: string;
     pecosaCode?: string; // Optional code for the final delivery document
 }
