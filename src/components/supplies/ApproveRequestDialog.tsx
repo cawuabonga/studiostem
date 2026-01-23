@@ -37,7 +37,7 @@ export function ApproveRequestDialog({ isOpen, onClose, request, onConfirm }: Ap
     if (request) {
       const initialMap = new Map<string, number>();
       request.items.forEach(item => {
-        initialMap.set(item.itemId, item.requestedQuantity);
+        initialMap.set(item.itemId, item.approvedQuantity ?? item.requestedQuantity);
       });
       setApprovedItems(initialMap);
     }
