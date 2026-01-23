@@ -1,8 +1,9 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getSupplyCatalog } from '@/config/firebase';
-import type { SupplyItem, RequestedSupplyItem } from '@/types';
+import type { SupplyItem, SupplyRequestItem } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '../ui/skeleton';
@@ -22,7 +23,7 @@ export function SupplyRequestForm() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const [requestItems, setRequestItems] = useState<Map<string, RequestedSupplyItem>>(new Map());
+    const [requestItems, setRequestItems] = useState<Map<string, SupplyRequestItem>>(new Map());
     
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -43,11 +44,11 @@ export function SupplyRequestForm() {
 
     const handleAddItem = (item: SupplyItem) => {
         if (requestItems.has(item.id)) return;
-        const newItem: RequestedSupplyItem = {
+        const newItem: SupplyRequestItem = {
             itemId: item.id,
             name: item.name,
             unitOfMeasure: item.unitOfMeasure,
-            quantity: 1
+            requestedQuantity: 1,
         };
         const newItems = new Map(requestItems);
         newItems.set(item.id, newItem);
@@ -64,7 +65,7 @@ export function SupplyRequestForm() {
         const item = requestItems.get(itemId);
         if (item) {
             const newItems = new Map(requestItems);
-            newItems.set(itemId, { ...item, quantity: Math.max(1, quantity) });
+            newItems.set(itemId, { ...item, requestedQuantity: Math.max(1, quantity) });
             setRequestItems(newItems);
         }
     };
@@ -163,7 +164,7 @@ export function SupplyRequestForm() {
                                         <Input 
                                             type="number" 
                                             min="1"
-                                            value={item.quantity}
+                                            value={item.requestedQuantity}
                                             onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value, 10))}
                                             className="h-8"
                                         />
@@ -182,5 +183,3 @@ export function SupplyRequestForm() {
         </div>
     );
 }
-
-    

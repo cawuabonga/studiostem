@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -73,7 +74,7 @@ export function MySupplyRequests() {
                                         <TableCell>
                                             <ul className="list-disc list-inside">
                                                 {req.items.map(item => (
-                                                    <li key={item.itemId}>{item.quantity} x {item.name} ({item.unitOfMeasure})</li>
+                                                    <li key={item.itemId}>{item.requestedQuantity} x {item.name} ({item.unitOfMeasure})</li>
                                                 ))}
                                             </ul>
                                         </TableCell>
@@ -105,5 +106,3 @@ export function MySupplyRequests() {
         </Card>
     );
 }
-
-    
