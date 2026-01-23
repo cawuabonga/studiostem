@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -76,13 +75,14 @@ export function DirectDeliveryForm() {
         const item = requestItems.get(itemId);
         if (item) {
             const newItems = new Map(requestItems);
-            newItems.set(itemId, { ...item, requestedQuantity: Math.max(1, quantity) });
+            const validQuantity = isNaN(quantity) ? 1 : Math.max(1, quantity);
+            newItems.set(itemId, { ...item, requestedQuantity: validQuantity });
             setRequestItems(newItems);
         }
     };
     
     const handleRegisterRequest = async () => {
-        if (requestItems.size === 0 || !selectedStaff || !instituteId || !user?.documentId) {
+        if (requestItems.size === 0 || !selectedStaff || !instituteId || !user) {
             toast({ title: "Datos Incompletos", description: "Seleccione un personal y al menos un insumo.", variant: "destructive"});
             return;
         }
@@ -186,7 +186,7 @@ export function DirectDeliveryForm() {
                                         <TableRow key={item.itemId}>
                                             <TableCell>{item.name}</TableCell>
                                             <TableCell className="w-[100px]">
-                                                <Input type="number" min="1" value={item.requestedQuantity} onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value, 10))} className="h-8"/>
+                                                <Input type="number" min="1" value={item.requestedQuantity} onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value) || 1)} className="h-8"/>
                                             </TableCell>
                                             <TableCell className="text-right w-[50px]">
                                                 <Button size="icon" variant="ghost" className="text-destructive h-8 w-8" onClick={() => handleRemoveItem(item.itemId)}><Trash2 className="h-4 w-4"/></Button>
@@ -210,4 +210,3 @@ export function DirectDeliveryForm() {
         </Card>
     );
 }
-    

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -65,14 +64,15 @@ export function SupplyRequestForm() {
         const item = requestItems.get(itemId);
         if (item) {
             const newItems = new Map(requestItems);
-            newItems.set(itemId, { ...item, requestedQuantity: Math.max(1, quantity) });
+            const validQuantity = isNaN(quantity) ? 1 : Math.max(1, quantity);
+            newItems.set(itemId, { ...item, requestedQuantity: validQuantity });
             setRequestItems(newItems);
         }
     };
     
     const handleSubmitRequest = async () => {
         if (requestItems.size === 0 || !instituteId || !user?.documentId) {
-            toast({ title: "Pedido Vacío", description: "Añada al menos un insumo a su pedido.", variant: "destructive"});
+            toast({ title: "Pedido Vacío", description: "Añada al menos un insumo a su pedido o asegúrese de que su perfil esté correctamente vinculado.", variant: "destructive"});
             return;
         }
         setIsSubmitting(true);
@@ -165,7 +165,7 @@ export function SupplyRequestForm() {
                                             type="number" 
                                             min="1"
                                             value={item.requestedQuantity}
-                                            onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value, 10))}
+                                            onChange={(e) => handleQuantityChange(item.itemId, parseInt(e.target.value) || 1)}
                                             className="h-8"
                                         />
                                     </TableCell>
