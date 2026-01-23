@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Eye, Check, X, Info, FileX, RotateCcw } from 'lucide-react';
+import { Eye, Check, X, Info, FileX, RotateCcw, Loader2 } from 'lucide-react';
 import { ApprovePaymentDialog } from './ApprovePaymentDialog';
 import { RejectPaymentDialog } from './RejectPaymentDialog';
 import { AnnulPaymentDialog } from './AnnulPaymentDialog'; // New Import
