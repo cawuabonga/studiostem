@@ -1057,38 +1057,62 @@ export const updateSupplyRequest = async (instituteId: string, requestId: string
 };
 
 
-export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, newStatus: SupplyRequestStatus, extraData: { rejectionReason?: string; pecosaCode?: string; } = {}): Promise<void> => {
+export const updateSupplyRequestStatus = async (
+    instituteId: string, 
+    requestId: string, 
+    newStatus: SupplyRequestStatus, 
+    extraData: { rejectionReason?: string; pecosaCode?: string; } = {}
+): Promise<void> => {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuario no autenticado.");
 
     const requestRef = doc(db, 'institutes', instituteId, 'supplyRequests', requestId);
     
     if (newStatus === 'Entregado') {
-        const requestDoc = await getDoc(requestRef);
-        if (!requestDoc.exists()) {
-            throw new Error("El pedido no existe.");
-        }
-        const requestData = requestDoc.data() as SupplyRequest;
-
-        if (requestData.status !== 'Aprobado') {
-            throw new Error("Solo se pueden entregar pedidos que han sido aprobados.");
-        }
-        if (requestData.status === 'Entregado') {
-             throw new Error("Este pedido ya ha sido marcado como entregado.");
-        }
-
         await runTransaction(db, async (transaction) => {
-            // Validate stock and prepare updates
+            const requestDoc = await transaction.get(requestRef);
+            if (!requestDoc.exists()) {
+                throw new Error("El pedido no existe.");
+            }
+            const requestData = requestDoc.data() as SupplyRequest;
+
+            if (requestData.status !== 'Aprobado') {
+                throw new Error("Solo se pueden entregar pedidos que han sido aprobados.");
+            }
+            if (requestData.status === 'Entregado') {
+                throw new Error("Este pedido ya ha sido marcado como entregado.");
+            }
+            
+            const supplyItemDocs = new Map<string, DocumentSnapshot>();
+
+            // 1. READ PHASE
             for (const item of requestData.items) {
                 const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
                 const itemDoc = await transaction.get(itemRef);
-                if (!itemDoc.exists()) throw new Error(`Insumo ${item.name} no encontrado.`);
-                const currentStock = itemDoc.data().stock || 0;
+                if (!itemDoc.exists()) {
+                    throw new Error(`Insumo ${item.name} no encontrado en el catálogo.`);
+                }
+                supplyItemDocs.set(item.itemId, itemDoc);
+            }
+
+            // 2. VALIDATION PHASE
+            for (const item of requestData.items) {
+                const itemDoc = supplyItemDocs.get(item.itemId)!;
+                const currentStock = itemDoc.data()?.stock || 0;
                 const quantityToDeliver = item.approvedQuantity ?? item.requestedQuantity;
                 if (currentStock < quantityToDeliver) {
-                    throw new Error(`Stock insuficiente para "${item.name}". Stock: ${currentStock}, Solicitado: ${quantityToDeliver}.`);
+                    throw new Error(`Stock insuficiente para "${item.name}". Stock actual: ${currentStock}, se necesita: ${quantityToDeliver}.`);
                 }
+            }
+
+            // 3. WRITE PHASE
+            for (const item of requestData.items) {
+                const itemDoc = supplyItemDocs.get(item.itemId)!;
+                const itemRef = itemDoc.ref;
+                const currentStock = itemDoc.data()?.stock || 0;
+                const quantityToDeliver = item.approvedQuantity ?? item.requestedQuantity;
                 const newStock = currentStock - quantityToDeliver;
+                
                 transaction.update(itemRef, { stock: newStock });
 
                 const historyCol = collection(itemRef, 'stockHistory');
@@ -1103,7 +1127,6 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
                 });
             }
 
-            // Update request status
             transaction.update(requestRef, {
                 status: 'Entregado',
                 processedAt: Timestamp.now(),
@@ -1112,7 +1135,6 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
                 pecosaCode: extraData.pecosaCode || null
             });
         });
-        
     } else { // For 'Rechazado' or other simple status changes
         const updateData: any = {
             status: newStatus,
