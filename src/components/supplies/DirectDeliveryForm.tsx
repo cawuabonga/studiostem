@@ -1,7 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getSupplyCatalog, getStaffProfiles, updateStock } from '@/config/firebase';
+import { getSupplyCatalog, getStaffProfiles, createDelivery } from '@/config/firebase';
 import type { SupplyItem, RequestedSupplyItem, StaffProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -81,17 +82,23 @@ export function DirectDeliveryForm() {
     };
     
     const handleRegisterDelivery = async () => {
-        if (deliveryItems.size === 0 || !selectedStaff || !instituteId) {
+        if (deliveryItems.size === 0 || !selectedStaff || !instituteId || !user) {
             toast({ title: "Datos Incompletos", description: "Seleccione un personal y al menos un insumo.", variant: "destructive"});
             return;
         }
         setIsSubmitting(true);
         try {
-            for (const item of deliveryItems.values()) {
-                await updateStock(instituteId, item.itemId, -item.quantity, `Entrega directa a ${selectedStaff.displayName}`);
-            }
-            toast({ title: "Entrega Registrada", description: "El stock ha sido actualizado." });
-            router.push('/dashboard/gestion-administrativa/abastecimiento/stock');
+            await createDelivery(instituteId, {
+                recipientId: selectedStaff.documentId,
+                recipientName: selectedStaff.displayName,
+                items: Array.from(deliveryItems.values()),
+                notes: 'Entrega directa en almacén.',
+                deliveredById: user.uid,
+                deliveredByName: user.displayName || 'Sistema',
+            });
+            
+            toast({ title: "Entrega Registrada", description: "La entrega se ha guardado y el stock ha sido actualizado." });
+            router.push('/dashboard/gestion-administrativa/abastecimiento');
         } catch (error: any) {
             toast({ title: "Error al Registrar", description: error.message, variant: "destructive" });
         } finally {

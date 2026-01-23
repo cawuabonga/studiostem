@@ -309,6 +309,26 @@ export interface SupplyRequest {
     deliveredBy?: string; // UID of admin who delivered
 }
 
+export interface DeliveryItem {
+    itemId: string;
+    name: string;
+    quantity: number;
+    unitOfMeasure: SupplyUnitOfMeasure;
+}
+
+export interface Delivery {
+    id: string;
+    code: string; // e.g., ENT-2024-0001
+    deliveryDate: Timestamp;
+    recipientId: string; // documentId of staff
+    recipientName: string;
+    items: DeliveryItem[];
+    originRequestId?: string; // ID of the SupplyRequest if it exists
+    notes?: string;
+    deliveredById: string; // UID of the admin who delivered
+    deliveredByName: string;
+}
+
 
 // --- ACADEMIC & MATRICULATION TYPES ---
 
@@ -590,6 +610,7 @@ export type Permission =
   | 'admin:institute:manage'
   | 'admin:infra:manage'
   | 'admin:supplies:manage'
+  | 'admin:deliveries:view'
   // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
@@ -636,6 +657,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
             { id: 'admin:infra:manage', label: 'Gestionar Infraestructura (Edificios, Ambientes, Activos)' },
             { id: 'admin:supplies:manage', label: 'Gestionar Abastecimiento e Insumos' },
+            { id: 'admin:deliveries:view', label: 'Ver Entregas (PECOSAS)' },
         ],
     },
     {

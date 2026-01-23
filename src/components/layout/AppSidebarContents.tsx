@@ -42,7 +42,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view'] },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view'] },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
     
