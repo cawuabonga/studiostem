@@ -95,7 +95,7 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                             <p className="mt-1 text-sm">No se encontraron pedidos con el estado "{status}".</p>
                         </div>
                     ) : (
-                        <div className="rounded-md border">
+                        <div className="rounded-md border overflow-auto max-h-[60vh]">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
