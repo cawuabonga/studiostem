@@ -1,11 +1,16 @@
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Archive, Edit, List, PlusCircle } from "lucide-react";
+import { Archive, Edit, List, PlusCircle, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 
 const modules = [
+  {
+    title: "Dashboard de Abastecimiento",
+    description: "Vista general de pedidos, stock e indicadores clave.",
+    href: "/dashboard/gestion-administrativa/abastecimiento/dashboard",
+    icon: LayoutDashboard,
+  },
   {
     title: "Catálogo de Insumos",
     description: "Crear y administrar los tipos de insumos (papel, toner, etc.) disponibles en el instituto.",
