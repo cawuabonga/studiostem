@@ -62,10 +62,41 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
             (req.code || '').toLowerCase().includes(filter.toLowerCase())
         );
     }, [requests, filter]);
-
+    
     const handlePrint = (request: SupplyRequest) => {
         setSelectedRequest(request);
         setIsPrintPecosaOpen(true);
+    };
+    
+    const handleActualPrint = () => {
+        const printContent = document.getElementById('pecosa-print-area')?.innerHTML;
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printContent) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>PECOSA - ${selectedRequest?.code}</title>
+                        ${styles}
+                         <style>
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                            }
+                        </style>
+                    </head>
+                    <body>${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
     };
 
     if (loading) {
@@ -223,17 +254,23 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                             <DialogTitle>Previsualización de PECOSA</DialogTitle>
                         </DialogHeader>
                         <div className="flex-1 py-4 bg-gray-100 rounded-md overflow-y-auto">
-                            <div className="p-4 sm:p-8">
+                           <div style={{ transform: 'scale(0.8)', transformOrigin: 'top center' }}>
                                 <PrintPecosa request={selectedRequest} institute={institute} />
                             </div>
                         </div>
                         <DialogFooter className="mt-4 flex-shrink-0">
                             <Button variant="ghost" onClick={() => setIsPrintPecosaOpen(false)}>Cerrar</Button>
-                            <Button onClick={() => window.print()}>Imprimir</Button>
+                            <Button onClick={handleActualPrint}>Imprimir</Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
             )}
+
+            <div id="pecosa-print-area" className="hidden">
+                 {selectedRequest && institute && (
+                    <PrintPecosa request={selectedRequest} institute={institute} />
+                 )}
+            </div>
         </>
     )
 }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -15,7 +14,7 @@ export function PrintPecosa({ request, institute }: PrintPecosaProps) {
     const today = new Date();
 
     return (
-        <div className="printable-area p-8 font-sans text-black bg-white">
+        <div className="print-page-preview p-8 font-sans text-black bg-white">
              <header className="print-header flex items-center justify-between mb-4 pb-4 border-b-2 border-black">
                 <div className="flex items-center gap-4">
                     {institute?.logoUrl && (
