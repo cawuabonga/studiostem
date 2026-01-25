@@ -95,7 +95,7 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                             <p className="mt-1 text-sm">No se encontraron pedidos con el estado "{status}".</p>
                         </div>
                     ) : (
-                        <div className="rounded-md border overflow-auto max-h-[60vh]">
+                        <div className="rounded-md border max-h-[60vh] overflow-y-auto">
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -217,15 +217,17 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                 />
             )}
             {selectedRequest && institute && isPrintPecosaOpen && (
-                 <Dialog open={isPrintPecosaOpen} onOpenChange={setIsPrintPecosaOpen}>
-                    <DialogContent className="max-w-4xl">
+                <Dialog open={isPrintPecosaOpen} onOpenChange={setIsPrintPecosaOpen}>
+                    <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
                         <DialogHeader>
                             <DialogTitle>Previsualización de PECOSA</DialogTitle>
                         </DialogHeader>
-                        <div className="py-4 bg-gray-200 overflow-y-auto">
-                            <PrintPecosa request={selectedRequest} institute={institute} />
+                        <div className="flex-1 py-4 bg-gray-100 rounded-md overflow-y-auto">
+                            <div className="p-4 sm:p-8">
+                                <PrintPecosa request={selectedRequest} institute={institute} />
+                            </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className="mt-4 flex-shrink-0">
                             <Button variant="ghost" onClick={() => setIsPrintPecosaOpen(false)}>Cerrar</Button>
                             <Button onClick={() => window.print()}>Imprimir</Button>
                         </DialogFooter>
