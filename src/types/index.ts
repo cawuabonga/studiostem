@@ -308,10 +308,13 @@ export interface SupplyRequest {
     createdAt: Timestamp;
     processedAt?: Timestamp; // Date of approval, rejection or delivery
     rejectionReason?: string;
+    annulmentReason?: string;
     approvedById?: string;
     approvedByName?: string;
     deliveredById?: string;
     deliveredByName?: string;
+    annulledById?: string;
+    annulledByName?: string;
     pecosaCode?: string; // Optional code for the final delivery document
 }
 

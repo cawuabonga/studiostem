@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -9,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
-import { Check, X, Truck, Info, Loader2 } from 'lucide-react';
+import { Eye, Check, X, Truck, Info, Loader2, RotateCcw, Printer } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { ApproveRequestDialog } from './ApproveRequestDialog';
@@ -17,6 +18,9 @@ import { RejectRequestDialog } from './RejectRequestDialog';
 import { DeliverRequestDialog } from './DeliverRequestDialog';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { AnnulRequestDialog } from './AnnulRequestDialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { PrintPecosa } from './PrintPecosa';
 
 
 interface AdminSupplyRequestsListProps {
@@ -24,7 +28,7 @@ interface AdminSupplyRequestsListProps {
 }
 
 export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps) {
-    const { instituteId } = useAuth();
+    const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     const [requests, setRequests] = useState<SupplyRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -33,6 +37,8 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
     const [isApproveOpen, setIsApproveOpen] = useState(false);
     const [isRejectOpen, setIsRejectOpen] = useState(false);
     const [isDeliverOpen, setIsDeliverOpen] = useState(false);
+    const [isAnnulOpen, setIsAnnulOpen] = useState(false);
+    const [isPrintPecosaOpen, setIsPrintPecosaOpen] = useState(false);
     
     const [filter, setFilter] = useState('');
 
@@ -57,6 +63,11 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
             (req.code || '').toLowerCase().includes(filter.toLowerCase())
         );
     }, [requests, filter]);
+
+    const handlePrint = (request: SupplyRequest) => {
+        setSelectedRequest(request);
+        setIsPrintPecosaOpen(true);
+    };
 
     if (loading) {
         return <Skeleton className="h-48 w-full" />;
@@ -93,6 +104,10 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                                         <TableHead>Fecha</TableHead>
                                         <TableHead>Solicitante</TableHead>
                                         <TableHead>Insumos</TableHead>
+                                        {status === 'Entregado' && <TableHead>Fecha Entrega</TableHead>}
+                                        {status === 'Entregado' && <TableHead>PECOSA</TableHead>}
+                                        {status === 'Anulado' && <TableHead>Fecha Anulación</TableHead>}
+                                        {status === 'Anulado' && <TableHead>Motivo</TableHead>}
                                         <TableHead className="text-right">Acciones</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -114,6 +129,10 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                                                     ))}
                                                 </ul>
                                             </TableCell>
+                                            {status === 'Entregado' && <TableCell className="text-xs">{req.processedAt ? format(req.processedAt.toDate(), 'dd/MM/yy HH:mm') : 'N/A'}</TableCell>}
+                                            {status === 'Entregado' && <TableCell className="font-mono text-xs">{req.pecosaCode || 'N/A'}</TableCell>}
+                                            {status === 'Anulado' && <TableCell className="text-xs">{req.processedAt ? format(req.processedAt.toDate(), 'dd/MM/yy HH:mm') : 'N/A'}</TableCell>}
+                                            {status === 'Anulado' && <TableCell className="text-xs text-destructive italic">{req.annulmentReason || 'N/A'}</TableCell>}
                                             <TableCell className="text-right">
                                                 {status === 'Pendiente' && (
                                                     <TooltipProvider>
@@ -145,6 +164,16 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                                                     <Button size="sm" onClick={() => { setSelectedRequest(req); setIsDeliverOpen(true); }}>
                                                         <Truck className="mr-2 h-4 w-4"/> Entregar (PECOSA)
                                                     </Button>
+                                                )}
+                                                {status === 'Entregado' && (
+                                                     <div className="space-x-1">
+                                                        <Button variant="outline" size="sm" onClick={() => handlePrint(req)}>
+                                                            <Printer className="mr-2 h-4 w-4"/> Imprimir
+                                                        </Button>
+                                                         <Button variant="destructive" size="sm" onClick={() => { setSelectedRequest(req); setIsAnnulOpen(true); }}>
+                                                            <RotateCcw className="mr-2 h-4 w-4"/> Anular
+                                                        </Button>
+                                                    </div>
                                                 )}
                                             </TableCell>
                                         </TableRow>
@@ -179,6 +208,30 @@ export function AdminSupplyRequestsList({ status }: AdminSupplyRequestsListProps
                     request={selectedRequest}
                     onConfirm={() => { setIsDeliverOpen(false); fetchData(); }}
                 />
+            )}
+            {selectedRequest && isAnnulOpen && (
+                <AnnulRequestDialog
+                    isOpen={isAnnulOpen}
+                    onClose={() => setIsAnnulOpen(false)}
+                    request={selectedRequest}
+                    onConfirm={() => { setIsAnnulOpen(false); fetchData(); }}
+                />
+            )}
+            {selectedRequest && institute && isPrintPecosaOpen && (
+                 <Dialog open={isPrintPecosaOpen} onOpenChange={setIsPrintPecosaOpen}>
+                    <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>Previsualización de PECOSA</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4 bg-gray-200 overflow-y-auto">
+                            <PrintPecosa request={selectedRequest} institute={institute} />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setIsPrintPecosaOpen(false)}>Cerrar</Button>
+                            <Button onClick={() => window.print()}>Imprimir</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             )}
         </>
     )

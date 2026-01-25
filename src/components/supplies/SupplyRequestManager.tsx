@@ -19,10 +19,11 @@ export function SupplyRequestManager() {
                 </CardHeader>
             </Card>
              <Tabs defaultValue="Pendiente" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="Pendiente">Pendientes</TabsTrigger>
                     <TabsTrigger value="Aprobado">Aprobados</TabsTrigger>
                     <TabsTrigger value="Entregado">Entregados</TabsTrigger>
+                    <TabsTrigger value="Anulado">Anulados</TabsTrigger>
                     <TabsTrigger value="Rechazado">Rechazados</TabsTrigger>
                 </TabsList>
                 <TabsContent value="Pendiente">
@@ -33,6 +34,9 @@ export function SupplyRequestManager() {
                 </TabsContent>
                  <TabsContent value="Entregado">
                     <AdminSupplyRequestsList status="Entregado" key="Entregado" />
+                </TabsContent>
+                 <TabsContent value="Anulado">
+                    <AdminSupplyRequestsList status="Anulado" key="Anulado" />
                 </TabsContent>
                 <TabsContent value="Rechazado">
                     <AdminSupplyRequestsList status="Rechazado" key="Rechazado" />

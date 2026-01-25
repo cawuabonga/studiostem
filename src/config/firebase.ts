@@ -1061,7 +1061,7 @@ export const updateSupplyRequestStatus = async (
     instituteId: string, 
     requestId: string, 
     newStatus: SupplyRequestStatus, 
-    extraData: { rejectionReason?: string; pecosaCode?: string; } = {}
+    extraData: { rejectionReason?: string; pecosaCode?: string; annulmentReason?: string; } = {}
 ): Promise<void> => {
     const user = auth.currentUser;
     if (!user) throw new Error("Usuario no autenticado.");
@@ -1135,12 +1135,58 @@ export const updateSupplyRequestStatus = async (
                 pecosaCode: extraData.pecosaCode || null
             });
         });
-    } else { // For 'Rechazado' or other simple status changes
+    } else if (newStatus === 'Anulado') {
+        await runTransaction(db, async (transaction) => {
+            const requestDoc = await transaction.get(requestRef);
+            if (!requestDoc.exists()) throw new Error("El pedido no existe.");
+            
+            const requestData = requestDoc.data() as SupplyRequest;
+            if (requestData.status !== 'Entregado') throw new Error("Solo se pueden anular pedidos que ya han sido entregados.");
+
+            // Add stock back
+            for (const item of requestData.items) {
+                const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', item.itemId);
+                const itemDoc = await transaction.get(itemRef);
+                if (!itemDoc.exists()) throw new Error(`Insumo ${item.name} no encontrado en el catálogo.`);
+                
+                const currentStock = itemDoc.data()?.stock || 0;
+                const quantityToReturn = item.approvedQuantity ?? item.requestedQuantity;
+                const newStock = currentStock + quantityToReturn;
+                
+                transaction.update(itemRef, { stock: newStock });
+
+                const historyCol = collection(itemRef, 'stockHistory');
+                const historyDocRef = doc(historyCol);
+                transaction.set(historyDocRef, {
+                    timestamp: Timestamp.now(),
+                    userId: user.uid,
+                    userName: user.displayName || 'Sistema',
+                    change: quantityToReturn, // Positive change
+                    newStock: newStock,
+                    notes: `Anulación de entrega para pedido ${requestData.code}.`,
+                });
+            }
+
+            // Update the request status
+            transaction.update(requestRef, {
+                status: 'Anulado',
+                processedAt: Timestamp.now(),
+                annulledById: user.uid,
+                annulledByName: user.displayName,
+                annulmentReason: extraData.annulmentReason || 'Anulado por administrador.'
+            });
+        });
+    } else { // For 'Rechazado', 'Aprobado' or other simple status changes
         const updateData: any = {
             status: newStatus,
             processedAt: Timestamp.now(),
             ...extraData
         };
+        // Add approver info if status is 'Aprobado'
+        if (newStatus === 'Aprobado') {
+            updateData.approvedById = user.uid;
+            updateData.approvedByName = user.displayName;
+        }
         await updateDoc(requestRef, updateData);
     }
 };
