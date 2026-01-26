@@ -4,7 +4,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Function for Development ---
+    // --- Helper Functions for Development ---
+    function isSuperAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+    }
+    
     function isAssociatedWithInstitute() {
       // Checks if the user is signed in and has an instituteId in their user document.
       return request.auth != null && 
@@ -13,9 +17,9 @@ service cloud.firestore {
     }
     
     // --- General Access Rule for Development ---
-    // Allows any authenticated user associated with an institute to read and write any data.
+    // Allows any authenticated user associated with an institute OR a SuperAdmin to read/write.
     match /{path=**} {
-      allow read, write: if isAssociatedWithInstitute();
+      allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
     }
     
     // --- EXCEPTIONS TO THE GENERAL RULE ---
@@ -30,8 +34,9 @@ service cloud.firestore {
     match /config/{documents=**} {
       allow get: if true;
     }
+    // Changed from 'get' to 'read' to allow listing institutes on the login page.
     match /institutes/{instituteId} {
-      allow get: if true;
+      allow read: if true; // 'read' is 'get' + 'list'
     }
     match /institutes/{instituteId}/news/{newsId} {
       allow get: if true;
