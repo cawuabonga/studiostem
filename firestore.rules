@@ -34,8 +34,9 @@ service cloud.firestore {
     match /config/{documents=**} {
       allow get: if true;
     }
+    // Changed from 'get' to 'read' to allow listing institutes on the login page.
     match /institutes/{instituteId} {
-      allow get: if true;
+      allow read: if true; // 'read' is 'get' + 'list'
     }
     match /institutes/{instituteId}/news/{newsId} {
       allow get: if true;
