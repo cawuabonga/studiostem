@@ -216,12 +216,49 @@ export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
 };
 
 // --- User Management ---
-export const getAllUsersFromAllInstitutes = async (): Promise<AppUser[]> => {
+export const getAllUsersPaginated = async (options: { 
+    instituteId?: string; 
+    limit: number; 
+    startAfter?: DocumentSnapshot | null;
+}): Promise<{ users: AppUser[], lastVisible: DocumentSnapshot | null }> => {
+    
     const usersCol = collection(db, 'users');
-    const q = query(usersCol, orderBy("displayName"));
+    
+    const queryConstraints: any[] = [];
+    
+    if (options.instituteId && options.instituteId !== 'all') {
+        queryConstraints.push(where("instituteId", "==", options.instituteId));
+    }
+
+    queryConstraints.push(orderBy("displayName"));
+    
+    if (options.startAfter) {
+        queryConstraints.push(startAfter(options.startAfter));
+    }
+    
+    queryConstraints.push(limit(options.limit));
+    
+    const q = query(usersCol, ...queryConstraints);
+    
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
+    
+    const users = querySnapshot.docs.map(docSnap => ({ uid: docSnap.id, ...docSnap.data() } as AppUser));
+    const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1] || null;
+    
+    return { users, lastVisible };
 };
+
+export const getTotalUsersCount = async (instituteId?: string): Promise<number> => {
+    const usersCol = collection(db, 'users');
+    let q;
+    if (instituteId && instituteId !== 'all') {
+        q = query(usersCol, where("instituteId", "==", instituteId));
+    } else {
+        q = query(usersCol);
+    }
+    const snapshot = await getDocs(q);
+    return snapshot.size;
+}
 
 export const getUsersFromInstitute = async (instituteId: string): Promise<AppUser[]> => {
     const usersCol = collection(db, 'users');
@@ -2389,3 +2426,4 @@ export const deletePhotoFromAlbum = async (instituteId: string, albumId: string,
     
 
     
+
