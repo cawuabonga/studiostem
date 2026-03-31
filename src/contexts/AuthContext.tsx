@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program } from '@/types';
@@ -88,76 +86,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setInstituteObject(data);
         }).catch(err => {
             console.error("Failed to load initial institute data:", err);
-            setInstitute(null);
+            // Don't clear instituteId if offline, might be in cache
         });
     }
-  }, [instituteId, institute, setInstitute]);
+  }, [instituteId, institute]);
 
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser) => {
-    const userDocRef = doc(db, 'users', firebaseUser.uid);
-    const userDocSnap = await getDoc(userDocRef);
+    try {
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
 
-    if (!userDocSnap.exists()) {
-      const newUser: AppUser = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
-        role: 'Student',
-        instituteId: null,
-        documentId: '',
-        roleId: 'student', 
-        permissions: [],
-      };
-      await saveUserAdditionalData(
-        { uid: newUser.uid, email: newUser.email, displayName: newUser.displayName, photoURL: newUser.photoURL },
-        newUser.role,
-        null
-      );
-      setUser(newUser);
-      return;
-    }
-
-    const baseUserData = userDocSnap.data() as AppUser;
-    let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid, permissions: [] };
-
-    if (baseUserData.instituteId && baseUserData.roleId) {
-        finalUser.instituteId = baseUserData.instituteId;
-        const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
-        if (permissionsMap) {
-            finalUser.permissions = Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[];
+        if (!userDocSnap.exists()) {
+          const newUser: AppUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: 'Student',
+            instituteId: null,
+            documentId: '',
+            roleId: 'student', 
+            permissions: [],
+          };
+          await saveUserAdditionalData(
+            { uid: newUser.uid, email: newUser.email, displayName: newUser.displayName, photoURL: newUser.photoURL },
+            newUser.role,
+            null
+          );
+          setUser(newUser);
+          return;
         }
 
-        if (baseUserData.documentId) {
-            let profileData: StudentProfile | StaffProfile | null = null;
-            if (baseUserData.role === 'Student') {
-                profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
-            } else {
-                profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
+        const baseUserData = userDocSnap.data() as AppUser;
+        let finalUser: AppUser = { ...baseUserData, uid: firebaseUser.uid, permissions: [] };
+
+        if (baseUserData.instituteId && baseUserData.roleId) {
+            finalUser.instituteId = baseUserData.instituteId;
+            const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
+            if (permissionsMap) {
+                finalUser.permissions = Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[];
             }
 
-            if (profileData) {
-                finalUser = { ...finalUser, ...profileData };
-                 if (profileData.programId) {
-                    const programs = await getPrograms(baseUserData.instituteId);
-                    const programMap = new Map(programs.map(p => [p.id, p.name]));
-                    finalUser.programName = programMap.get(profileData.programId) || undefined;
+            if (baseUserData.documentId) {
+                let profileData: StudentProfile | StaffProfile | null = null;
+                if (baseUserData.role === 'Student') {
+                    profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
+                } else {
+                    profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
+                }
+
+                if (profileData) {
+                    finalUser = { ...finalUser, ...profileData };
+                     if (profileData.programId) {
+                        const programs = await getPrograms(baseUserData.instituteId);
+                        const programMap = new Map(programs.map(p => [p.id, p.name]));
+                        finalUser.programName = programMap.get(profileData.programId) || undefined;
+                    }
                 }
             }
+        } else if (baseUserData.role === 'SuperAdmin') {
+             finalUser.permissions = ['superadmin:institute:manage', 'superadmin:users:manage', 'superadmin:design:manage', 'superadmin:roles:manage'];
         }
-    } else if (baseUserData.role === 'SuperAdmin') {
-         finalUser.permissions = ['superadmin:institute:manage', 'superadmin:users:manage', 'superadmin:design:manage', 'superadmin:roles:manage'];
-    }
 
-    finalUser.displayName = finalUser.displayName || firebaseUser.displayName;
-    finalUser.photoURL = finalUser.photoURL || firebaseUser.photoURL;
+        finalUser.displayName = finalUser.displayName || firebaseUser.displayName;
+        finalUser.photoURL = finalUser.photoURL || firebaseUser.photoURL;
 
-    setUser(finalUser);
-    if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
-      await setInstitute(finalUser.instituteId);
-    } else if (!finalUser.instituteId && instituteId) {
-      await setInstitute(null);
+        setUser(finalUser);
+        if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
+          await setInstitute(finalUser.instituteId);
+        } else if (!finalUser.instituteId && instituteId) {
+          await setInstitute(null);
+        }
+    } catch (error) {
+        console.error("Error in fetchAndSetUser:", error);
+        // If offline, we still want to set the user object from whatever base data we have
+        setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            role: 'Student',
+            instituteId: null,
+            documentId: '',
+            roleId: 'student', 
+            permissions: [],
+        });
     }
   };
 
@@ -165,14 +179,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       setLoading(true);
       if (firebaseUser) {
-        try {
-          await fetchAndSetUser(firebaseUser);
-        } catch (error) {
-           console.error("Error fetching user data from Firestore:", error);
-           toast({ title: 'Error de Autenticación', description: 'No se pudo cargar el perfil del usuario.', variant: 'destructive' });
-           await firebaseSignOut(auth);
-           setUser(null);
-        }
+        await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
         setInstitute(null);
@@ -181,20 +188,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => unsubscribe();
-  }, [toast, setInstitute]);
+  }, [setInstitute]);
   
   const reloadUser = async () => {
     const firebaseUser = auth.currentUser;
     if (firebaseUser) {
         setLoading(true);
-        await firebaseUser.reload();
-        const refreshedFirebaseUser = auth.currentUser;
-        if(refreshedFirebaseUser) {
-            await fetchAndSetUser(refreshedFirebaseUser);
-        }
-        if (instituteId) {
-          const instituteData = await getInstitute(instituteId);
-          setInstituteObject(instituteData);
+        try {
+            await firebaseUser.reload();
+            const refreshedFirebaseUser = auth.currentUser;
+            if(refreshedFirebaseUser) {
+                await fetchAndSetUser(refreshedFirebaseUser);
+            }
+            if (instituteId) {
+              const instituteData = await getInstitute(instituteId);
+              setInstituteObject(instituteData);
+            }
+        } catch (e) {
+            console.error("Error reloading user:", e);
         }
         setLoading(false);
     }
@@ -231,7 +242,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-      // onAuthStateChanged will handle the rest.
     } catch (error: any) {
       console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
@@ -262,5 +272,3 @@ export const useAuth = () => {
   }
   return context;
 };
-
-    

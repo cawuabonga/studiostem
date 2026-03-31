@@ -28,7 +28,10 @@ import {
   onSnapshot,
   runTransaction,
   writeBatch,
-  getCountFromServer
+  getCountFromServer,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { 
@@ -63,32 +66,33 @@ import type {
   EFSRTAssignment,
   EFSRTVisit,
   EFSRTStatus,
-  Permission
+  Permission,
+  Role,
+  Album,
+  Photo
 } from '@/types';
 
-// Las variables de entorno en Next.js deben empezar con NEXT_PUBLIC_ para ser accesibles en el cliente
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
 };
 
-// Validación básica para evitar el error de "invalid-api-key" durante la carga del módulo
-const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "tu-api-key";
+const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey.length > 10;
 
-if (!isConfigValid) {
-  console.warn("⚠️ Firebase: Faltan las variables de entorno de configuración. Por favor, completa el archivo .env");
-}
-
-// Inicializar Firebase solo si no se ha inicializado previamente
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Exportar instancias de servicios
+// Initialize Firestore with persistence if config is valid
+export const db = isConfigValid 
+  ? initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+    })
+  : getFirestore(app);
+
 export const auth = getAuth(app);
-export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 export { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, firebaseSignOut as signOut, onAuthStateChanged };
@@ -928,7 +932,10 @@ export const addAsset = async (instituteId: string, buildingId: string, environm
         codeOrSerial: code, 
         name: assetTypeSnap.data()?.name,
         type: assetTypeSnap.data()?.class,
-        createdAt: Timestamp.now()
+        createdAt: Timestamp.now(),
+        instituteId,
+        buildingId,
+        environmentId
     });
     batch.update(assetTypeRef, { lastAssignedNumber: newNum });
     await batch.commit();
@@ -951,7 +958,7 @@ export const getAssetHistory = async (instituteId: string, buildingId: string, e
 export const getAssetTypes = async (instituteId: string, options: any = {}) => {
     let q = query(getSubCollectionRef(instituteId, 'assetCatalog'), orderBy('name'), limit(options.limit || 50));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
 };
 
 export const getAssetTypeById = async (instituteId: string, id: string) => {
@@ -1068,19 +1075,19 @@ export const deleteNonTeachingActivity = async (instituteId: string, id: string)
 export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: string) => {
     const q = query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where('teacherId', '==', teacherId), where('year', '==', year), where('period', '==', period));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
 
 export const getAllNonTeachingAssignmentsForYear = async (instituteId: string, year: string) => {
     const q = query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where('year', '==', year));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
 
 export const getAssignmentsForActivity = async (instituteId: string, activityId: string, year: string) => {
     const q = query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where('activityId', '==', activityId), where('year', '==', year));
     const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
 };
 
 export const saveNonTeachingAssignmentsForTeacher = async (instituteId: string, teacherId: string, year: string, period: string, assignments: any[]) => {
