@@ -1,10 +1,8 @@
-
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  signInWithPopup, 
-  signOut, 
+  signOut as firebaseSignOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword
@@ -68,6 +66,7 @@ import type {
   Permission
 } from '@/types';
 
+// Las variables de entorno en Next.js deben empezar con NEXT_PUBLIC_ para ser accesibles en el cliente
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -77,17 +76,22 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Validar que la API Key exista antes de inicializar
-if (!firebaseConfig.apiKey) {
-  console.warn("Firebase API Key is missing. Check your .env file.");
+// Validación básica para evitar el error de "invalid-api-key" durante la carga del módulo
+const isConfigValid = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== "tu-api-key";
+
+if (!isConfigValid) {
+  console.warn("⚠️ Firebase: Faltan las variables de entorno de configuración. Por favor, completa el archivo .env");
 }
 
+// Inicializar Firebase solo si no se ha inicializado previamente
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const storage = getStorage(app);
 
-export { auth, db, storage, GoogleAuthProvider, createUserWithEmailAndPassword };
+// Exportar instancias de servicios
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
+
+export { GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, firebaseSignOut as signOut, onAuthStateChanged };
 
 // --- HELPER FUNCTIONS ---
 
