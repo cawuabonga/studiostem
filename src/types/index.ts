@@ -1,5 +1,4 @@
 
-
 import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
@@ -35,6 +34,8 @@ export interface StaffProfile {
   linkedUserUid?: string | null;
 }
 
+export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
+
 export interface StudentProfile {
   id?: string; // Firestore document ID
   documentId: string;
@@ -55,6 +56,8 @@ export interface StudentProfile {
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
   rfidCardId?: string; // For Arduino/RFID integration
   linkedUserUid?: string | null;
+  academicStatus?: StudentAcademicStatus;
+  graduationYear?: string;
 }
 
 export interface AccessPoint {
@@ -227,6 +230,39 @@ export interface NonTeachingAssignment {
     assignedHours: number;
     year: string;
     period: UnitPeriod;
+}
+
+
+// --- EFSRT (PRACTICAS) ---
+export type EFSRTStatus = 'Programado' | 'En Curso' | 'Por Evaluar' | 'Aprobado' | 'Desaprobado';
+
+export interface EFSRTVisit {
+    id: string;
+    date: Timestamp;
+    type: 'Presencial' | 'Virtual';
+    observations: string;
+}
+
+export interface EFSRTAssignment {
+    id: string;
+    studentId: string; // documentId
+    studentName: string;
+    programId: string;
+    moduleId: string; // module code
+    moduleName: string;
+    supervisorId: string; // teacher documentId
+    supervisorName: string;
+    location: string; // Company name
+    address?: string;
+    startDate: Timestamp;
+    endDate: Timestamp;
+    status: EFSRTStatus;
+    studentReportUrl?: string;
+    supervisorReportUrl?: string;
+    grade?: number;
+    observations?: string;
+    visits: EFSRTVisit[];
+    createdAt: Timestamp;
 }
 
 
@@ -591,6 +627,7 @@ export type Permission =
   | 'academic:enrollment:manage'
   | 'academic:periods:manage'
   | 'academic:load:view'
+  | 'academic:efsrt:manage'
   // Administrative Management
   | 'admin:fees:manage'
   | 'admin:payments:validate'
@@ -615,10 +652,12 @@ export type Permission =
   | 'superadmin:roles:manage'
   // Teacher
   | 'teacher:unit:view'
+  | 'teacher:efsrt:supervise'
   // Student
   | 'student:unit:view'
   | 'student:grades:view'
-  | 'student:payments:manage';
+  | 'student:payments:manage'
+  | 'student:efsrt:view';
 
 
 export interface Role {
@@ -662,6 +701,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'academic:enrollment:manage', label: 'Gestionar Matrículas' },
             { id: 'academic:periods:manage', label: 'Gestionar Períodos Lectivos' },
             { id: 'academic:load:view', label: 'Ver Dashboard de Carga Académica' },
+            { id: 'academic:efsrt:manage', label: 'Gestionar Experiencias Formativas (EFSRT)' },
         ],
     },
      {
@@ -685,9 +725,11 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         description: 'Permisos para acciones que el personal y estudiantes pueden realizar.',
         permissions: [
             { id: 'teacher:unit:view', label: 'Ver sus Unidades Asignadas' },
+            { id: 'teacher:efsrt:supervise', label: 'Supervisar Experiencias Formativas (EFSRT)' },
             { id: 'student:unit:view', label: 'Ver sus Unidades Matriculadas' },
             { id: 'student:grades:view', label: 'Ver sus Calificaciones' },
             { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
+            { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
         ],
     },
@@ -702,5 +744,3 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
-
-    

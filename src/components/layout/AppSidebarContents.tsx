@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -16,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -48,9 +47,11 @@ const allNavItems: NavItem[] = [
     
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
+    { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPin, permission: 'teacher:efsrt:supervise' },
 
     // Student & General Staff
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, permission: 'student:unit:view' },
+    { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPin, permission: 'student:efsrt:view' },
     { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, permission: 'student:grades:view' },
     { href: '/dashboard/gestion-administrativa/mis-pagos', label: 'Mis Pagos', icon: History, permission: 'student:payments:manage' },
     { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: Pencil, permission: 'user:supplies:request' },
