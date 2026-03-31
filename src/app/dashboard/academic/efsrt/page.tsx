@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileUp, MapPin, Calendar, Clock, CheckCircle, AlertTriangle, MessageSquare, Loader2 } from 'lucide-react';
+import { FileUp, MapPin, Calendar, Clock, CheckCircle, AlertTriangle, MessageSquare, Loader2, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';

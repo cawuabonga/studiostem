@@ -3,13 +3,13 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getEFSRTAssignmentsForSupervisor, registerEFSRTVisit, evaluateEFSRT, uploadEFSRTReport } from '@/config/firebase';
+import { getEFSRTAssignmentsForSupervisor, registerEFSRTVisit, evaluateEFSRT, uploadEFSRTReport, db } from '@/config/firebase';
 import type { EFSRTAssignment, EFSRTStatus, EFSRTVisit } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, ExternalLink, GraduationCap } from 'lucide-react';
+import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, ExternalLink, GraduationCap, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Timestamp } from 'firebase/firestore';
 
 export default function SupervisorEFSRTPage() {
     const { user, instituteId } = useAuth();
@@ -59,8 +60,8 @@ export default function SupervisorEFSRTPage() {
         setIsSubmitting(true);
         try {
             await registerEFSRTVisit(instituteId, selectedAssignment.id, {
-                date: new any(), // Timestamp created in firebase function or here
-                type: visitData.type as any,
+                date: Timestamp.now(),
+                type: visitData.type as 'Presencial' | 'Virtual',
                 observations: visitData.observations
             });
             toast({ title: "Visita Registrada", description: "La visita ha sido guardada en la bitácora." });
