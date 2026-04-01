@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus, FileText, CalendarDays, KanbanSquare } from "lucide-react";
+import { BookOpen, Library, Users, ListPlus, Hourglass, ClipboardList, ClipboardEdit, CalendarPlus, FileText, CalendarDays, KanbanSquare, MapPin, Award } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,20 @@ const academicModules = [
     permission: "academic:workload:view",
   },
   {
+    title: "Programación de EFSRT",
+    description: "Asigna empresas, fechas y supervisores para las prácticas por módulo profesional.",
+    href: "/dashboard/gestion-academica/efsrt",
+    icon: MapPin,
+    permission: "academic:efsrt:manage",
+  },
+  {
+    title: "Consolidado de Egreso",
+    description: "Verifica requisitos de egreso y promociona a estudiantes expeditos.",
+    href: "/dashboard/gestion-academica/consolidado-egreso",
+    icon: Award,
+    permission: "academic:efsrt:manage",
+  },
+  {
     title: "Matricular Estudiantes",
     description: "Inscribir estudiantes en las unidades didácticas por período académico.",
     href: "/dashboard/gestion-academica/matricula",
@@ -83,7 +97,7 @@ const academicModules = [
     description: "Generar e imprimir listas de estudiantes matriculados por unidad y semestre.",
     href: "/dashboard/gestion-academica/reportes/matriculas",
     icon: FileText,
-    permission: "academic:enrollment:manage", // Re-using permission, might need a specific one later
+    permission: "academic:enrollment:manage",
   },
 ];
 
