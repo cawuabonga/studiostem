@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentProfiles, getPrograms, getTeachers, programEFSRT, getEFSRTAssignmentsForStudent } from '@/config/firebase';
-import type { StudentProfile, Program, Teacher, UnitPeriod } from '@/types';
+import { getStudentProfiles, getPrograms, getTeachers, programEFSRT } from '@/config/firebase';
+import type { StudentProfile, Program, Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Search, Calendar, MapPin, User, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight, Search, MapPin, Calendar, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function AdminEFSRTPage() {
     const { instituteId } = useAuth();
@@ -29,7 +30,6 @@ export default function AdminEFSRTPage() {
     const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null);
     
-    // Form state
     const [formData, setFormData] = useState({
         moduleId: '',
         supervisorId: '',
@@ -72,7 +72,10 @@ export default function AdminEFSRTPage() {
     };
 
     const handleSave = async () => {
-        if (!instituteId || !selectedStudent || !formData.moduleId || !formData.supervisorId) return;
+        if (!instituteId || !selectedStudent || !formData.moduleId || !formData.supervisorId || !formData.startDate || !formData.endDate) {
+            toast({ title: "Datos incompletos", description: "Por favor complete todos los campos.", variant: "destructive" });
+            return;
+        }
         
         setIsSubmitting(true);
         try {
@@ -103,7 +106,7 @@ export default function AdminEFSRTPage() {
         }
     };
 
-    if (loading) return <Skeleton className="h-96 w-full" />;
+    if (loading) return <div className="p-8 space-y-4"><Skeleton className="h-12 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
     const selectedStudentProgram = selectedStudent ? programs.find(p => p.id === selectedStudent.programId) : null;
 
@@ -112,30 +115,34 @@ export default function AdminEFSRTPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Programación de Experiencias Formativas (EFSRT)</CardTitle>
-                    <CardDescription>Asigna lugar, fechas y supervisores a los estudiantes para sus prácticas por módulo.</CardDescription>
+                    <CardDescription>Asigna lugar, fechas y supervisores a los estudiantes para sus prácticas por módulo profesional.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center gap-4 max-w-sm">
-                        <Input 
-                            placeholder="Buscar estudiante..." 
-                            value={filter} 
-                            onChange={(e) => setFilter(e.target.value)}
-                        />
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                                placeholder="Buscar estudiante por DNI o nombre..." 
+                                value={filter} 
+                                onChange={(e) => setFilter(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
                     </div>
                     <div className="rounded-md border">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>DNI</TableHead>
-                                    <TableHead>Nombre</TableHead>
-                                    <TableHead>Programa</TableHead>
+                                    <TableHead>Nombre Completo</TableHead>
+                                    <TableHead>Programa de Estudios</TableHead>
                                     <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredStudents.map(student => (
                                     <TableRow key={student.documentId}>
-                                        <TableCell className="font-mono">{student.documentId}</TableCell>
+                                        <TableCell className="font-mono text-xs">{student.documentId}</TableCell>
                                         <TableCell className="font-medium">{student.fullName}</TableCell>
                                         <TableCell>{programs.find(p => p.id === student.programId)?.name}</TableCell>
                                         <TableCell className="text-right">
@@ -155,7 +162,7 @@ export default function AdminEFSRTPage() {
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
                         <DialogTitle>Programar EFSRT: {selectedStudent?.fullName}</DialogTitle>
-                        <DialogDescription>Configura los detalles de la práctica profesional.</DialogDescription>
+                        <DialogDescription>Configure los detalles de la práctica profesional para este estudiante.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -183,8 +190,8 @@ export default function AdminEFSRTPage() {
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <Label>Empresa / Lugar de Práctica</Label>
-                            <Input value={formData.location} onChange={(e) => setFormData(p => ({...p, location: e.target.value}))} placeholder="Nombre de la empresa o institución" />
+                            <Label>Empresa / Institución de Práctica</Label>
+                            <Input value={formData.location} onChange={(e) => setFormData(p => ({...p, location: e.target.value}))} placeholder="Nombre de la empresa o lugar de prácticas" />
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -192,14 +199,14 @@ export default function AdminEFSRTPage() {
                                 <Input type="date" value={formData.startDate} onChange={(e) => setFormData(p => ({...p, startDate: e.target.value}))} />
                             </div>
                             <div className="space-y-2">
-                                <Label>Fecha de Fin</Label>
+                                <Label>Fecha de Fin (Aprox.)</Label>
                                 <Input type="date" value={formData.endDate} onChange={(e) => setFormData(p => ({...p, endDate: e.target.value}))} />
                             </div>
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsProgramDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={isSubmitting || !formData.moduleId || !formData.supervisorId || !formData.location}>
+                        <Button onClick={handleSave} disabled={isSubmitting}>
                             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Confirmar Programación
                         </Button>
