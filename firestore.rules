@@ -3,77 +3,71 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isSuperAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().role == 'SuperAdmin';
+    // --- Helper Functions for Development ---
+     function isSuperAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
     
-    function isAssociatedWith(instituteId) {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().instituteId == instituteId;
+    function isAssociatedWithInstitute() {
+      // Checks if the user is signed in and has an instituteId in their user document.
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId != null;
     }
-
-    // --- Rules ---
-
-    // Public config (e.g., login design)
-    match /config/{document=**} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
+    
+    // --- General Access Rule for Development ---
+    // Allows any authenticated user associated with an institute OR a SuperAdmin to read/write.
+    match /{path=**} {
+      allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
     }
+    
+    // --- EXCEPTIONS TO THE GENERAL RULE ---
 
-    // Login images collection
-    match /login_images/{doc=**} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // User's own document (critical for login and linking)
+    // Exception 1: Allow a user to manage their own user document.
+    // This is critical for login, profile creation, and profile linking.
     match /users/{userId} {
-      allow read, write: if isSignedIn() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Public read-only access to institute basic info
-    match /institutes/{instituteId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAssociatedWith(instituteId);
-    }
-
-    // Exception for Profile Linking: Allow any authenticated user to read profiles to find themselves
+    // Exception for Profile Linking: Allow any authenticated user to read profiles.
     match /institutes/{instituteId}/staffProfiles/{staffId} {
-      allow read: if isSignedIn();
-      allow write: if isSuperAdmin() || isAssociatedWith(instituteId);
+      allow read: if request.auth != null;
     }
     match /institutes/{instituteId}/studentProfiles/{studentId} {
-      allow read: if isSignedIn();
-      allow write: if isSuperAdmin() || isAssociatedWith(instituteId);
+      allow read: if request.auth != null;
     }
 
-    // Subcollections for public pages (news, albums, programs)
-    match /institutes/{instituteId}/news/{newsId} {
+    // --- EFSRT (Experiencias Formativas) Rules ---
+    // Permite gestionar las prácticas si el usuario está asociado al instituto o es SuperAdmin.
+    match /institutes/{instituteId}/efsrtAssignments/{assignmentId} {
+      allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
+    }
+
+    //***************************
+
+    // Default deny all reads and writes (as per user snippet)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Config ---
+    match /config/{document=**} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
+    }
+
+    // Exception 2: Allow public read-only access to collections needed for public-facing pages.
+    match /institutes/{instituteId} {
       allow read: if true;
     }
-    match /institutes/{instituteId}/albums/{albumId}/{photos=**} {
+    match /institutes/{instituteId}/news/{newsId} {
       allow read: if true;
     }
     match /institutes/{instituteId}/programs/{programId} {
       allow read: if true;
     }
-
-    // General access rule for all other institute data
-    match /institutes/{instituteId}/{document=**} {
-      allow read, write: if isSuperAdmin() || isAssociatedWith(instituteId);
-    }
-    
-    // Global access for SuperAdmin to all other collections
-    match /{path=**} {
-      allow read, write: if isSuperAdmin();
+    match /institutes/{instituteId}/albums/{albumId}/{photos=**} {
+      allow read: if true;
     }
   }
 }
