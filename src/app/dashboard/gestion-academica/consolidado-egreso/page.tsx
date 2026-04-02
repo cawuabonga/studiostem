@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -22,7 +21,7 @@ interface EligibilityResult {
     pendingEFSRT: string[];
 }
 
-export function ConsolidadoEgresoPage() {
+export default function ConsolidadoEgresoPage() {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [students, setStudents] = useState<StudentProfile[]>([]);
