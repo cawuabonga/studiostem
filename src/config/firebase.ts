@@ -1564,7 +1564,7 @@ export const updateContentInWeek = async (instituteId: string, unitId: string, w
     const updatedContent = { ...weekData.contents[contentIndex], ...data };
 
     if (data.type === 'file' && file) {
-        const storagePath = `institutes/${instituteId}/unidadesDidacticas/${unitId}/week_${weekNumber}/${contentId}`;
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/${contentId}`;
         updatedContent.value = await uploadFileAndGetURL(file, storagePath);
     }
 
@@ -2429,6 +2429,13 @@ export const getEFSRTAssignmentsForSupervisor = async (instituteId: string, supe
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EFSRTAssignment));
 };
 
+export const getAllEFSRTAssignments = async (instituteId: string): Promise<EFSRTAssignment[]> => {
+    const efsrtCol = getSubCollectionRef(instituteId, 'efsrtAssignments');
+    const q = query(efsrtCol, orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EFSRTAssignment));
+};
+
 export const programEFSRT = async (instituteId: string, data: Omit<EFSRTAssignment, 'id' | 'status' | 'createdAt' | 'visits' | 'studentReportUrl' | 'supervisorReportUrl' | 'grade' | 'observations'>): Promise<void> => {
     const efsrtCol = getSubCollectionRef(instituteId, 'efsrtAssignments');
     const newAssignment: Omit<EFSRTAssignment, 'id'> = {
@@ -2521,4 +2528,37 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
     if (linkedUid) {
         await updateDoc(doc(db, 'users', linkedUid), { academicStatus: 'Egresado' });
     }
+};
+
+export const closeUnitGrades = async (
+    instituteId: string,
+    unitId: string,
+    year: string,
+    period: UnitPeriod,
+    results: { studentId: string; finalGrade: number | null; status: 'aprobado' | 'desaprobado' | 'inhabilitado' }[]
+): Promise<void> => {
+    const batch = writeBatch(db);
+    
+    const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+
+    for (const res of results) {
+        // 1. Update Academic Record
+        const recordId = `${unitId}_${res.studentId}_${year}_${period}`;
+        const recordRef = doc(recordsCol, recordId);
+        batch.update(recordRef, { status: res.status, finalGrade: res.finalGrade });
+
+        // 2. Update Matriculation (Search by unit and student)
+        const mQuery = query(matriculationsCol, 
+            where("unitId", "==", unitId),
+            where("studentId", "==", res.studentId),
+            where("year", "==", year)
+        );
+        const mSnap = await getDocs(mQuery);
+        mSnap.forEach(mDoc => {
+            batch.update(mDoc.ref, { status: res.status });
+        });
+    }
+
+    await batch.commit();
 };
