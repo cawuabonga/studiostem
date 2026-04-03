@@ -58,6 +58,10 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Edit states
+  const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkData, setBulkData] = useState({ year: new Date().getFullYear().toString(), semester: '' });
 
@@ -87,6 +91,15 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   }, [instituteId, isFullAdmin, coordinatorProgramId, toast]);
 
   useEffect(() => { if (instituteId) fetchData(instituteId); }, [fetchData]);
+
+  const handleDialogClose = (updated?: boolean) => {
+    setIsEditDialogOpen(false);
+    setSelectedProfile(null);
+    if (updated) {
+      fetchData(instituteId);
+      onDataChange();
+    }
+  };
 
   const filteredProfiles = useMemo(() => {
     let profiles = allProfiles;
