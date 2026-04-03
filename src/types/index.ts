@@ -58,6 +58,7 @@ export interface StudentProfile {
   linkedUserUid?: string | null;
   academicStatus?: StudentAcademicStatus;
   graduationYear?: string;
+  currentSemester?: number; // Added to track actual academic progress
 }
 
 export interface AccessPoint {
@@ -642,6 +643,7 @@ export type Permission =
   | 'users:student:manage'
   // Planning & Schedules
   | 'planning:schedule:manage'
+  | 'planning:environment:manage'
   | 'planning:schedule:view:own'
   // User-specific actions
   | 'user:supplies:request'

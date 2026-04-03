@@ -1,9 +1,10 @@
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTVisit, EFSRTStatus } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -633,9 +634,9 @@ export const getStudentProfile = async (instituteId: string, studentId: string):
 
 export const updateStudentProfile = async (instituteId: string, documentId: string, data: Partial<Omit<StudentProfile, 'id' | 'documentId' | 'photoURL'>>) => {
     const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', documentId);
-    const updateData = {
-        ...data,
-        fullName: `${data.firstName} ${data.lastName}`,
+    let updateData: any = { ...data };
+    if (data.firstName && data.lastName) {
+        updateData.fullName = `${data.firstName} ${data.lastName}`;
     }
     await updateDoc(studentRef, updateData);
 }
@@ -1251,6 +1252,9 @@ export const createMatriculations = async (
 ) => {
     const batch = writeBatch(db);
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    
+    // Determine the highest semester from the units being matriculated
+    let highestSemester = 0;
 
     units.forEach(unit => {
         const matriculationDocRef = doc(matriculationsCol);
@@ -1266,10 +1270,51 @@ export const createMatriculations = async (
             createdAt: Timestamp.now()
         };
         batch.set(matriculationDocRef, matriculationData);
+        if (unit.semester > highestSemester) highestSemester = unit.semester;
+    });
+
+    // Update student's current semester in their profile
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+    batch.update(studentRef, { currentSemester: highestSemester });
+
+    await batch.commit();
+};
+
+export const bulkCreateMatriculations = async (
+    instituteId: string,
+    studentIds: string[],
+    units: Unit[],
+    year: string,
+    semester: number
+) => {
+    const batch = writeBatch(db);
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+
+    studentIds.forEach(studentId => {
+        units.forEach(unit => {
+            const matriculationDocRef = doc(matriculationsCol);
+            const matriculationData: Omit<Matriculation, 'id'> = {
+                studentId: studentId,
+                unitId: unit.id,
+                programId: unit.programId,
+                year: year,
+                period: unit.period,
+                semester: unit.semester,
+                moduleId: unit.moduleId,
+                status: 'cursando',
+                createdAt: Timestamp.now()
+            };
+            batch.set(matriculationDocRef, matriculationData);
+        });
+
+        // Update each student's current semester
+        const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+        batch.update(studentRef, { currentSemester: semester });
     });
 
     await batch.commit();
 };
+
 
 export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
