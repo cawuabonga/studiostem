@@ -1,15 +1,15 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getEFSRTAssignmentsForSupervisor, registerEFSRTVisit, evaluateEFSRT } from '@/config/firebase';
-import type { EFSRTAssignment, EFSRTStatus } from '@/types';
+import { getEFSRTAssignmentsForSupervisor, registerEFSRTVisit, evaluateEFSRT, getPrograms, getStudentProfiles } from '@/config/firebase';
+import type { EFSRTAssignment, EFSRTStatus, Program, StudentProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, GraduationCap, History } from 'lucide-react';
+import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, GraduationCap, History, Search, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -19,12 +19,34 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Timestamp } from 'firebase/firestore';
 
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+
+const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-JUL' | 'AGO-DIC'): number => {
+    if (!admissionYear || !admissionPeriod) return 1;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth();
+    const yearsDiff = currentYear - parseInt(admissionYear);
+    let semesterCount = yearsDiff * 2;
+    if (admissionPeriod === 'MAR-JUL') semesterCount += 1;
+    if (currentMonth >= 7) semesterCount += 1;
+    else if (admissionPeriod === 'AGO-DIC') semesterCount -= 1;
+    return Math.max(1, semesterCount);
+};
+
 export default function SupervisorEFSRTPage() {
     const { user, instituteId } = useAuth();
     const { toast } = useToast();
     const [assignments, setAssignments] = useState<EFSRTAssignment[]>([]);
+    const [programs, setPrograms] = useState<Program[]>([]);
+    const [students, setStudents] = useState<StudentProfile[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // Filters
+    const [moduleFilter, setModuleFilter] = useState('all');
+    const [semesterFilter, setSemesterFilter] = useState('all');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+
     const [selectedAssignment, setSelectedAssignment] = useState<EFSRTAssignment | null>(null);
     const [isVisitDialogOpen, setIsVisitDialogOpen] = useState(false);
     const [isEvaluateDialogOpen, setIsEvaluateDialogOpen] = useState(false);
@@ -40,8 +62,14 @@ export default function SupervisorEFSRTPage() {
         }
         setLoading(true);
         try {
-            const fetched = await getEFSRTAssignmentsForSupervisor(instituteId, user.documentId);
+            const [fetched, fetchedPrograms, fetchedStudents] = await Promise.all([
+                getEFSRTAssignmentsForSupervisor(instituteId, user.documentId),
+                getPrograms(instituteId),
+                getStudentProfiles(instituteId)
+            ]);
             setAssignments(fetched);
+            setPrograms(fetchedPrograms);
+            setStudents(fetchedStudents);
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar tus supervisiones.", variant: "destructive" });
         } finally {
@@ -60,6 +88,33 @@ export default function SupervisorEFSRTPage() {
         if (now >= start) return 'En Curso';
         return 'Programado';
     };
+
+    const filteredAssignments = useMemo(() => {
+        return assignments.filter(a => {
+            const status = getEffectiveStatus(a);
+            const student = students.find(s => s.documentId === a.studentId);
+            const currentSem = student ? (student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)) : 0;
+
+            const matchesModule = moduleFilter === 'all' || a.moduleId === moduleFilter;
+            const matchesSemester = semesterFilter === 'all' || String(currentSem) === semesterFilter;
+            const matchesStatus = statusFilter === 'all' || status === statusFilter;
+            const matchesSearch = searchTerm === '' || 
+                                 a.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                 a.studentId.includes(searchTerm);
+
+            return matchesModule && matchesSemester && matchesStatus && matchesSearch;
+        });
+    }, [assignments, students, moduleFilter, semesterFilter, statusFilter, searchTerm]);
+
+    const availableModules = useMemo(() => {
+        const moduleMap = new Map();
+        assignments.forEach(a => {
+            if (!moduleMap.has(a.moduleId)) {
+                moduleMap.set(a.moduleId, a.moduleName);
+            }
+        });
+        return Array.from(moduleMap.entries()).map(([code, name]) => ({ code, name }));
+    }, [assignments]);
 
     const handleRegisterVisit = async () => {
         if (!instituteId || !selectedAssignment || !visitData.observations) return;
@@ -122,10 +177,59 @@ export default function SupervisorEFSRTPage() {
                     <CardTitle>Supervisiones de EFSRT</CardTitle>
                     <CardDescription>Gestión automática de estados basada en fechas programadas.</CardDescription>
                 </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                            <Label>Buscar Estudiante</Label>
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="DNI o nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9" />
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Módulo</Label>
+                            <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Módulos</SelectItem>
+                                    {availableModules.map(m => (
+                                        <SelectItem key={m.code} value={m.code}>{m.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Semestre</Label>
+                            <Select value={semesterFilter} onValueChange={setSemesterFilter}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Semestres</SelectItem>
+                                    {semesters.map(s => (
+                                        <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Estado</Label>
+                            <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todos los Estados</SelectItem>
+                                    <SelectItem value="Programado">Programado</SelectItem>
+                                    <SelectItem value="En Curso">En Curso</SelectItem>
+                                    <SelectItem value="Por Evaluar">Por Evaluar</SelectItem>
+                                    <SelectItem value="Aprobado">Aprobado</SelectItem>
+                                    <SelectItem value="Desaprobado">Desaprobado</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                </CardContent>
             </Card>
 
             <div className="grid gap-6">
-                {assignments.length > 0 ? assignments.map(a => {
+                {filteredAssignments.length > 0 ? filteredAssignments.map((a, index) => {
                     const status = getEffectiveStatus(a);
                     return (
                         <Card key={a.id} className="overflow-hidden border-l-4 border-l-primary">
@@ -133,7 +237,10 @@ export default function SupervisorEFSRTPage() {
                                 <div className="md:col-span-4 bg-muted/20 p-6 border-r">
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-start">
-                                            <Badge className={getStatusColor(status)}>{status}</Badge>
+                                            <div className="flex items-center gap-2">
+                                                <Badge variant="outline" className="bg-background font-bold">N° {index + 1}</Badge>
+                                                <Badge className={getStatusColor(status)}>{status}</Badge>
+                                            </div>
                                             {a.grade !== undefined && <Badge variant="outline" className="text-lg font-bold">Nota: {a.grade}</Badge>}
                                         </div>
                                         <div>
@@ -150,7 +257,7 @@ export default function SupervisorEFSRTPage() {
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center">
                                             <h4 className="font-bold flex items-center gap-2 text-primary"><History className="h-4 w-4" /> Bitácora ({a.visits.length})</h4>
-                                            <Button size="sm" variant="outline" onClick={() => { setSelectedAssignment(a); setIsVisitDialogOpen(true); }}>
+                                            <Button size="sm" variant="outline" onClick={() => { setSelectedAssignment(a); setIsVisitDialogOpen(true); }} disabled={status === 'Aprobado'}>
                                                 <PlusCircle className="mr-2 h-4 w-4" /> Nueva Visita
                                             </Button>
                                         </div>
@@ -161,15 +268,18 @@ export default function SupervisorEFSRTPage() {
                                                     <p className="italic">"{visit.observations}"</p>
                                                 </div>
                                             ))}
+                                            {a.visits.length === 0 && (
+                                                <div className="col-span-2 py-8 text-center text-muted-foreground italic text-xs">Sin visitas registradas.</div>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="mt-6 pt-6 border-t flex flex-wrap gap-4 justify-between items-center">
                                         <div className="flex gap-2">
                                             {a.studentReportUrl ? (
                                                 <Button variant="default" size="sm" asChild><a href={a.studentReportUrl} target="_blank"><FileText className="mr-2 h-4 w-4" /> Ver Informe Estudiante</a></Button>
-                                            ) : <Badge variant="outline" className="text-muted-foreground">Esperando informe...</Badge>}
+                                            ) : <Badge variant="outline" className="text-muted-foreground italic text-[10px]">Esperando informe...</Badge>}
                                         </div>
-                                        <Button variant="secondary" size="sm" onClick={() => { setSelectedAssignment(a); setIsEvaluateDialogOpen(true); }}>
+                                        <Button variant="secondary" size="sm" onClick={() => { setSelectedAssignment(a); setIsEvaluateDialogOpen(true); }} disabled={status === 'Aprobado'}>
                                             <GraduationCap className="mr-2 h-4 w-4" /> Calificar Módulo
                                         </Button>
                                     </div>
@@ -177,7 +287,7 @@ export default function SupervisorEFSRTPage() {
                             </div>
                         </Card>
                     );
-                }) : <div className="text-center py-24 bg-muted/10 rounded-lg border-2 border-dashed">No hay asignaciones.</div>}
+                }) : <div className="text-center py-24 bg-muted/10 rounded-lg border-2 border-dashed">No se encontraron supervisiones que coincidan con los filtros.</div>}
             </div>
 
             {/* Visit Dialog */}
