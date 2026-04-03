@@ -1315,6 +1315,25 @@ export const bulkCreateMatriculations = async (
     await batch.commit();
 };
 
+export const deleteMatriculation = async (instituteId: string, studentId: string, matriculationId: string): Promise<void> => {
+    const matriculationRef = doc(db, 'institutes', instituteId, 'matriculations', matriculationId);
+    await deleteDoc(matriculationRef);
+
+    // Re-calculate the highest semester
+    const matriculationsCol = collection(db, 'institutes', instituteId, 'matriculations');
+    const q = query(matriculationsCol, where("studentId", "==", studentId));
+    const snapshot = await getDocs(q);
+    
+    let highestSemester = 0;
+    snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.semester > highestSemester) highestSemester = data.semester;
+    });
+
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+    await updateDoc(studentRef, { currentSemester: highestSemester });
+};
+
 
 export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
