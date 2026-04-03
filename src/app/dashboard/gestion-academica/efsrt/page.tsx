@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProfiles, getPrograms, getTeachers, programEFSRT, getAllEFSRTAssignments } from '@/config/firebase';
-import type { StudentProfile, Program, Teacher, EFSRTAssignment, UnitPeriod } from '@/types';
+import type { StudentProfile, Program, Teacher, EFSRTAssignment, UnitPeriod, EFSRTStatus } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,33 +12,23 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, MapPin, Calendar, ListChecks, PlusCircle, Filter, Info } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/tabs';
 import { Badge } from '@/components/ui/badge';
-import { format } from 'date-fns';
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
 const calculateCurrentSemester = (admissionYear: string, admissionPeriod: UnitPeriod): number => {
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth(); // 0-11
-    
+    const currentMonth = new Date().getMonth();
     const yearsDiff = currentYear - parseInt(admissionYear);
     let semesterCount = yearsDiff * 2;
-
-    if (admissionPeriod === 'MAR-JUL') {
-        semesterCount += 1;
-    }
-
-    if (currentMonth >= 7) { // Julio en adelante, estamos en el segundo semestre del año
-        semesterCount += 1;
-    } else if (admissionPeriod === 'AGO-DIC') {
-         semesterCount -=1;
-    }
-
+    if (admissionPeriod === 'MAR-JUL') semesterCount += 1;
+    if (currentMonth >= 7) semesterCount += 1;
+    else if (admissionPeriod === 'AGO-DIC') semesterCount -= 1;
     return Math.max(1, semesterCount);
 };
 
@@ -52,14 +42,11 @@ export default function AdminEFSRTPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    // --- ESTADOS DE FILTROS ---
-    // Filtros para la pestaña de SEGUIMIENTO
     const [filterSeg, setFilterSeg] = useState('');
     const [semesterFilterSeg, setSemesterFilterSeg] = useState<string>('all');
     const [moduleFilterSeg, setModuleFilterSeg] = useState<string>('all');
     const [statusFilterSeg, setStatusFilterSeg] = useState<string>('all');
 
-    // Filtros para la pestaña de PROGRAMAR
     const [filterProg, setFilterProg] = useState('');
     const [semesterFilterProg, setSemesterFilterProg] = useState<string>('all');
     const [moduleFilterProg, setModuleFilterProg] = useState<string>('all');
@@ -75,7 +62,6 @@ export default function AdminEFSRTPage() {
         endDate: '',
     });
 
-    // Determinar si el usuario es coordinador y su programa
     const isFullAdmin = hasPermission('academic:program:manage');
     const userProgramId = user?.programId || (user as any)?.programId;
 
@@ -102,68 +88,62 @@ export default function AdminEFSRTPage() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
+    const getEffectiveStatus = (a: EFSRTAssignment): EFSRTStatus => {
+        if (a.status === 'Aprobado' || a.status === 'Desaprobado') return a.status;
+        const now = new Date();
+        const start = a.startDate.toDate();
+        const end = a.endDate.toDate();
+        
+        if (now > end || a.studentReportUrl) return 'Por Evaluar';
+        if (now >= start) return 'En Curso';
+        return 'Programado';
+    };
+
     const currentProgramModules = useMemo(() => {
         if (!userProgramId) return [];
         return programs.find(p => p.id === userProgramId)?.modules || [];
     }, [programs, userProgramId]);
 
-    // --- LÓGICA DE FILTRADO PARA SEGUIMIENTO ---
     const filteredAssignments = useMemo(() => {
         const baseAssignments = isFullAdmin && !userProgramId 
             ? allAssignments 
             : allAssignments.filter(a => a.programId === userProgramId);
 
         return baseAssignments.filter(a => {
-            // 1. Filtro de Texto
+            const effectiveStatus = getEffectiveStatus(a);
             const matchesText = a.studentName.toLowerCase().includes(filterSeg.toLowerCase()) || a.studentId.includes(filterSeg);
             if (!matchesText) return false;
-
-            // 2. Filtro de Módulo
             if (moduleFilterSeg !== 'all' && a.moduleId !== moduleFilterSeg) return false;
-
-            // 3. Filtro de Estado
-            if (statusFilterSeg !== 'all' && a.status !== statusFilterSeg) return false;
-
-            // 4. Filtro de Semestre (requiere cruce con perfiles de alumnos)
+            if (statusFilterSeg !== 'all' && effectiveStatus !== statusFilterSeg) return false;
             if (semesterFilterSeg !== 'all') {
                 const student = students.find(s => s.documentId === a.studentId);
                 if (student) {
                     const currentSem = calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
                     if (currentSem !== parseInt(semesterFilterSeg)) return false;
-                } else {
-                    return false;
-                }
+                } else return false;
             }
-
             return true;
         });
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
-    // --- LÓGICA DE FILTRADO PARA PROGRAMAR ---
     const studentsToProgram = useMemo(() => {
         const myProgramStudents = isFullAdmin && !userProgramId 
             ? students 
             : students.filter(s => s.programId === userProgramId);
 
         return myProgramStudents.filter(student => {
-            // 1. Filtro de Texto
             const matchesText = student.fullName.toLowerCase().includes(filterProg.toLowerCase()) || student.documentId.includes(filterProg);
             if (!matchesText) return false;
-
-            // 2. Filtro de Semestre
             if (semesterFilterProg !== 'all') {
                 const currentSem = calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
                 if (currentSem !== parseInt(semesterFilterProg)) return false;
             }
-
-            // 3. Filtro de Módulo Inteligente (Ocultar si ya tiene asignación)
             if (moduleFilterProg !== 'all') {
                 const alreadyAssigned = allAssignments.some(a => 
                     a.studentId === student.documentId && a.moduleId === moduleFilterProg
                 );
                 if (alreadyAssigned) return false;
             }
-
             return true;
         });
     }, [students, allAssignments, isFullAdmin, userProgramId, filterProg, semesterFilterProg, moduleFilterProg]);
@@ -213,12 +193,13 @@ export default function AdminEFSRTPage() {
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusColor = (status: EFSRTStatus) => {
         switch(status) {
             case 'Aprobado': return 'bg-green-100 text-green-800';
             case 'En Curso': return 'bg-blue-100 text-blue-800';
             case 'Por Evaluar': return 'bg-amber-100 text-amber-800';
             case 'Programado': return 'bg-purple-100 text-purple-800';
+            case 'Desaprobado': return 'bg-red-100 text-red-800';
             default: return 'bg-gray-100 text-gray-800';
         }
     };
@@ -251,10 +232,9 @@ export default function AdminEFSRTPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Listado Maestro de Prácticas</CardTitle>
-                            <CardDescription>Visualiza el estado de todos los estudiantes con EFSRT programadas.</CardDescription>
+                            <CardDescription>Visualiza el estado de todos los estudiantes con EFSRT programadas (Estado automático por fechas).</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* --- FILTROS SEGUIMIENTO --- */}
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
                                     <Label>Búsqueda rápida</Label>
@@ -291,7 +271,7 @@ export default function AdminEFSRTPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Semestre</Label>
-                                    <Select value={semesterFilterSeg} onValueChange={setSemesterFilterSeg}>
+                                    <Select value={semesterFilterSeg} onValueChange={semesterFilterSeg => setSemesterFilterSeg(semesterFilterSeg)}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Semestres</SelectItem>
@@ -311,25 +291,28 @@ export default function AdminEFSRTPage() {
                                             <TableHead>Supervisor</TableHead>
                                             <TableHead>Empresa</TableHead>
                                             <TableHead className="text-center">Visitas</TableHead>
-                                            <TableHead>Estado</TableHead>
+                                            <TableHead>Estado Actual</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredAssignments.length > 0 ? filteredAssignments.map((a, index) => (
-                                            <TableRow key={a.id}>
-                                                <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
-                                                <TableCell className="font-bold">
-                                                    {a.studentName}
-                                                    <p className="text-[10px] font-mono text-muted-foreground">{a.studentId}</p>
-                                                </TableCell>
-                                                <TableCell className="text-[10px] leading-tight max-w-[200px]">{a.moduleName}</TableCell>
-                                                <TableCell className="text-xs">{a.supervisorName}</TableCell>
-                                                <TableCell className="text-xs">{a.location}</TableCell>
-                                                <TableCell className="text-center"><Badge variant="outline">{a.visits?.length || 0}</Badge></TableCell>
-                                                <TableCell><Badge className={getStatusColor(a.status)}>{a.status}</Badge></TableCell>
-                                            </TableRow>
-                                        )) : (
-                                            <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground italic">No se encontraron registros con los filtros aplicados.</TableCell></TableRow>
+                                        {filteredAssignments.length > 0 ? filteredAssignments.map((a, index) => {
+                                            const status = getEffectiveStatus(a);
+                                            return (
+                                                <TableRow key={a.id}>
+                                                    <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
+                                                    <TableCell className="font-bold">
+                                                        {a.studentName}
+                                                        <p className="text-[10px] font-mono text-muted-foreground">{a.studentId}</p>
+                                                    </TableCell>
+                                                    <TableCell className="text-[10px] leading-tight max-w-[200px]">{a.moduleName}</TableCell>
+                                                    <TableCell className="text-xs">{a.supervisorName}</TableCell>
+                                                    <TableCell className="text-xs">{a.location}</TableCell>
+                                                    <TableCell className="text-center"><Badge variant="outline">{a.visits?.length || 0}</Badge></TableCell>
+                                                    <TableCell><Badge className={getStatusColor(status)}>{status}</Badge></TableCell>
+                                                </TableRow>
+                                            );
+                                        }) : (
+                                            <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground italic">No se encontraron registros.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
@@ -342,10 +325,9 @@ export default function AdminEFSRTPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Búsqueda de Estudiantes Pendientes</CardTitle>
-                            <CardDescription>Filtra para identificar estudiantes que aún no tienen una práctica asignada.</CardDescription>
+                            <CardDescription>Identifica estudiantes sin prácticas asignadas.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {/* --- FILTROS PROGRAMAR --- */}
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
                                     <Label>Buscar Alumno</Label>
@@ -405,11 +387,7 @@ export default function AdminEFSRTPage() {
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
-                                            <TableRow>
-                                                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">
-                                                    No se encontraron estudiantes pendientes con estos filtros.
-                                                </TableCell>
-                                            </TableRow>
+                                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">No hay estudiantes pendientes.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
