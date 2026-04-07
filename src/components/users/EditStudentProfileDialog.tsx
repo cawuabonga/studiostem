@@ -34,7 +34,8 @@ const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
+// Ampliamos el rango de años de 2015 a 2035
+const years = Array.from({ length: 21 }, (_, i) => (2015 + i).toString());
 
 const editStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),

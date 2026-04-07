@@ -24,7 +24,8 @@ const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 const currentYear = new Date().getFullYear();
-const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
+// Ampliamos el rango de años de 2015 a 2035
+const years = Array.from({ length: 21 }, (_, i) => (2015 + i).toString());
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -457,7 +458,7 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
             />
         </div>
         
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" className="w-full" disabled={loading}>
           {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {loading ? 'Creando Perfil...' : 'Crear Perfil de Estudiante'}
         </Button>

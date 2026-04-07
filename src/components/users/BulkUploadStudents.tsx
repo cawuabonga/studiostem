@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { bulkAddStudents, getPrograms } from '@/config/firebase';
-import type { Program, StudentProfile } from '@/types';
+import type { Program, StudentProfile, UnitPeriod } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
 import { calculateAge } from '@/lib/utils';
 import { Timestamp } from 'firebase/firestore';
@@ -19,6 +19,7 @@ interface BulkUploadStudentsProps {
 
 const validGenders = ['Masculino', 'Femenino'];
 const validTurnos = ['Mañana', 'Tarde', 'Noche'];
+const validPeriods = ['MAR-JUL', 'AGO-DIC'];
 
 export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps) {
     const [file, setFile] = useState<File | null>(null);
@@ -53,10 +54,12 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                 address: "Av. Falsa 123",
                 programAbbreviation: programAbbreviations || "ABREV_PROGRAMA",
                 turno: "Mañana / Tarde / Noche",
+                añoAdmision: "2024",
+                periodoAdmision: "MAR-JUL / AGO-DIC",
                 photoURL: "https://example.com/foto.png (Opcional)"
             },
         ]);
-        XLSX.utils.sheet_add_aoa(worksheet, [[`Programas válidos: ${programAbbreviations || 'Primero debe registrar programas'}`]], { origin: "L1" });
+        XLSX.utils.sheet_add_aoa(worksheet, [[`Programas válidos: ${programAbbreviations || 'Primero debe registrar programas'}`]], { origin: "N1" });
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
@@ -86,7 +89,7 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                 const programMap = new Map(programs.map(p => [p.abbreviation, p.id]));
 
                 const studentsToUpload: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[] = json.map(row => {
-                    const gender = String(row.gender);
+                    const gender = String(row.gender).trim();
                     if (!validGenders.includes(gender)) {
                         throw new Error(`Género inválido "${gender}" para ${row.firstName}. Válidos: Masculino, Femenino.`);
                     }
@@ -96,7 +99,12 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                         throw new Error(`Turno inválido "${turno}" para ${row.firstName}. Válidos: Mañana, Tarde, Noche.`);
                     }
 
-                    const programId = programMap.get(String(row.programAbbreviation));
+                    const admissionPeriod = String(row.periodoAdmision || '').trim().toUpperCase();
+                    if (!validPeriods.includes(admissionPeriod)) {
+                        throw new Error(`Período de admisión inválido "${row.periodoAdmision}" para ${row.firstName}. Válidos: MAR-JUL, AGO-DIC.`);
+                    }
+
+                    const programId = programMap.get(String(row.programAbbreviation).trim());
                     if (!programId) {
                          throw new Error(`Abreviatura de programa inválida "${row.programAbbreviation}" para ${row.firstName}. Válidas: ${Array.from(programMap.keys()).join(', ')}.`);
                     }
@@ -119,8 +127,8 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                         photoURL: String(row.photoURL || ''),
                         programId: programId,
                         turno: turno as any,
-                        admissionYear: new Date().getFullYear().toString(),
-                        admissionPeriod: 'MAR-JUL',
+                        admissionYear: String(row.añoAdmision || new Date().getFullYear()),
+                        admissionPeriod: admissionPeriod as UnitPeriod,
                         role: 'Student',
                         roleId: 'student',
                     }
@@ -130,7 +138,7 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
 
                 toast({
                     title: '¡Éxito!',
-                    description: `${studentsToUpload.length} perfiles de estudiantes han sido creados.`,
+                    description: `${studentsToUpload.length} perfiles de estudiantes han sido creados con sus datos de admisión correspondientes.`,
                     duration: 8000
                 });
                 onUploadSuccess();
