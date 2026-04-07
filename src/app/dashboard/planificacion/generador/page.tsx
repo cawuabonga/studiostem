@@ -8,12 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPrograms } from '@/config/firebase';
-import type { Program } from '@/types';
+import type { Program, UnitTurno } from '@/types';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { ScheduleGenerator } from '@/components/planning/ScheduleGenerator';
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
@@ -30,8 +31,9 @@ export default function GeneradorHorariosPage() {
     const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
     const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
     const [selectedSemester, setSelectedSemester] = useState<string>('');
+    const [selectedTurno, setSelectedTurno] = useState<UnitTurno | ''>('');
 
-    const [scheduleParams, setScheduleParams] = useState<{programId: string; year: string; semester: number} | null>(isCoordinator && selectedProgramId ? { programId: selectedProgramId, year: selectedYear, semester: 0 } : null);
+    const [scheduleParams, setScheduleParams] = useState<{programId: string; year: string; semester: number; turno: UnitTurno} | null>(null);
 
 
     useEffect(() => {
@@ -50,11 +52,12 @@ export default function GeneradorHorariosPage() {
 
 
     const handleShowGenerator = () => {
-        if (selectedProgramId && selectedYear && selectedSemester) {
+        if (selectedProgramId && selectedYear && selectedSemester && selectedTurno) {
             setScheduleParams({
                 programId: selectedProgramId,
                 year: selectedYear,
                 semester: parseInt(selectedSemester, 10),
+                turno: selectedTurno as UnitTurno
             });
         }
     };
@@ -65,14 +68,14 @@ export default function GeneradorHorariosPage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Generador de Horarios</CardTitle>
+                    <CardTitle>Generador de Horarios por Sección</CardTitle>
                     <CardDescription>
-                        Herramienta para la asignación visual de horarios, detección de conflictos y gestión de la carga horaria. Selecciona los parámetros para comenzar.
+                        Crea horarios independientes por programa, ciclo y turno. El sistema validará conflictos de docentes y aulas en todo el instituto.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                      {loading ? <Loader2 className="animate-spin" /> : (
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end pt-4">
                             <div className="space-y-2">
                                 <Label htmlFor="program-select">Programa de Estudios</Label>
                                 {isCoordinator ? (
@@ -100,13 +103,22 @@ export default function GeneradorHorariosPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="semester-select">Semestre</Label>
                                 <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-                                    <SelectTrigger id="semester-select"><SelectValue placeholder="Seleccione semestre" /></SelectTrigger>
+                                    <SelectTrigger id="semester-select"><SelectValue placeholder="Ciclo..." /></SelectTrigger>
                                     <SelectContent>
                                         {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button onClick={handleShowGenerator} disabled={!selectedProgramId || !selectedYear || !selectedSemester}>
+                            <div className="space-y-2">
+                                <Label htmlFor="turno-select">Turno / Sección</Label>
+                                <Select value={selectedTurno} onValueChange={(v) => setSelectedTurno(v as UnitTurno)}>
+                                    <SelectTrigger id="turno-select"><SelectValue placeholder="Turno..." /></SelectTrigger>
+                                    <SelectContent>
+                                        {turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <Button onClick={handleShowGenerator} disabled={!selectedProgramId || !selectedYear || !selectedSemester || !selectedTurno}>
                                 Cargar Generador
                             </Button>
                         </div>
@@ -116,7 +128,7 @@ export default function GeneradorHorariosPage() {
 
             {scheduleParams && (
                 <ScheduleGenerator
-                    key={`${scheduleParams.programId}-${scheduleParams.year}-${scheduleParams.semester}`}
+                    key={`${scheduleParams.programId}-${scheduleParams.year}-${scheduleParams.semester}-${scheduleParams.turno}`}
                     {...scheduleParams}
                 />
             )}

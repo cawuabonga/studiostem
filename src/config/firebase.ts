@@ -4,7 +4,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -2271,8 +2271,8 @@ export const setDefaultScheduleTemplate = async (instituteId: string, templateId
 
 
 // --- SCHEDULE DATA ---
-const getScheduleDocRef = (instituteId: string, programId: string, year: string, semester: number) => {
-    const scheduleId = `${programId}_${year}_${semester}`;
+const getScheduleDocRef = (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno) => {
+    const scheduleId = `${programId}_${year}_${semester}_${turno}`;
     return doc(db, 'institutes', instituteId, 'schedules', scheduleId);
 }
 
@@ -2302,8 +2302,8 @@ export const getScheduledDaysForUnit = async (instituteId: string, unitId: strin
 };
 
 
-export const getSchedule = async (instituteId: string, programId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
-    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
+export const getSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno): Promise<Record<string, ScheduleBlock>> => {
+    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester, turno);
     const docSnap = await getDoc(scheduleRef);
     if (docSnap.exists()) {
         return docSnap.data().schedule || {};
@@ -2313,14 +2313,11 @@ export const getSchedule = async (instituteId: string, programId: string, year: 
 
 export const getAllSchedules = async (instituteId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
     const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
-    // We can't query based on a part of the document ID easily. We fetch all and filter.
-    // This is acceptable if the number of programs/schedules per institute isn't massive.
     const snapshot = await getDocs(schedulesCol);
     const allBlocks: Record<string, ScheduleBlock> = {};
 
     snapshot.forEach(doc => {
         const data = doc.data();
-        // Filter by year and semester from the document's fields
         if (data.year === year && data.semester === semester) {
             Object.assign(allBlocks, data.schedule);
         }
@@ -2329,9 +2326,9 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     return allBlocks;
 }
 
-export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, schedule: Record<string, ScheduleBlock>): Promise<void> => {
-    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
-    await setDoc(scheduleRef, { schedule, programId, year, semester });
+export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, schedule: Record<string, ScheduleBlock>): Promise<void> => {
+    const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester, turno);
+    await setDoc(scheduleRef, { schedule, programId, year, semester, turno });
 }
 
 // --- NEWS ---
