@@ -70,12 +70,14 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
     useEffect(() => { fetchData(); }, [fetchData]);
 
     useEffect(() => {
-        if (selectedSemester && allUnits.length > 0) {
+        if (selectedSemester && allUnits.length > 0 && student) {
             const completedUnitIds = new Set(matriculationHistory.filter(m => m.status === 'aprobado').map(m => m.unitId));
             const currentlyEnrolledUnitIds = new Set(matriculationHistory.filter(m => m.year === selectedYear).map(m => m.unitId));
 
+            // CRITICAL: Filter units by the student's assigned Turno
             const unitsForSemester = allUnits.filter(unit => 
                 unit.semester === selectedSemester &&
+                unit.turno === student.turno && 
                 !completedUnitIds.has(unit.id) &&
                 !currentlyEnrolledUnitIds.has(unit.id)
             );
@@ -83,7 +85,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
         } else {
             setAvailableUnits([]);
         }
-    }, [selectedSemester, selectedYear, allUnits, matriculationHistory]);
+    }, [selectedSemester, selectedYear, allUnits, matriculationHistory, student]);
 
     const handleSelectUnit = (unitId: string) => {
         setSelectedUnits(prev => {
@@ -149,9 +151,16 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
             <Card>
                 <CardHeader className="flex flex-row items-center gap-6">
                     <Image src={student.photoURL || `https://placehold.co/100x100.png`} alt="" width={100} height={100} className="rounded-lg object-cover" />
-                    <div>
-                        <CardTitle className="text-2xl">{student.fullName}</CardTitle>
-                        <CardDescription className="text-base">{program.name}</CardDescription>
+                    <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl">{student.fullName}</CardTitle>
+                                <CardDescription className="text-base">{program.name}</CardDescription>
+                            </div>
+                            <Badge variant="secondary" className="text-lg px-4 py-1 bg-blue-100 text-blue-800 border-blue-200">
+                                Turno: {student.turno || 'Sin asignar'}
+                            </Badge>
+                        </div>
                         <div className="text-sm text-muted-foreground mt-2 space-x-4">
                             <span>DNI: {student.documentId}</span>
                             <span>Email: {student.email}</span>
@@ -177,7 +186,7 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
                                                         <div className="flex justify-between items-start mb-2">
                                                             <div className="flex-1 pr-2">
                                                                 <p className="font-bold text-sm leading-tight">{unit?.name || 'Unidad desconocida'}</p>
-                                                                <p className="text-[10px] text-muted-foreground mt-1">{m.year} - {m.period}</p>
+                                                                <p className="text-[10px] text-muted-foreground mt-1">{m.year} - {m.period} | {unit?.turno}</p>
                                                             </div>
                                                             <AlertDialog>
                                                                 <AlertDialogTrigger asChild>
@@ -214,20 +223,20 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
             </Card>
 
             <Card>
-                <CardHeader><CardTitle>Realizar Nueva Matrícula</CardTitle><CardDescription>Inscriba al estudiante en nuevas unidades didácticas.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Realizar Nueva Matrícula</CardTitle><CardDescription>Inscriba al estudiante en las unidades correspondientes a su turno ({student.turno}).</CardDescription></CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex gap-4">
-                        <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
-                        <Select value={String(selectedSemester)} onValueChange={(v) => setSelectedSemester(v ? parseInt(v) : '')}><SelectTrigger><SelectValue placeholder="Semestre..." /></SelectTrigger><SelectContent>{semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}</SelectContent></Select>
+                        <Select value={selectedYear} onValueChange={setSelectedYear}><SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger><SelectContent>{years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select>
+                        <Select value={String(selectedSemester)} onValueChange={(v) => setSelectedSemester(v ? parseInt(v) : '')}><SelectTrigger className="w-[180px]"><SelectValue placeholder="Ciclo / Semestre..." /></SelectTrigger><SelectContent>{semesters.map(s => <SelectItem key={s} value={String(s)}>{s}° Semestre</SelectItem>)}</SelectContent></Select>
                     </div>
                     {selectedSemester && (
                         <div className="rounded-md border">
                              <Table>
-                                <TableHeader><TableRow><TableHead className="w-[50px]"><Checkbox onCheckedChange={handleSelectAllAvailable} checked={availableUnits.length > 0 && selectedUnits.size === availableUnits.length}/></TableHead><TableHead>Unidad Disponible</TableHead><TableHead>Periodo</TableHead></TableRow></TableHeader>
+                                <TableHeader><TableRow><TableHead className="w-[50px]"><Checkbox onCheckedChange={handleSelectAllAvailable} checked={availableUnits.length > 0 && selectedUnits.size === availableUnits.length}/></TableHead><TableHead>Unidad Disponible ({student.turno})</TableHead><TableHead>Periodo</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {availableUnits.length > 0 ? availableUnits.map(unit => (
                                         <TableRow key={unit.id}><TableCell><Checkbox checked={selectedUnits.has(unit.id)} onCheckedChange={() => handleSelectUnit(unit.id)}/></TableCell><TableCell className="font-medium">{unit.name}</TableCell><TableCell><Badge variant="outline">{unit.period}</Badge></TableCell></TableRow>
-                                    )) : <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No hay unidades disponibles para este semestre.</TableCell></TableRow>}
+                                    )) : <TableRow><TableCell colSpan={3} className="h-24 text-center text-muted-foreground">No hay unidades disponibles para el semestre {selectedSemester} en el turno {student.turno}.</TableCell></TableRow>}
                                 </TableBody>
                             </Table>
                         </div>

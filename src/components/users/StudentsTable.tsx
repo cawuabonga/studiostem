@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getStudentProfiles, getPrograms, bulkCreateMatriculations, getUnits } from '@/config/firebase';
-import type { StudentProfile, Program, Unit } from '@/types';
+import type { StudentProfile, Program, Unit, UnitTurno } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ interface StudentsTableProps {
 
 const PAGE_SIZE = 10;
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 
 const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-JUL' | 'AGO-DIC'): number => {
     const currentYear = new Date().getFullYear();
@@ -55,6 +56,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const [textFilter, setTextFilter] = useState('');
   const [programFilter, setProgramFilter] = useState('all');
   const [semesterFilter, setSemesterFilter] = useState('all');
+  const [turnoFilter, setTurnoFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -107,6 +109,9 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     if (semesterFilter !== 'all') {
         profiles = profiles.filter(p => (p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod)) === parseInt(semesterFilter));
     }
+    if (turnoFilter !== 'all') {
+        profiles = profiles.filter(p => p.turno === turnoFilter);
+    }
     if (textFilter) {
         profiles = profiles.filter(p => 
             p.fullName.toLowerCase().includes(textFilter.toLowerCase()) ||
@@ -114,7 +119,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
         );
     }
     return profiles.sort((a, b) => a.lastName.localeCompare(b.lastName));
-  }, [allProfiles, textFilter, programFilter, semesterFilter]);
+  }, [allProfiles, textFilter, programFilter, semesterFilter, turnoFilter]);
   
   const paginatedProfiles = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
@@ -141,6 +146,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     setIsSubmitting(true);
     try {
         const semesterNum = parseInt(bulkData.semester);
+        // Important: Units also must match the student's turno for bulk enrollment to be consistent
+        // For now, we take units of the semester. Individual checks happen if student turns differ.
         const unitsToEnroll = allUnits.filter(u => u.programId === programFilter && u.semester === semesterNum);
         
         if (unitsToEnroll.length === 0) {
@@ -168,8 +175,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             <Label className="text-[10px] font-bold uppercase text-muted-foreground">Búsqueda</Label>
             <Input placeholder="Buscar por nombre o DNI..." value={textFilter} onChange={(e) => setTextFilter(e.target.value)} />
         </div>
-        <div className="w-[280px] space-y-1">
-            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Programa de Estudios</Label>
+        <div className="w-[200px] space-y-1">
+            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Programa</Label>
             <Select value={programFilter} onValueChange={setProgramFilter} disabled={!isFullAdmin}>
                 <SelectTrigger><SelectValue placeholder="Programa..." /></SelectTrigger>
                 <SelectContent>
@@ -178,13 +185,23 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                 </SelectContent>
             </Select>
         </div>
-        <div className="w-[180px] space-y-1">
-            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Ciclo Académico</Label>
+        <div className="w-[120px] space-y-1">
+            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Ciclo</Label>
             <Select value={semesterFilter} onValueChange={setSemesterFilter}>
                 <SelectTrigger><SelectValue placeholder="Semestre..." /></SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="all">Todos los Semestres</SelectItem>
-                    {semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}
+                    <SelectItem value="all">Todos</SelectItem>
+                    {semesters.map(s => <SelectItem key={s} value={String(s)}>{s}° Ciclo</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="w-[120px] space-y-1">
+            <Label className="text-[10px] font-bold uppercase text-muted-foreground">Turno</Label>
+            <Select value={turnoFilter} onValueChange={setTurnoFilter}>
+                <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
             </Select>
         </div>
@@ -206,6 +223,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
               <TableHead>DNI</TableHead>
               <TableHead>Estudiante</TableHead>
               <TableHead>Ciclo Actual</TableHead>
+              <TableHead>Turno</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead className="text-right">Acción</TableHead>
             </TableRow>
@@ -226,7 +244,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                         <span className="font-medium">{p.fullName}</span>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant="outline">Semestre {currentSem}</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{currentSem}° Semestre</Badge></TableCell>
+                  <TableCell><Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100">{p.turno || 'Sin asignar'}</Badge></TableCell>
                   <TableCell><Badge variant={p.linkedUserUid ? 'default' : 'secondary'}>{p.linkedUserUid ? 'Vinculado' : 'Pendiente'}</Badge></TableCell>
                   <TableCell className="text-right">
                     {isMatriculaMode ? (

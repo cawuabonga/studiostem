@@ -51,6 +51,7 @@ export interface StudentProfile {
   programId: string;
   admissionYear: string;
   admissionPeriod: UnitPeriod;
+  turno: UnitTurno;
   role: 'Student';
   roleId: 'student';
   condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency

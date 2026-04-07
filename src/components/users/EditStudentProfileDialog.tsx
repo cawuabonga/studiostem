@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -20,13 +19,14 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import type { StudentProfile, Program, UnitPeriod } from '@/types';
+import type { StudentProfile, Program, UnitPeriod, UnitTurno } from '@/types';
 import { updateStudentProfile, getPrograms } from '@/config/firebase';
 import { Loader2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
+const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
@@ -41,6 +41,7 @@ const editStudentSchema = z.object({
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
   admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
   admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
+  turno: z.enum(turnos, { required_error: 'Debe seleccionar un turno.' }),
   rfidCardId: z.string().optional().or(z.literal('')),
 });
 
@@ -81,6 +82,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
         programId: profile.programId || '',
         admissionYear: profile.admissionYear || '',
         admissionPeriod: profile.admissionPeriod,
+        turno: profile.turno,
         rfidCardId: profile.rfidCardId || '',
       });
     }
@@ -142,7 +144,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
                 />
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                  <FormField
                     control={form.control}
                     name="gender"
@@ -166,6 +168,22 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
                         <FormItem>
                         <FormLabel>Edad</FormLabel>
                         <FormControl><Input type="number" {...field} /></FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="turno"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Turno</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                            <SelectContent>
+                            {turnos.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                         <FormMessage />
                         </FormItem>
                     )}

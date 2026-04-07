@@ -11,11 +11,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
-import type { Program, UnitPeriod } from '@/types';
+import type { Program, UnitPeriod, UnitTurno } from '@/types';
 import { Loader2, Search } from 'lucide-react';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
+const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 const currentYear = new Date().getFullYear();
 const years = Array.from({ length: 5 }, (_, i) => (currentYear - 2 + i).toString());
 
@@ -34,6 +35,7 @@ const addStudentSchema = z.object({
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
   admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
   admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
+  turno: z.enum(turnos, { required_error: 'Debe seleccionar un turno.' }),
   photoURL: z.instanceof(FileList).optional()
     .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 2MB.`)
     .refine(
@@ -87,6 +89,7 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
       programId: '',
       admissionYear: new Date().getFullYear().toString(),
       admissionPeriod: undefined,
+      turno: undefined,
       photoURL: undefined,
     },
   });
@@ -143,7 +146,6 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
       await addStudentProfile(instituteId, {
         ...studentData,
         photoURL: photoDataUri,
-        // Asignar el roleId por defecto para estudiantes
         roleId: 'student', 
         role: 'Student',
       });
@@ -239,7 +241,7 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
             />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
              <FormField
                 control={form.control}
                 name="gender"
@@ -267,6 +269,24 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                     <FormControl>
                         <Input type="number" {...field} />
                     </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="turno"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Turno</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {turnos.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                     </FormItem>
                 )}

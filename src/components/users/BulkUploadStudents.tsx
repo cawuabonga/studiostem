@@ -16,6 +16,7 @@ interface BulkUploadStudentsProps {
 }
 
 const validGenders = ['Masculino', 'Femenino'];
+const validTurnos = ['Mañana', 'Tarde', 'Noche'];
 
 export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps) {
     const [file, setFile] = useState<File | null>(null);
@@ -49,10 +50,11 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                 phone: "987654321",
                 address: "Av. Falsa 123",
                 programAbbreviation: programAbbreviations || "ABREV_PROGRAMA",
+                turno: "Mañana / Tarde / Noche",
                 photoURL: "https://example.com/foto.png (Opcional)"
             },
         ]);
-        XLSX.utils.sheet_add_aoa(worksheet, [[`Programas válidos: ${programAbbreviations || 'Primero debe registrar programas'}`]], { origin: "K1" });
+        XLSX.utils.sheet_add_aoa(worksheet, [[`Programas válidos: ${programAbbreviations || 'Primero debe registrar programas'}`]], { origin: "L1" });
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Estudiantes");
@@ -81,10 +83,15 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
 
                 const programMap = new Map(programs.map(p => [p.abbreviation, p.id]));
 
-                const studentsToUpload: Omit<StudentProfile, 'fullName'| 'linkedUserUid'>[] = json.map(row => {
+                const studentsToUpload: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[] = json.map(row => {
                     const gender = String(row.gender);
                     if (!validGenders.includes(gender)) {
                         throw new Error(`Género inválido "${gender}" para ${row.firstName}. Válidos: Masculino, Femenino.`);
+                    }
+
+                    const turno = String(row.turno || '').trim();
+                    if (!validTurnos.includes(turno)) {
+                        throw new Error(`Turno inválido "${turno}" para ${row.firstName}. Válidos: Mañana, Tarde, Noche.`);
                     }
 
                     const programId = programMap.get(String(row.programAbbreviation));
@@ -103,6 +110,11 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                         address: String(row.address || ''),
                         photoURL: String(row.photoURL || ''),
                         programId: programId,
+                        turno: turno as any,
+                        admissionYear: new Date().getFullYear().toString(), // Default for bulk
+                        admissionPeriod: 'MAR-JUL', // Default
+                        role: 'Student',
+                        roleId: 'student',
                     }
                 });
 
