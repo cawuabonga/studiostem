@@ -1980,6 +1980,16 @@ export const getEnvironmentsForBuilding = async (instituteId: string, buildingId
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, buildingId, ...docSnap.data() } as Environment));
 };
 
+export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
+    const buildings = await getBuildings(instituteId);
+    let allEnvironments: Environment[] = [];
+    for (const building of buildings) {
+        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
+        allEnvironments = allEnvironments.concat(envs);
+    }
+    return allEnvironments;
+}
+
 export const updateEnvironment = async (instituteId: string, buildingId: string, envId: string, data: Partial<Environment>): Promise<void> => {
     const envRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', envId);
     await updateDoc(envRef, data);

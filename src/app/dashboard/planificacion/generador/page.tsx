@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPrograms } from '@/config/firebase';
 import type { Program, UnitTurno } from '@/types';
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CalendarRange } from 'lucide-react';
 import { ScheduleGenerator } from '@/components/planning/ScheduleGenerator';
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
@@ -23,12 +23,12 @@ export default function GeneradorHorariosPage() {
     const { user, hasPermission, instituteId } = useAuth();
     
     const isFullAdmin = hasPermission('academic:program:manage');
-    const isCoordinator = hasPermission('planning:schedule:manage') && !isFullAdmin;
+    const isCoordinator = !!user?.programId && !isFullAdmin;
 
     const [programs, setPrograms] = useState<Program[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const [selectedProgramId, setSelectedProgramId] = useState(() => isCoordinator ? user?.programId || '' : '');
+    const [selectedProgramId, setSelectedProgramId] = useState<string>('');
     const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
     const [selectedSemester, setSelectedSemester] = useState<string>('');
     const [selectedTurno, setSelectedTurno] = useState<UnitTurno | ''>('');
@@ -41,7 +41,11 @@ export default function GeneradorHorariosPage() {
             setLoading(true);
             getPrograms(instituteId).then(allPrograms => {
                 if (isCoordinator && user?.programId) {
-                    setPrograms(allPrograms.filter(p => p.id === user.programId));
+                    const myPrograms = allPrograms.filter(p => p.id === user.programId);
+                    setPrograms(myPrograms);
+                    if (myPrograms.length > 0) {
+                        setSelectedProgramId(myPrograms[0].id);
+                    }
                 } else {
                     setPrograms(allPrograms);
                 }
@@ -68,10 +72,15 @@ export default function GeneradorHorariosPage() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Generador de Horarios por Sección</CardTitle>
-                    <CardDescription>
-                        Crea horarios independientes por programa, ciclo y turno. El sistema validará conflictos de docentes y aulas en todo el instituto.
-                    </CardDescription>
+                    <div className="flex items-center gap-3">
+                        <CalendarRange className="h-8 w-8 text-primary" />
+                        <div>
+                            <CardTitle>Generador de Horarios por Sección</CardTitle>
+                            <CardDescription>
+                                Crea horarios independientes por programa, ciclo y turno. El sistema validará conflictos de docentes y aulas en todo el instituto.
+                            </CardDescription>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                      {loading ? <Loader2 className="animate-spin" /> : (
@@ -112,7 +121,7 @@ export default function GeneradorHorariosPage() {
                             <div className="space-y-2">
                                 <Label htmlFor="turno-select">Turno / Sección</Label>
                                 <Select value={selectedTurno} onValueChange={(v) => setSelectedTurno(v as UnitTurno)}>
-                                    <SelectTrigger id="turno-select"><SelectValue placeholder="Turno..." /></SelectTrigger>
+                                    <SelectTrigger id="turno-select"><SelectValue placeholder="Seleccione turno..." /></SelectTrigger>
                                     <SelectContent>
                                         {turnos.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                                     </SelectContent>

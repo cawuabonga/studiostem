@@ -12,8 +12,9 @@ import { produce } from 'immer';
 import { UnassignedUnitCard } from './UnassignedUnitCard';
 import { TurnoGrid } from './TurnoGrid';
 import { Button } from '../ui/button';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, AlertCircle, Info } from 'lucide-react';
 import { OccupiedBlockCard } from './OccupiedBlockCard';
+import Link from 'next/link';
 
 interface ScheduleGeneratorProps {
     programId: string;
@@ -71,17 +72,9 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
             setTeachers(fetchedTeachers);
             setAssignments({ ...allAssignmentsForYear['MAR-JUL'], ...allAssignmentsForYear['AGO-DIC'] });
             
-            if (!defaultTemplate) {
-                toast({
-                    title: "Plantilla no encontrada",
-                    description: "No se encontró una plantilla de horario por defecto.",
-                    variant: "destructive",
-                });
-            }
-            
         } catch (error) {
             console.error("Error fetching data for schedule generator:", error);
-            toast({ title: "Error", description: "No se pudieron cargar los datos necesarios.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudieron cargar los datos necesarios. Verifica la configuración.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -310,6 +303,28 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
         )
     }
 
+    if (!template) {
+        return (
+            <Card className="border-destructive/50 bg-destructive/5">
+                <CardHeader className="text-center py-12">
+                    <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
+                    <CardTitle className="text-destructive">Falta Configuración de Plantilla</CardTitle>
+                    <CardDescription className="max-w-md mx-auto mt-2">
+                        No se ha encontrado una plantilla de horario por defecto. 
+                        Es necesario definir los bloques horarios (mañana, tarde, noche) antes de generar el horario.
+                    </CardDescription>
+                    <div className="mt-6">
+                        <Button asChild variant="outline">
+                            <Link href="/dashboard/planificacion/configuracion-horario">
+                                Ir a Configurar Plantilla
+                            </Link>
+                        </Button>
+                    </div>
+                </CardHeader>
+            </Card>
+        )
+    }
+
     // Pass the relevant blocks to the grid view
     const currentViewSchedule = Object.fromEntries(
         Object.entries(allSchedules).filter(([key, block]) => 
@@ -323,8 +338,11 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
             <div className="col-span-12 md:col-span-3">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Unidades ({turno})</CardTitle>
-                        <CardDescription>Arrastra para asignar</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Info className="h-4 w-4" />
+                            Unidades ({turno})
+                        </CardTitle>
+                        <CardDescription>Arrastra para asignar bloques.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2 max-h-[70vh] overflow-y-auto">
                         {units.length > 0 ? units.map(unit => (
@@ -335,7 +353,9 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                                 onDragStart={handleDragStart} 
                             />
                         )) : (
-                            <p className="text-sm text-muted-foreground text-center py-4">No hay unidades registradas para el turno {turno}.</p>
+                            <p className="text-sm text-muted-foreground text-center py-8">
+                                No hay unidades registradas para el turno {turno} en este semestre.
+                            </p>
                         )}
                     </CardContent>
                 </Card>
