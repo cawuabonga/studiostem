@@ -43,6 +43,7 @@ export interface StudentProfile {
   lastName:string;
   fullName: string;
   gender: 'Masculino' | 'Femenino';
+  birthDate?: Timestamp;
   age: number;
   email: string;
   phone?: string;
@@ -441,8 +442,8 @@ export interface Submission {
 // Represents a single grade entry for an evaluation
 export interface GradeEntry {
   type: 'task' | 'manual';
-  refId: string; // The ID of the original task, or a generated ID for a manual entry
-  label: string; // Title of the task or manual evaluation
+  refId: string; // El ID de la tarea original, o un ID generado para una entrada manual
+  label: string; // Título de la tarea o evaluación manual
   grade: number | null;
   weekNumber: number;
 }

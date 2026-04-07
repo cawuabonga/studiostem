@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { bulkAddStudents, getPrograms } from '@/config/firebase';
 import type { Program, StudentProfile } from '@/types';
 import { FileDown, Upload, Loader2 } from 'lucide-react';
+import { calculateAge } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
 
 interface BulkUploadStudentsProps {
     onUploadSuccess: () => void;
@@ -45,7 +47,7 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                 firstName: "Juan",
                 lastName: "Perez",
                 gender: "Masculino",
-                age: 20,
+                fechaNacimiento: "1995-05-20",
                 email: "juan.perez@example.com",
                 phone: "987654321",
                 address: "Av. Falsa 123",
@@ -76,7 +78,7 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
         reader.onload = async (e) => {
             try {
                 const data = new Uint8Array(e.target?.result as ArrayBuffer);
-                const workbook = XLSX.read(data, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[sheetName];
                 const json = XLSX.utils.sheet_to_json(worksheet) as any[];
@@ -98,21 +100,27 @@ export function BulkUploadStudents({ onUploadSuccess }: BulkUploadStudentsProps)
                     if (!programId) {
                          throw new Error(`Abreviatura de programa inválida "${row.programAbbreviation}" para ${row.firstName}. Válidas: ${Array.from(programMap.keys()).join(', ')}.`);
                     }
+                    
+                    const bDate = row.fechaNacimiento instanceof Date ? row.fechaNacimiento : new Date(row.fechaNacimiento);
+                    if (isNaN(bDate.getTime())) {
+                        throw new Error(`Fecha de nacimiento inválida para ${row.firstName}. Use el formato YYYY-MM-DD.`);
+                    }
 
                     return {
                         documentId: String(row.documentId),
                         firstName: String(row.firstName),
                         lastName: String(row.lastName),
                         gender: gender as any,
-                        age: Number(row.age),
+                        birthDate: Timestamp.fromDate(bDate),
+                        age: calculateAge(bDate),
                         email: String(row.email),
                         phone: String(row.phone || ''),
                         address: String(row.address || ''),
                         photoURL: String(row.photoURL || ''),
                         programId: programId,
                         turno: turno as any,
-                        admissionYear: new Date().getFullYear().toString(), // Default for bulk
-                        admissionPeriod: 'MAR-JUL', // Default
+                        admissionYear: new Date().getFullYear().toString(),
+                        admissionPeriod: 'MAR-JUL',
                         role: 'Student',
                         roleId: 'student',
                     }

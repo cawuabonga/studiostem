@@ -7,12 +7,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { addStudentProfile, getPrograms } from '@/config/firebase';
 import type { Program, UnitPeriod, UnitTurno } from '@/types';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { calculateAge, cn } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
 
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
@@ -30,7 +36,8 @@ const addStudentSchema = z.object({
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   address: z.string().min(5, { message: 'La dirección es requerida.' }).optional().or(z.literal('')),
-  age: z.coerce.number().min(15, { message: 'La edad debe ser al menos 15 años.' }),
+  birthDate: z.date({ required_error: 'La fecha de nacimiento es requerida.' }),
+  age: z.number(),
   gender: z.enum(genders, { required_error: 'Debe seleccionar un género.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
   admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
@@ -94,6 +101,15 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
     },
   });
   
+  const watchedBirthDate = form.watch('birthDate');
+
+  useEffect(() => {
+    if (watchedBirthDate) {
+        const age = calculateAge(watchedBirthDate);
+        form.setValue('age', age);
+    }
+  }, [watchedBirthDate, form]);
+
   useEffect(() => {
     if(initialData) {
         form.reset({
@@ -141,10 +157,11 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
           photoDataUri = await fileToDataUri(data.photoURL[0]);
       }
       
-      const { photoURL, ...studentData } = data;
+      const { photoURL, birthDate, ...studentData } = data;
 
       await addStudentProfile(instituteId, {
         ...studentData,
+        birthDate: Timestamp.fromDate(birthDate),
         photoURL: photoDataUri,
         roleId: 'student', 
         role: 'Student',
@@ -262,35 +279,54 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
             />
              <FormField
                 control={form.control}
-                name="age"
+                name="birthDate"
                 render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Edad</FormLabel>
-                    <FormControl>
-                        <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-            />
-            <FormField
-                control={form.control}
-                name="turno"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Turno</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormItem className="flex flex-col pt-2">
+                    <FormLabel className="mb-1">Fecha de Nacimiento</FormLabel>
+                    <Popover>
+                        <PopoverTrigger asChild>
                         <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                            )}
+                            >
+                            {field.value ? (
+                                format(field.value, "PPP", { locale: es })
+                            ) : (
+                                <span>Seleccione fecha</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
                         </FormControl>
-                        <SelectContent>
-                        {turnos.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                            date > new Date() || date < new Date("1950-01-01")
+                            }
+                            captionLayout="dropdown-buttons"
+                            fromYear={1950}
+                            toYear={new Date().getFullYear()}
+                            initialFocus
+                        />
+                        </PopoverContent>
+                    </Popover>
                     <FormMessage />
                     </FormItem>
                 )}
             />
+            <div className="space-y-2">
+                <FormLabel>Edad Calculada</FormLabel>
+                <div className="h-10 px-3 py-2 rounded-md border bg-muted flex items-center font-bold text-primary">
+                    {form.watch('age') || 0} años
+                </div>
+            </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -393,6 +429,28 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                         {periods.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                         </SelectContent>
                     </Select>
+                    <FormMessage />
+                    </FormItem>
+                )}
+            />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="turno"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Turno Inicial Asignado</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Turno..." /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {turnos.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormDescription>Se usará para filtrar las unidades en la matrícula.</FormDescription>
                     <FormMessage />
                     </FormItem>
                 )}
