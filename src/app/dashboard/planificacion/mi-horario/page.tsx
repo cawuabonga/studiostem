@@ -1,4 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+"use client";
+
+import { ScheduleViewer } from "@/components/planning/ScheduleViewer";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from "lucide-react";
 
 export default function MiHorarioPage() {
@@ -7,19 +11,20 @@ export default function MiHorarioPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-4">
-             <CalendarClock className="h-8 w-8" />
+             <div className="p-3 bg-primary rounded-lg text-primary-foreground">
+                <CalendarClock className="h-8 w-8" />
+             </div>
             <div>
-              <CardTitle>Mi Horario Semanal</CardTitle>
+              <CardTitle className="text-2xl">Mi Horario Personal</CardTitle>
               <CardDescription>
-                Aquí podrás visualizar tu horario de clases o de trabajo asignado para la semana actual.
+                Visualiza tu programación semanal de clases y laboratorios asignados para el periodo actual.
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <p className="text-center text-muted-foreground py-12">El módulo para visualizar horarios se implementará próximamente en la Fase 2.</p>
-        </CardContent>
       </Card>
+      
+      <ScheduleViewer />
     </div>
   );
 }

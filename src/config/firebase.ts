@@ -1921,8 +1921,8 @@ export const getMatriculationReportData = async (
         if (studentIds.length > 0) {
             const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
             const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
-            const studentSnap = await getDocs(studentQuery);
-            students = studentSnap.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
+            const studentSnapshot = await getDocs(studentQuery);
+            students = studentSnapshot.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
         }
 
         return {
@@ -2329,6 +2329,21 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     snapshot.forEach(doc => {
         const data = doc.data();
         if (data.year === year && data.semester === semester) {
+            Object.assign(allBlocks, data.schedule);
+        }
+    });
+
+    return allBlocks;
+}
+
+export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<Record<string, ScheduleBlock>> => {
+    const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
+    const snapshot = await getDocs(schedulesCol);
+    const allBlocks: Record<string, ScheduleBlock> = {};
+
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.year === year) {
             Object.assign(allBlocks, data.schedule);
         }
     });
