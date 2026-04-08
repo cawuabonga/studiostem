@@ -50,9 +50,6 @@ export function ScheduleViewer() {
 
                 Object.entries(allSchedules).forEach(([key, block]) => {
                     if (block.programId === studentProgramId && block.semester === studentSemester) {
-                        // Verificamos si el turno del bloque coincide con el turno de la sección
-                        // Como las keys ya separan secciones, si cargamos por semestre/programa ya tenemos los bloques correctos.
-                        // Sin embargo, para seguridad, comparamos que el bloque pertenezca a una de las unidades del turno del alumno.
                         const unitOfBlock = allUnits.find(u => u.id === block.unitId);
                         if (unitOfBlock?.turno === studentTurno) {
                             userSchedule[key] = block;
@@ -88,13 +85,9 @@ export function ScheduleViewer() {
             const turno = (user as any).turno?.toLowerCase() || 'mañana';
             return template.turnos[turno as keyof typeof template.turnos] || [];
         }
-        // Para docentes, mostrar todos los bloques que tengan al menos una clase asignada
-        const allBlocks = [...template.turnos.mañana, ...template.turnos.tarde, ...template.turnos.noche];
-        const assignedStartTimes = new Set(Object.values(personalSchedule).map(b => b.startTime));
-        
-        // Retornar bloques de clase o recesos que estén en medio de clases asignadas
-        return allBlocks.filter(b => b.type === 'receso' || assignedStartTimes.has(b.startTime));
-    }, [template, user, personalSchedule]);
+        // Para docentes, mostrar todos los bloques
+        return [...template.turnos.mañana, ...template.turnos.tarde, ...template.turnos.noche];
+    }, [template, user]);
 
     if (loading) {
         return (
@@ -153,57 +146,70 @@ export function ScheduleViewer() {
                     ))}
 
                     {/* Time Rows */}
-                    {activeTimeBlocks.map((timeBlock, idx) => (
-                        <React.Fragment key={`${timeBlock.startTime}-${idx}`}>
-                            <div className="bg-background p-3 text-center text-[10px] font-mono border-t flex flex-col justify-center leading-none text-muted-foreground">
-                                <span>{timeBlock.startTime}</span>
-                                <span className="my-1">|</span>
-                                <span>{timeBlock.endTime}</span>
-                            </div>
-                            {days.map(day => {
-                                const cellKey = `${day}-${timeBlock.startTime}`;
-                                const block = personalSchedule[cellKey];
-                                const unit = block ? units.find(u => u.id === block.unitId) : null;
-                                const environment = block ? environments.find(e => e.id === block.environmentId) : null;
+                    {activeTimeBlocks.map((timeBlock, idx) => {
+                        // Check if this row has ANY classes scheduled for the user
+                        const hasClassesInRow = days.some(day => personalSchedule[`${day}-${timeBlock.startTime}`]);
+                        const isReceso = timeBlock.type === 'receso';
+                        
+                        // Dynamic height: Clase ocupada (h-32), Clase vacía (h-12), Receso (h-8)
+                        const rowHeightClass = isReceso ? "h-8" : (hasClassesInRow ? "h-32" : "h-12");
 
-                                return (
-                                    <div key={cellKey} className={cn(
-                                        "bg-background border-t p-2 h-32 transition-colors",
-                                        timeBlock.type === 'receso' && "bg-muted/30"
-                                    )}>
-                                        {timeBlock.type === 'receso' ? (
-                                            <div className="h-full flex items-center justify-center text-[10px] uppercase font-bold text-muted-foreground/40 italic">
-                                                {timeBlock.label || 'Receso'}
-                                            </div>
-                                        ) : block && unit ? (
-                                            <div className="h-full bg-primary/5 border-l-4 border-l-primary rounded-r-md p-2 flex flex-col justify-between shadow-sm hover:bg-primary/10 transition-all">
-                                                <div>
-                                                    <p className="font-bold text-[11px] leading-tight text-primary uppercase line-clamp-2">
-                                                        {unit.name}
-                                                    </p>
-                                                    <p className="text-[9px] font-semibold text-muted-foreground mt-1">
-                                                        {unit.code}
-                                                    </p>
+                        return (
+                            <React.Fragment key={`${timeBlock.startTime}-${idx}`}>
+                                <div className={cn(
+                                    "bg-background p-2 text-center text-[10px] font-mono border-t flex flex-col justify-center leading-none text-muted-foreground",
+                                    rowHeightClass
+                                )}>
+                                    <span>{timeBlock.startTime}</span>
+                                    {!isReceso && hasClassesInRow && <span className="my-1">|</span>}
+                                    {!isReceso && hasClassesInRow && <span>{timeBlock.endTime}</span>}
+                                </div>
+                                {days.map(day => {
+                                    const cellKey = `${day}-${timeBlock.startTime}`;
+                                    const block = personalSchedule[cellKey];
+                                    const unit = block ? units.find(u => u.id === block.unitId) : null;
+                                    const environment = block ? environments.find(e => e.id === block.environmentId) : null;
+
+                                    return (
+                                        <div key={cellKey} className={cn(
+                                            "bg-background border-t p-1 transition-all duration-200",
+                                            rowHeightClass,
+                                            isReceso && "bg-muted/30"
+                                        )}>
+                                            {isReceso ? (
+                                                <div className="h-full flex items-center justify-center text-[9px] uppercase font-bold text-muted-foreground/30 italic">
+                                                    {timeBlock.label || 'Receso'}
                                                 </div>
-                                                <div className="space-y-1">
-                                                    {user?.role !== 'Student' && (
-                                                        <div className="flex items-center gap-1 text-[9px] font-medium text-muted-foreground">
-                                                            <User className="h-2.5 w-2.5" />
-                                                            <span>Ciclo {block.semester}°</span>
+                                            ) : block && unit ? (
+                                                <div className="h-full bg-primary/5 border-l-4 border-l-primary rounded-r-md p-2 flex flex-col justify-between shadow-sm hover:bg-primary/10 transition-all">
+                                                    <div>
+                                                        <p className="font-bold text-[10px] leading-tight text-primary uppercase line-clamp-2">
+                                                            {unit.name}
+                                                        </p>
+                                                        <p className="text-[8px] font-semibold text-muted-foreground mt-0.5">
+                                                            {unit.code}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex justify-between items-end">
+                                                        {user?.role !== 'Student' && (
+                                                            <div className="flex items-center gap-1 text-[8px] font-medium text-muted-foreground">
+                                                                <User className="h-2 w-2" />
+                                                                <span>Ciclo {block.semester}°</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-1 text-[8px] font-bold text-accent-foreground bg-accent/20 rounded px-1 w-fit">
+                                                            <MapPin className="h-2 w-2" />
+                                                            <span>{environment?.name || 'A.P.'}</span>
                                                         </div>
-                                                    )}
-                                                    <div className="flex items-center gap-1 text-[9px] font-bold text-accent-foreground bg-accent/20 rounded px-1 w-fit">
-                                                        <MapPin className="h-2.5 w-2.5" />
-                                                        <span>{environment?.name || 'Aula Pendiente'}</span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                );
-                            })}
-                        </React.Fragment>
-                    ))}
+                                            ) : null}
+                                        </div>
+                                    );
+                                })}
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
             </CardContent>
         </Card>
