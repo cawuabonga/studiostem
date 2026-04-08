@@ -7,7 +7,7 @@ import type { StudentProfile, Program, Unit, UnitTurno } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, ArrowRight, Edit2, Eye, Loader2, CheckCircle2 } from 'lucide-react';
+import { MoreHorizontal, ArrowRight, Edit2, Eye, Loader2, CheckCircle2, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,6 +20,7 @@ import { EditStudentProfileDialog } from './EditStudentProfileDialog';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface StudentsTableProps {
     instituteId: string;
@@ -64,8 +65,10 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
+  // Bulk Matriculation states
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [bulkData, setBulkData] = useState({ year: new Date().getFullYear().toString(), semester: '' });
+  const [selectedUnitIdsBulk, setSelectedUnitIdsBulk] = useState<Set<string>>(new Set());
 
   const isFullAdmin = hasPermission('superadmin:institute:manage') || (user?.role === 'Admin' && !user?.programId);
   const coordinatorProgramId = user?.programId || (user as any)?.programId;
@@ -127,7 +130,6 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   }, [filteredProfiles, currentPage]);
 
   const totalPages = Math.ceil(filteredProfiles.length / PAGE_SIZE);
-  const programMap = useMemo(() => new Map(programs.map(p => [p.id, p])), [programs]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) setSelectedIds(new Set(filteredProfiles.map(p => p.documentId)));
@@ -141,23 +143,39 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     setSelectedIds(newSet);
   };
 
+  // Units available for bulk matriculation based on current dialog state
+  const availableUnitsBulk = useMemo(() => {
+    if (!bulkData.semester || !programFilter || programFilter === 'all') return [];
+    const sem = parseInt(bulkData.semester);
+    // Filter by program and semester. 
+    // We show all units of that semester for the program to let the user choose.
+    return allUnits.filter(u => u.programId === programFilter && u.semester === sem);
+  }, [allUnits, bulkData.semester, programFilter]);
+
+  const handleSelectAllUnitsBulk = (checked: boolean) => {
+    if (checked) setSelectedUnitIdsBulk(new Set(availableUnitsBulk.map(u => u.id)));
+    else setSelectedUnitIdsBulk(new Set());
+  };
+
+  const handleSelectOneUnitBulk = (unitId: string) => {
+    const newSet = new Set(selectedUnitIdsBulk);
+    if (newSet.has(unitId)) newSet.delete(unitId);
+    else newSet.add(unitId);
+    setSelectedUnitIdsBulk(newSet);
+  };
+
   const handleBulkMatriculate = async () => {
-    if (!instituteId || selectedIds.size === 0 || !bulkData.semester) return;
+    if (!instituteId || selectedIds.size === 0 || !bulkData.semester || selectedUnitIdsBulk.size === 0) return;
     setIsSubmitting(true);
     try {
         const semesterNum = parseInt(bulkData.semester);
-        // Important: Units also must match the student's turno for bulk enrollment to be consistent
-        // For now, we take units of the semester. Individual checks happen if student turns differ.
-        const unitsToEnroll = allUnits.filter(u => u.programId === programFilter && u.semester === semesterNum);
+        const unitsToEnroll = allUnits.filter(u => selectedUnitIdsBulk.has(u.id));
         
-        if (unitsToEnroll.length === 0) {
-            throw new Error("No hay unidades didácticas configuradas para este programa y semestre.");
-        }
-
         await bulkCreateMatriculations(instituteId, Array.from(selectedIds), unitsToEnroll, bulkData.year, semesterNum);
         toast({ title: "Matrícula Exitosa", description: `${selectedIds.size} estudiantes matriculados en ${unitsToEnroll.length} unidades.` });
         setIsBulkDialogOpen(false);
         setSelectedIds(new Set());
+        setSelectedUnitIdsBulk(new Set());
         fetchData(instituteId);
     } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -206,7 +224,10 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             </Select>
         </div>
         {isMatriculaMode && selectedIds.size > 0 && (
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => setIsBulkDialogOpen(true)}>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={() => {
+                setSelectedUnitIdsBulk(new Set());
+                setIsBulkDialogOpen(true);
+            }}>
                 <CheckCircle2 className="mr-2 h-4 w-4" /> Matricular ({selectedIds.size})
             </Button>
         )}
@@ -273,29 +294,85 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
       </div>
 
       <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
                 <DialogTitle>Matrícula Masiva ({selectedIds.size} alumnos)</DialogTitle>
-                <DialogDescription>Los alumnos seleccionados serán inscritos en todas las unidades didácticas del semestre elegido.</DialogDescription>
+                <DialogDescription>Seleccione el semestre y las unidades didácticas específicas para la inscripción del grupo.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Año</Label><Input value={bulkData.year} disabled /></div>
+                    <div className="space-y-2"><Label>Año Académico</Label><Input value={bulkData.year} disabled /></div>
                     <div className="space-y-2">
-                        <Label>Semestre de Destino</Label>
-                        <Select value={bulkData.semester} onValueChange={(v) => setBulkData(p => ({ ...p, semester: v }))}>
+                        <Label>Semestre Destino</Label>
+                        <Select value={bulkData.semester} onValueChange={(v) => {
+                            setBulkData(p => ({ ...p, semester: v }));
+                            setSelectedUnitIdsBulk(new Set()); // Reset units when semester changes
+                        }}>
                             <SelectTrigger><SelectValue placeholder="Seleccione..." /></SelectTrigger>
                             <SelectContent>{semesters.map(s => <SelectItem key={s} value={String(s)}>Semestre {s}</SelectItem>)}</SelectContent>
                         </Select>
                     </div>
                 </div>
+
+                {bulkData.semester && (
+                    <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                            <Label className="flex items-center gap-2 font-bold text-primary">
+                                <ListChecks className="h-4 w-4" />
+                                Unidades Disponibles
+                            </Label>
+                            <div className="flex items-center space-x-2">
+                                <Checkbox 
+                                    id="select-all-units" 
+                                    checked={availableUnitsBulk.length > 0 && selectedUnitIdsBulk.size === availableUnitsBulk.length}
+                                    onCheckedChange={handleSelectAllUnitsBulk}
+                                />
+                                <Label htmlFor="select-all-units" className="text-xs cursor-pointer">Marcar Todas</Label>
+                            </div>
+                        </div>
+                        <ScrollArea className="h-[200px] rounded-md border p-4 bg-muted/30">
+                            {availableUnitsBulk.length > 0 ? (
+                                <div className="space-y-3">
+                                    {availableUnitsBulk.map(unit => (
+                                        <div key={unit.id} className="flex items-start space-x-3 space-y-0">
+                                            <Checkbox 
+                                                id={`unit-${unit.id}`} 
+                                                checked={selectedUnitIdsBulk.has(unit.id)}
+                                                onCheckedChange={() => handleSelectOneUnitBulk(unit.id)}
+                                            />
+                                            <div className="grid gap-1.5 leading-none">
+                                                <label htmlFor={`unit-${unit.id}`} className="text-sm font-medium cursor-pointer">
+                                                    {unit.name}
+                                                </label>
+                                                <p className="text-[10px] text-muted-foreground font-mono">
+                                                    {unit.code} | {unit.turno}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-center text-muted-foreground py-8">
+                                    No hay unidades registradas para este semestre.
+                                </p>
+                            )}
+                        </ScrollArea>
+                    </div>
+                )}
+
                 <div className="p-3 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800">
-                    Se inscribirán automáticamente en las unidades configuradas para el semestre {bulkData.semester} en el periodo actual.
+                    <p className="font-bold mb-1">Información:</p>
+                    Se matriculará a los {selectedIds.size} alumnos en las {selectedUnitIdsBulk.size} unidades seleccionadas. El ciclo actual de sus perfiles se actualizará automáticamente.
                 </div>
             </div>
             <DialogFooter>
                 <Button variant="ghost" onClick={() => setIsBulkDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleBulkMatriculate} disabled={isSubmitting || !bulkData.semester}>{isSubmitting ? <Loader2 className="animate-spin" /> : "Confirmar Matrícula Masiva"}</Button>
+                <Button 
+                    onClick={handleBulkMatriculate} 
+                    disabled={isSubmitting || !bulkData.semester || selectedUnitIdsBulk.size === 0}
+                >
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Matrícula Masiva"}
+                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>
