@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +7,7 @@ import type { Task, Unit, TaskSubmission } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { FileText, CalendarClock, PlusCircle, MoreVertical, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star } from 'lucide-react';
+import { FileText, CalendarClock, PlusCircle, MoreVertical, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { AddTaskForm } from './AddTaskForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
