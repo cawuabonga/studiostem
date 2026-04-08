@@ -416,6 +416,16 @@ export interface Task {
   createdAt: Timestamp;
 }
 
+// New type for task submissions
+export interface TaskSubmission {
+    id: string; // student documentId
+    studentName: string;
+    fileUrl: string;
+    submittedAt: Timestamp;
+    grade?: number;
+    feedback?: string;
+}
+
 // New type for the weekly document in Firestore
 export interface WeekData {
   weekNumber: number;
