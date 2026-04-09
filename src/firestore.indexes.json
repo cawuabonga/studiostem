@@ -218,6 +218,20 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "year",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "scheduleBlocks",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "unitId",
           "order": "ASCENDING"
         },
@@ -241,6 +255,16 @@
         },
         {
           "fieldPath": "semester",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "assets",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "instituteId",
           "order": "ASCENDING"
         }
       ]
