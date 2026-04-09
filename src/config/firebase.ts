@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -1088,17 +1089,22 @@ export const deletePaymentConcept = async (instituteId: string, id: string) => {
 };
 
 // --- CONTENIDO Y TAREAS ---
+export const getWeeksData = async (instituteId: string, unitId: string): Promise<WeekData[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks'));
+    return snap.docs.map(doc => doc.data() as WeekData);
+};
+
 export const getWeekData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
     const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks', `week_${weekNumber}`));
     return snap.exists() ? snap.data() as WeekData : null;
 };
 
 export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
-    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks', `week_${weekNumber}`), { isVisible }, { merge: true });
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks', `week_${weekNumber}`), { isVisible, weekNumber }, { merge: true });
 };
 
 export const saveWeekSyllabusData = async (instituteId: string, unitId: string, weekNumber: number, data: any) => {
-    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks', `week_${weekNumber}`), data, { merge: true });
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks', `week_${weekNumber}`), { ...data, weekNumber }, { merge: true });
 };
 
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Omit<Content, 'id'>, file?: File) => {

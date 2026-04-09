@@ -1,44 +1,35 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Unit, WeekData } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { ContentManager } from './ContentManager';
-import { Separator } from '../ui/separator';
 import { TaskManager } from './TaskManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { setWeekVisibility, getWeekData, saveWeekSyllabusData } from '@/config/firebase';
+import { setWeekVisibility, getWeekData, saveWeekSyllabusData, getWeeksData } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { Loader2, ArrowLeft, Eye, EyeOff, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, EyeOff, FileText, CheckCircle2, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WeekCardProps {
     weekNumber: number;
-    unit: Unit;
+    unit: { id: string; totalWeeks: number };
+    weekData?: WeekData;
     isStudentView: boolean;
     onClick: () => void;
 }
 
-function WeekCard({ weekNumber, unit, isStudentView, onClick }: WeekCardProps) {
-    const { instituteId } = useAuth();
-    const [weekData, setWeekData] = useState<WeekData | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!instituteId) return;
-        getWeekData(instituteId, unit.id, weekNumber).then(setWeekData).finally(() => setLoading(false));
-    }, [instituteId, unit.id, weekNumber]);
-
-    if (loading) return <Skeleton className="h-32 w-full" />;
-
+function WeekCard({ weekNumber, unit, weekData, isStudentView, onClick }: WeekCardProps) {
     const isVisible = weekData?.isVisible ?? false;
+    
+    // In student view, if the week is not visible, we don't render the card at all.
     if (isStudentView && !isVisible) return null;
 
     const contentCount = weekData?.contents?.length || 0;
@@ -47,8 +38,8 @@ function WeekCard({ weekNumber, unit, isStudentView, onClick }: WeekCardProps) {
     return (
         <Card 
             className={cn(
-                "cursor-pointer hover:border-primary transition-all group relative overflow-hidden",
-                !isVisible && !isStudentView && "opacity-60 bg-muted/20"
+                "cursor-pointer hover:border-primary transition-all group relative overflow-hidden h-full shadow-sm",
+                !isVisible && !isStudentView && "opacity-60 bg-muted/20 border-dashed"
             )}
             onClick={onClick}
         >
@@ -59,37 +50,43 @@ function WeekCard({ weekNumber, unit, isStudentView, onClick }: WeekCardProps) {
                         isVisible ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />
                     )}
                 </div>
-                <CardDescription className="line-clamp-1">{weekData?.capacityElement || 'Sin descripción'}</CardDescription>
+                <CardDescription className="line-clamp-2 h-10 text-xs">
+                    {weekData?.capacityElement || 'Contenido académico pendiente de programar.'}
+                </CardDescription>
             </CardHeader>
             <CardContent className="pb-4">
                 <div className="flex gap-2">
-                    <Badge variant="outline" className="text-[10px] uppercase">
+                    <Badge variant="outline" className="text-[10px] uppercase font-bold">
                         {contentCount} Recursos
                     </Badge>
-                    <Badge variant="secondary" className="text-[10px] uppercase">
+                    <Badge variant="secondary" className="text-[10px] uppercase font-bold">
                         {taskCount} Tareas
                     </Badge>
                 </div>
             </CardContent>
-            <div className="absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
+            <div className={cn(
+                "absolute bottom-0 left-0 w-full h-1 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform origin-left",
+                isVisible && "bg-primary",
+                !isVisible && "bg-muted-foreground"
+            )} />
         </Card>
     );
 }
 
 interface WeekDetailProps {
     weekNumber: number; 
-    unit: Unit; 
+    unit: { id: string; totalWeeks: number }; 
     isStudentView: boolean;
     onBack: () => void;
+    onDataChanged: () => void;
 }
 
-function WeekDetail({ weekNumber, unit, isStudentView, onBack }: WeekDetailProps) {
+function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: WeekDetailProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [weekData, setWeekData] = useState<WeekData | null>(null);
     const [loading, setLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
-    const [dataVersion, setDataVersion] = useState(0);
 
     const fetchWeekData = useCallback(async () => {
         if (!instituteId) return;
@@ -106,13 +103,13 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack }: WeekDetailProps
                 basicContents: '',
             });
         } catch (error) {
-            toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudieron cargar los detalles de la semana.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
     }, [instituteId, unit.id, weekNumber, toast]);
 
-    useEffect(() => { fetchWeekData(); }, [fetchWeekData, dataVersion]);
+    useEffect(() => { fetchWeekData(); }, [fetchWeekData]);
 
     const handleVisibilityChange = async (isEnabled: boolean) => {
         if (!instituteId) return;
@@ -120,9 +117,10 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack }: WeekDetailProps
         try {
             await setWeekVisibility(instituteId, unit.id, weekNumber, isEnabled);
             setWeekData(prev => prev ? { ...prev, isVisible: isEnabled } : null);
-            toast({ title: "Visibilidad Actualizada", description: isEnabled ? 'Visible para alumnos' : 'Oculto para alumnos' });
+            toast({ title: "Visibilidad Actualizada", description: isEnabled ? 'La semana ahora es visible para los alumnos.' : 'La semana ha sido ocultada.' });
+            onDataChanged();
         } catch (error) {
-            toast({ title: "Error", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo cambiar la visibilidad.", variant: "destructive" });
         } finally {
             setIsUpdating(false);
         }
@@ -137,62 +135,103 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack }: WeekDetailProps
                 learningActivities: weekData.learningActivities,
                 basicContents: weekData.basicContents,
             });
-            toast({ title: "¡Éxito!", description: "Información del sílabo guardada." });
+            toast({ title: "¡Éxito!", description: "Información del sílabo guardada correctamente." });
+            onDataChanged();
         } catch (error) {
-            toast({ title: "Error", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo guardar la información.", variant: "destructive" });
         } finally {
             setIsUpdating(false);
         }
     };
 
-    if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-1/4" /><Skeleton className="h-64 w-full" /></div>;
+    if (loading) return (
+        <div className="space-y-6">
+            <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Volver</Button>
+            <Skeleton className="h-12 w-1/4" />
+            <Skeleton className="h-64 w-full" />
+        </div>
+    );
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-left-4 duration-300">
             <div className="flex items-center justify-between">
                 <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Volver a las semanas</Button>
-                <h2 className="text-2xl font-bold text-primary">Semana {weekNumber}</h2>
+                <div className="text-right">
+                    <h2 className="text-2xl font-bold text-primary">Programación Semanal</h2>
+                    <p className="text-sm text-muted-foreground font-medium">Semana {weekNumber}</p>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     {!isStudentView && (
-                        <Card className="border-l-4 border-l-primary">
-                            <CardHeader className="pb-2"><CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">Configuración de Semana</CardTitle></CardHeader>
+                        <Card className="border-l-4 border-l-primary shadow-sm relative overflow-hidden">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground font-bold">Configuración de Visibilidad</CardTitle>
+                            </CardHeader>
                             <CardContent>
                                 <div className="flex items-center justify-between">
                                     <div className="space-y-0.5">
-                                        <Label className="text-base">Publicar Semana</Label>
-                                        <p className="text-xs text-muted-foreground">Habilita este interruptor para que los alumnos puedan ver los recursos y tareas.</p>
-                                    </div>
-                                    <Switch checked={weekData?.isVisible} onCheckedChange={handleVisibilityChange} disabled={isUpdating} />
+                                        <Label className="text-base" htmlFor={`visibility-switch-${weekNumber}`}>Publicar para Estudiantes</Label>
+                                        <p className="text-xs text-muted-foreground">Activa este control para que los alumnos puedan acceder a los materiales de esta semana.</p>
+                                    </div >
+                                    <Switch
+                                        id={`visibility-switch-${weekNumber}`}
+                                        checked={weekData?.isVisible || false}
+                                        onCheckedChange={handleVisibilityChange}
+                                        disabled={isUpdating}
+                                    />
                                 </div>
+                                {isUpdating && <div className="absolute inset-0 bg-background/50 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
                             </CardContent>
                         </Card>
                     )}
 
-                    <Card>
-                        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><FileText className="h-5 w-5" /> Información Académica</CardTitle></CardHeader>
+                    <Card className="border-l-4 border-l-primary shadow-sm">
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground font-bold">Descripción Académica</CardTitle>
+                        </CardHeader>
                         <CardContent className="space-y-4">
-                            <div>
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Capacidad Terminal</Label>
-                                {isStudentView ? <p className="text-sm mt-1">{weekData?.capacityElement || 'No definido'}</p> : 
-                                <Textarea value={weekData?.capacityElement || ''} onChange={e => setWeekData(p => p ? {...p, capacityElement: e.target.value} : null)} placeholder="..." />}
+                            <div className="space-y-1">
+                                <Label htmlFor="capacityElement" className="text-xs font-bold text-muted-foreground">ELEMENTO DE CAPACIDAD</Label>
+                                {isStudentView ? (
+                                    <p className="p-3 bg-muted/30 rounded-md text-sm italic">"{weekData?.capacityElement || 'No definido.'}"</p>
+                                ) : (
+                                    <Textarea
+                                        id="capacityElement"
+                                        placeholder="Describe el elemento de capacidad de esta semana"
+                                        value={weekData?.capacityElement || ''}
+                                        onChange={e => setWeekData(prev => prev ? ({ ...prev, capacityElement: e.target.value }) : null)}
+                                    />
+                                )}
                             </div>
-                            <div>
-                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Actividades de Aprendizaje</Label>
-                                {isStudentView ? <p className="text-sm mt-1">{weekData?.learningActivities || 'No definido'}</p> : 
-                                <Textarea value={weekData?.learningActivities || ''} onChange={e => setWeekData(p => p ? {...p, learningActivities: e.target.value} : null)} placeholder="..." />}
+                            <div className="space-y-1">
+                                <Label htmlFor="learningActivities" className="text-xs font-bold text-muted-foreground">ACTIVIDADES DE APRENDIZAJE</Label>
+                                {isStudentView ? (
+                                    <p className="p-3 bg-muted/30 rounded-md text-sm italic">"{weekData?.learningActivities || 'No definido.'}"</p>
+                                ) : (
+                                    <Textarea
+                                        id="learningActivities"
+                                        placeholder="Describe las actividades de aprendizaje de esta semana"
+                                        value={weekData?.learningActivities || ''}
+                                        onChange={e => setWeekData(prev => prev ? ({ ...prev, learningActivities: e.target.value }) : null)}
+                                    />
+                                )}
                             </div>
-                            {!isStudentView && <Button size="sm" onClick={handleSaveSyllabusFields} disabled={isUpdating}>{isUpdating ? <Loader2 className="animate-spin h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}Guardar Información</Button>}
+                            {!isStudentView && (
+                                <Button disabled={isUpdating} onClick={handleSaveSyllabusFields} className="mt-2">
+                                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                    Guardar Cambios Académicos
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
 
-                    <ContentManager unit={unit} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={() => setDataVersion(v => v + 1)} />
+                    <ContentManager unit={unit as any} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
                 </div>
 
                 <div className="space-y-6">
-                    <TaskManager unit={unit} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={() => setDataVersion(v => v + 1)} />
+                    <TaskManager unit={unit as any} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
                 </div>
             </div>
         </div>
@@ -200,33 +239,105 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack }: WeekDetailProps
 }
 
 interface WeeklyPlannerProps {
-    unit: Unit;
+    unit: { id: string; totalWeeks: number };
     isStudentView: boolean;
 }
 
 export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
+    const { instituteId } = useAuth();
+    const [weeksData, setWeeksData] = useState<WeekData[]>([]);
+    const [loading, setLoading] = useState(true);
     const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
     const totalWeeks = unit.totalWeeks || 16;
-   
+    const { toast } = useToast();
+
+    const fetchAllWeeks = useCallback(async () => {
+        if (!instituteId) return;
+        setLoading(true);
+        try {
+            const data = await getWeeksData(instituteId, unit.id);
+            setWeeksData(data);
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudieron cargar las semanas de planificación.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    }, [instituteId, unit.id, toast]);
+
+    useEffect(() => {
+        fetchAllWeeks();
+    }, [fetchAllWeeks]);
+
+    const handleDataChanged = useCallback(() => {
+        fetchAllWeeks();
+    }, [fetchAllWeeks]);
+
+    const renderGrid = useMemo(() => {
+        if (loading) {
+            return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {Array.from({ length: totalWeeks }, (_, i) => (
+                        <Skeleton key={i} className="h-32 w-full" />
+                    ))}
+                </div>
+            );
+        }
+
+        const visibleWeeks = weeksData.filter(w => w.isVisible);
+
+        if (isStudentView && visibleWeeks.length === 0) {
+            return (
+                <Card className="border-dashed py-12">
+                    <CardContent className="flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="p-4 bg-muted rounded-full">
+                            <Inbox className="h-12 w-12 text-muted-foreground opacity-50" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-xl">Sin contenidos publicados</CardTitle>
+                            <CardDescription className="max-w-xs mx-auto mt-2">
+                                El docente aún no ha publicado el material de estudio para esta unidad didáctica.
+                            </CardDescription>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: totalWeeks }, (_, i) => {
+                    const weekNumber = i + 1;
+                    const weekData = weeksData.find(week => week.weekNumber === weekNumber);
+                    return (
+                        <WeekCard
+                            key={weekNumber}
+                            weekNumber={weekNumber}
+                            unit={unit}
+                            weekData={weekData}
+                            isStudentView={isStudentView}
+                            onClick={() => setSelectedWeek(weekNumber)}
+                        />
+                    );
+                })}
+            </div>
+        );
+    }, [loading, weeksData, isStudentView, unit, totalWeeks]);
+
+    if (selectedWeek) {
+        return (
+            <WeekDetail
+                weekNumber={selectedWeek}
+                unit={unit}
+                isStudentView={isStudentView}
+                onBack={() => setSelectedWeek(null)}
+                onDataChanged={handleDataChanged}
+            />
+        );
+    }
+
     return (
-        <Card className="min-h-[600px]">
-            <CardHeader>
-                <CardTitle>Planificación de la Unidad Didáctica</CardTitle>
-                <CardDescription>
-                    {isStudentView ? "Explora los contenidos y cumple con tus tareas semanales." : "Organiza los recursos y actividades por semanas."}
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {selectedWeek === null ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {Array.from({ length: totalWeeks }, (_, i) => i + 1).map(num => (
-                            <WeekCard key={num} weekNumber={num} unit={unit} isStudentView={isStudentView} onClick={() => setSelectedWeek(num)} />
-                        ))}
-                    </div>
-                ) : (
-                    <WeekDetail weekNumber={selectedWeek} unit={unit} isStudentView={isStudentView} onBack={() => setSelectedWeek(null)} />
-                )}
-            </CardContent>
-        </Card>
+        <div className="space-y-4">
+            {renderGrid}
+        </div>
     );
 }
