@@ -6,7 +6,6 @@ import { getLoginDesignSettings, getInstitutes } from '@/config/firebase';
 import type { LoginDesign, Institute } from '@/types';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
@@ -49,7 +48,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
     )
   }
 
-  // Use the admin image if available, otherwise use our professional placeholder
+  // Prioridad total a la imagen administrada. Solo usa fallback si está vacío.
   const backgroundImageUrl = design?.imageUrl || DEFAULT_LOGIN_IMAGE;
   const overlayColor = design?.backgroundColor || '#1e3a8a';
 
@@ -57,23 +56,22 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl min-h-[750px] grid md:grid-cols-2 shadow-2xl rounded-lg overflow-hidden bg-white">
         
-        {/* Panel Izquierdo - Imagen Administrada */}
+        {/* Panel Izquierdo - Imagen Dinámica Administrada */}
         <div className="hidden md:block relative overflow-hidden" style={{ backgroundColor: overlayColor }}>
             <Image 
               src={backgroundImageUrl}
-              alt="Fondo Institucional"
+              alt="Fondo Institucional Personalizado"
               fill
               className="object-cover"
               priority
               data-ai-hint="campus university"
             />
-            {/* Sutil gradiente para mejorar legibilidad si se añade texto encima */}
+            {/* Capa de superposición para mejorar contraste si hay texto */}
             <div className="absolute inset-0 bg-black/30" />
             
-            {/* Brand elements can go here if needed in the future */}
             <div className="absolute bottom-10 left-10 right-10 z-10 text-white">
-                <h2 className="text-2xl font-bold font-headline">{design?.title || ''}</h2>
-                <p className="text-sm opacity-90">{design?.slogan || ''}</p>
+                <h2 className="text-2xl font-bold font-headline drop-shadow-md">{design?.title || ''}</h2>
+                <p className="text-sm opacity-90 drop-shadow-sm">{design?.slogan || ''}</p>
             </div>
         </div>
 
