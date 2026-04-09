@@ -1,11 +1,11 @@
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, DocumentSnapshot, getCountFromServer } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PayerType, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno, TaskSubmission, GradeEntry } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PayerType, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno, TaskSubmission, GradeEntry } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -30,14 +30,56 @@ const storage = getStorage(app);
 
 export { auth, db, storage, firebaseUpdateProfile, GoogleAuthProvider, firebaseCreateUser as createUserWithEmailAndPassword };
 
-// --- UTILS ---
+// --- UTILIDADES ---
 export const uploadFileAndGetURL = async (file: File, path: string): Promise<string> => {
     const storageRef = ref(storage, path);
     const snapshot = await uploadBytes(storageRef, file);
     return await getDownloadURL(snapshot.ref);
 };
 
-// --- AUTH & USERS ---
+// --- AUTENTICACIÓN Y DISEÑO DE LOGIN ---
+export const getLoginDesignSettings = async (): Promise<LoginDesign | null> => {
+    const snap = await getDoc(doc(db, 'config', 'login_design')).catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'config/login_design', operation: 'get' }));
+        throw err;
+    });
+    return snap.exists() ? snap.data() as LoginDesign : null;
+};
+
+export const saveLoginDesignSettings = async (data: LoginDesign) => {
+    await setDoc(doc(db, 'config', 'login_design'), data, { merge: true }).catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: 'config/login_design', operation: 'write', requestResourceData: data }));
+        throw err;
+    });
+};
+
+export const getLoginImages = async (): Promise<LoginImage[]> => {
+    const snap = await getDocs(query(collection(db, 'config', 'login_design', 'images'), orderBy('createdAt', 'desc')));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as LoginImage));
+};
+
+export const uploadLoginImage = async (file: File, name: string) => {
+    const id = Math.random().toString(36).substring(7);
+    const url = await uploadFileAndGetURL(file, `config/login/images/${id}`);
+    const data = { id, name, url, createdAt: Timestamp.now() };
+    await setDoc(doc(db, 'config', 'login_design', 'images', id), data);
+};
+
+export const deleteLoginImage = async (image: LoginImage) => {
+    await deleteDoc(doc(db, 'config', 'login_design', 'images', image.id));
+    try { await deleteObject(ref(storage, image.url)); } catch (e) {}
+};
+
+export const setActiveLoginImage = async (imageUrl: string) => {
+    await updateDoc(doc(db, 'config', 'login_design'), { imageUrl });
+};
+
+export const getInstituteLoginPageImage = async (): Promise<string | null> => {
+    const settings = await getLoginDesignSettings();
+    return settings?.imageUrl || null;
+};
+
+// --- GESTIÓN DE USUARIOS ---
 export const saveUserAdditionalData = async (user: any, role: UserRole, instituteId: string | null) => {
   const userDocRef = doc(db, 'users', user.uid);
   const data = {
@@ -49,885 +91,439 @@ export const saveUserAdditionalData = async (user: any, role: UserRole, institut
     instituteId: instituteId,
     createdAt: Timestamp.now(),
   };
-  setDoc(userDocRef, data, { merge: true })
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: userDocRef.path,
-        operation: 'write',
-        requestResourceData: data,
-      }));
-    });
-};
-
-export const updateUserProfile = async (data: Partial<AppUser>) => {
-  const user = auth.currentUser;
-  if (!user) return;
-  const userDocRef = doc(db, 'users', user.uid);
-  updateDoc(userDocRef, data)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: userDocRef.path,
-        operation: 'update',
-        requestResourceData: data,
-      }));
-    });
-};
-
-export const updateUserBySuperAdmin = async (uid: string, data: Partial<AppUser>) => {
-    const userDocRef = doc(db, 'users', uid);
-    updateDoc(userDocRef, data)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        }));
-      });
-};
-
-export const updateUserByInstituteAdmin = async (instituteId: string, uid: string, data: Partial<AppUser>) => {
-    const userDocRef = doc(db, 'users', uid);
-    updateDoc(userDocRef, data)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: userDocRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        }));
-      });
-};
-
-export const getAllUsersPaginated = async (options: { instituteId?: string, limit: number, startAfter?: DocumentSnapshot }) => {
-    let q = query(collection(db, 'users'), orderBy('email'));
-    if (options.instituteId) q = query(q, where('instituteId', '==', options.instituteId));
-    if (options.startAfter) q = query(q, startAfter(options.startAfter));
-    q = query(q, limit(options.limit));
-    
-    const snap = await getDocs(q).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'users',
-        operation: 'list',
-      }));
-      throw err;
-    });
-    return {
-        users: snap.docs.map(doc => doc.data() as AppUser),
-        lastVisible: snap.docs[snap.docs.length - 1] || null
-    };
-};
-
-export const getTotalUsersCount = async (instituteId?: string) => {
-    let q = query(collection(db, 'users'));
-    if (instituteId) q = query(q, where('instituteId', '==', instituteId));
-    const snap = await getDocs(q).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'users',
-        operation: 'list',
-      }));
-      throw err;
-    });
-    return snap.size;
+  setDoc(userDocRef, data, { merge: true }).catch(async (err) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({ path: userDocRef.path, operation: 'write', requestResourceData: data }));
+  });
 };
 
 export const linkUserToProfile = async (userId: string, documentId: string, email: string) => {
-    const institutesSnap = await getDocs(collection(db, 'institutes')).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'institutes',
-        operation: 'list',
-      }));
-      throw err;
-    });
-
+    const institutesSnap = await getDocs(collection(db, 'institutes'));
     for (const instDoc of institutesSnap.docs) {
         const instId = instDoc.id;
         const staffRef = doc(db, 'institutes', instId, 'staffProfiles', documentId);
         const studentRef = doc(db, 'institutes', instId, 'studentProfiles', documentId);
 
-        const [staffSnap, studentSnap] = await Promise.all([
-          getDoc(staffRef).catch(async (err) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: staffRef.path,
-              operation: 'get',
-            }));
-            throw err;
-          }),
-          getDoc(studentRef).catch(async (err) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({
-              path: studentRef.path,
-              operation: 'get',
-            }));
-            throw err;
-          })
-        ]);
+        const [staffSnap, studentSnap] = await Promise.all([getDoc(staffRef), getDoc(studentRef)]);
 
         if (staffSnap.exists() && staffSnap.data().email === email) {
             const updateData = { linkedUserUid: userId };
             await updateDoc(staffRef, updateData).catch(async (err) => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: staffRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                }));
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: staffRef.path, operation: 'update', requestResourceData: updateData }));
                 throw err;
             });
             const data = staffSnap.data() as StaffProfile;
-            const userUpdateData = { 
-                instituteId: instId, 
-                documentId, 
-                role: data.role, 
-                roleId: data.roleId 
-            };
-            await updateDoc(doc(db, 'users', userId), userUpdateData).catch(async (err) => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: `users/${userId}`,
-                    operation: 'update',
-                    requestResourceData: userUpdateData,
-                }));
-                throw err;
-            });
+            await updateDoc(doc(db, 'users', userId), { instituteId: instId, documentId, role: data.role, roleId: data.roleId });
             return { role: data.role, instituteName: instDoc.data().name };
         }
 
         if (studentSnap.exists() && studentSnap.data().email === email) {
             const updateData = { linkedUserUid: userId };
             await updateDoc(studentRef, updateData).catch(async (err) => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: studentRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                }));
+                errorEmitter.emit('permission-error', new FirestorePermissionError({ path: studentRef.path, operation: 'update', requestResourceData: updateData }));
                 throw err;
             });
-            const data = studentSnap.data() as StudentProfile;
-            const userUpdateData = { 
-                instituteId: instId, 
-                documentId, 
-                role: 'Student', 
-                roleId: 'student' 
-            };
-            await updateDoc(doc(db, 'users', userId), userUpdateData).catch(async (err) => {
-                errorEmitter.emit('permission-error', new FirestorePermissionError({
-                    path: `users/${userId}`,
-                    operation: 'update',
-                    requestResourceData: userUpdateData,
-                }));
-                throw err;
-            });
+            await updateDoc(doc(db, 'users', userId), { instituteId: instId, documentId, role: 'Student', roleId: 'student' });
             return { role: 'Student', instituteName: instDoc.data().name };
         }
     }
-    throw new Error("No se encontró un perfil que coincida con el DNI y Email proporcionados.");
-};
-
-// --- INSTITUTES ---
-export const addInstitute = async (id: string, data: Partial<Institute>, logoFile?: File) => {
-  let logoUrl = '';
-  if (logoFile) {
-    logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
-  }
-  const instRef = doc(db, 'institutes', id);
-  const instData = { ...data, id, logoUrl };
-  setDoc(instRef, instData, { merge: true })
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: instRef.path,
-        operation: 'write',
-        requestResourceData: instData,
-      }));
-    });
-};
-
-export const getInstitute = async (id: string): Promise<Institute | null> => {
-  const snap = await getDoc(doc(db, 'institutes', id)).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: `institutes/${id}`,
-      operation: 'get',
-    }));
-    throw err;
-  });
-  return snap.exists() ? snap.data() as Institute : null;
-};
-
-export const updateInstitute = async (id: string, data: Partial<Institute>, logoFile?: File) => {
-    const updateData = { ...data };
-    if (logoFile) {
-        updateData.logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
-    }
-    const instRef = doc(db, 'institutes', id);
-    updateDoc(instRef, updateData)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: instRef.path,
-          operation: 'update',
-          requestResourceData: updateData,
-        }));
-      });
-};
-
-export const getInstitutes = async (): Promise<Institute[]> => {
-  const snap = await getDocs(collection(db, 'institutes')).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: 'institutes',
-      operation: 'list',
-    }));
-    throw err;
-  });
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
-};
-
-export const deleteInstitute = async (id: string) => {
-    deleteDoc(doc(db, 'institutes', id))
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `institutes/${id}`,
-          operation: 'delete',
-        }));
-      });
-};
-
-// --- ROLES & PERMISSIONS ---
-export const getRoles = async (instituteId: string): Promise<Role[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'roles')).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/roles`,
-        operation: 'list',
-      }));
-      throw err;
-    });
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
-};
-
-export const addRole = async (instituteId: string, data: Omit<Role, 'id'>) => {
-    addDoc(collection(db, 'institutes', instituteId, 'roles'), data)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `institutes/${instituteId}/roles`,
-          operation: 'create',
-          requestResourceData: data,
-        }));
-      });
-};
-
-export const updateRole = async (instituteId: string, roleId: string, data: Partial<Role>) => {
-    const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
-    updateDoc(roleRef, data)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: roleRef.path,
-          operation: 'update',
-          requestResourceData: data,
-        }));
-      });
-};
-
-export const deleteRole = async (instituteId: string, roleId: string) => {
-    const roleRef = doc(db, 'institutes', instituteId, 'roles', roleId);
-    deleteDoc(roleRef)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: roleRef.path,
-          operation: 'delete',
-        }));
-      });
+    throw new Error("No se encontró un perfil que coincida con los datos.");
 };
 
 export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Record<Permission, boolean> | null> => {
     if (roleId === 'SuperAdmin') return null;
-    if (roleId === 'student') {
-        return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true } as any;
-    }
-    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'roles', roleId)).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/roles/${roleId}`,
-        operation: 'get',
-      }));
-      throw err;
-    });
+    if (roleId === 'student') return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true } as any;
+    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'roles', roleId));
     return docSnap.exists() ? (docSnap.data() as Role).permissions : null;
 };
 
-// --- PROGRAMS ---
-export const getPrograms = async (instituteId: string): Promise<Program[]> => {
-  const snap = await getDocs(collection(db, 'institutes', instituteId, 'programs')).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: `institutes/${instituteId}/programs`,
-      operation: 'list',
-    }));
-    throw err;
-  });
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Program));
+// --- INSTITUTOS ---
+export const getInstitutes = async (): Promise<Institute[]> => {
+  const snap = await getDocs(collection(db, 'institutes'));
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
 };
 
-export const addProgram = async (instituteId: string, data: Omit<Program, 'id'>) => {
-  addDoc(collection(db, 'institutes', instituteId, 'programs'), data)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/programs`,
-        operation: 'create',
-        requestResourceData: data,
-      }));
-    });
+export const getInstitute = async (id: string): Promise<Institute | null> => {
+  const snap = await getDoc(doc(db, 'institutes', id));
+  return snap.exists() ? snap.data() as Institute : null;
 };
 
-export const updateProgram = async (instituteId: string, programId: string, data: Partial<Program>) => {
-  const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
-  updateDoc(programRef, data)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: programRef.path,
-        operation: 'update',
-        requestResourceData: data,
-      }));
-    });
+export const addInstitute = async (id: string, data: Partial<Institute>, logoFile?: File) => {
+  let logoUrl = '';
+  if (logoFile) logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
+  await setDoc(doc(db, 'institutes', id), { ...data, id, logoUrl }, { merge: true });
 };
 
-export const deleteProgram = async (instituteId: string, programId: string) => {
-  const programRef = doc(db, 'institutes', instituteId, 'programs', programId);
-  deleteDoc(programRef)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: programRef.path,
-        operation: 'delete',
-      }));
-    });
+export const updateInstitute = async (id: string, data: Partial<Institute>, logoFile?: File) => {
+    const updateData = { ...data };
+    if (logoFile) updateData.logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
+    await updateDoc(doc(db, 'institutes', id), updateData);
 };
 
-// --- UNITS ---
+export const deleteInstitute = async (id: string) => {
+    await deleteDoc(doc(db, 'institutes', id));
+};
+
+// --- PERFILES DE PERSONAL Y ALUMNOS ---
+export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'staffProfiles'));
+    return snap.docs.map(d => ({ documentId: d.id, ...d.data() } as StaffProfile));
+};
+
+export const getStaffProfileByDocumentId = async (instituteId: string, documentId: string): Promise<StaffProfile | null> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'staffProfiles', documentId));
+    return snap.exists() ? { documentId: snap.id, ...snap.data() } as StaffProfile : null;
+};
+
+export const addStaffProfile = async (instituteId: string, data: any) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'staffProfiles', data.documentId), data);
+};
+
+export const updateStaffProfile = async (instituteId: string, documentId: string, data: Partial<StaffProfile>) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'staffProfiles', documentId), data);
+};
+
+export const deleteStaffProfile = async (instituteId: string, documentId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'staffProfiles', documentId));
+};
+
+export const bulkAddStaff = async (instituteId: string, staff: any[]) => {
+    const batch = writeBatch(db);
+    staff.forEach(s => batch.set(doc(db, 'institutes', instituteId, 'staffProfiles', s.documentId), s));
+    await batch.commit();
+};
+
+export const getStudentProfiles = async (instituteId: string): Promise<StudentProfile[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'studentProfiles'));
+    return snap.docs.map(d => ({ documentId: d.id, fullName: `${d.data().lastName}, ${d.data().firstName}`, ...d.data() } as StudentProfile));
+};
+
+export const getStudentProfile = async (instituteId: string, documentId: string): Promise<StudentProfile | null> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'studentProfiles', documentId));
+    return snap.exists() ? { documentId: snap.id, fullName: `${snap.data().lastName}, ${snap.data().firstName}`, ...snap.data() } as StudentProfile : null;
+};
+
+export const addStudentProfile = async (instituteId: string, data: any) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId), data);
+};
+
+export const updateStudentProfile = async (instituteId: string, documentId: string, data: Partial<StudentProfile>) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'studentProfiles', documentId), data);
+};
+
+export const bulkAddStudents = async (instituteId: string, students: any[]) => {
+    const batch = writeBatch(db);
+    students.forEach(s => batch.set(doc(db, 'institutes', instituteId, 'studentProfiles', s.documentId), s));
+    await batch.commit();
+};
+
+export const bulkDeleteStaff = async (instituteId: string, ids: string[]) => {
+    const batch = writeBatch(db);
+    ids.forEach(id => batch.delete(doc(db, 'institutes', instituteId, 'staffProfiles', id)));
+    await batch.commit();
+};
+
+// --- GESTIÓN ACADÉMICA (PROGRAMAS, UNIDADES, MATRÍCULA) ---
+export const addUnit = async (instituteId: string, data: Omit<Unit, 'id'>) => {
+  const docRef = await addDoc(collection(db, 'institutes', instituteId, 'unidadesDidacticas'), data);
+  return docRef.id;
+};
+
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
-  const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas')).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: `institutes/${instituteId}/unidadesDidacticas`,
-      operation: 'list',
-    }));
-    throw err;
-  });
+  const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas'));
   return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
 };
 
 export const getUnit = async (instituteId: string, unitId: string): Promise<Unit | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId)).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/unidadesDidacticas/${unitId}`,
-        operation: 'get',
-      }));
-      throw err;
-    });
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId));
     return snap.exists() ? { id: snap.id, ...snap.data() } as Unit : null;
 };
 
-export const addUnit = async (instituteId: string, data: Omit<Unit, 'id'>) => {
-  const docRef = await addDoc(collection(db, 'institutes', instituteId, 'unidadesDidacticas'), data).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: `institutes/${instituteId}/unidadesDidacticas`,
-      operation: 'create',
-      requestResourceData: data,
-    }));
-    throw err;
-  });
-  return docRef.id;
-};
-
 export const updateUnit = async (instituteId: string, unitId: string, data: Partial<Unit>) => {
-  const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-  updateDoc(unitRef, data)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: unitRef.path,
-        operation: 'update',
-        requestResourceData: data,
-      }));
-    });
+  await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId), data);
 };
 
 export const deleteUnit = async (instituteId: string, unitId: string) => {
-  const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-  deleteDoc(unitRef)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: unitRef.path,
-        operation: 'delete',
-      }));
-    });
+  await deleteDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId));
 };
 
-export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'imageUrl'>[]) => {
+export const bulkAddUnits = async (instituteId: string, units: any[]) => {
     const batch = writeBatch(db);
-    const colRef = collection(db, 'institutes', instituteId, 'unidadesDidacticas');
     units.forEach(u => {
-        const docRef = doc(colRef);
-        batch.set(docRef, { ...u, totalHours: u.theoreticalHours + u.practicalHours });
+        const ref = doc(collection(db, 'institutes', instituteId, 'unidadesDidacticas'));
+        batch.set(ref, { ...u, totalHours: u.theoreticalHours + u.practicalHours });
     });
-    await batch.commit().catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/unidadesDidacticas (bulk)`,
-        operation: 'write',
-      }));
-      throw err;
-    });
+    await batch.commit();
 };
 
-export const updateUnitImage = async (instituteId: string, unitId: string, imageUrl: string) => {
-    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
-    updateDoc(unitRef, { imageUrl })
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: unitRef.path,
-          operation: 'update',
-          requestResourceData: { imageUrl },
-        }));
-      });
+export const duplicateUnit = async (instituteId: string, unitId: string) => {
+    const original = await getUnit(instituteId, unitId);
+    if (!original) return;
+    const { id, ...data } = original;
+    await addUnit(instituteId, { ...data, name: `${data.name} (Copia)` });
 };
 
-// --- INDICATORS ---
-export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
-  const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'indicators')).catch(async (err) => {
-    errorEmitter.emit('permission-error', new FirestorePermissionError({
-      path: `institutes/${instituteId}/unidadesDidacticas/${unitId}/indicators`,
-      operation: 'list',
-    }));
-    throw err;
-  });
-  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AchievementIndicator));
-};
-
-export const addAchievementIndicator = async (instituteId: string, unitId: string, data: Omit<AchievementIndicator, 'id'>) => {
-  addDoc(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'indicators'), data)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/unidadesDidacticas/${unitId}/indicators`,
-        operation: 'create',
-        requestResourceData: data,
-      }));
-    });
-};
-
-export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
-  const indRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'indicators', indicatorId);
-  deleteDoc(indRef)
-    .catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: indRef.path,
-        operation: 'delete',
-      }));
-    });
-};
-
-// --- ATTENDANCE ---
-export const getAttendanceForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AttendanceRecord | null> => {
-    const id = `${unitId}_${year}_${period}`;
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'attendance', id)).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/attendance/${id}`,
-        operation: 'get',
-      }));
-      throw err;
-    });
-    return snap.exists() ? snap.data() as AttendanceRecord : null;
-};
-
-export const saveAttendance = async (instituteId: string, record: AttendanceRecord) => {
-    const attRef = doc(db, 'institutes', instituteId, 'attendance', record.id);
-    setDoc(attRef, record)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: attRef.path,
-          operation: 'write',
-          requestResourceData: record,
-        }));
-      });
-};
-
-// --- EFSRT ---
-export const programEFSRT = async (instituteId: string, data: Omit<EFSRTAssignment, 'id' | 'status' | 'createdAt' | 'visits'>) => {
-    const assignmentData = { ...data, status: 'Programado', visits: [], createdAt: Timestamp.now() };
-    addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), assignmentData)
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: `institutes/${instituteId}/efsrtAssignments`,
-          operation: 'create',
-          requestResourceData: assignmentData,
-        }));
-      });
-};
-
-// --- ASSETS ---
-export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[], status: string) => {
+export const bulkDeleteUnits = async (instituteId: string, ids: string[]) => {
     const batch = writeBatch(db);
-    assets.forEach(a => {
-        const assetRef = doc(db, 'institutes', instituteId, 'buildings', a.buildingId, 'environments', a.environmentId, 'assets', a.id);
-        batch.update(assetRef, { status });
-    });
-    await batch.commit().catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: 'assets (bulk status change)',
-        operation: 'write',
-      }));
-      throw err;
-    });
+    ids.forEach(id => batch.delete(doc(db, 'institutes', instituteId, 'unidadesDidacticas', id)));
+    await batch.commit();
 };
 
-// --- SUPPLY REQUESTS ---
-export const updateSupplyRequestStatus = async (instituteId: string, id: string, status: SupplyRequestStatus, data?: any) => {
-    const ref = doc(db, 'institutes', instituteId, 'supplyRequests', id);
-    const user = auth.currentUser;
-    await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref);
-        if (!snap.exists()) throw new Error("Pedido no encontrado.");
-        const req = snap.data() as SupplyRequest;
-        if (status === 'Entregado') {
-            for (const item of req.items) {
-                const qty = item.approvedQuantity ?? item.requestedQuantity;
-                const itemRef = doc(db, 'institutes', instituteId, 'supplyItems', item.itemId);
-                const itemSnap = await tx.get(itemRef);
-                const current = itemSnap.data()?.stock || 0;
-                tx.update(itemRef, { stock: current - qty });
-                tx.set(doc(collection(itemRef, 'history')), { timestamp: Timestamp.now(), userId: user?.uid, userName: user?.displayName, change: -qty, newStock: current - qty, notes: `Entrega pedido ${req.code}` });
-            }
-        } else if (status === 'Anulado' && req.status === 'Entregado') {
-            for (const item of req.items) {
-                const qty = item.approvedQuantity ?? item.requestedQuantity;
-                const itemRef = doc(db, 'institutes', instituteId, 'supplyItems', item.itemId);
-                const itemSnap = await tx.get(itemRef);
-                const current = itemSnap.data()?.stock || 0;
-                tx.update(itemRef, { stock: current + qty });
-                tx.set(doc(collection(itemRef, 'history')), { timestamp: Timestamp.now(), userId: user?.uid, userName: user?.displayName, change: qty, newStock: current + qty, notes: `Anulación entrega ${req.code}` });
-            }
+export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
+    const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where('studentId', '==', studentId), orderBy('semester', 'desc'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Matriculation));
+};
+
+export const createMatriculations = async (instituteId: string, studentId: string, units: Unit[], year: string) => {
+    const batch = writeBatch(db);
+    units.forEach(u => {
+        const ref = doc(collection(db, 'institutes', instituteId, 'matriculations'));
+        batch.set(ref, { studentId, unitId: u.id, programId: u.programId, semester: u.semester, year, period: u.period, status: 'cursando', createdAt: Timestamp.now() });
+    });
+    await batch.commit();
+};
+
+export const deleteMatriculation = async (instituteId: string, studentId: string, mId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'matriculations', mId));
+};
+
+export const bulkCreateMatriculations = async (instituteId: string, studentIds: string[], units: Unit[], year: string, semester: number) => {
+    const batch = writeBatch(db);
+    studentIds.forEach(sid => {
+        units.forEach(u => {
+            const ref = doc(collection(db, 'institutes', instituteId, 'matriculations'));
+            batch.set(ref, { studentId: sid, unitId: u.id, programId: u.programId, semester: u.semester, year, period: u.period, status: 'cursando', createdAt: Timestamp.now() });
+        });
+        batch.update(doc(db, 'institutes', instituteId, 'studentProfiles', sid), { currentSemester: semester });
+    });
+    await batch.commit();
+};
+
+export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
+    const mats = await getMatriculationsForStudent(instituteId, studentId);
+    const units: EnrolledUnit[] = [];
+    const programs = await getPrograms(instituteId);
+    for (const m of mats) {
+        const u = await getUnit(instituteId, m.unitId);
+        if (u) {
+            const p = programs.find(prog => prog.id === u.programId);
+            units.push({ ...u, programName: p?.name || 'N/A' });
         }
-        tx.update(ref, { status, processedAt: Timestamp.now(), ...data });
-    }).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: ref.path,
-        operation: 'update',
-        requestResourceData: { status, ...data },
-      }));
-      throw err;
-    });
+    }
+    return units;
 };
 
-// ... Resto de las funciones de exportación simplificadas para mantener el archivo manejable ...
-// Todas las funciones de escritura/lectura deben seguir el patrón de .catch(errorEmitter.emit)
-
-export const saveSyllabus = async (instituteId: string, unitId: string, data: Syllabus) => {
-    const sylRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'config', 'syllabus');
-    await setDoc(sylRef, data).catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: sylRef.path,
-        operation: 'write',
-        requestResourceData: data,
-      }));
-      throw err;
-    });
+// --- CALIFICACIONES ---
+export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
+    const id = `${unitId}_${studentId}_${year}_${period}`;
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'academicRecords', id));
+    return snap.exists() ? snap.data() as AcademicRecord : null;
 };
 
-export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, blocks: Record<string, ScheduleBlock>) => {
-    const colId = `${programId}_${year}_${semester}_${turno}`;
+export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
+    const q = query(collection(db, 'institutes', instituteId, 'academicRecords'), where('unitId', '==', unitId), where('year', '==', year), where('period', '==', period));
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => doc.data() as AcademicRecord);
+};
+
+export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
     const batch = writeBatch(db);
-    const colRef = collection(db, 'institutes', instituteId, 'schedules', colId, 'scheduleBlocks');
-    const existing = await getDocs(colRef);
-    existing.docs.forEach(d => batch.delete(d.ref));
-    Object.entries(blocks).forEach(([key, b]) => batch.set(doc(colRef, key), { ...b, instituteId }));
-    await batch.commit().catch(async (err) => {
-      errorEmitter.emit('permission-error', new FirestorePermissionError({
-        path: `institutes/${instituteId}/schedules/${colId}`,
-        operation: 'write',
-      }));
-      throw err;
-    });
+    records.forEach(r => batch.set(doc(db, 'institutes', instituteId, 'academicRecords', r.id), r, { merge: true }));
+    await batch.commit();
 };
 
-// Re-exporting missing functions from the request
-export const getAssignments = async (instituteId: string, year: string, programId: string) => {
-    const docRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
-    const snap = await getDoc(docRef);
-    return snap.exists() ? snap.data() as { 'MAR-JUL': Assignment, 'AGO-DIC': Assignment } : { 'MAR-JUL': {}, 'AGO-DIC': {} };
-};
-
-export const getAcademicYearSettings = async (instituteId: string, year: string) => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'config', `academic_periods_${year}`));
-    return snap.exists() ? snap.data() as AcademicYearSettings : null;
-};
-
-export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
-    const q = query(collectionGroup(db, 'scheduleBlocks'), where('instituteId', '==', instituteId), where('unitId', '==', unitId), where('year', '==', year));
-    const snap = await getDocs(q);
-    const daysFound = new Set<string>();
-    snap.docs.forEach(d => daysFound.add(d.data().dayOfWeek));
-    const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    return Array.from(daysFound).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
-};
-
-export const getEFSRTAssignmentsForSupervisor = async (instituteId: string, supervisorId: string): Promise<EFSRTAssignment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'efsrtAssignments'), where('supervisorId', '==', supervisorId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
-};
-
-export const getEFSRTAssignmentsForStudent = async (instituteId: string, studentId: string): Promise<EFSRTAssignment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'efsrtAssignments'), where('studentId', '==', studentId));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
-};
-
-export const registerEFSRTVisit = async (instituteId: string, assignmentId: string, visit: Omit<EFSRTVisit, 'id'>) => {
-    const ref = doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId);
-    await updateDoc(ref, { visits: arrayUnion({ ...visit, id: Math.random().toString(36).substring(7) }) });
-};
-
-export const evaluateEFSRT = async (instituteId: string, assignmentId: string, grade: number, observations: string) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), { grade, observations, status: grade >= 13 ? 'Aprobado' : 'Desaprobado', processedAt: Timestamp.now() });
-};
-
-export const uploadEFSRTReport = async (instituteId: string, assignmentId: string, type: 'student' | 'supervisor', file: File) => {
-    const url = await uploadFileAndGetURL(file, `institutes/${instituteId}/efsrt/${assignmentId}/${type}_report`);
-    await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), { [`${type}ReportUrl`]: url });
-};
-
-export const getSyllabusData = async (instituteId: string, unitId: string): Promise<Syllabus | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'config', 'syllabus'));
-    return snap.exists() ? snap.data() as Syllabus : null;
-};
-
-export const getWeekSyllabusData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
+// --- PLANIFICADOR SEMANAL ---
+export const getWeekData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
     const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`));
     return snap.exists() ? { ...snap.data(), weekNumber } as WeekData : null;
 };
 
-export const getAllEFSRTAssignments = async (instituteId: string): Promise<EFSRTAssignment[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'efsrtAssignments'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
+export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`), { isVisible }, { merge: true });
 };
 
-export const getAcademicPeriods = async (instituteId: string, year: string): Promise<AcademicYearSettings | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'config', `academic_periods_${year}`));
-    return snap.exists() ? snap.data() as AcademicYearSettings : null;
+export const saveWeekSyllabusData = async (instituteId: string, unitId: string, weekNumber: number, data: any) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`), data, { merge: true });
 };
 
-export const saveAcademicPeriods = async (instituteId: string, year: string, data: AcademicYearSettings) => {
-    await setDoc(doc(db, 'institutes', instituteId, 'config', `academic_periods_${year}`), data);
+export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Omit<Content, 'id'>, file?: File) => {
+    const id = Math.random().toString(36).substring(7);
+    let value = content.value;
+    if (file) value = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/contents/${id}`);
+    await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`), {
+        contents: arrayUnion({ ...content, id, value, createdAt: Timestamp.now() })
+    });
 };
 
-export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'nonTeachingAssignments'), where('teacherId', '==', teacherId), where('year', '==', year), where('period', '==', period));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
+export const updateContentInWeek = async (instituteId: string, unitId: string, weekNumber: number, contentId: string, data: Partial<Content>, file?: File) => {
+    const ref = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`);
+    const snap = await getDoc(ref);
+    const contents = snap.data()?.contents || [];
+    const index = contents.findIndex((c: any) => c.id === contentId);
+    if (index === -1) return;
+    if (file) data.value = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/contents/${contentId}`);
+    contents[index] = { ...contents[index], ...data };
+    await updateDoc(ref, { contents });
 };
 
-export const getAllNonTeachingAssignmentsForYear = async (instituteId: string, year: string): Promise<NonTeachingAssignment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'nonTeachingAssignments'), where('year', '==', year));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
+export const deleteContentFromWeek = async (instituteId: string, unitId: string, weekNumber: number, content: Content) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`), {
+        contents: arrayRemove(content)
+    });
+    if (content.type === 'file') { try { await deleteObject(ref(storage, content.value)); } catch(e) {} }
 };
 
-export const saveNonTeachingAssignmentsForTeacher = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod, assignments: Omit<NonTeachingAssignment, 'id'>[]) => {
-    const batch = writeBatch(db);
-    const existing = await getNonTeachingAssignments(instituteId, teacherId, year, period);
-    existing.forEach(e => batch.delete(doc(db, 'institutes', instituteId, 'nonTeachingAssignments', e.id)));
-    assignments.forEach(a => batch.set(doc(collection(db, 'institutes', instituteId, 'nonTeachingAssignments')), a));
-    await batch.commit();
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, task: Omit<Task, 'id'>) => {
+    const id = Math.random().toString(36).substring(7);
+    await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`), {
+        tasks: arrayUnion({ ...task, id, createdAt: Timestamp.now() })
+    });
 };
 
-export const getAssignmentsForActivity = async (instituteId: string, activityId: string, year: string): Promise<NonTeachingAssignment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'nonTeachingAssignments'), where('activityId', '==', activityId), where('year', '==', year));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingAssignment));
+export const deleteTaskFromWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string) => {
+    const ref = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`);
+    const snap = await getDoc(ref);
+    const tasks = snap.data()?.tasks || [];
+    const filtered = tasks.filter((t: any) => t.id !== taskId);
+    await updateDoc(ref, { tasks: filtered });
 };
 
-export const getStockHistory = async (instituteId: string, itemId: string): Promise<StockHistoryLog[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'supplyItems', itemId, 'history'), orderBy('timestamp', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as StockHistoryLog));
+export const getTaskSubmissions = async (instituteId: string, unitId: string, week: number, taskId: string): Promise<TaskSubmission[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', taskId, 'submissions'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as TaskSubmission));
 };
 
-export const getSupplyItemHistory = async (instituteId: string, itemId: string): Promise<StockHistoryLog[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'supplyItems', itemId, 'history'), orderBy('timestamp', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as StockHistoryLog));
+export const submitTask = async (instituteId: string, unitId: string, week: number, taskId: string, student: StudentProfile, file: File) => {
+    const url = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/tasks/${taskId}/${student.documentId}`);
+    const data = { studentName: student.fullName, fileUrl: url, submittedAt: Timestamp.now() };
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', taskId, 'submissions', student.documentId), data);
 };
 
-export const bulkAddAssetTypes = async (instituteId: string, types: any[]) => {
-    const batch = writeBatch(db);
-    types.forEach(t => batch.set(doc(collection(db, 'institutes', instituteId, 'assetTypes')), { ...t, lastAssignedNumber: 0 }));
-    await batch.commit();
-};
+export const gradeTaskSubmission = async (instituteId: string, unitId: string, week: number, taskId: string, taskTitle: string, studentId: string, grade: number, feedback: string) => {
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', taskId, 'submissions', studentId);
+    await updateDoc(subRef, { grade, feedback });
+    
+    const year = new Date().getFullYear().toString();
+    const period = week <= 8 ? 'MAR-JUL' : 'AGO-DIC'; // Simple logic for period
+    const recordId = `${unitId}_${studentId}_${year}_${period}`;
+    const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+    
+    const indicators = await getAchievementIndicators(instituteId, unitId);
+    const targetIndicator = indicators.find(ind => week >= ind.startWeek && week <= ind.endWeek);
+    if (!targetIndicator) return;
 
-export const getAssetTypes = async (instituteId: string, options: { search?: string, limit?: number, startAfter?: DocumentSnapshot }) => {
-    let q = query(collection(db, 'institutes', instituteId, 'assetTypes'), orderBy('name'));
-    if (options.search) q = query(q, where('name', '>=', options.search), where('name', '<=', options.search + '\uf8ff'));
-    if (options.startAfter) q = query(q, startAfter(options.startAfter));
-    if (options.limit) q = query(q, limit(options.limit));
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AssetType));
-};
-
-export const getAssetTypeById = async (instituteId: string, typeId: string): Promise<AssetType | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'assetTypes', typeId));
-    return snap.exists() ? { id: snap.id, ...snap.data() } as AssetType : null;
-};
-
-export const getAssetsForEnvironment = async (instituteId: string, buildingId: string, environmentId: string): Promise<Asset[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Asset));
-};
-
-export const addAsset = async (instituteId: string, buildingId: string, environmentId: string, assetTypeId: string, data: any) => {
-    const typeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
-    const typeSnap = await getDoc(typeRef);
-    if (!typeSnap.exists()) throw new Error("Tipo de activo no encontrado.");
-    const typeData = typeSnap.data() as AssetType;
-    const newNumber = (typeData.lastAssignedNumber || 0) + 1;
-    const code = `${typeData.patrimonialCode}-${String(newNumber).padStart(4, '0')}`;
-    const assetRef = doc(collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets'));
     await runTransaction(db, async (tx) => {
-        tx.update(typeRef, { lastAssignedNumber: newNumber });
-        tx.set(assetRef, { ...data, id: assetRef.id, assetTypeId, codeOrSerial: code, name: typeData.name, type: typeData.class, instituteId, buildingId, environmentId });
+        const snap = await tx.get(recordRef);
+        const currentData = snap.exists() ? snap.data() as AcademicRecord : { grades: {} };
+        const indicatorGrades = currentData.grades[targetIndicator.id] || [];
+        const index = indicatorGrades.findIndex(g => g.refId === taskId);
+        if (index !== -1) indicatorGrades[index].grade = grade;
+        else indicatorGrades.push({ type: 'task', refId: taskId, label: taskTitle, grade, weekNumber: week });
+        tx.set(recordRef, { ...currentData, grades: { ...currentData.grades, [targetIndicator.id]: indicatorGrades } }, { merge: true });
     });
-    return code;
 };
 
-export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId), data);
-};
-
-export const deleteAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId));
-};
-
-export const getAssetHistory = async (instituteId: string, bId: string, eId: string, aId: string): Promise<AssetHistoryLog[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets', aId, 'history'), orderBy('timestamp', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AssetHistoryLog));
-};
-
-export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
-    const q = query(collectionGroup(db, 'assets'), where('instituteId', '==', instituteId));
+// --- PAGOS Y TASAS ---
+export const getPaymentConcepts = async (instituteId: string, onlyActive = false): Promise<PaymentConcept[]> => {
+    let q = query(collection(db, 'institutes', instituteId, 'paymentConcepts'), orderBy('name'));
+    if (onlyActive) q = query(q, where('isActive', '==', true));
     const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Asset));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentConcept));
 };
 
-export const moveAssets = async (instituteId: string, assets: Asset[], target: Environment) => {
-    const batch = writeBatch(db);
-    assets.forEach(a => {
-        const oldRef = doc(db, 'institutes', instituteId, 'buildings', a.buildingId, 'environments', a.environmentId, 'assets', a.id);
-        const newRef = doc(db, 'institutes', instituteId, 'buildings', target.buildingId, 'environments', target.id, 'assets', a.id);
-        batch.delete(oldRef);
-        batch.set(newRef, { ...a, buildingId: target.buildingId, environmentId: target.id, buildingName: deleteField(), environmentName: deleteField() });
-    });
-    await batch.commit();
+export const registerPayment = async (instituteId: string, data: any, voucherFile?: File, options?: { autoApprove?: boolean, receiptNumber?: string }) => {
+    let voucherUrl = '';
+    if (voucherFile) voucherUrl = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${data.payerId}_${Date.now()}`);
+    const status: PaymentStatus = options?.autoApprove ? 'Aprobado' : 'Pendiente';
+    const paymentData = { ...data, voucherUrl, status, createdAt: Timestamp.now(), receiptNumber: options?.receiptNumber || '' };
+    if (options?.autoApprove) paymentData.processedAt = Timestamp.now();
+    await addDoc(collection(db, 'institutes', instituteId, 'payments'), paymentData);
 };
 
-export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'scheduleTemplates'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleTemplate));
-};
-
-export const updateScheduleTemplate = async (instituteId: string, id: string, data: Partial<ScheduleTemplate>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'scheduleTemplates', id), data);
-};
-
-export const deleteScheduleTemplate = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'scheduleTemplates', id));
-};
-
-export const setDefaultScheduleTemplate = async (instituteId: string, id: string) => {
-    const batch = writeBatch(db);
-    const all = await getScheduleTemplates(instituteId);
-    all.forEach(t => batch.update(doc(db, 'institutes', instituteId, 'scheduleTemplates', t.id), { isDefault: t.id === id }));
-    await batch.commit();
-};
-
-export const getMatriculationReportData = async (instituteId: string, programId: string, year: string, semester: number): Promise<MatriculationReportData> => {
-    const programs = await getPrograms(instituteId);
-    const prog = programs.find(p => p.id === programId);
-    if (!prog) throw new Error("Programa no encontrado.");
-    
-    const units = (await getUnits(instituteId)).filter(u => u.programId === programId && u.semester === semester);
-    const assignments = await getAssignments(instituteId, year, programId);
-    const teachers = await getTeachers(instituteId);
-    
-    const reportUnits = [];
-    for (const u of units) {
-        const tId = assignments[u.period]?.[u.id];
-        const teacher = teachers.find(t => t.documentId === tId);
-        const students = await getEnrolledStudentProfiles(instituteId, u.id, year, u.period);
-        reportUnits.push({ unit: u, teacherName: teacher?.fullName || null, students });
-    }
-    
-    return { program: prog, units: reportUnits };
-};
-
-export const getApprovedPaymentsInDateRange = async (instituteId: string, start: Date, end: Date): Promise<Payment[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'payments'), where('status', '==', 'Aprobado'), where('paymentDate', '>=', Timestamp.fromDate(start)), where('paymentDate', '<=', Timestamp.fromDate(end)));
+export const getStudentPaymentsByStatus = async (instituteId: string, studentId: string, status: PaymentStatus): Promise<Payment[]> => {
+    const q = query(collection(db, 'institutes', instituteId, 'payments'), where('payerId', '==', studentId), where('status', '==', status), orderBy('createdAt', 'desc'));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
 };
 
-export const bulkAddAssetTypesFromExcel = async (instituteId: string, types: any[]) => {
-    const batch = writeBatch(db);
-    types.forEach(t => batch.set(doc(collection(db, 'institutes', instituteId, 'assetTypes')), { ...t, lastAssignedNumber: 0 }));
-    await batch.commit();
+export const updatePaymentStatus = async (instituteId: string, paymentId: string, status: PaymentStatus, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'payments', paymentId), { ...data, status, processedAt: Timestamp.now() });
 };
 
-export const updateAssetType = async (instituteId: string, id: string, data: Partial<AssetType>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'assetTypes', id), data);
-};
-
-export const deleteAssetType = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'assetTypes', id));
-};
-
-export const getAlbum = async (instituteId: string, id: string): Promise<Album | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'albums', id));
-    return snap.exists() ? { id: snap.id, ...snap.data() } as Album : null;
-};
-
-export const updateAlbum = async (instituteId: string, id: string, data: Partial<Album>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'albums', id), data);
-};
-
-export const deleteAlbum = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'albums', id));
-};
-
-export const deletePhotoFromAlbum = async (instituteId: string, albumId: string, photo: Photo) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'albums', albumId, 'photos', photo.id));
-    try { await deleteObject(ref(storage, photo.url)); } catch (e) {}
-};
-
-export const addPhotosToAlbum = async (instituteId: string, albumId: string, files: File[]) => {
-    const batch = writeBatch(db);
-    for (const f of files) {
-        const id = Math.random().toString(36).substring(7);
-        const url = await uploadFileAndGetURL(f, `institutes/${instituteId}/albums/${albumId}/${id}`);
-        batch.set(doc(collection(db, 'institutes', instituteId, 'albums', albumId, 'photos')), { url, createdAt: Timestamp.now(), albumId });
-        if (files.indexOf(f) === 0) await updateDoc(doc(db, 'institutes', instituteId, 'albums', albumId), { coverImageUrl: url });
-    }
-    await batch.commit();
-};
-
-export const getAlbumPhotos = async (instituteId: string, albumId: string): Promise<Photo[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'albums', albumId, 'photos'), orderBy('createdAt', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Photo));
-};
-
-export const getAlbums = async (instituteId: string): Promise<Album[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'albums'), orderBy('createdAt', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Album));
-};
-
-export const addAlbum = async (instituteId: string, data: Omit<Album, 'id' | 'createdAt'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'albums'), { ...data, createdAt: Timestamp.now() });
-};
-
-export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<StudentProfile[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where('unitId', '==', unitId), where('year', '==', year), where('period', '==', period));
+export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus, options?: { lastVisible?: DocumentSnapshot }) => {
+    let q = query(collection(db, 'institutes', instituteId, 'payments'), where('status', '==', status), orderBy('createdAt', 'desc'), limit(20));
+    if (options?.lastVisible) q = query(q, startAfter(options.lastVisible));
     const snap = await getDocs(q);
-    const studentIds = snap.docs.map(d => d.data().studentId);
-    const profiles: StudentProfile[] = [];
-    for (const id of studentIds) {
-        const p = await getStudentProfile(instituteId, id);
-        if (p) profiles.push(p);
-    }
-    return profiles;
+    return { payments: snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)), newLastVisible: snap.docs[snap.docs.length - 1] || null };
 };
 
-export const getAllAssignmentsForYear = async (instituteId: string, year: string) => {
+// --- GESTIÓN DE NOTICIAS ---
+export const getNewsList = async (instituteId: string): Promise<News[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'news'), orderBy('createdAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as News));
+};
+
+export const addNews = async (instituteId: string, data: any, imageFile?: File) => {
+    let imageUrl = '';
+    if (imageFile) imageUrl = await uploadFileAndGetURL(imageFile, `institutes/${instituteId}/news/${Date.now()}`);
+    await addDoc(collection(db, 'institutes', instituteId, 'news'), { ...data, imageUrl, createdAt: Timestamp.now() });
+};
+
+export const updateNews = async (instituteId: string, id: string, data: any, imageFile?: File) => {
+    if (imageFile) data.imageUrl = await uploadFileAndGetURL(imageFile, `institutes/${instituteId}/news/${id}`);
+    await updateDoc(doc(db, 'institutes', instituteId, 'news', id), data);
+};
+
+export const deleteNews = async (instituteId: string, item: News) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'news', item.id));
+    if (item.imageUrl) { try { await deleteObject(ref(storage, item.imageUrl)); } catch(e) {} }
+};
+
+// --- CONTROL DE ACCESO ---
+export const getAccessPoints = async (instituteId: string): Promise<AccessPoint[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'accessPoints'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AccessPoint));
+};
+
+export const getAccessPoint = async (instituteId: string, id: string): Promise<AccessPoint | null> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'accessPoints', id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } as AccessPoint : null;
+};
+
+export const addAccessPoint = async (instituteId: string, data: any) => {
+    await addDoc(collection(db, 'institutes', instituteId, 'accessPoints'), data);
+};
+
+export const updateAccessPoint = async (instituteId: string, id: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'accessPoints', id), data);
+};
+
+export const deleteAccessPoint = async (instituteId: string, id: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'accessPoints', id));
+};
+
+export const listenToAccessLogsForUser = (instituteId: string, documentId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
+    const q = query(collectionGroup(db, 'accessLogs'), where('instituteId', '==', instituteId), where('userDocumentId', '==', documentId), orderBy('timestamp', 'desc'), limit(20));
+    return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog))));
+};
+
+export const listenToAllAccessLogs = (instituteId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
+    const q = query(collectionGroup(db, 'accessLogs'), where('instituteId', '==', instituteId), orderBy('timestamp', 'desc'), limit(50));
+    return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog))));
+};
+
+export const listenToAccessLogsForPoint = (instituteId: string, pointDocId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
+    const q = query(collection(db, 'institutes', instituteId, 'accessPoints', pointDocId, 'accessLogs'), orderBy('timestamp', 'desc'), limit(50));
+    return onSnapshot(q, (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog))));
+};
+
+// --- OTROS ACADÉMICOS ---
+export const getAchievementIndicatorsByWeek = async (instituteId: string, unitId: string, week: number): Promise<AchievementIndicator[]> => {
+    const all = await getAchievementIndicators(instituteId, unitId);
+    return all.filter(i => week >= i.startWeek && week <= i.endWeek);
+};
+
+export const getAssignmentsForYear = async (instituteId: string, year: string) => {
     const q = query(collection(db, 'institutes', instituteId, 'assignments'), where('__name__', '>=', `${year}_`), where('__name__', '<=', `${year}_\uf8ff`));
     const snap = await getDocs(q);
     const all: { 'MAR-JUL': Assignment, 'AGO-DIC': Assignment } = { 'MAR-JUL': {}, 'AGO-DIC': {} };
@@ -939,215 +535,44 @@ export const getAllAssignmentsForYear = async (instituteId: string, year: string
     return all;
 };
 
-export const getAchievementRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'academicRecords'), where('unitId', '==', unitId), where('year', '==', year), where('period', '==', period));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademicRecord));
+export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
+    const staff = await getStaffProfiles(instituteId);
+    const roles = await getRoles(instituteId);
+    const targetRoleIds = roles.filter(r => ['docente', 'coordinador'].includes(r.name.toLowerCase())).map(r => r.id);
+    return staff.filter(s => targetRoleIds.includes(s.roleId) || ['Teacher', 'Coordinator'].includes(s.role)).map(s => ({
+        id: s.documentId, documentId: s.documentId, fullName: s.displayName, email: s.email, phone: s.phone || '', active: true, specialty: '', condition: s.condition, programId: s.programId
+    }));
 };
 
-export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'academicRecords'), where('unitId', '==', unitId), where('year', '==', year), where('period', '==', period));
-    const snap = await getDocs(q);
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademicRecord));
-};
-
-export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
-    const batch = writeBatch(db);
-    records.forEach(r => batch.set(doc(db, 'institutes', instituteId, 'academicRecords', r.id), r, { merge: true }));
-    await batch.commit();
-};
-
-export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
-    const batch = writeBatch(db);
-    for (const res of results) {
-        const recordId = `${unitId}_${res.studentId}_${year}_${period}`;
-        batch.update(doc(db, 'institutes', instituteId, 'academicRecords', recordId), { finalGrade: res.finalGrade, status: res.status });
-        
-        // Use individual getDocs for update because recursive batch updates inside loop are safer with direct refs
-        const q = query(collection(db, 'institutes', instituteId, 'matriculations'), 
-            where('studentId', '==', res.studentId), 
-            where('unitId', '==', unitId), 
-            where('year', '==', year), 
-            where('period', '==', period)
-        );
-        const matSnap = await getDocs(q);
-        matSnap.docs.forEach(d => batch.update(d.ref, { status: res.status }));
-    }
-    await batch.commit();
-};
-
-export const getDefaultScheduleTemplate = async (instituteId: string): Promise<ScheduleTemplate | null> => {
-    const colRef = collection(db, 'institutes', instituteId, 'scheduleTemplates');
-    const snap = await getDocs(colRef);
-    if (snap.empty) return null;
-    const templates = snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleTemplate));
-    return templates.find(t => t.isDefault) || templates[0];
-};
-
-export const getAllSchedules = async (instituteId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
-    const q = query(collectionGroup(db, 'scheduleBlocks'), 
-        where('instituteId', '==', instituteId), 
-        where('year', '==', year), 
-        where('semester', '==', semester)
-    );
-    const snap = await getDocs(q);
-    const map: Record<string, ScheduleBlock> = {};
-    snap.docs.forEach(d => {
-        const b = d.data() as ScheduleBlock;
-        map[`${b.dayOfWeek}-${b.startTime}`] = b;
-    });
-    return map;
-};
-
-export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
-    const q = query(collectionGroup(db, 'scheduleBlocks'), 
-        where('instituteId', '==', instituteId), 
-        where('year', '==', year)
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleBlock));
-};
-
-export const updateStock = async (instituteId: string, itemId: string, change: number, notes: string) => {
-    const ref = doc(db, 'institutes', instituteId, 'supplyItems', itemId);
-    const user = auth.currentUser;
-    await runTransaction(db, async (tx) => {
-        const snap = await tx.get(ref);
-        if (!snap.exists()) throw new Error("Insumo no encontrado.");
-        const current = snap.data().stock || 0;
-        const next = current + change;
-        if (next < 0) throw new Error("Stock insuficiente.");
-        tx.update(ref, { stock: next });
-        tx.set(doc(collection(ref, 'history')), { 
-            timestamp: Timestamp.now(), 
-            userId: user?.uid, 
-            userName: user?.displayName, 
-            change, 
-            newStock: next, 
-            notes 
-        });
+export const saveSingleAssignment = async (instituteId: string, year: string, programId: string, period: UnitPeriod, unitId: string, teacherId: string | null) => {
+    const ref = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
+    const updateData = { [`${period}.${unitId}`]: teacherId || deleteField() };
+    await setDoc(ref, updateData, { merge: true }).catch(async (err) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: ref.path, operation: 'update', requestResourceData: updateData }));
+        throw err;
     });
 };
 
-export const getSupplyCatalog = async (instituteId: string): Promise<SupplyItem[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'supplyItems'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyItem));
-};
-
-export const getRequestsForUser = async (instituteId: string, authUid: string): Promise<SupplyRequest[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'supplyRequests'), 
-        where('requesterAuthUid', '==', authUid), 
-        orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
-};
-
-export const createSupplyRequest = async (instituteId: string, data: Omit<SupplyRequest, 'id' | 'status' | 'createdAt' | 'code'>) => {
-    const count = (await getDocs(collection(db, 'institutes', instituteId, 'supplyRequests'))).size;
-    const code = `PED-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
-    await addDoc(collection(db, 'institutes', instituteId, 'supplyRequests'), { ...data, code, status: 'Pendiente', createdAt: Timestamp.now() });
-};
-
-export const getSupplyRequestsByStatus = async (instituteId: string, status: SupplyRequestStatus): Promise<SupplyRequest[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'supplyRequests'), 
-        where('status', '==', status), 
-        orderBy('createdAt', 'desc')
-    );
-    const snap = await getDocs(q);
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
-};
-
-export const updateSupplyRequest = async (instituteId: string, id: string, data: Partial<SupplyRequest>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'supplyRequests', id), data);
-};
-
-export const createDirectApprovedRequest = async (instituteId: string, data: Omit<SupplyRequest, 'id' | 'status' | 'createdAt' | 'code'>) => {
-    const count = (await getDocs(collection(db, 'institutes', instituteId, 'supplyRequests'))).size;
-    const code = `PED-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
-    await addDoc(collection(db, 'institutes', instituteId, 'supplyRequests'), { 
-        ...data, 
-        code, 
-        status: 'Aprobado', 
-        createdAt: Timestamp.now(), 
-        processedAt: Timestamp.now() 
-    });
-};
-
-export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'nonTeachingActivities'));
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as NonTeachingActivity));
-};
-
-export const addNonTeachingActivity = async (instituteId: string, data: Omit<NonTeachingActivity, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'nonTeachingActivities'), data);
-};
-
-export const updateNonTeachingActivity = async (instituteId: string, id: string, data: Partial<NonTeachingActivity>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'nonTeachingActivities', id), data);
+export const saveNonTeachingActivity = async (instituteId: string, data: any) => {
+    if (data.id) await updateDoc(doc(db, 'institutes', instituteId, 'nonTeachingActivities', data.id), data);
+    else await addDoc(collection(db, 'institutes', instituteId, 'nonTeachingActivities'), { ...data, isActive: true });
 };
 
 export const deleteNonTeachingActivity = async (instituteId: string, id: string) => {
     await deleteDoc(doc(db, 'institutes', instituteId, 'nonTeachingActivities', id));
 };
 
-export const getBuildings = async (instituteId: string): Promise<Building[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'buildings'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Building));
+export const promoteToEgresado = async (instituteId: string, documentId: string, year: string) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'studentProfiles', documentId), { academicStatus: 'Egresado', graduationYear: year });
 };
 
-export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
-    const buildings = await getBuildings(instituteId);
-    const allEnvs: Environment[] = [];
-    for (const b of buildings) {
-        const envs = await getEnvironmentsForBuilding(instituteId, b.id);
-        allEnvs.push(...envs);
-    }
-    return allEnvs;
+export const checkEgresoEligibility = async (instituteId: string, documentId: string) => {
+    const student = await getStudentProfile(instituteId, documentId);
+    if (!student) return { eligible: false, pendingUnits: [], pendingEFSRT: [] };
+    const [allUnits, allMats, allEFSRT] = await Promise.all([getUnits(instituteId), getMatriculationsForStudent(instituteId, documentId), getEFSRTAssignmentsForStudent(instituteId, documentId)]);
+    const programUnits = allUnits.filter(u => u.programId === student.programId);
+    const pendingUnits = programUnits.filter(u => !allMats.some(m => m.unitId === u.id && m.status === 'aprobado')).map(u => u.name);
+    const prog = (await getPrograms(instituteId)).find(p => p.id === student.programId);
+    const pendingEFSRT = (prog?.modules || []).filter(m => !allEFSRT.some(a => a.moduleId === m.code && a.status === 'Aprobado')).map(m => m.name);
+    return { eligible: pendingUnits.length === 0 && pendingEFSRT.length === 0, pendingUnits, pendingEFSRT };
 };
-
-export const addBuilding = async (instituteId: string, data: Omit<Building, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'buildings'), data);
-};
-
-export const updateBuilding = async (instituteId: string, id: string, data: Partial<Building>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', id), data);
-};
-
-export const deleteBuilding = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', id));
-};
-
-export const getEnvironmentsForBuilding = async (instituteId: string, buildingId: string): Promise<Environment[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data(), buildingId } as Environment));
-};
-
-export const addEnvironment = async (instituteId: string, buildingId: string, data: Omit<Environment, 'id' | 'buildingId'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments'), data);
-};
-
-export const updateEnvironment = async (instituteId: string, buildingId: string, id: string, data: Partial<Environment>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', id), data);
-};
-
-export const deleteEnvironment = async (instituteId: string, buildingId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', id));
-};
-
-export const addSupplyItem = async (instituteId: string, data: Omit<SupplyItem, 'id' | 'stock'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'supplyItems'), { ...data, stock: 0 });
-};
-
-export const updateSupplyItem = async (instituteId: string, id: string, data: Partial<SupplyItem>) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'supplyItems', id), data);
-};
-
-export const deleteSupplyItem = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'supplyItems', id));
-};
-
-export const addAssetType = async (instituteId: string, data: Omit<AssetType, 'id' | 'lastAssignedNumber'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'assetTypes'), { ...data, lastAssignedNumber: 0 });
-};
-
