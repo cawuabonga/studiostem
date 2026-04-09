@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -145,7 +144,8 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 documentId, 
                 role: data.role, 
                 roleId: data.roleId,
-                programId: data.programId 
+                programId: data.programId,
+                displayName: data.displayName // Overwrite with official name from staff profile
             });
             return { role: data.role, instituteName: instDoc.data().name };
         }
@@ -161,12 +161,14 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 throw err;
             });
             const data = studentSnap.data() as StudentProfile;
+            const officialName = `${data.firstName} ${data.lastName}`.trim();
             await updateDoc(doc(db, 'users', userId), { 
                 instituteId: instId, 
                 documentId, 
                 role: 'Student', 
                 roleId: 'student',
-                programId: data.programId 
+                programId: data.programId,
+                displayName: officialName // Overwrite with official name from student profile
             });
             return { role: 'Student', instituteName: instDoc.data().name };
         }
