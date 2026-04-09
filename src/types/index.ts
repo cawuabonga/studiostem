@@ -15,7 +15,10 @@ export interface AppUser {
   roleId?: string; 
   // Will hold the specific permissions for the user's role
   permissions?: Permission[];
+  programId?: string; // ID del programa al que pertenece
   programName?: string;
+  currentSemester?: number; // Para estudiantes
+  turno?: UnitTurno; // Para estudiantes
 }
 
 // Represents a pre-created profile for a staff member, identified by Document ID.

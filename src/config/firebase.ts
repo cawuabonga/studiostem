@@ -144,7 +144,8 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 instituteId: instId, 
                 documentId, 
                 role: data.role, 
-                roleId: data.roleId 
+                roleId: data.roleId,
+                programId: data.programId 
             });
             return { role: data.role, instituteName: instDoc.data().name };
         }
@@ -159,11 +160,13 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 }));
                 throw err;
             });
+            const data = studentSnap.data() as StudentProfile;
             await updateDoc(doc(db, 'users', userId), { 
                 instituteId: instId, 
                 documentId, 
                 role: 'Student', 
-                roleId: 'student' 
+                roleId: 'student',
+                programId: data.programId 
             });
             return { role: 'Student', instituteName: instDoc.data().name };
         }
@@ -1088,7 +1091,7 @@ export const deletePaymentConcept = async (instituteId: string, id: string) => {
     await deleteDoc(doc(db, 'institutes', instituteId, 'paymentConcepts', id));
 };
 
-// --- CONTENIDO Y TAREAS ---
+// --- CONTENIDO E TAREAS ---
 export const getWeeksData = async (instituteId: string, unitId: string): Promise<WeekData[]> => {
     const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeks'));
     return snap.docs.map(doc => doc.data() as WeekData);
