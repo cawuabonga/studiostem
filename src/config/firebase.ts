@@ -27,7 +27,6 @@ if (!getApps().length) {
   app = getApp();
 }
 
-// Initialize Analytics if running in the browser
 if (typeof window !== 'undefined') {
     getAnalytics(app);
 }
@@ -218,15 +217,15 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
 };
 
 // --- PROGRAMAS Y UNIDADES ---
-const getSubCollectionRef = (instituteId: string, collectionName: string) => collection(db, 'institutes', instituteId, collectionName);
+const getSubColRef = (instituteId: string, collectionName: string) => collection(db, 'institutes', instituteId, collectionName);
 
 export const getPrograms = async (instituteId: string): Promise<Program[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'programs'), orderBy("name")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'programs'), orderBy("name")));
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Program));
 };
 
 export const addProgram = async (instituteId: string, data: Omit<Program, 'id'>) => {
-    await addDoc(getSubCollectionRef(instituteId, 'programs'), { ...data, modules: data.modules.map(m => ({ ...m })) });
+    await addDoc(getSubColRef(instituteId, 'programs'), { ...data, modules: data.modules.map(m => ({ ...m })) });
 };
 
 export const updateProgram = async (instituteId: string, programId: string, data: Partial<Program>) => {
@@ -239,7 +238,7 @@ export const deleteProgram = async (instituteId: string, programId: string) => {
 };
 
 export const getUnits = async (instituteId: string): Promise<Unit[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'unidadesDidacticas'), orderBy("code")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'unidadesDidacticas'), orderBy("code")));
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Unit));
 };
 
@@ -250,7 +249,7 @@ export const getUnit = async (instituteId: string, unitId: string): Promise<Unit
 
 export const addUnit = async (instituteId: string, data: Omit<Unit, 'id' | 'imageUrl'>) => {
     const totalHours = (data.theoreticalHours || 0) + (data.practicalHours || 0);
-    const ref = await addDoc(getSubCollectionRef(instituteId, 'unidadesDidacticas'), { ...data, totalHours });
+    const ref = await addDoc(getSubColRef(instituteId, 'unidadesDidacticas'), { ...data, totalHours });
     return ref.id;
 };
 
@@ -297,7 +296,7 @@ export const getAssignments = async (instituteId: string, year: string, programI
 };
 
 export const getAllAssignmentsForYear = async (instituteId: string, year: string) => {
-    const q = query(getSubCollectionRef(instituteId, 'assignments'), where('__name__', '>=', `${year}_`), where('__name__', '<=', `${year}_\uf8ff`));
+    const q = query(getSubColRef(instituteId, 'assignments'), where('__name__', '>=', `${year}_`), where('__name__', '<=', `${year}_\uf8ff`));
     const snap = await getDocs(q);
     const all: { 'MAR-JUL': Assignment, 'AGO-DIC': Assignment } = { 'MAR-JUL': {}, 'AGO-DIC': {} };
     snap.docs.forEach(d => {
@@ -315,7 +314,7 @@ export const saveSingleAssignment = async (instituteId: string, year: string, pr
 
 // --- STAFF Y ESTUDIANTES ---
 export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'staffProfiles'), orderBy("displayName")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'staffProfiles'), orderBy("displayName")));
     return snap.docs.map(d => ({ documentId: d.id, ...d.data() } as StaffProfile));
 };
 
@@ -349,7 +348,7 @@ export const bulkDeleteStaff = async (instituteId: string, ids: string[]) => {
 };
 
 export const getStudentProfiles = async (instituteId: string): Promise<StudentProfile[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'studentProfiles'), orderBy("lastName")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'studentProfiles'), orderBy("lastName")));
     return snap.docs.map(d => ({ id: d.id, ...d.data(), fullName: `${d.data().firstName} ${d.data().lastName}` } as StudentProfile));
 };
 
@@ -379,14 +378,28 @@ export const bulkAddStudents = async (instituteId: string, students: any[]) => {
 
 // --- MATRÍCULAS ---
 export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Matriculation)).sort((a,b) => b.year.localeCompare(a.year));
+};
+
+export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
+    const unitIds = snap.docs.map(d => d.data().unitId);
+    if (unitIds.length === 0) return [];
+    
+    const [allUnits, programs] = await Promise.all([getUnits(instituteId), getPrograms(instituteId)]);
+    const programMap = new Map(programs.map(p => [p.id, p.name]));
+    
+    return allUnits.filter(u => unitIds.includes(u.id)).map(u => ({
+        ...u,
+        programName: programMap.get(u.programId) || 'N/A'
+    }));
 };
 
 export const createMatriculations = async (instituteId: string, studentId: string, units: Unit[], year: string) => {
     const batch = writeBatch(db);
     units.forEach(u => {
-        batch.set(doc(getSubCollectionRef(instituteId, 'matriculations')), {
+        batch.set(doc(getSubColRef(instituteId, 'matriculations')), {
             studentId, unitId: u.id, programId: u.programId, year, period: u.period, semester: u.semester, moduleId: u.moduleId, status: 'cursando', createdAt: Timestamp.now()
         });
     });
@@ -397,7 +410,7 @@ export const bulkCreateMatriculations = async (instituteId: string, studentIds: 
     const batch = writeBatch(db);
     studentIds.forEach(sId => {
         units.forEach(u => {
-            batch.set(doc(getSubCollectionRef(instituteId, 'matriculations')), {
+            batch.set(doc(getSubColRef(instituteId, 'matriculations')), {
                 studentId: sId, unitId: u.id, programId: u.programId, year, period: u.period, semester, moduleId: u.moduleId, status: 'cursando', createdAt: Timestamp.now()
             });
         });
@@ -412,12 +425,12 @@ export const deleteMatriculation = async (instituteId: string, studentId: string
 
 // --- NON-TEACHING ---
 export const getNonTeachingActivities = async (instituteId: string): Promise<NonTeachingActivity[]> => {
-    const snap = await getDocs(getSubCollectionRef(instituteId, 'nonTeachingActivities'));
+    const snap = await getDocs(getSubColRef(instituteId, 'nonTeachingActivities'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingActivity));
 };
 
 export const addNonTeachingActivity = async (instituteId: string, data: Omit<NonTeachingActivity, 'id'>) => {
-    await addDoc(getSubCollectionRef(instituteId, 'nonTeachingActivities'), data);
+    await addDoc(getSubColRef(instituteId, 'nonTeachingActivities'), data);
 };
 
 export const updateNonTeachingActivity = async (instituteId: string, id: string, data: any) => {
@@ -429,39 +442,39 @@ export const deleteNonTeachingActivity = async (instituteId: string, id: string)
 };
 
 export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where("teacherId", "==", teacherId), where("year", "==", year), where("period", "==", period)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'nonTeachingAssignments'), where("teacherId", "==", teacherId), where("year", "==", year), where("period", "==", period)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
 };
 
 export const getAllNonTeachingAssignmentsForYear = async (instituteId: string, year: string): Promise<NonTeachingAssignment[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where("year", "==", year)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'nonTeachingAssignments'), where("year", "==", year)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
 };
 
 export const getAssignmentsForActivity = async (instituteId: string, activityId: string, year: string): Promise<NonTeachingAssignment[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where("activityId", "==", activityId), where("year", "==", year)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'nonTeachingAssignments'), where("activityId", "==", activityId), where("year", "==", year)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
 };
 
 export const saveNonTeachingAssignmentsForTeacher = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod, assignments: any[]) => {
-    const q = query(getSubCollectionRef(instituteId, 'nonTeachingAssignments'), where("teacherId", "==", teacherId), where("year", "==", year), where("period", "==", period));
+    const q = query(getSubColRef(instituteId, 'nonTeachingAssignments'), where("teacherId", "==", teacherId), where("year", "==", year), where("period", "==", period));
     const snap = await getDocs(q);
     const batch = writeBatch(db);
     snap.docs.forEach(d => batch.delete(d.ref));
-    assignments.forEach(a => { if (a.assignedHours > 0) batch.set(doc(getSubCollectionRef(instituteId, 'nonTeachingAssignments')), a); });
+    assignments.forEach(a => { if (a.assignedHours > 0) batch.set(doc(getSubColRef(instituteId, 'nonTeachingAssignments')), a); });
     await batch.commit();
 };
 
 // --- PAYMENTS ---
 export const getPaymentConcepts = async (instituteId: string, activeOnly = false): Promise<PaymentConcept[]> => {
-    let q = query(getSubCollectionRef(instituteId, 'paymentConcepts'), orderBy("name"));
+    let q = query(getSubColRef(instituteId, 'paymentConcepts'), orderBy("name"));
     if (activeOnly) q = query(q, where("isActive", "==", true));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as PaymentConcept));
 };
 
 export const addPaymentConcept = async (instituteId: string, data: any) => {
-    await addDoc(getSubCollectionRef(instituteId, 'paymentConcepts'), { ...data, createdAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'paymentConcepts'), { ...data, createdAt: Timestamp.now() });
 };
 
 export const updatePaymentConcept = async (instituteId: string, id: string, data: any) => {
@@ -473,7 +486,7 @@ export const deletePaymentConcept = async (instituteId: string, id: string) => {
 };
 
 export const registerPayment = async (instituteId: string, data: any, voucherFile?: File, options: any = {}) => {
-    const ref = doc(getSubCollectionRef(instituteId, 'payments'));
+    const ref = doc(getSubColRef(instituteId, 'payments'));
     let voucherUrl = '';
     if (voucherFile) voucherUrl = await uploadFileAndGetURL(voucherFile, `institutes/${instituteId}/vouchers/${ref.id}`);
     await setDoc(ref, {
@@ -483,19 +496,19 @@ export const registerPayment = async (instituteId: string, data: any, voucherFil
 };
 
 export const getStudentPaymentsByStatus = async (instituteId: string, payerId: string, status: PaymentStatus): Promise<Payment[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'payments'), where("payerId", "==", payerId), where("status", "==", status)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'payments'), where("payerId", "==", payerId), where("status", "==", status)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
 };
 
 export const getPaymentsByStatus = async (instituteId: string, status: PaymentStatus, options: any = {}) => {
-    let q = query(getSubCollectionRef(instituteId, 'payments'), where("status", "==", status), orderBy("createdAt", "desc"), limit(20));
+    let q = query(getSubColRef(instituteId, 'payments'), where("status", "==", status), orderBy("createdAt", "desc"), limit(20));
     if (options.lastVisible) q = query(q, startAfter(options.lastVisible));
     const snap = await getDocs(q);
     return { payments: snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment)), newLastVisible: snap.docs[snap.docs.length-1] || null };
 };
 
 export const getApprovedPaymentsInDateRange = async (instituteId: string, from: Date, to: Date): Promise<Payment[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'payments'), where("status", "==", "Aprobado"), where("processedAt", ">=", from), where("processedAt", "<=", to), orderBy("processedAt", "desc")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'payments'), where("status", "==", "Aprobado"), where("processedAt", ">=", from), where("processedAt", "<=", to), orderBy("processedAt", "desc")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Payment));
 };
 
@@ -505,12 +518,12 @@ export const updatePaymentStatus = async (instituteId: string, id: string, statu
 
 // --- ABASTECIMIENTO ---
 export const getSupplyCatalog = async (instituteId: string): Promise<SupplyItem[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'supplyCatalog'), orderBy("name")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyCatalog'), orderBy("name")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyItem));
 };
 
 export const addSupplyItem = async (instituteId: string, data: any) => {
-    await addDoc(getSubCollectionRef(instituteId, 'supplyCatalog'), { ...data, stock: 0 });
+    await addDoc(getSubColRef(instituteId, 'supplyCatalog'), { ...data, stock: 0 });
 };
 
 export const updateSupplyItem = async (instituteId: string, id: string, data: any) => {
@@ -552,22 +565,22 @@ export const getNextRequestCode = async (instituteId: string): Promise<string> =
 
 export const createSupplyRequest = async (instituteId: string, data: any) => {
     const code = await getNextRequestCode(instituteId);
-    await addDoc(getSubCollectionRef(instituteId, 'supplyRequests'), { ...data, code, status: 'Pendiente', createdAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, code, status: 'Pendiente', createdAt: Timestamp.now() });
 };
 
 export const createDirectApprovedRequest = async (instituteId: string, data: any) => {
     const user = auth.currentUser;
     const code = await getNextRequestCode(instituteId);
-    await addDoc(getSubCollectionRef(instituteId, 'supplyRequests'), { ...data, items: data.items.map((i:any) => ({...i, approvedQuantity: i.requestedQuantity})), code, status: 'Aprobado', createdAt: Timestamp.now(), approvedById: user?.uid, approvedByName: user?.displayName, processedAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, items: data.items.map((i:any) => ({...i, approvedQuantity: i.requestedQuantity})), code, status: 'Aprobado', createdAt: Timestamp.now(), approvedById: user?.uid, approvedByName: user?.displayName, processedAt: Timestamp.now() });
 };
 
 export const getRequestsForUser = async (instituteId: string, uid: string): Promise<SupplyRequest[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'supplyRequests'), where("requesterAuthUid", "==", uid), orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), where("requesterAuthUid", "==", uid), orderBy("createdAt", "desc")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
 };
 
 export const getSupplyRequestsByStatus = async (instituteId: string, status: SupplyRequestStatus): Promise<SupplyRequest[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'supplyRequests'), where("status", "==", status), orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), where("status", "==", status), orderBy("createdAt", "desc")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
 };
 
@@ -603,28 +616,20 @@ export const saveAcademicPeriods = async (instituteId: string, year: string, dat
     await setDoc(doc(db, 'institutes', instituteId, 'academicYears', year), data, { merge: true });
 };
 
-export const getEnrolledUnitsForStudent = async (instituteId: string, studentId: string) => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
-    const unitIds = snap.docs.map(d => d.data().unitId);
-    if (unitIds.length === 0) return [];
-    const units = await getUnits(instituteId);
-    return units.filter(u => unitIds.includes(u.id));
-};
-
 export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
     const id = `${unitId}_${studentId}_${year}_${period}`;
-    const snap = await getDoc(doc(getSubCollectionRef(instituteId, 'academicRecords'), id));
+    const snap = await getDoc(doc(getSubColRef(instituteId, 'academicRecords'), id));
     return snap.exists() ? snap.data() as AcademicRecord : null;
 };
 
 export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'academicRecords'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'academicRecords'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as AcademicRecord));
 };
 
 export const batchUpdateAcademicRecords = async (instituteId: string, records: any[]) => {
     const batch = writeBatch(db);
-    records.forEach(r => batch.set(doc(getSubCollectionRef(instituteId, 'academicRecords'), r.id), r, { merge: true }));
+    records.forEach(r => batch.set(doc(getSubColRef(instituteId, 'academicRecords'), r.id), r, { merge: true }));
     await batch.commit();
 };
 
@@ -632,7 +637,7 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
     const batch = writeBatch(db);
     for (const res of results) {
         batch.update(doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${res.studentId}_${year}_${period}`), { finalGrade: res.finalGrade, status: res.status });
-        const matSnap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("studentId", "==", res.studentId), where("unitId", "==", unitId), where("year", "==", year)));
+        const matSnap = await getDocs(query(getSubColRef(instituteId, 'matriculations'), where("studentId", "==", res.studentId), where("unitId", "==", unitId), where("year", "==", year)));
         matSnap.docs.forEach(d => batch.update(d.ref, { status: res.status }));
     }
     await batch.commit();
@@ -649,7 +654,7 @@ export const saveAttendance = async (instituteId: string, data: AttendanceRecord
 };
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
-    const snap = await getDocs(getSubCollectionRef(instituteId, 'schedules'));
+    const snap = await getDocs(getSubColRef(instituteId, 'schedules'));
     const days = new Set<string>();
     snap.forEach(d => {
         const data = d.data();
@@ -754,7 +759,7 @@ export const gradeTaskSubmission = async (instituteId: string, unitId: string, w
     const target = indicators.find(i => weekNumber >= i.startWeek && weekNumber <= i.endWeek);
     if (target) {
         const rId = `${unitId}_${studentId}_${new Date().getFullYear()}_${(await getUnit(instituteId, unitId))?.period}`;
-        const ref = doc(getSubCollectionRef(instituteId, 'academicRecords'), rId);
+        const ref = doc(getSubColRef(instituteId, 'academicRecords'), rId);
         const rSnap = await getDoc(ref);
         const grades = rSnap.data()?.grades?.[target.id] || [];
         const idx = grades.findIndex((g:any) => g.refId === taskId);
@@ -765,24 +770,6 @@ export const gradeTaskSubmission = async (instituteId: string, unitId: string, w
 };
 
 // --- ROLES Y ACCESOS ---
-export const getRoles = async (instituteId: string): Promise<Role[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'roles'), orderBy("name")));
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Role));
-};
-
-export const addRole = async (instituteId: string, data: any) => {
-    const id = data.name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-    await setDoc(doc(db, 'institutes', instituteId, 'roles', id), data);
-};
-
-export const updateRole = async (instituteId: string, id: string, data: any) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'roles', id), data);
-};
-
-export const deleteRole = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'roles', id));
-};
-
 export const getRolePermissions = async (instituteId: string, id: string): Promise<Record<Permission, boolean> | null> => {
     if (id === 'student') return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true, 'planning:schedule:view:own': true } as any;
     const snap = await getDoc(doc(db, 'institutes', instituteId, 'roles', id));
@@ -795,12 +782,12 @@ export const getAccessPoint = async (instituteId: string, id: string): Promise<A
 };
 
 export const getAccessPoints = async (instituteId: string): Promise<AccessPoint[]> => {
-    const snap = await getDocs(getSubCollectionRef(instituteId, 'accessPoints'));
+    const snap = await getDocs(getSubColRef(instituteId, 'accessPoints'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as AccessPoint));
 };
 
 export const addAccessPoint = async (instituteId: string, data: any) => {
-    await addDoc(getSubCollectionRef(instituteId, 'accessPoints'), data);
+    await addDoc(getSubColRef(instituteId, 'accessPoints'), data);
 };
 
 export const updateAccessPoint = async (instituteId: string, id: string, data: any) => {
@@ -865,12 +852,12 @@ export const uploadEFSRTReport = async (instituteId: string, aId: string, type: 
 
 // --- NEWS Y GALLERY ---
 export const getNewsList = async (instituteId: string): Promise<News[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'news'), orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'news'), orderBy("createdAt", "desc")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as News));
 };
 
 export const addNews = async (instituteId: string, data: any, file?: File) => {
-    const ref = doc(getSubCollectionRef(instituteId, 'news'));
+    const ref = doc(getSubColRef(instituteId, 'news'));
     let imageUrl = '';
     if (file) imageUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/news/${ref.id}`);
     await setDoc(ref, { ...data, imageUrl, createdAt: Timestamp.now() });
@@ -882,7 +869,7 @@ export const deleteNews = async (instituteId: string, news: News) => {
 };
 
 export const getAlbums = async (instituteId: string): Promise<Album[]> => {
-    const snap = await getDocs(query(getSubCollectionRef(instituteId, 'albums'), orderBy("createdAt", "desc")));
+    const snap = await getDocs(query(getSubColRef(instituteId, 'albums'), orderBy("createdAt", "desc")));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Album));
 };
 
@@ -892,7 +879,7 @@ export const getAlbum = async (instituteId: string, id: string): Promise<Album |
 };
 
 export const addAlbum = async (instituteId: string, data: any) => {
-    await addDoc(getSubCollectionRef(instituteId, 'albums'), { ...data, createdAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'albums'), { ...data, createdAt: Timestamp.now() });
 };
 
 export const deleteAlbum = async (instituteId: string, id: string) => {
@@ -919,4 +906,194 @@ export const addPhotosToAlbum = async (instituteId: string, id: string, files: F
 export const deletePhotoFromAlbum = async (instituteId: string, aId: string, photo: Photo) => {
     await deleteDoc(doc(db, 'institutes', instituteId, 'albums', aId, 'photos', photo.id));
     try { await deleteObject(ref(storage, photo.url)); } catch (e) {}
+};
+
+// --- INFRAESTRUCTURA ---
+export const getBuildings = async (instituteId: string): Promise<Building[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'buildings'), orderBy("name")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Building));
+};
+
+export const addBuilding = async (instituteId: string, data: any) => {
+    await addDoc(getSubColRef(instituteId, 'buildings'), data);
+};
+
+export const updateBuilding = async (instituteId: string, id: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', id), data);
+};
+
+export const deleteBuilding = async (instituteId: string, id: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', id));
+};
+
+export const getEnvironmentsForBuilding = async (instituteId: string, bId: string): Promise<Environment[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments'), orderBy("name")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Environment));
+};
+
+export const addEnvironment = async (instituteId: string, bId: string, data: any) => {
+    await addDoc(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments'), { ...data, buildingId: bId });
+};
+
+export const updateEnvironment = async (instituteId: string, bId: string, eId: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId), data);
+};
+
+export const deleteEnvironment = async (instituteId: string, bId: string, eId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId));
+};
+
+export const getAssetTypes = async (instituteId: string, options: any = {}): Promise<AssetType[]> => {
+    let q = query(getSubColRef(instituteId, 'assetTypes'), orderBy("name"));
+    if (options.search) {
+        const s = options.search.toUpperCase();
+        q = query(q, where("name", ">=", s), where("name", "<=", s + '\uf8ff'));
+    }
+    if (options.limit) q = query(q, limit(options.limit));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AssetType));
+};
+
+export const getAssetTypeById = async (instituteId: string, id: string): Promise<AssetType | null> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'assetTypes', id));
+    return snap.exists() ? { id: snap.id, ...snap.data() } as AssetType : null;
+};
+
+export const addAssetType = async (instituteId: string, data: any) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'assetTypes', data.patrimonialCode), { ...data, lastAssignedNumber: 0 }, { merge: true });
+};
+
+export const bulkAddAssetTypes = async (instituteId: string, items: any[]) => {
+    const batch = writeBatch(db);
+    items.forEach(item => batch.set(doc(db, 'institutes', instituteId, 'assetTypes', item.patrimonialCode), { ...item, lastAssignedNumber: 0 }, { merge: true }));
+    await batch.commit();
+};
+
+export const updateAssetType = async (instituteId: string, id: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'assetTypes', id), data);
+};
+
+export const deleteAssetType = async (instituteId: string, id: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'assetTypes', id));
+};
+
+export const getAssetsForEnvironment = async (instituteId: string, bId: string, eId: string): Promise<Asset[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets'), orderBy("name")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as Asset));
+};
+
+export const getAllAssets = async (instituteId: string): Promise<Asset[]> => {
+    const buildings = await getBuildings(instituteId);
+    let all: Asset[] = [];
+    for (const b of buildings) {
+        const envs = await getEnvironmentsForBuilding(instituteId, b.id);
+        for (const e of envs) {
+            const assets = await getAssetsForEnvironment(instituteId, b.id, e.id);
+            all = all.concat(assets.map(a => ({ ...a, buildingName: b.name, environmentName: e.name })));
+        }
+    }
+    return all;
+};
+
+export const addAsset = async (instituteId: string, bId: string, eId: string, typeId: string, data: any) => {
+    const user = auth.currentUser;
+    const typeRef = doc(db, 'institutes', instituteId, 'assetTypes', typeId);
+    let code = '';
+    await runTransaction(db, async (tx) => {
+        const tSnap = await tx.get(typeRef);
+        if (!tSnap.exists()) throw new Error("Type not found");
+        const next = (tSnap.data().lastAssignedNumber || 0) + 1;
+        code = `${tSnap.data().patrimonialCode}-${String(next).padStart(4, '0')}`;
+        tx.update(typeRef, { lastAssignedNumber: next });
+        const aRef = doc(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets'));
+        tx.set(aRef, { ...data, assetTypeId: typeId, name: tSnap.data().name, type: tSnap.data().class, codeOrSerial: code, instituteId, buildingId: bId, environmentId: eId });
+        if (user) tx.set(doc(collection(aRef, 'history')), { action: 'create', userId: user.uid, userName: user.displayName || 'Sis', timestamp: Timestamp.now(), details: `Creado: ${code}` });
+    });
+    return code;
+};
+
+export const updateAsset = async (instituteId: string, bId: string, eId: string, aId: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets', aId), data);
+};
+
+export const deleteAsset = async (instituteId: string, bId: string, eId: string, aId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets', aId));
+};
+
+export const moveAssets = async (instituteId: string, assets: Asset[], target: Environment) => {
+    const batch = writeBatch(db);
+    assets.forEach(a => {
+        batch.delete(doc(db, 'institutes', instituteId, 'buildings', a.buildingId, 'environments', a.environmentId, 'assets', a.id));
+        const nRef = doc(collection(db, 'institutes', instituteId, 'buildings', target.buildingId, 'environments', target.id, 'assets'));
+        const { id, buildingId, environmentId, buildingName, environmentName, ...rest } = a;
+        batch.set(nRef, { ...rest, instituteId, buildingId: target.buildingId, environmentId: target.id });
+    });
+    await batch.commit();
+};
+
+export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[], status: string) => {
+    const batch = writeBatch(db);
+    assets.forEach(a => batch.update(doc(db, 'institutes', instituteId, 'buildings', a.buildingId, 'environments', a.environmentId, 'assets', a.id), { status }));
+    await batch.commit();
+};
+
+export const getAssetHistory = async (instituteId: string, bId: string, eId: string, aId: string): Promise<AssetHistoryLog[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments', eId, 'assets', aId, 'history'), orderBy("timestamp", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AssetHistoryLog));
+};
+
+// --- HORARIOS ---
+export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'scheduleTemplates'), orderBy("name")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleTemplate));
+};
+
+export const getDefaultScheduleTemplate = async (instituteId: string): Promise<ScheduleTemplate | null> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'scheduleTemplates'), where("isDefault", "==", true), limit(1)));
+    return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() } as ScheduleTemplate;
+};
+
+export const addScheduleTemplate = async (instituteId: string, data: any) => {
+    const ref = await addDoc(getSubColRef(instituteId, 'scheduleTemplates'), data);
+    return ref.id;
+};
+
+export const updateScheduleTemplate = async (instituteId: string, id: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'scheduleTemplates', id), data);
+};
+
+export const deleteScheduleTemplate = async (instituteId: string, id: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'scheduleTemplates', id));
+};
+
+export const setDefaultScheduleTemplate = async (instituteId: string, id: string) => {
+    const q = query(getSubColRef(instituteId, 'scheduleTemplates'), where("isDefault", "==", true));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.forEach(d => batch.update(d.ref, { isDefault: false }));
+    batch.update(doc(db, 'institutes', instituteId, 'scheduleTemplates', id), { isDefault: true });
+    await batch.commit();
+};
+
+export const getSchedule = async (instituteId: string, pId: string, year: string, sem: number): Promise<Record<string, ScheduleBlock>> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'schedules', `${pId}_${year}_${sem}`));
+    return snap.exists() ? snap.data().schedule || {} : {};
+};
+
+export const getAllSchedules = async (instituteId: string, year: string, sem: number): Promise<Record<string, ScheduleBlock>> => {
+    const snap = await getDocs(getSubColRef(instituteId, 'schedules'));
+    const all: Record<string, ScheduleBlock> = {};
+    snap.forEach(d => { if (d.data().year === year && d.data().semester === sem) Object.assign(all, d.data().schedule); });
+    return all;
+};
+
+export const saveSchedule = async (instituteId: string, pId: string, year: string, sem: number, turno: UnitTurno, schedule: any) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'schedules', `${pId}_${year}_${sem}`), { schedule, programId: pId, year, semester: sem, turno }, { merge: true });
+};
+
+export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
+    const snap = await getDocs(getSubColRef(instituteId, 'schedules'));
+    let all: ScheduleBlock[] = [];
+    snap.forEach(d => { if(d.data().year === year) all = all.concat(Object.values(d.data().schedule || {})); });
+    return all;
 };
