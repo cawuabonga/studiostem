@@ -3,60 +3,60 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions for Development ---
-     function isSuperAdmin() {
+    // --- Funciones de Ayuda ---
+    
+    // Verifica si el usuario tiene el rol de 'SuperAdmin' en su documento de usuario global.
+    function isSuperAdmin() {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
     
+    // Verifica si el usuario está autenticado y ya tiene un instituto asignado en su perfil.
     function isAssociatedWithInstitute() {
-      // Checks if the user is signed in and has an instituteId in their user document.
       return request.auth != null && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId != null;
     }
     
-    // --- General Access Rule for Development ---
-    // Allows any authenticated user associated with an institute OR a SuperAdmin to read/write.
+    // --- Regla de Acceso General para Desarrollo ---
+    // Permite lectura y escritura a cualquier usuario que ya pertenezca a un instituto o que sea SuperAdmin.
+    // Esto cubre la mayoría de las operaciones una vez que el usuario ha iniciado sesión y vinculado su perfil.
     match /{path=**} {
       allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
     }
     
-    // --- EXCEPTIONS TO THE GENERAL RULE ---
+    // --- EXCEPCIONES A LA REGLA GENERAL (Casos Especiales) ---
 
-    // Exception 1: Allow a user to manage their own user document.
-    // This is critical for login, profile creation, and profile linking.
+    // Gestión del documento de usuario propio:
+    // Permite que cualquier usuario autenticado lea y escriba su propio documento en la colección /users.
+    // Es crítico para el proceso de registro, login y actualización de datos personales.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Exception for Profile Linking: Allow any authenticated user to read profiles.
+    // Proceso de Vinculación de Perfil (Staff):
+    // Permite buscar un perfil por ID (get) y actualizarlo (update) para vincular la cuenta.
+    // La actualización solo se permite si el campo 'linkedUserUid' está vacío, evitando que se "roben" perfiles ya vinculados.
     match /institutes/{instituteId}/staffProfiles/{staffId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow update: if request.auth != null && (!resource.data.keys().contains('linkedUserUid') || resource.data.linkedUserUid == null || resource.data.linkedUserUid == "");
     }
+
+    // Proceso de Vinculación de Perfil (Estudiantes):
+    // Misma lógica que el personal: permite buscar y vincular si el perfil está disponible.
     match /institutes/{instituteId}/studentProfiles/{studentId} {
-      allow read: if request.auth != null;
+      allow get: if request.auth != null;
+      allow update: if request.auth != null && (!resource.data.keys().contains('linkedUserUid') || resource.data.linkedUserUid == null || resource.data.linkedUserUid == "");
     }
 
-    // --- EFSRT (Experiencias Formativas) Rules ---
-    // Permite gestionar las prácticas si el usuario está asociado al instituto o es SuperAdmin.
-    match /institutes/{instituteId}/efsrtAssignments/{assignmentId} {
-      allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
-    }
-
-    //***************************
-
-    // Default deny all reads and writes (as per user snippet)
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // --- Global Config ---
+    // Configuración Global del Sistema:
+    // Cualquier persona puede leer la configuración (ej. tasas, periodos), pero solo el SuperAdmin puede editarla.
     match /config/{document=**} {
         allow read: if true;
         allow write: if isSuperAdmin();
     }
 
-    // Exception 2: Allow public read-only access to collections needed for public-facing pages.
+    // Acceso Público (Página Web del Instituto):
+    // Estas colecciones deben ser legibles sin necesidad de estar logueado para que la web pública funcione.
     match /institutes/{instituteId} {
       allow read: if true;
     }
@@ -66,8 +66,14 @@ service cloud.firestore {
     match /institutes/{instituteId}/programs/{programId} {
       allow read: if true;
     }
-    match /institutes/{instituteId}/albums/{albumId}/{photos=**} {
+    match /institutes/{instituteId}/albums/{albumId}/{allPhotos=**} {
       allow read: if true;
+    }
+
+    // Denegación por defecto:
+    // Si ninguna de las reglas anteriores se cumple, la operación es rechazada.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

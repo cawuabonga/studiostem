@@ -1,54 +1,46 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions for Development ---
+    // --- Funciones de Ayuda ---
+    
     function isSuperAdmin() {
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
     
     function isAssociatedWithInstitute() {
-      // Checks if the user is signed in and has an instituteId in their user document.
       return request.auth != null && 
              exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId != null;
     }
     
-    // --- General Access Rule for Development ---
-    // Allows any authenticated user associated with an institute OR a SuperAdmin to read/write.
+    // --- Regla de Acceso General ---
     match /{path=**} {
       allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
     }
     
-    // --- EXCEPTIONS TO THE GENERAL RULE ---
+    // --- Excepciones ---
 
-    // Exception 1: Allow a user to manage their own user document.
-    // This is critical for login, profile creation, and profile linking.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Exception for Profile Linking: 
-    // Permite que CUALQUIER usuario autenticado busque su perfil por DNI (get)
-    // y lo vincule (update) solo si el perfil no tiene ya un dueño (linkedUserUid).
     match /institutes/{instituteId}/staffProfiles/{staffId} {
       allow get: if request.auth != null;
       allow update: if request.auth != null && (!resource.data.keys().contains('linkedUserUid') || resource.data.linkedUserUid == null || resource.data.linkedUserUid == "");
     }
+
     match /institutes/{instituteId}/studentProfiles/{studentId} {
       allow get: if request.auth != null;
       allow update: if request.auth != null && (!resource.data.keys().contains('linkedUserUid') || resource.data.linkedUserUid == null || resource.data.linkedUserUid == "");
     }
 
-    // --- Global Config ---
     match /config/{document=**} {
         allow read: if true;
         allow write: if isSuperAdmin();
     }
 
-    // Exception 2: Allow public read-only access to collections needed for public-facing pages.
     match /institutes/{instituteId} {
       allow read: if true;
     }
@@ -58,8 +50,12 @@ service cloud.firestore {
     match /institutes/{instituteId}/programs/{programId} {
       allow read: if true;
     }
-    match /institutes/{instituteId}/albums/{albumId}/{photos=**} {
+    match /institutes/{instituteId}/albums/{albumId}/{allPhotos=**} {
       allow read: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
