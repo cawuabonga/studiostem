@@ -724,9 +724,11 @@ export const saveAcademicPeriods = async (instituteId: string, year: string, dat
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
     const q = query(collectionGroup(db, 'scheduleBlocks'), where('instituteId', '==', instituteId), where('unitId', '==', unitId), where('year', '==', year));
     const snap = await getDocs(q);
-    const days = new Set<string>();
-    snap.docs.forEach(d => days.add(d.data().dayOfWeek));
-    return Array.from(days);
+    const daysFound = new Set<string>();
+    snap.docs.forEach(d => daysFound.add(d.data().dayOfWeek));
+    
+    const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return Array.from(daysFound).sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
 };
 
 // --- PAYMENTS ---
@@ -823,7 +825,7 @@ export const uploadEFSRTReport = async (instituteId: string, assignmentId: strin
 };
 
 export const checkEgresoEligibility = async (instituteId: string, studentId: string) => {
-    const [mats, efsrt, prog, student] = await Promise.all([getMatriculationsForStudent(instituteId, studentId), getEFSRTAssignmentsForStudent(instituteId, studentId), getPrograms(instituteId).then(ps => ps.find(p => p.id === allProfiles.find(s => s.documentId === studentId)?.programId)), getStudentProfile(instituteId, studentId)]);
+    const [mats, efsrt, student] = await Promise.all([getMatriculationsForStudent(instituteId, studentId), getEFSRTAssignmentsForStudent(instituteId, studentId), getStudentProfile(instituteId, studentId)]);
     const pendingUnits = mats.filter(m => m.status !== 'aprobado').map(m => m.unitId);
     const pendingEFSRT = efsrt.filter(e => e.status !== 'Aprobado').map(e => e.moduleId);
     return { eligible: pendingUnits.length === 0 && pendingEFSRT.length === 0, pendingUnits, pendingEFSRT };

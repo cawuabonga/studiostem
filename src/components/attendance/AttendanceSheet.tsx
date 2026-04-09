@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from 'react';
@@ -10,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Label } from '../ui/label';
 import { addDays, startOfWeek, format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { CalendarX } from 'lucide-react';
 
 
 interface AttendanceSheetProps {
@@ -53,25 +52,37 @@ const dayNameToIndex: { [key: string]: number } = {
 
 export function AttendanceSheet({ students, attendanceRecord, totalWeeks, scheduledDays, onAttendanceChange, defaultWeek = 1, periodStartDate }: AttendanceSheetProps) {
     const [selectedWeek, setSelectedWeek] = useState<number>(defaultWeek);
-    const weekNumber = selectedWeek; // for clarity inside the table
+    const weekNumber = selectedWeek; 
     
-    const daysToShow = scheduledDays.length > 0 ? scheduledDays : ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+    // Solo mostrar los días que vienen del horario real.
+    const daysToShow = scheduledDays;
+
+    if (daysToShow.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                <div className="p-4 bg-amber-50 rounded-full">
+                    <CalendarX className="h-12 w-12 text-amber-500" />
+                </div>
+                <div className="max-w-md">
+                    <h3 className="text-lg font-bold">Horario no asignado</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Esta unidad didáctica aún no tiene días de clase asignados en el Generador de Horarios. 
+                        Es necesario que el coordinador genere el horario para habilitar el registro de asistencia.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const getWeekDateForDay = (dayName: string): string | null => {
         if (!periodStartDate) return null;
         try {
-            // Find the start of the academic period's week (assuming it's a Monday)
             const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
-            // Calculate the start of the selected week
             const startOfSelectedWeek = addDays(startOfFirstWeek, (selectedWeek - 1) * 7);
-            // Get the index of the day (Monday=1, etc.)
             const dayIndex = dayNameToIndex[dayName];
-            // Get the date for that day in the selected week
-            const dateOfDay = addDays(startOfSelectedWeek, dayIndex - 1); // -1 because addDays is 0-indexed from the start date
-            
+            const dateOfDay = addDays(startOfSelectedWeek, dayIndex - 1);
             return format(dateOfDay, 'dd/MM');
         } catch (e) {
-            console.error("Error calculating date for day:", e);
             return null;
         }
     }
