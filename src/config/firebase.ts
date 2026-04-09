@@ -147,7 +147,7 @@ export const updateInstitute = async (id: string, data: Partial<Institute>, logo
 
 export const getInstitutes = async (): Promise<Institute[]> => {
   const snap = await getDocs(collection(db, 'institutes'));
-  return snap.docs.map(doc => doc.data() as Institute);
+  return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Institute));
 };
 
 export const deleteInstitute = async (id: string) => {

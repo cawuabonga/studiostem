@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -92,16 +91,18 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
                 <p className="text-sm font-semibold text-gray-500 mb-4">INSTITUCIONES AFILIADAS</p>
                 <TooltipProvider>
                   <div className="flex justify-center items-center gap-6 flex-wrap">
-                    {institutes.map(institute => (
-                      <Tooltip key={institute.id}>
-                        <TooltipTrigger>
-                           <Image 
-                              src={institute.logoUrl || `https://placehold.co/60x60.png?text=${institute.abbreviation}`} 
-                              alt={institute.name}
-                              width={48}
-                              height={48}
-                              className="h-12 w-12 object-contain rounded-md bg-gray-100 p-1 grayscale hover:grayscale-0 transition-all"
-                            />
+                    {institutes.map((institute, index) => (
+                      <Tooltip key={institute.id || `inst-${index}`}>
+                        <TooltipTrigger asChild>
+                           <div className="cursor-pointer">
+                            <Image 
+                                src={institute.logoUrl || `https://placehold.co/60x60.png?text=${institute.name.substring(0, 2).toUpperCase()}`} 
+                                alt={institute.name}
+                                width={48}
+                                height={48}
+                                className="h-12 w-12 object-contain rounded-md bg-gray-100 p-1 grayscale hover:grayscale-0 transition-all"
+                              />
+                           </div>
                         </TooltipTrigger>
                          <TooltipContent>
                           <p>{institute.name}</p>
