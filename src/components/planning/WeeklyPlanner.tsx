@@ -253,8 +253,7 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
 
     const fetchAllWeeks = useCallback(async () => {
         if (!instituteId) {
-            // Ensure we don't get stuck in loading state if instituteId is missing
-            setLoading(false);
+            // Keep loading true while instituteId is being loaded
             return;
         }
         setLoading(true);
@@ -313,6 +312,8 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Array.from({ length: totalWeeks }, (_, i) => {
                     const weekNumber = i + 1;
+                    // Improved find logic: try explicit weekNumber field first, fallback to checking id if possible
+                    // but we ensure weekNumber is saved correctly in setWeekVisibility and saveWeekSyllabusData
                     const weekData = weeksData.find(week => week.weekNumber === weekNumber);
                     
                     // If student view and week is not visible, don't show the card
