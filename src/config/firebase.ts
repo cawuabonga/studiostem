@@ -1,10 +1,9 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, DocumentSnapshot, getCountFromServer } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PayerType, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno, TaskSubmission, GradeEntry } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -378,6 +377,24 @@ export const bulkAddStudents = async (instituteId: string, students: any[]) => {
     await batch.commit();
 };
 
+export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
+    const allStaff = await getStaffProfiles(instituteId);
+    const allPrograms = await getPrograms(instituteId);
+    const programMap = new Map(allPrograms.map(p => [p.id, p.name]));
+    return allStaff.map(data => ({
+        id: data.documentId,
+        documentId: data.documentId,
+        fullName: data.displayName,
+        email: data.email,
+        phone: data.phone || '',
+        specialty: 'N/A', 
+        active: !!data.linkedUserUid,
+        condition: data.condition,
+        programId: data.programId,
+        programName: programMap.get(data.programId) || 'N/A'
+    } as Teacher));
+};
+
 // --- MATRÍCULAS ---
 export const getMatriculationsForStudent = async (instituteId: string, studentId: string): Promise<Matriculation[]> => {
     const snap = await getDocs(query(getSubColRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
@@ -388,14 +405,9 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
     const snap = await getDocs(query(getSubColRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
     const unitIds = snap.docs.map(d => d.data().unitId);
     if (unitIds.length === 0) return [];
-    
     const [allUnits, programs] = await Promise.all([getUnits(instituteId), getPrograms(instituteId)]);
     const programMap = new Map(programs.map(p => [p.id, p.name]));
-    
-    return allUnits.filter(u => unitIds.includes(u.id)).map(u => ({
-        ...u,
-        programName: programMap.get(u.programId) || 'N/A'
-    }));
+    return allUnits.filter(u => unitIds.includes(u.id)).map(u => ({ ...u, programName: programMap.get(u.programId) || 'N/A' }));
 };
 
 export const createMatriculations = async (instituteId: string, studentId: string, units: Unit[], year: string) => {
@@ -474,10 +486,7 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
 export const getAttendanceForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AttendanceRecord | null> => {
     const attendanceRef = doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${year}_${period}`);
     const docSnap = await getDoc(attendanceRef);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as AttendanceRecord;
-    }
-    return null;
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as AttendanceRecord : null;
 };
 
 export const saveAttendance = async (instituteId: string, data: AttendanceRecord) => {
@@ -509,12 +518,12 @@ export const saveSyllabus = async (instituteId: string, unitId: string, data: Sy
 
 export const getWeeksData = async (instituteId: string, unitId: string): Promise<WeekData[]> => {
     const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner'));
-    return snap.docs.map(doc => doc.data() as WeekData);
+    return snap.docs.map(doc => ({ ...doc.data(), weekNumber: doc.data().weekNumber || parseInt(doc.id.split('_')[1]) } as WeekData));
 };
 
 export const getWeekData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
     const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`));
-    return snap.exists() ? snap.data() as WeekData : null;
+    return snap.exists() ? { ...snap.data(), weekNumber } as WeekData : null;
 };
 
 export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {
@@ -586,35 +595,6 @@ export const submitTask = async (instituteId: string, unitId: string, weekNumber
 
 export const gradeTaskSubmission = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, taskTitle: string, studentId: string, grade: number, feedback: string) => {
     await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentId), { grade, feedback });
-    const indicators = await getAchievementIndicators(instituteId, unitId);
-    const target = indicators.find(i => weekNumber >= i.startWeek && weekNumber <= i.endWeek);
-    if (target) {
-        const currentYear = new Date().getFullYear().toString();
-        const unit = await getUnit(instituteId, unitId);
-        if (!unit) return;
-        const rId = `${unitId}_${studentId}_${currentYear}_${unit.period}`;
-        const ref = doc(getSubColRef(instituteId, 'academicRecords'), rId);
-        const rSnap = await getDoc(ref);
-        const grades = rSnap.data()?.grades?.[target.id] || [];
-        const idx = grades.findIndex((g:any) => g.refId === taskId);
-        const entry = { type: 'task', refId: taskId, label: taskTitle, grade, weekNumber };
-        if (idx !== -1) grades[idx] = entry; else grades.push(entry);
-        await setDoc(ref, { grades: { [target.id]: grades } }, { merge: true });
-    }
-};
-
-// --- INDICADORES ---
-export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
-    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators'), orderBy("name")));
-    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as AchievementIndicator));
-};
-
-export const addAchievementIndicator = async (instituteId: string, unitId: string, data: Omit<AchievementIndicator, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators'), data);
-};
-
-export const deleteAchievementIndicator = async (instituteId: string, unitId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', id));
 };
 
 // --- ROLES Y PERMISOS ---
@@ -737,6 +717,12 @@ export const addNews = async (instituteId: string, data: any, file?: File) => {
     await setDoc(ref, { ...data, imageUrl, createdAt: Timestamp.now() });
 };
 
+export const updateNews = async (instituteId: string, newsId: string, data: any, imageFile?: File) => {
+    let imageUrl = data.imageUrl;
+    if (imageFile) imageUrl = await uploadFileAndGetURL(imageFile, `institutes/${instituteId}/news/${newsId}`);
+    await updateDoc(doc(db, 'institutes', instituteId, 'news', newsId), { ...data, imageUrl });
+};
+
 export const deleteNews = async (instituteId: string, news: News) => {
     await deleteDoc(doc(db, 'institutes', instituteId, 'news', news.id));
     if (news.imageUrl) try { await deleteObject(ref(storage, news.imageUrl)); } catch (e) {}
@@ -754,6 +740,10 @@ export const getAlbum = async (instituteId: string, id: string): Promise<Album |
 
 export const addAlbum = async (instituteId: string, data: any) => {
     await addDoc(getSubColRef(instituteId, 'albums'), { ...data, createdAt: Timestamp.now() });
+};
+
+export const updateAlbum = async (instituteId: string, id: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'albums', id), data);
 };
 
 export const deleteAlbum = async (instituteId: string, id: string) => {
@@ -803,6 +793,16 @@ export const deleteBuilding = async (instituteId: string, id: string) => {
 export const getEnvironmentsForBuilding = async (instituteId: string, bId: string): Promise<Environment[]> => {
     const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'buildings', bId, 'environments'), orderBy("name")));
     return snap.docs.map(d => ({ id: d.id, ...d.data(), buildingId: bId } as Environment));
+};
+
+export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
+    const bSnap = await getBuildings(instituteId);
+    let all: Environment[] = [];
+    for (const b of bSnap) {
+        const envs = await getEnvironmentsForBuilding(instituteId, b.id);
+        all = all.concat(envs);
+    }
+    return all;
 };
 
 export const addEnvironment = async (instituteId: string, bId: string, data: any) => {
@@ -956,6 +956,11 @@ export const getAllSchedules = async (instituteId: string, year: string, sem: nu
     return all;
 };
 
+export const getSchedule = async (instituteId: string, pId: string, year: string, sem: number): Promise<Record<string, ScheduleBlock>> => {
+    const snap = await getDoc(doc(db, 'institutes', instituteId, 'schedules', `${pId}_${year}_${sem}`));
+    return snap.exists() ? snap.data()?.schedule || {} : {};
+};
+
 export const saveSchedule = async (instituteId: string, pId: string, year: string, sem: number, turno: UnitTurno, schedule: any) => {
     await setDoc(doc(db, 'institutes', instituteId, 'schedules', `${pId}_${year}_${sem}`), { schedule, programId: pId, year, semester: sem, turno }, { merge: true });
 };
@@ -967,17 +972,58 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
     return all;
 };
 
-// --- OTROS ---
-export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
-    const buildings = await getBuildings(instituteId);
-    let all: Environment[] = [];
-    for (const b of buildings) {
-        const envs = await getEnvironmentsForBuilding(instituteId, b.id);
-        all = all.concat(envs);
-    }
-    return all;
+// --- ABASTECIMIENTO ---
+export const addSupplyRequest = async (instituteId: string, data: any) => {
+    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, createdAt: Timestamp.now(), status: 'Pendiente' });
 };
 
+export const getSupplyRequests = async (instituteId: string): Promise<SupplyRequest[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), orderBy("createdAt", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
+};
+
+export const createSupplyRequest = async (instituteId: string, requestData: Omit<SupplyRequest, 'id' | 'createdAt' | 'status' | 'code'>): Promise<void> => {
+    const requestsCol = getSubColRef(instituteId, 'supplyRequests');
+    const counterRef = doc(db, 'institutes', instituteId, 'counters', 'supplyRequests');
+    let newCount = 1;
+    await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+        newCount = (counterSnap.data()?.count || 0) + 1;
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+    });
+    const code = `PED-${new Date().getFullYear()}-${String(newCount).padStart(4, '0')}`;
+    await addDoc(requestsCol, { ...requestData, code, status: 'Pendiente', createdAt: Timestamp.now() });
+};
+
+export const getRequestsForUser = async (instituteId: string, uid: string): Promise<SupplyRequest[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), where("requesterAuthUid", "==", uid), orderBy("createdAt", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
+};
+
+export const getSupplyRequestsByStatus = async (instituteId: string, status: SupplyRequestStatus): Promise<SupplyRequest[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), where("status", "==", status), orderBy("createdAt", "desc")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
+};
+
+export const updateSupplyRequestStatus = async (instituteId: string, requestId: string, status: SupplyRequestStatus, extra: any = {}) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'supplyRequests', requestId), { status, processedAt: Timestamp.now(), ...extra });
+};
+
+export const createDirectApprovedRequest = async (instituteId: string, requestData: any) => {
+    const user = auth.currentUser;
+    const requestsCol = getSubColRef(instituteId, 'supplyRequests');
+    const counterRef = doc(db, 'institutes', instituteId, 'counters', 'supplyRequests');
+    let newCount = 1;
+    await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+        newCount = (counterSnap.data()?.count || 0) + 1;
+        transaction.set(counterRef, { count: newCount }, { merge: true });
+    });
+    const code = `PED-${new Date().getFullYear()}-${String(newCount).padStart(4, '0')}`;
+    await addDoc(requestsCol, { ...requestData, code, status: 'Aprobado', createdAt: Timestamp.now(), approvedById: user?.uid, processedAt: Timestamp.now() });
+};
+
+// --- OTROS ---
 export const getMatriculationReportData = async (instituteId: string, programId: string, year: string, semester: number): Promise<MatriculationReportData | null> => {
     const [allPrograms, allUnits, allStaff] = await Promise.all([getPrograms(instituteId), getUnits(instituteId), getStaffProfiles(instituteId)]);
     const program = allPrograms.find(p => p.id === programId);
