@@ -837,9 +837,11 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
 
 // --- SCHEDULES / HORARIOS ---
 export const getDefaultScheduleTemplate = async (instituteId: string): Promise<ScheduleTemplate | null> => {
-    const q = query(collection(db, 'institutes', instituteId, 'scheduleTemplates'), where('isDefault', '==', true), limit(1));
-    const snap = await getDocs(q);
-    return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() } as ScheduleTemplate;
+    const colRef = collection(db, 'institutes', instituteId, 'scheduleTemplates');
+    const snap = await getDocs(colRef);
+    if (snap.empty) return null;
+    const templates = snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleTemplate));
+    return templates.find(t => t.isDefault) || templates[0];
 };
 
 export const getScheduleTemplates = async (instituteId: string): Promise<ScheduleTemplate[]> => {
@@ -878,15 +880,10 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     return map;
 };
 
-export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<Record<string, ScheduleBlock>> => {
+export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
     const q = query(collectionGroup(db, 'scheduleBlocks'), where('instituteId', '==', instituteId), where('year', '==', year));
     const snap = await getDocs(q);
-    const map: Record<string, ScheduleBlock> = {};
-    snap.docs.forEach(d => {
-        const b = d.data() as ScheduleBlock;
-        map[`${b.dayOfWeek}-${b.startTime}-${b.programId}-${b.semester}`] = b;
-    });
-    return map;
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ScheduleBlock));
 };
 
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, blocks: Record<string, ScheduleBlock>) => {

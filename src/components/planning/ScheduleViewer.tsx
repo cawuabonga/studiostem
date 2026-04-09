@@ -48,19 +48,19 @@ export function ScheduleViewer() {
                 const studentTurno = (user as any).turno || 'Mañana';
                 const studentProgramId = (user as any).programId;
 
-                Object.entries(allSchedules).forEach(([key, block]) => {
+                allSchedules.forEach((block) => {
                     if (block.programId === studentProgramId && block.semester === studentSemester) {
                         const unitOfBlock = allUnits.find(u => u.id === block.unitId);
                         if (unitOfBlock?.turno === studentTurno) {
-                            userSchedule[key] = block;
+                            userSchedule[`${block.dayOfWeek}-${block.startTime}`] = block;
                         }
                     }
                 });
             } else {
                 // Docente/Administrativo: Filtrar bloques donde él es el docente asignado
-                Object.entries(allSchedules).forEach(([key, block]) => {
+                allSchedules.forEach((block) => {
                     if (block.teacherId === user.documentId) {
-                        userSchedule[key] = block;
+                        userSchedule[`${block.dayOfWeek}-${block.startTime}`] = block;
                     }
                 });
             }
@@ -85,8 +85,16 @@ export function ScheduleViewer() {
             const turno = (user as any).turno?.toLowerCase() || 'mañana';
             return template.turnos[turno as keyof typeof template.turnos] || [];
         }
-        // Para docentes, mostrar todos los bloques
-        return [...template.turnos.mañana, ...template.turnos.tarde, ...template.turnos.noche];
+        // Para docentes, mostrar todos los bloques de todos los turnos combinados y ordenados
+        const allBlocks = [
+            ...template.turnos.mañana,
+            ...template.turnos.tarde,
+            ...template.turnos.noche
+        ];
+        // Eliminar duplicados por hora de inicio y ordenar
+        return allBlocks.filter((block, index, self) =>
+            index === self.findIndex((t) => t.startTime === block.startTime)
+        ).sort((a, b) => a.startTime.localeCompare(b.startTime));
     }, [template, user]);
 
     if (loading) {
@@ -109,7 +117,9 @@ export function ScheduleViewer() {
         );
     }
 
-    if (Object.keys(personalSchedule).length === 0) {
+    const hasData = Object.keys(personalSchedule).length > 0;
+
+    if (!hasData) {
         return (
             <Card className="bg-muted/50 border-dashed">
                 <CardContent className="py-12 text-center text-muted-foreground">
@@ -130,8 +140,8 @@ export function ScheduleViewer() {
                 </CardTitle>
                 <CardDescription className="text-primary-foreground/80">
                     {user?.role === 'Student' 
-                        ? `Ciclo: ${user.currentSemester}° Semestre | Turno: ${(user as any).turno}`
-                        : "Horario consolidado de dictado de clases en todos los programas."
+                        ? `Ciclo: ${user.currentSemester || 1}° Semestre | Turno: ${(user as any).turno}`
+                        : "Horario consolidado de dictado de clases asignado a su perfil."
                     }
                 </CardDescription>
             </CardHeader>
@@ -151,8 +161,8 @@ export function ScheduleViewer() {
                         const hasClassesInRow = days.some(day => personalSchedule[`${day}-${timeBlock.startTime}`]);
                         const isReceso = timeBlock.type === 'receso';
                         
-                        // Dynamic height: Clase ocupada (h-32), Clase vacía (h-12), Receso (h-8)
-                        const rowHeightClass = isReceso ? "h-8" : (hasClassesInRow ? "h-32" : "h-12");
+                        // Dynamic height: Clase ocupada (h-32), Clase vacía (h-12), Receso (h-10)
+                        const rowHeightClass = isReceso ? "h-10" : (hasClassesInRow ? "h-32" : "h-12");
 
                         return (
                             <React.Fragment key={`${timeBlock.startTime}-${idx}`}>
@@ -193,12 +203,12 @@ export function ScheduleViewer() {
                                                     <div className="flex justify-between items-end">
                                                         {user?.role !== 'Student' && (
                                                             <div className="flex items-center gap-1 text-[8px] font-medium text-muted-foreground">
-                                                                <User className="h-2 w-2" />
+                                                                <User className="h-2.5 w-2.5" />
                                                                 <span>Ciclo {block.semester}°</span>
                                                             </div>
                                                         )}
                                                         <div className="flex items-center gap-1 text-[8px] font-bold text-accent-foreground bg-accent/20 rounded px-1 w-fit">
-                                                            <MapPin className="h-2 w-2" />
+                                                            <MapPin className="h-2.5 w-2.5" />
                                                             <span>{environment?.name || 'A.P.'}</span>
                                                         </div>
                                                     </div>
