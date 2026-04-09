@@ -10,9 +10,8 @@ import { Button } from '../ui/button';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { LoginForm } from '../auth/LoginForm';
-import { RegisterForm } from '../auth/RegisterForm';
-import AppLogo from '../common/AppLogo';
+
+const DEFAULT_LOGIN_IMAGE = "https://picsum.photos/seed/education/800/1200";
 
 interface AuthPageLayoutProps {
   children: React.ReactNode;
@@ -56,20 +55,21 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl min-h-[750px] grid md:grid-cols-2 shadow-2xl rounded-lg overflow-hidden bg-white">
         
-        {/* Left Panel - Image */}
-        <div className="hidden md:block relative p-8 text-white" style={{ backgroundColor: design?.backgroundColor || '#000' }}>
-            {design?.imageUrl && (
-              <Image 
-                src={design.imageUrl}
-                alt="Imagen de fondo del login"
-                fill
-                className="object-cover"
-                priority
-              />
-            )}
+        {/* Panel Izquierdo - Imagen con respaldo */}
+        <div className="hidden md:block relative p-8 text-white" style={{ backgroundColor: design?.backgroundColor || '#1e3a8a' }}>
+            <Image 
+              src={design?.imageUrl || DEFAULT_LOGIN_IMAGE}
+              alt="Imagen de fondo del login"
+              fill
+              className="object-cover"
+              priority
+              data-ai-hint="university login"
+            />
+            {/* Overlay sutil para mejorar legibilidad si hubiera texto sobre la imagen */}
+            <div className="absolute inset-0 bg-black/20" />
         </div>
 
-        {/* Right Panel - Form */}
+        {/* Panel Derecho - Formulario */}
         <div className="w-full h-full flex flex-col justify-center p-8 sm:p-12 overflow-y-auto">
             <div className={cn(
               'mb-8',
