@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PayerType, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno, TaskSubmission, GradeEntry } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PayerType, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, EFSRTVisit, EFSRTStatus, UnitTurno, TaskSubmission, GradeEntry } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -77,19 +77,23 @@ export const getInstitute = async (id: string): Promise<Institute | null> => {
 };
 
 export const addInstitute = async (id: string, data: Omit<Institute, 'id' | 'logoUrl'>, logoFile?: File) => {
+    const instituteRef = doc(db, 'institutes', id);
+    const docSnap = await getDoc(instituteRef);
+    if (docSnap.exists()) throw new Error(`Institute with ID "${id}" already exists.`);
+
     let logoUrl = '';
     if (logoFile) {
         logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
     }
-    await setDoc(doc(db, 'institutes', id), { ...data, logoUrl });
+    await setDoc(instituteRef, { ...data, logoUrl });
 };
 
 export const updateInstitute = async (id: string, data: Partial<Institute>, logoFile?: File) => {
-    let logoUrl = (await getInstitute(id))?.logoUrl;
+    const updateData: any = { ...data };
     if (logoFile) {
-        logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
+        updateData.logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${id}/logo`);
     }
-    await updateDoc(doc(db, 'institutes', id), { ...data, logoUrl });
+    await updateDoc(doc(db, 'institutes', id), updateData);
 };
 
 export const deleteInstitute = async (id: string) => {
@@ -117,11 +121,7 @@ export const getLoginImages = async (): Promise<LoginImage[]> => {
 export const uploadLoginImage = async (file: File, name: string) => {
     const id = doc(collection(db, 'idGenerator')).id;
     const url = await uploadFileAndGetURL(file, `loginImages/${id}`);
-    await setDoc(doc(db, 'config', 'loginDesign', 'images', id), {
-        name,
-        url,
-        createdAt: Timestamp.now()
-    });
+    await setDoc(doc(db, 'config', 'loginDesign', 'images', id), { name, url, createdAt: Timestamp.now() });
 };
 
 export const deleteLoginImage = async (image: LoginImage) => {
@@ -482,6 +482,19 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
     await batch.commit();
 };
 
+export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators'), orderBy("name")));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AchievementIndicator));
+};
+
+export const addAchievementIndicator = async (instituteId: string, unitId: string, data: any) => {
+    await addDoc(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators'), data);
+};
+
+export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId));
+};
+
 // --- ASISTENCIA ---
 export const getAttendanceForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AttendanceRecord | null> => {
     const attendanceRef = doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${year}_${period}`);
@@ -746,8 +759,9 @@ export const updateAlbum = async (instituteId: string, id: string, data: any) =>
     await updateDoc(doc(db, 'institutes', instituteId, 'albums', id), data);
 };
 
-export const deleteAlbum = async (instituteId: string, id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'albums', id));
+export const deleteAlbum = async (instituteId: string, albumId: string): Promise<void> => {
+    const albumRef = doc(db, 'institutes', instituteId, 'albums', albumId);
+    await deleteDoc(albumRef);
 };
 
 export const getAlbumPhotos = async (instituteId: string, id: string): Promise<Photo[]> => {
@@ -973,26 +987,50 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
 };
 
 // --- ABASTECIMIENTO ---
-export const addSupplyRequest = async (instituteId: string, data: any) => {
-    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, createdAt: Timestamp.now(), status: 'Pendiente' });
+export const getSupplyCatalog = async (instituteId: string): Promise<SupplyItem[]> => {
+    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyCatalog'), orderBy("name")));
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as SupplyItem));
 };
 
-export const getSupplyRequests = async (instituteId: string): Promise<SupplyRequest[]> => {
-    const snap = await getDocs(query(getSubColRef(instituteId, 'supplyRequests'), orderBy("createdAt", "desc")));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as SupplyRequest));
+export const addSupplyItem = async (instituteId: string, data: any) => {
+    await addDoc(getSubColRef(instituteId, 'supplyCatalog'), { ...data, stock: 0 });
 };
 
-export const createSupplyRequest = async (instituteId: string, requestData: Omit<SupplyRequest, 'id' | 'createdAt' | 'status' | 'code'>): Promise<void> => {
-    const requestsCol = getSubColRef(instituteId, 'supplyRequests');
+export const updateSupplyItem = async (instituteId: string, itemId: string, data: any) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'supplyCatalog', itemId), data);
+};
+
+export const deleteSupplyItem = async (instituteId: string, itemId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'supplyCatalog', itemId));
+};
+
+export const updateStock = async (instituteId: string, itemId: string, quantityChange: number, notes?: string) => {
+    const user = auth.currentUser;
+    const itemRef = doc(db, 'institutes', instituteId, 'supplyCatalog', itemId);
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(itemRef);
+        const newStock = (snap.data()?.stock || 0) + quantityChange;
+        if (newStock < 0) throw new Error("Stock insuficiente");
+        tx.update(itemRef, { stock: newStock });
+        tx.set(doc(collection(itemRef, 'stockHistory')), { timestamp: Timestamp.now(), userId: user?.uid, userName: user?.displayName || 'Sis', change: quantityChange, newStock, notes });
+    });
+};
+
+export const getSupplyItemHistory = async (instituteId: string, itemId: string): Promise<StockHistoryLog[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'supplyCatalog', itemId, 'stockHistory'), orderBy("timestamp", "desc"), limit(50)));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as StockHistoryLog));
+};
+
+export const createSupplyRequest = async (instituteId: string, data: any) => {
     const counterRef = doc(db, 'institutes', instituteId, 'counters', 'supplyRequests');
     let newCount = 1;
-    await runTransaction(db, async (transaction) => {
-        const counterSnap = await transaction.get(counterRef);
-        newCount = (counterSnap.data()?.count || 0) + 1;
-        transaction.set(counterRef, { count: newCount }, { merge: true });
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(counterRef);
+        newCount = (snap.data()?.count || 0) + 1;
+        tx.set(counterRef, { count: newCount }, { merge: true });
     });
     const code = `PED-${new Date().getFullYear()}-${String(newCount).padStart(4, '0')}`;
-    await addDoc(requestsCol, { ...requestData, code, status: 'Pendiente', createdAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, code, status: 'Pendiente', createdAt: Timestamp.now() });
 };
 
 export const getRequestsForUser = async (instituteId: string, uid: string): Promise<SupplyRequest[]> => {
@@ -1009,18 +1047,17 @@ export const updateSupplyRequestStatus = async (instituteId: string, requestId: 
     await updateDoc(doc(db, 'institutes', instituteId, 'supplyRequests', requestId), { status, processedAt: Timestamp.now(), ...extra });
 };
 
-export const createDirectApprovedRequest = async (instituteId: string, requestData: any) => {
+export const createDirectApprovedRequest = async (instituteId: string, data: any) => {
     const user = auth.currentUser;
-    const requestsCol = getSubColRef(instituteId, 'supplyRequests');
     const counterRef = doc(db, 'institutes', instituteId, 'counters', 'supplyRequests');
     let newCount = 1;
-    await runTransaction(db, async (transaction) => {
-        const counterSnap = await transaction.get(counterRef);
-        newCount = (counterSnap.data()?.count || 0) + 1;
-        transaction.set(counterRef, { count: newCount }, { merge: true });
+    await runTransaction(db, async (tx) => {
+        const snap = await tx.get(counterRef);
+        newCount = (snap.data()?.count || 0) + 1;
+        tx.set(counterRef, { count: newCount }, { merge: true });
     });
     const code = `PED-${new Date().getFullYear()}-${String(newCount).padStart(4, '0')}`;
-    await addDoc(requestsCol, { ...requestData, code, status: 'Aprobado', createdAt: Timestamp.now(), approvedById: user?.uid, processedAt: Timestamp.now() });
+    await addDoc(getSubColRef(instituteId, 'supplyRequests'), { ...data, code, status: 'Aprobado', createdAt: Timestamp.now(), approvedById: user?.uid, processedAt: Timestamp.now() });
 };
 
 // --- OTROS ---
