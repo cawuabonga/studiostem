@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { Loader2, ArrowLeft, Eye, EyeOff, FileText, CheckCircle2, Inbox } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, EyeOff, CheckCircle2, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface WeekCardProps {
@@ -252,12 +252,17 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
     const { toast } = useToast();
 
     const fetchAllWeeks = useCallback(async () => {
-        if (!instituteId) return;
+        if (!instituteId) {
+            // Ensure we don't get stuck in loading state if instituteId is missing
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const data = await getWeeksData(instituteId, unit.id);
             setWeeksData(data);
         } catch (error) {
+            console.error("Error fetching weeks data:", error);
             toast({ title: "Error", description: "No se pudieron cargar las semanas de planificación.", variant: "destructive" });
         } finally {
             setLoading(false);
@@ -283,9 +288,10 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
             );
         }
 
-        const visibleWeeks = weeksData.filter(w => w.isVisible);
+        // For students, we only want to show the weeks that are actually visible
+        const visibleWeeksData = isStudentView ? weeksData.filter(w => w.isVisible) : weeksData;
 
-        if (isStudentView && visibleWeeks.length === 0) {
+        if (isStudentView && visibleWeeksData.length === 0) {
             return (
                 <Card className="border-dashed py-12">
                     <CardContent className="flex flex-col items-center justify-center text-center space-y-4">
@@ -308,6 +314,10 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
                 {Array.from({ length: totalWeeks }, (_, i) => {
                     const weekNumber = i + 1;
                     const weekData = weeksData.find(week => week.weekNumber === weekNumber);
+                    
+                    // If student view and week is not visible, don't show the card
+                    if (isStudentView && (!weekData || !weekData.isVisible)) return null;
+
                     return (
                         <WeekCard
                             key={weekNumber}
