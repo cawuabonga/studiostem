@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -145,7 +146,7 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 role: data.role, 
                 roleId: data.roleId,
                 programId: data.programId,
-                displayName: data.displayName // Overwrite with official name from staff profile
+                displayName: data.displayName
             });
             return { role: data.role, instituteName: instDoc.data().name };
         }
@@ -168,7 +169,7 @@ export const linkUserToProfile = async (userId: string, documentId: string, emai
                 role: 'Student', 
                 roleId: 'student',
                 programId: data.programId,
-                displayName: officialName // Overwrite with official name from student profile
+                displayName: officialName
             });
             return { role: 'Student', instituteName: instDoc.data().name };
         }

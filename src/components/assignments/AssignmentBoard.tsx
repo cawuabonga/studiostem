@@ -63,9 +63,8 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
       const currentProgram = allPrograms.find(p => p.id === programId) || null;
 
       setUnits(programUnits);
-      setAllUnits(fetchedUnits); // Store all units
+      setAllUnits(fetchedUnits);
       setTeachers(fetchedTeachers);
-      // Combine all assignments for the year for accurate workload calculation
       setAssignments({
           'MAR-JUL': { ...existingAssignments['MAR-JUL'], ...allAssignmentsForYear['MAR-JUL'] },
           'AGO-DIC': { ...existingAssignments['AGO-DIC'], ...allAssignmentsForYear['AGO-DIC'] }
@@ -111,7 +110,7 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
 
   const handleAssignmentChange = (period: UnitPeriod, unitId: string, teacherId: string) => {
     const unitToAssign = allUnits.find(u => u.id === unitId);
-    if (!teacherId || !unitToAssign) { // Handle un-assigning
+    if (!teacherId || !unitToAssign) {
         saveAssignment(period, unitId, '');
         return;
     }
@@ -135,7 +134,6 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
   };
 
   const saveAssignment = async (period: UnitPeriod, unitId: string, teacherId: string | null) => {
-    // Optimistic UI update
     setAssignments(prev => ({
       ...prev,
       [period]: {
@@ -148,7 +146,6 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
     
     try {
       await saveSingleAssignment(instituteId!, year, programId, period, unitId, teacherId || null);
-      // Success, just remove the saving indicator
       setTimeout(() => {
         setSavingStatus(prev => {
             const newStatus = { ...prev };
@@ -160,7 +157,6 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
     } catch (error) {
         console.error("Error saving single assignment:", error);
         toast({ title: 'Error al Guardar', description: 'No se pudo guardar la asignación. Revirtiendo cambio.', variant: 'destructive'});
-        // Revert UI on error
         fetchData(); 
         setSavingStatus(prev => {
             const newStatus = { ...prev };
@@ -178,9 +174,6 @@ export function AssignmentBoard({ programId, year }: AssignmentBoardProps) {
   };
   
   const handleCancelAssignment = () => {
-    // Important: We need to revert the UI change made by the Select component.
-    // The easiest way is a soft-re-fetch of assignments which are already in memory.
-    // This forces the component to re-render with the original data.
     setAssignments(current => ({...current}));
     setPendingAssignment(null);
   };

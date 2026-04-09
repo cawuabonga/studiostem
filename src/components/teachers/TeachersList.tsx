@@ -1,14 +1,13 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { getStaffProfiles, getPrograms, getRoles, bulkDeleteStaff } from '@/config/firebase';
-import type { Teacher, Program, StaffProfile, Role } from '@/types';
+import type { StaffProfile, Program, Role } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Edit2, Trash2, MoreHorizontal, Eye } from 'lucide-react';
+import { Edit2, Trash2, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,7 +75,8 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
     if (instituteId) {
       fetchData(instituteId);
     }
-  }, [instituteId, fetchData, onDataChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instituteId, fetchData]); // REMOVED onDataChange to avoid infinite loop
   
   const handleDialogClose = (updated?: boolean) => {
     setIsEditDialogOpen(false);
@@ -84,6 +84,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
     setSelectedProfile(null);
     if (updated) {
       fetchData(instituteId);
+      onDataChange();
     }
   };
 
@@ -149,6 +150,7 @@ export function TeachersList({ instituteId, onDataChange }: TeachersListProps) {
             description: `${selectedProfileIds.size} perfiles han sido eliminados.`,
         });
         fetchData(instituteId);
+        onDataChange();
     } catch (error) {
         toast({ title: "Error", description: "No se pudieron eliminar los perfiles seleccionados.", variant: "destructive"});
     }
