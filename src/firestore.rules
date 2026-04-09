@@ -42,22 +42,24 @@ service cloud.firestore {
       allow update: if request.auth != null && (!resource.data.keys().contains('linkedUserUid') || resource.data.linkedUserUid == null || resource.data.linkedUserUid == "");
     }
 
-    // Exception 2: Allow public read-only access to collections needed for public-facing pages.
-    match /config/{documents=**} {
-      allow get: if true;
+    // --- Global Config ---
+    match /config/{document=**} {
+        allow read: if true;
+        allow write: if isSuperAdmin();
     }
-    
+
+    // Exception 2: Allow public read-only access to collections needed for public-facing pages.
     match /institutes/{instituteId} {
-      allow read: if true; // 'read' is 'get' + 'list'
+      allow read: if true;
     }
     match /institutes/{instituteId}/news/{newsId} {
-      allow get: if true;
+      allow read: if true;
     }
     match /institutes/{instituteId}/programs/{programId} {
-      allow get: if true;
+      allow read: if true;
     }
     match /institutes/{instituteId}/albums/{albumId}/{photos=**} {
-      allow get: if true;
+      allow read: if true;
     }
   }
 }
