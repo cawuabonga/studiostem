@@ -1,17 +1,17 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Info } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { Timestamp } from 'firebase/firestore';
@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { addTaskToWeek, updateTaskInWeek, getAchievementIndicators } from '@/config/firebase';
 import type { Task, Unit, AchievementIndicator } from '@/types';
+import { Badge } from '../ui/badge';
 
 const addTaskSchema = z.object({
   title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
@@ -51,6 +52,11 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
     }
   }, [instituteId, unit.id]);
 
+  // Detect which indicator covers this week automatically
+  const suggestedIndicator = useMemo(() => {
+      return indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
+  }, [indicators, weekNumber]);
+
   const form = useForm<AddTaskFormValues>({
     resolver: zodResolver(addTaskSchema),
     defaultValues: { 
@@ -74,10 +80,10 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
             title: '',
             description: '',
             dueDate: undefined,
-            indicatorId: '',
+            indicatorId: suggestedIndicator?.id || '',
         });
     }
-  }, [initialData, form]);
+  }, [initialData, suggestedIndicator, form]);
 
   const onSubmit = async (data: AddTaskFormValues) => {
     if (!instituteId) return;
@@ -87,7 +93,8 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
             title: data.title,
             description: data.description,
             dueDate: Timestamp.fromDate(data.dueDate),
-            indicatorId: data.indicatorId || undefined,
+            // Use manually selected ID, or suggested ID, or nothing
+            indicatorId: data.indicatorId || suggestedIndicator?.id || undefined,
         };
         
         if (isEditMode && initialData) {
@@ -114,6 +121,22 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+        <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 mb-4">
+            <div className="flex items-center gap-2 mb-1">
+                <Info className="h-4 w-4 text-primary" />
+                <span className="text-sm font-bold text-primary uppercase">Asignación Automática</span>
+            </div>
+            {suggestedIndicator ? (
+                <p className="text-xs text-muted-foreground">
+                    Esta tarea se vinculará automáticamente al <span className="font-bold text-foreground">"{suggestedIndicator.name}"</span> porque pertenece a la semana {weekNumber}.
+                </p>
+            ) : (
+                <p className="text-xs text-destructive font-medium">
+                    Atención: No hay un Indicador de Logro definido que cubra la semana {weekNumber}. La tarea no aparecerá en el registro de notas hasta que vincules un indicador.
+                </p>
+            )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
             control={form.control}
@@ -167,32 +190,6 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
                     </FormItem>
                 )}
                 />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4">
-            <FormField
-                control={form.control}
-                name="indicatorId"
-                render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Indicador de Logro que Evalúa (Opcional)</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccione un indicador..." />
-                            </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            <SelectItem value="none">Ninguno (No vinculada al registro)</SelectItem>
-                            {indicators.map(ind => (
-                                <SelectItem key={ind.id} value={ind.id}>{ind.name}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )}
-            />
         </div>
 
         <FormField
