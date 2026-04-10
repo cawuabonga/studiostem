@@ -13,10 +13,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvaluation, Unit, GradeEntry, Task } from '@/types';
-import { PlusCircle, MoreVertical, Trash2, CalendarDays } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarDays, Calculator } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -44,34 +44,28 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
         return Object.values(records).some(r => r.status === 'aprobado' || r.status === 'desaprobado');
     }, [records]);
 
-    // Derive evaluations/columns from both planner tasks and manual record evaluations
-    const evaluationsByWeek = useMemo(() => {
+    // Flatten all evaluations (tasks and manual) into a single ordered list for the table header
+    const flattenedEvaluations = useMemo(() => {
         const firstRecord = Object.values(records)[0];
-        const evalsMap: Record<number, { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[]> = {};
+        const list: { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[] = [];
 
-        // 1. Tasks from the planner that evaluata this indicator
+        // 1. Tasks from the planner
         tasks.filter(t => t.indicatorId === indicator.id).forEach(t => {
-            if (!evalsMap[t.weekNumber]) evalsMap[t.weekNumber] = [];
-            evalsMap[t.weekNumber].push({ id: t.id, label: t.title, type: 'task', weekNumber: t.weekNumber });
+            list.push({ id: t.id, label: t.title, type: 'task', weekNumber: t.weekNumber });
         });
 
-        // 2. Manual evaluations already in the record
+        // 2. Manual evaluations
         if (firstRecord && firstRecord.evaluations[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(e => {
-                if (!evalsMap[e.weekNumber]) evalsMap[e.weekNumber] = [];
-                // Avoid duplicating if a task shares ID (unlikely but safe)
-                if (!evalsMap[e.weekNumber].some(x => x.id === e.id)) {
-                    evalsMap[e.weekNumber].push({ id: e.id, label: e.label, type: 'manual', weekNumber: e.weekNumber });
+                if (!list.some(x => x.id === e.id)) {
+                    list.push({ id: e.id, label: e.label, type: 'manual', weekNumber: e.weekNumber });
                 }
             });
         }
 
-        return evalsMap;
+        // Sort by week number
+        return list.sort((a, b) => a.weekNumber - b.weekNumber);
     }, [records, indicator.id, tasks]);
-
-    const sortedWeeks = useMemo(() => {
-        return Object.keys(evaluationsByWeek).map(Number).sort((a, b) => a - b);
-    }, [evaluationsByWeek]);
 
     const handleOpenDialog = (week: number) => {
         setSelectedWeek(week);
@@ -82,86 +76,131 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center screen-only">
+            <div className="flex justify-between items-center mb-4">
                 <div className="flex gap-2">
-                    <Badge variant="secondary" className="px-3 py-1">Semanas del Indicador: {indicator.startWeek} - {indicator.endWeek}</Badge>
+                    <Badge variant="outline" className="px-3 py-1 bg-primary/5 border-primary/20">
+                        <CalendarDays className="h-3.5 w-3.5 mr-2 text-primary" />
+                        Vigencia del Indicador: Semanas {indicator.startWeek} a {indicator.endWeek}
+                    </Badge>
                 </div>
                 {!isActaClosed && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm"><PlusCircle className="mr-2 h-4 w-4" /> Añadir Evaluación Manual</Button>
+                            <Button variant="default" size="sm" className="shadow-sm">
+                                <PlusCircle className="mr-2 h-4 w-4" /> 
+                                Añadir Evaluación Manual
+                            </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Seleccionar Semana</DropdownMenuLabel>
                             {Array.from({ length: indicator.endWeek - indicator.startWeek + 1 }, (_, i) => indicator.startWeek + i).map(w => (
-                                <DropdownMenuItem key={w} onClick={() => handleOpenDialog(w)}>Semana {w}</DropdownMenuItem>
+                                <DropdownMenuItem key={w} onClick={() => handleOpenDialog(w)}>
+                                    Semana {w}
+                                </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 )}
             </div>
 
-            <Accordion type="multiple" className="space-y-4">
-                {students.map((student, sIdx) => {
-                    const studentRecord = records[student.documentId];
-                    const allGrades = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
-                    const avg = calculateAverage(allGrades);
-
-                    return (
-                        <AccordionItem key={student.documentId} value={student.documentId} className="border rounded-xl shadow-sm overflow-hidden bg-background">
-                            <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-muted/30">
-                                <div className="flex justify-between items-center w-full pr-4">
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-muted-foreground font-mono text-xs">{sIdx + 1}</span>
-                                        <span className="font-bold text-left">{student.fullName}</span>
-                                    </div>
-                                    <Badge className={cn("text-lg px-4", avg === null ? "bg-muted" : avg < 13 ? "bg-destructive" : "bg-green-600")}>PROM: {avg ?? '--'}</Badge>
-                                </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-6 pb-6 pt-2">
-                                {sortedWeeks.length > 0 ? sortedWeeks.map(week => (
-                                    <div key={week} className="mt-4 first:mt-0">
-                                        <h5 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2"><CalendarDays className="h-3 w-3" /> Semana {week}</h5>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                            {evaluationsByWeek[week].map(ev => {
-                                                const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
-
-                                                return (
-                                                    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 relative group">
-                                                        <div className="flex-1 min-w-0 pr-2">
-                                                            <p className="text-xs font-medium truncate">{ev.label}</p>
-                                                            <p className="text-[10px] text-muted-foreground uppercase">{ev.type === 'task' ? 'Tarea Planificada' : 'Manual'}</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-2">
-                                                            <Input 
-                                                                type="number" className="w-16 h-8 text-center font-bold" value={gradeEntry?.grade ?? ''}
-                                                                onChange={e => {
-                                                                    const val = e.target.value === '' ? null : Number(e.target.value);
-                                                                    if (val === null || (val >= 0 && val <= 20)) onGradeChange(student.documentId, indicator.id, ev.id, val, ev.type, ev.label, week);
-                                                                }}
-                                                                disabled={isActaClosed}
-                                                            />
-                                                            {ev.type === 'manual' && !isActaClosed && (
-                                                                <Button 
-                                                                    variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                    onClick={() => onManualEvaluationDeleted(indicator.id, ev.id)}
-                                                                >
-                                                                    <Trash2 className="h-3 w-3" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )
-                                            })}
+            <div className="rounded-xl border shadow-sm bg-background overflow-hidden">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-muted/50 hover:bg-muted/50">
+                                <TableHead className="w-[50px] text-center font-bold">N°</TableHead>
+                                <TableHead className="min-w-[250px] font-bold sticky left-0 bg-muted/50 z-20">Apellidos y Nombres</TableHead>
+                                {flattenedEvaluations.map(ev => (
+                                    <TableHead key={ev.id} className="text-center min-w-[120px] p-2">
+                                        <div className="flex flex-col items-center gap-1 group">
+                                            <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Sem. {ev.weekNumber}</span>
+                                            <span className="text-xs font-bold leading-tight line-clamp-2 max-w-[100px]">{ev.label}</span>
+                                            <div className="flex items-center gap-1">
+                                                <Badge variant="outline" className={cn("text-[9px] px-1 h-4", ev.type === 'task' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50")}>
+                                                    {ev.type === 'task' ? 'Tarea' : 'Manual'}
+                                                </Badge>
+                                                {ev.type === 'manual' && !isActaClosed && (
+                                                    <Button 
+                                                        variant="ghost" size="icon" className="h-4 w-4 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        onClick={() => onManualEvaluationDeleted(indicator.id, ev.id)}
+                                                    >
+                                                        <Trash2 className="h-3 w-3" />
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </div>
+                                    </TableHead>
+                                ))}
+                                <TableHead className="text-center font-bold bg-primary/5 min-w-[100px] border-l">
+                                    <div className="flex flex-col items-center">
+                                        <Calculator className="h-3.5 w-3.5 mb-1 text-primary" />
+                                        <span>PROMEDIO</span>
                                     </div>
-                                )) : <div className="text-center py-8 text-muted-foreground italic text-sm">No hay evaluaciones vinculadas a este indicador. Las tareas creadas en el planificador aparecerán aquí si se vinculan a este indicador.</div>}
-                            </AccordionContent>
-                        </AccordionItem>
-                    );
-                })}
-            </Accordion>
+                                </TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student, index) => {
+                                const studentRecord = records[student.documentId];
+                                const allGrades = studentRecord?.grades?.[indicator.id]?.map(g => g.grade) || [];
+                                const avg = calculateAverage(allGrades);
 
-            <AddManualEvaluationDialog isOpen={dialogOpen} onClose={() => setDialogOpen(false)} onSubmit={l => { onManualEvaluationAdded(indicator.id, l, selectedWeek); setDialogOpen(false); }} indicator={indicator} unit={unit} weekNumber={selectedWeek} />
+                                return (
+                                    <TableRow key={student.documentId} className="hover:bg-muted/20 transition-colors">
+                                        <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                                            {index + 1}
+                                        </TableCell>
+                                        <TableCell className="font-semibold sticky left-0 bg-background z-10 border-r">
+                                            <div className="flex flex-col">
+                                                <span>{student.fullName}</span>
+                                                <span className="text-[10px] font-mono text-muted-foreground">{student.documentId}</span>
+                                            </div>
+                                        </TableCell>
+                                        {flattenedEvaluations.map(ev => {
+                                            const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
+                                            return (
+                                                <TableCell key={ev.id} className="p-1">
+                                                    <Input 
+                                                        type="number" 
+                                                        className={cn(
+                                                            "w-full h-9 text-center font-bold border-transparent hover:border-input focus:bg-background",
+                                                            (gradeEntry?.grade ?? 0) > 0 && (gradeEntry?.grade ?? 0) < 13 ? "text-destructive" : "text-primary"
+                                                        )}
+                                                        value={gradeEntry?.grade ?? ''}
+                                                        placeholder="--"
+                                                        onChange={e => {
+                                                            const val = e.target.value === '' ? null : Number(e.target.value);
+                                                            if (val === null || (val >= 0 && val <= 20)) {
+                                                                onGradeChange(student.documentId, indicator.id, ev.id, val, ev.type, ev.label, ev.weekNumber);
+                                                            }
+                                                        }}
+                                                        disabled={isActaClosed}
+                                                    />
+                                                </TableCell>
+                                            );
+                                        })}
+                                        <TableCell className={cn(
+                                            "text-center font-black text-base border-l bg-primary/5",
+                                            avg !== null && avg < 13 ? "text-destructive" : "text-primary"
+                                        )}>
+                                            {avg !== null ? avg : '--'}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
+
+            <AddManualEvaluationDialog 
+                isOpen={dialogOpen} 
+                onClose={() => setDialogOpen(false)} 
+                onSubmit={label => { onManualEvaluationAdded(indicator.id, label, selectedWeek); setDialogOpen(false); }} 
+                indicator={indicator} 
+                unit={unit} 
+                weekNumber={selectedWeek} 
+            />
         </div>
     );
 }
