@@ -1514,6 +1514,16 @@ export const getWeekData = async (instituteId: string, unitId: string, weekNumbe
     return null;
 };
 
+export const getWeeksData = async (instituteId: string, unitId: string): Promise<WeekData[]> => {
+    const plannerCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner');
+    const snapshot = await getDocs(plannerCol);
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        const weekNumber = data.weekNumber || parseInt(doc.id.replace('week_', ''));
+        return { ...data, weekNumber } as WeekData;
+    });
+};
+
 export const addContentToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Content, 'id'>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     const newContentId = doc(collection(db, 'idGenerator')).id;
@@ -2451,4 +2461,73 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
         academicStatus: 'Egresado',
         graduationYear
     });
+};
+
+export const getTaskSubmissions = async (instituteId: string, unitId: string, weekNumber: number, taskId: string): Promise<TaskSubmission[]> => {
+    const submissionsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions');
+    const snap = await getDocs(submissionsCol);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskSubmission));
+};
+
+export const submitTask = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, studentProfile: StudentProfile, file: File) => {
+    const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/submissions/${studentProfile.documentId}`;
+    const fileUrl = await uploadFileAndGetURL(file, storagePath);
+    
+    const submissionRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentProfile.documentId);
+    
+    await setDoc(submissionRef, {
+        studentName: studentProfile.fullName,
+        fileUrl,
+        submittedAt: Timestamp.now()
+    }, { merge: true });
+};
+
+export const gradeTaskSubmission = async (
+    instituteId: string, unitId: string, weekNumber: number, taskId: string, taskTitle: string,
+    studentId: string, grade: number, feedback: string
+) => {
+    const submissionRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentId);
+    await updateDoc(submissionRef, { grade, feedback });
+
+    // Also update the academic record
+    const currentYear = new Date().getFullYear().toString();
+    const period = weekNumber <= 8 ? 'MAR-JUL' : 'AGO-DIC'; // Simplified logic, could be better
+    const recordId = `${unitId}_${studentId}_${currentYear}_${period}`;
+    const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+    
+    const recordSnap = await getDoc(recordRef);
+    const indicators = await getAchievementIndicators(instituteId, unitId);
+    const indicator = indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
+
+    if (indicator) {
+        const gradeEntry = { type: 'task', refId: taskId, label: taskTitle, grade, weekNumber };
+        const recordData = recordSnap.exists() ? recordSnap.data() as AcademicRecord : null;
+        const grades = recordData?.grades || {};
+        if (!grades[indicator.id]) grades[indicator.id] = [];
+        const index = grades[indicator.id].findIndex(g => g.refId === taskId);
+        if (index !== -1) grades[indicator.id][index] = gradeEntry;
+        else grades[indicator.id].push(gradeEntry);
+
+        await setDoc(recordRef, { grades }, { merge: true });
+    }
+};
+
+export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
+    const batch = writeBatch(db);
+    
+    for (const res of results) {
+        const recordId = `${unitId}_${res.studentId}_${year}_${period}`;
+        const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+        batch.update(recordRef, { finalGrade: res.finalGrade, status: res.status });
+
+        // Update matriculation status
+        const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+        const q = query(matriculationsCol, where("studentId", "==", res.studentId), where("unitId", "==", unitId), where("year", "==", year));
+        const mSnap = await getDocs(q);
+        mSnap.forEach(mDoc => {
+            batch.update(mDoc.ref, { status: res.status });
+        });
+    }
+    
+    await batch.commit();
 };

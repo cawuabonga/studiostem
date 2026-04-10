@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -16,7 +17,7 @@ import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvalua
 import { PlusCircle, Trash2, CalendarDays, Calculator } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
