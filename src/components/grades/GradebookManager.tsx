@@ -6,7 +6,19 @@ import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getEnrolledStudentProfiles, getAchievementIndicators, getAcademicRecordsForUnit, batchUpdateAcademicRecords, addManualEvaluationToRecord, deleteManualEvaluationFromRecord, getPrograms, getTeachers, getAssignments, closeUnitGrades } from '@/config/firebase';
+import { 
+    getEnrolledStudentProfiles, 
+    getAchievementIndicators, 
+    getAcademicRecordsForUnit, 
+    batchUpdateAcademicRecords, 
+    addManualEvaluationToRecord, 
+    deleteManualEvaluationFromRecord, 
+    getPrograms, 
+    getTeachers, 
+    getAssignments, 
+    closeUnitGrades,
+    getWeeksData
+} from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
 import { Save, Loader2, ArrowLeft, Printer, Lock, CheckCircle2 } from 'lucide-react';
@@ -50,6 +62,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [initialRecords, setInitialRecords] = useState<Record<string, AcademicRecord>>({});
     const [program, setProgram] = useState<Program | null>(null);
     const [teacher, setTeacher] = useState<Teacher | null>(null);
+    const [unitTasks, setUnitTasks] = useState<(Task & { weekNumber: number })[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
@@ -60,6 +73,12 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
+            
+            // Fetch tasks from weeks data
+            const allWeeksData = await getWeeksData(instituteId, unit.id);
+            const allTasks = allWeeksData.flatMap(w => (w.tasks || []).map(t => ({ ...t, weekNumber: w.weekNumber })));
+            setUnitTasks(allTasks);
+
             const [
                 enrolledStudents, 
                 achievementIndicators, 
@@ -137,6 +156,34 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         }));
     };
 
+    const handleManualEvaluationAdded = async (indicatorId: string, label: string, weekNumber: number) => {
+        if (!instituteId) return;
+        try {
+            const currentYear = new Date().getFullYear().toString();
+            await addManualEvaluationToRecord(instituteId, unit.id, currentYear, unit.period, {
+                indicatorId,
+                label,
+                weekNumber
+            });
+            toast({ title: "Evaluación Añadida", description: `Se ha creado la columna "${label}" para el registro.` });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo añadir la evaluación manual.", variant: "destructive" });
+        }
+    };
+
+    const handleManualEvaluationDeleted = async (indicatorId: string, evaluationId: string) => {
+        if (!instituteId) return;
+        try {
+            const currentYear = new Date().getFullYear().toString();
+            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
+            toast({ title: "Evaluación Eliminada" });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo eliminar la evaluación.", variant: "destructive" });
+        }
+    };
+
     const handleSaveChanges = async () => {
         if (!instituteId) return;
         setIsSaving(true);
@@ -153,10 +200,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 return;
             }
             await batchUpdateAcademicRecords(instituteId, updatedRecords);
-            toast({ title: "¡Éxito!", description: "Calificaciones guardadas." });
+            toast({ title: "¡Éxito!", description: "Calificaciones guardadas correctamente." });
             setInitialRecords(records);
         } catch(error) {
-            toast({ title: "Error", description: "No se pudo guardar.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo guardar las notas.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -182,7 +229,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada y las matrículas actualizadas." });
             fetchData();
         } catch (error) {
-            toast({ title: "Error al cerrar", description: "Ocurrió un error técnico.", variant: "destructive" });
+            toast({ title: "Error al cerrar", description: "Ocurrió un error técnico al intentar cerrar el acta.", variant: "destructive" });
         } finally {
             setIsClosing(false);
         }
@@ -192,7 +239,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         return Object.values(records).some(r => r.status === 'aprobado' || r.status === 'desaprobado');
     }, [records]);
 
-    if (loading) return <Skeleton className="h-64 w-full" />;
+    if (loading) return <div className="space-y-6"><Skeleton className="h-24 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
     return (
         <div className="space-y-6">
@@ -238,8 +285,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {indicators.map(indicator => (
-                                <Card key={indicator.id} className="hover:shadow-md cursor-pointer transition-all" onClick={() => setSelectedIndicator(indicator)}>
-                                    <CardHeader><CardTitle className="text-lg">{indicator.name}</CardTitle><CardDescription>{indicator.description}</CardDescription></CardHeader>
+                                <Card key={indicator.id} className="hover:shadow-md cursor-pointer transition-all border-l-4 border-l-primary" onClick={() => setSelectedIndicator(indicator)}>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">{indicator.name}</CardTitle>
+                                        <CardDescription className="line-clamp-2">{indicator.description}</CardDescription>
+                                    </CardHeader>
                                 </Card>
                             ))}
                         </div>
@@ -255,8 +305,14 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             <CardHeader><CardTitle>Calificando: {selectedIndicator.name}</CardTitle></CardHeader>
                             <CardContent>
                                 <IndicatorGradebook 
-                                    students={students} indicator={selectedIndicator} records={records} unit={unit}
-                                    onGradeChange={handleGradeChange} onManualEvaluationAdded={() => fetchData()} onManualEvaluationDeleted={() => fetchData()}
+                                    students={students} 
+                                    indicator={selectedIndicator} 
+                                    records={records} 
+                                    unit={unit}
+                                    tasks={unitTasks}
+                                    onGradeChange={handleGradeChange} 
+                                    onManualEvaluationAdded={handleManualEvaluationAdded} 
+                                    onManualEvaluationDeleted={handleManualEvaluationDeleted}
                                 />
                             </CardContent>
                         </Card>

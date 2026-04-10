@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -10,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -18,13 +18,14 @@ import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addTaskToWeek, updateTaskInWeek } from '@/config/firebase';
-import type { Task, Unit } from '@/types';
+import { addTaskToWeek, updateTaskInWeek, getAchievementIndicators } from '@/config/firebase';
+import type { Task, Unit, AchievementIndicator } from '@/types';
 
 const addTaskSchema = z.object({
   title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
   description: z.string().min(10, 'La descripción debe tener al menos 10 caracteres.'),
   dueDate: z.date({ required_error: 'La fecha de entrega es requerida.' }),
+  indicatorId: z.string().optional(),
 });
 
 type AddTaskFormValues = z.infer<typeof addTaskSchema>;
@@ -41,14 +42,22 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
   const isEditMode = !!initialData;
+
+  useEffect(() => {
+    if (instituteId && unit.id) {
+        getAchievementIndicators(instituteId, unit.id).then(setIndicators).catch(console.error);
+    }
+  }, [instituteId, unit.id]);
 
   const form = useForm<AddTaskFormValues>({
     resolver: zodResolver(addTaskSchema),
     defaultValues: { 
         title: '', 
         description: '',
-        dueDate: undefined
+        dueDate: undefined,
+        indicatorId: '',
     },
   });
 
@@ -58,12 +67,14 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
             title: initialData.title,
             description: initialData.description,
             dueDate: initialData.dueDate instanceof Timestamp ? initialData.dueDate.toDate() : initialData.dueDate,
+            indicatorId: initialData.indicatorId || '',
         });
     } else {
         form.reset({
             title: '',
             description: '',
-            dueDate: undefined
+            dueDate: undefined,
+            indicatorId: '',
         });
     }
   }, [initialData, form]);
@@ -76,6 +87,7 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
             title: data.title,
             description: data.description,
             dueDate: Timestamp.fromDate(data.dueDate),
+            indicatorId: data.indicatorId || undefined,
         };
         
         if (isEditMode && initialData) {
@@ -155,6 +167,32 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
                     </FormItem>
                 )}
                 />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4">
+            <FormField
+                control={form.control}
+                name="indicatorId"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Indicador de Logro que Evalúa (Opcional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccione un indicador..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="none">Ninguno (No vinculada al registro)</SelectItem>
+                            {indicators.map(ind => (
+                                <SelectItem key={ind.id} value={ind.id}>{ind.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
         </div>
 
         <FormField

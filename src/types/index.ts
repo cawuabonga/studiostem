@@ -417,6 +417,7 @@ export interface Task {
   dueDate: Timestamp | Date;
   fileUrl?: string; // URL to an attached file from the teacher
   createdAt: Timestamp;
+  indicatorId?: string; // Vínculo con el indicador
 }
 
 // New type for task submissions

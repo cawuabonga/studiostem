@@ -6,7 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvaluation, Unit, GradeEntry } from '@/types';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvaluation, Unit, GradeEntry, Task } from '@/types';
 import { PlusCircle, MoreVertical, Trash2, CalendarDays } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -17,6 +23,7 @@ interface IndicatorGradebookProps {
     indicator: AchievementIndicator;
     records: Record<string, AcademicRecord>;
     unit: Unit;
+    tasks: (Task & { weekNumber: number })[];
     onGradeChange: (studentId: string, indicatorId: string, refId: string, grade: number | null, type: 'task' | 'manual', label: string, weekNumber: number) => void;
     onManualEvaluationAdded: (indicatorId: string, label: string, weekNumber: number) => void;
     onManualEvaluationDeleted: (indicatorId: string, evaluationId: string) => void;
@@ -29,7 +36,7 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
     return Math.round(sum / validGrades.length);
 };
 
-export function IndicatorGradebook({ students, indicator, records, unit, onGradeChange, onManualEvaluationAdded, onManualEvaluationDeleted }: IndicatorGradebookProps) {
+export function IndicatorGradebook({ students, indicator, records, unit, tasks, onGradeChange, onManualEvaluationAdded, onManualEvaluationDeleted }: IndicatorGradebookProps) {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState<number>(indicator.startWeek);
     
@@ -37,34 +44,30 @@ export function IndicatorGradebook({ students, indicator, records, unit, onGrade
         return Object.values(records).some(r => r.status === 'aprobado' || r.status === 'desaprobado');
     }, [records]);
 
-    // Group evaluations by week
+    // Derive evaluations/columns from both planner tasks and manual record evaluations
     const evaluationsByWeek = useMemo(() => {
         const firstRecord = Object.values(records)[0];
-        if (!firstRecord) return {};
+        const evalsMap: Record<number, { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[]> = {};
 
-        const evalsMap: Record<number, (GradeEntry | ManualEvaluation)[]> = {};
+        // 1. Tasks from the planner that evaluata this indicator
+        tasks.filter(t => t.indicatorId === indicator.id).forEach(t => {
+            if (!evalsMap[t.weekNumber]) evalsMap[t.weekNumber] = [];
+            evalsMap[t.weekNumber].push({ id: t.id, label: t.title, type: 'task', weekNumber: t.weekNumber });
+        });
 
-        // Collect all evaluations from grades array and evaluations array
-        const allEvals: (GradeEntry | ManualEvaluation)[] = [];
-        if (firstRecord.grades[indicator.id]) {
-            firstRecord.grades[indicator.id].forEach(g => allEvals.push(g));
-        }
-        if (firstRecord.evaluations[indicator.id]) {
+        // 2. Manual evaluations already in the record
+        if (firstRecord && firstRecord.evaluations[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(e => {
-                if (!allEvals.some(ae => ('refId' in ae ? ae.refId : ae.id) === e.id)) {
-                    allEvals.push(e);
+                if (!evalsMap[e.weekNumber]) evalsMap[e.weekNumber] = [];
+                // Avoid duplicating if a task shares ID (unlikely but safe)
+                if (!evalsMap[e.weekNumber].some(x => x.id === e.id)) {
+                    evalsMap[e.weekNumber].push({ id: e.id, label: e.label, type: 'manual', weekNumber: e.weekNumber });
                 }
             });
         }
 
-        allEvals.forEach(ev => {
-            const week = ev.weekNumber;
-            if (!evalsMap[week]) evalsMap[week] = [];
-            evalsMap[week].push(ev);
-        });
-
         return evalsMap;
-    }, [records, indicator.id]);
+    }, [records, indicator.id, tasks]);
 
     const sortedWeeks = useMemo(() => {
         return Object.keys(evaluationsByWeek).map(Number).sort((a, b) => a - b);
@@ -120,31 +123,38 @@ export function IndicatorGradebook({ students, indicator, records, unit, onGrade
                                         <h5 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2"><CalendarDays className="h-3 w-3" /> Semana {week}</h5>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                             {evaluationsByWeek[week].map(ev => {
-                                                const refId = 'refId' in ev ? ev.refId : ev.id;
-                                                const label = 'label' in ev ? ev.label : ev.title;
-                                                const type = 'type' in ev && ev.type === 'task' ? 'task' : 'manual';
-                                                const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === refId);
+                                                const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
 
                                                 return (
-                                                    <div key={refId} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20">
+                                                    <div key={ev.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/20 relative group">
                                                         <div className="flex-1 min-w-0 pr-2">
-                                                            <p className="text-xs font-medium truncate">{label}</p>
-                                                            <p className="text-[10px] text-muted-foreground uppercase">{type}</p>
+                                                            <p className="text-xs font-medium truncate">{ev.label}</p>
+                                                            <p className="text-[10px] text-muted-foreground uppercase">{ev.type === 'task' ? 'Tarea Planificada' : 'Manual'}</p>
                                                         </div>
-                                                        <Input 
-                                                            type="number" className="w-16 h-8 text-center font-bold" value={gradeEntry?.grade ?? ''}
-                                                            onChange={e => {
-                                                                const val = e.target.value === '' ? null : Number(e.target.value);
-                                                                if (val === null || (val >= 0 && val <= 20)) onGradeChange(student.documentId, indicator.id, refId, val, type, label, week);
-                                                            }}
-                                                            disabled={isActaClosed}
-                                                        />
+                                                        <div className="flex items-center gap-2">
+                                                            <Input 
+                                                                type="number" className="w-16 h-8 text-center font-bold" value={gradeEntry?.grade ?? ''}
+                                                                onChange={e => {
+                                                                    const val = e.target.value === '' ? null : Number(e.target.value);
+                                                                    if (val === null || (val >= 0 && val <= 20)) onGradeChange(student.documentId, indicator.id, ev.id, val, ev.type, ev.label, week);
+                                                                }}
+                                                                disabled={isActaClosed}
+                                                            />
+                                                            {ev.type === 'manual' && !isActaClosed && (
+                                                                <Button 
+                                                                    variant="ghost" size="icon" className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                    onClick={() => onManualEvaluationDeleted(indicator.id, ev.id)}
+                                                                >
+                                                                    <Trash2 className="h-3 w-3" />
+                                                                </Button>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )
                                             })}
                                         </div>
                                     </div>
-                                )) : <div className="text-center py-8 text-muted-foreground italic text-sm">No hay evaluaciones programadas para este indicador.</div>}
+                                )) : <div className="text-center py-8 text-muted-foreground italic text-sm">No hay evaluaciones vinculadas a este indicador. Las tareas creadas en el planificador aparecerán aquí si se vinculan a este indicador.</div>}
                             </AccordionContent>
                         </AccordionItem>
                     );
