@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -10,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvaluation, Unit, GradeEntry, Task } from '@/types';
@@ -49,13 +49,13 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
         const firstRecord = Object.values(records)[0];
         const list: { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[] = [];
 
-        // 1. Tasks from the planner
+        // 1. Tasks from the planner that belong to this indicator (based on indicatorId or weeks)
         tasks.filter(t => t.indicatorId === indicator.id).forEach(t => {
             list.push({ id: t.id, label: t.title, type: 'task', weekNumber: t.weekNumber });
         });
 
         // 2. Manual evaluations
-        if (firstRecord && firstRecord.evaluations[indicator.id]) {
+        if (firstRecord && firstRecord.evaluations && firstRecord.evaluations[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(e => {
                 if (!list.some(x => x.id === e.id)) {
                     list.push({ id: e.id, label: e.label, type: 'manual', weekNumber: e.weekNumber });
