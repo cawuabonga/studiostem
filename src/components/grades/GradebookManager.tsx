@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -122,6 +123,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         attendancePercentage: 100,
                         status: 'cursando',
                     };
+                } else {
+                    // Critical Protection: Ensure mandatory maps exist for data consistency
+                    if (!existingRecord.grades) existingRecord.grades = {};
+                    if (!existingRecord.evaluations) existingRecord.evaluations = {};
                 }
                  recordsMap[student.documentId] = existingRecord;
             });
@@ -141,6 +146,15 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setRecords(produce(draft => {
             const studentRecord = draft[studentId];
             if (!studentRecord) return;
+
+            // Ensure maps exist before accessing them
+            if (!studentRecord.grades) {
+                studentRecord.grades = {};
+            }
+            if (!studentRecord.evaluations) {
+                studentRecord.evaluations = {};
+            }
+
             if (!studentRecord.grades[indicatorId]) {
                 studentRecord.grades[indicatorId] = [];
             }
@@ -177,7 +191,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         try {
             const currentYear = new Date().getFullYear().toString();
             const studentIds = students.map(s => s.documentId);
-            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, studentIds, indicatorId, evaluationId);
+            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
             toast({ title: "Evaluación Eliminada" });
             fetchData();
         } catch (error) {
@@ -227,7 +241,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 return { studentId: student.documentId, finalGrade: finalAverage, status: status as any };
             });
 
-            await closeUnitGrades(instituteId, unit.id, currentYear, period, results);
+            await closeUnitGrades(instituteId, unit.id, currentYear, unit.period, results);
             toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada y las matrículas actualizadas." });
             fetchData();
         } catch (error) {
