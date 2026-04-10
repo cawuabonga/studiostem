@@ -209,7 +209,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     };
     if ((foundProfile as any).programId) userUpdateData.programId = (foundProfile as any).programId;
 
-    await updateDoc(doc(db, 'users', uid), userUpdateData);
+    await updateDoc(userDocRef, userUpdateData);
 
     const col = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
     await updateDoc(doc(db, 'institutes', foundInstituteId, col, documentId), { linkedUserUid: uid });
@@ -495,6 +495,82 @@ export const deleteAchievementIndicator = async (instituteId: string, unitId: st
     await deleteDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId));
 };
 
+export const addManualEvaluationToRecord = async (
+    instituteId: string,
+    unitId: string, 
+    year: string, 
+    period: UnitPeriod,
+    studentIds: string[],
+    newEvaluation: Omit<ManualEvaluation, 'id' | 'createdAt'>
+) => {
+    const batch = writeBatch(db);
+    const evaluationId = doc(collection(db, 'idGenerator')).id;
+    const recordsCol = getSubColRef(instituteId, 'academicRecords');
+
+    for (const studentId of studentIds) {
+        const recordId = `${unitId}_${studentId}_${year}_${period}`;
+        const recordRef = doc(recordsCol, recordId);
+        
+        batch.set(recordRef, {
+            id: recordId,
+            studentId,
+            unitId,
+            year,
+            period,
+            evaluations: {
+                [newEvaluation.indicatorId]: arrayUnion({
+                    ...newEvaluation,
+                    id: evaluationId,
+                    createdAt: Timestamp.now()
+                })
+            }
+        }, { merge: true });
+    }
+
+    await batch.commit();
+};
+
+export const deleteManualEvaluationFromRecord = async (
+    instituteId: string,
+    unitId: string, 
+    year: string, 
+    period: UnitPeriod,
+    studentIds: string[],
+    indicatorId: string,
+    evaluationId: string
+) => {
+    const batch = writeBatch(db);
+    const recordsCol = getSubColRef(instituteId, 'academicRecords');
+
+    const q = query(recordsCol,
+        where("unitId", "==", unitId),
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    const snapshot = await getDocs(q);
+    
+    snapshot.docs.forEach(docSnap => {
+        const data = docSnap.data() as AcademicRecord;
+        if (data.evaluations && data.evaluations[indicatorId]) {
+            const itemToRemove = data.evaluations[indicatorId].find(e => e.id === evaluationId);
+            if (itemToRemove) {
+                batch.update(docSnap.ref, {
+                    [`evaluations.${indicatorId}`]: arrayRemove(itemToRemove)
+                });
+            }
+            
+            if (data.grades && data.grades[indicatorId]) {
+                const updatedGrades = data.grades[indicatorId].filter(g => g.refId !== evaluationId);
+                batch.update(docSnap.ref, {
+                    [`grades.${indicatorId}`]: updatedGrades
+                });
+            }
+        }
+    });
+
+    await batch.commit();
+};
+
 // --- ASISTENCIA ---
 export const getAttendanceForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AttendanceRecord | null> => {
     const attendanceRef = doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${year}_${period}`);
@@ -535,8 +611,9 @@ export const getWeeksData = async (instituteId: string, unitId: string): Promise
 };
 
 export const getWeekData = async (instituteId: string, unitId: string, weekNumber: number): Promise<WeekData | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`));
-    return snap.exists() ? { ...snap.data(), weekNumber } as WeekData : null;
+    const weekDocRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`);
+    const docSnap = await getDoc(weekDocRef);
+    return docSnap.exists() ? { ...docSnap.data(), weekNumber } as WeekData : null;
 };
 
 export const setWeekVisibility = async (instituteId: string, unitId: string, weekNumber: number, isVisible: boolean) => {

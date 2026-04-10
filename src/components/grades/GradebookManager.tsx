@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -74,7 +73,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         try {
             const currentYear = new Date().getFullYear().toString();
             
-            // Fetch tasks from weeks data
             const allWeeksData = await getWeeksData(instituteId, unit.id);
             const allTasks = allWeeksData.flatMap(w => (w.tasks || []).map(t => ({ ...t, weekNumber: w.weekNumber })));
             setUnitTasks(allTasks);
@@ -160,7 +158,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         if (!instituteId) return;
         try {
             const currentYear = new Date().getFullYear().toString();
-            await addManualEvaluationToRecord(instituteId, unit.id, currentYear, unit.period, {
+            const studentIds = students.map(s => s.documentId);
+            await addManualEvaluationToRecord(instituteId, unit.id, currentYear, unit.period, studentIds, {
                 indicatorId,
                 label,
                 weekNumber
@@ -168,6 +167,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             toast({ title: "Evaluación Añadida", description: `Se ha creado la columna "${label}" para el registro.` });
             fetchData();
         } catch (error) {
+            console.error("Error adding manual evaluation:", error);
             toast({ title: "Error", description: "No se pudo añadir la evaluación manual.", variant: "destructive" });
         }
     };
@@ -176,10 +176,12 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         if (!instituteId) return;
         try {
             const currentYear = new Date().getFullYear().toString();
-            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
+            const studentIds = students.map(s => s.documentId);
+            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, studentIds, indicatorId, evaluationId);
             toast({ title: "Evaluación Eliminada" });
             fetchData();
         } catch (error) {
+            console.error("Error deleting manual evaluation:", error);
             toast({ title: "Error", description: "No se pudo eliminar la evaluación.", variant: "destructive" });
         }
     };
@@ -225,7 +227,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 return { studentId: student.documentId, finalGrade: finalAverage, status: status as any };
             });
 
-            await closeUnitGrades(instituteId, unit.id, currentYear, unit.period, results);
+            await closeUnitGrades(instituteId, unit.id, currentYear, period, results);
             toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada y las matrículas actualizadas." });
             fetchData();
         } catch (error) {
