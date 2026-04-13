@@ -1849,7 +1849,7 @@ export const getMatriculationReportData = async (
         let students: StudentProfile[] = [];
         if (studentIds.length > 0) {
             const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
-            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
+            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentDocIds));
             const studentSnap = await getDocs(studentQuery);
             students = studentSnap.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
         }
@@ -2443,6 +2443,10 @@ export const evaluateEFSRT = async (instituteId: string, assignmentId: string, g
 
 export const uploadEFSRTReport = async (instituteId: string, assignmentId: string, type: 'student' | 'supervisor', file: File) => {
     const url = await uploadFileAndGetURL(file, `institutes/${instituteId}/efsrt/${assignmentId}/${type}_report`);
+    await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), { [type === 'student' ? 'studentReportUrl' : 'supervisorReportUrl']: url });
+};
+
+export const saveEFSRTReportUrl = async (instituteId: string, assignmentId: string, type: 'student' | 'supervisor', url: string) => {
     await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), { [type === 'student' ? 'studentReportUrl' : 'supervisorReportUrl']: url });
 };
 
