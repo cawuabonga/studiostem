@@ -7,8 +7,6 @@ import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, se
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission } from '@/types';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1268,7 +1266,7 @@ export const getEnrolledUnits = async (instituteId: string, studentId: string): 
         return [];
     }
 
-    const unitIds = matriculationSnapshot.docs.map(doc => doc.data().unitId);
+    const unitIds = Array.from(new Set(matriculationSnapshot.docs.map(doc => doc.data().unitId)));
     
     const [programs, allUnits] = await Promise.all([
         getPrograms(instituteId),
@@ -2243,6 +2241,22 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     return allBlocks;
 }
 
+export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
+    const schedulesCol = getSubCollectionRef(instituteId, 'schedules');
+    const q = query(schedulesCol, where("year", "==", year));
+    const snapshot = await getDocs(q);
+    const allBlocks: ScheduleBlock[] = [];
+    snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.schedule) {
+            Object.values(data.schedule as Record<string, ScheduleBlock>).forEach(block => {
+                allBlocks.push(block);
+            });
+        }
+    });
+    return allBlocks;
+}
+
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, schedule: Record<string, ScheduleBlock>): Promise<void> => {
     const scheduleRef = getScheduleDocRef(instituteId, programId, year, semester);
     await setDoc(scheduleRef, { schedule, programId, year, semester, turno }, { merge: true });
@@ -2489,9 +2503,8 @@ export const gradeTaskSubmission = async (
     const submissionRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentId);
     await updateDoc(submissionRef, { grade, feedback });
 
-    // Also update the academic record
     const currentYear = new Date().getFullYear().toString();
-    const period = weekNumber <= 8 ? 'MAR-JUL' : 'AGO-DIC'; // Simplified logic, could be better
+    const period = weekNumber <= 8 ? 'MAR-JUL' : 'AGO-DIC'; 
     const recordId = `${unitId}_${studentId}_${currentYear}_${period}`;
     const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
     
@@ -2520,7 +2533,6 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
         batch.update(recordRef, { finalGrade: res.finalGrade, status: res.status });
 
-        // Update matriculation status
         const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
         const q = query(matriculationsCol, where("studentId", "==", res.studentId), where("unitId", "==", unitId), where("year", "==", year));
         const mSnap = await getDocs(q);
@@ -2529,5 +2541,44 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         });
     }
     
+    await batch.commit();
+};
+
+export const deleteMatriculation = async (instituteId: string, studentId: string, mId: string) => {
+    const mRef = doc(db, 'institutes', instituteId, 'matriculations', mId);
+    await deleteDoc(mRef);
+}
+
+export const bulkCreateMatriculations = async (
+    instituteId: string,
+    studentIds: string[],
+    units: Unit[],
+    year: string,
+    semester: number
+) => {
+    const batch = writeBatch(db);
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+
+    for (const sId of studentIds) {
+        units.forEach(unit => {
+            const mRef = doc(matriculationsCol);
+            batch.set(mRef, {
+                studentId: sId,
+                unitId: unit.id,
+                programId: unit.programId,
+                year,
+                period: unit.period,
+                semester: unit.semester,
+                moduleId: unit.moduleId,
+                status: 'cursando',
+                createdAt: Timestamp.now()
+            });
+        });
+        
+        const sRef = doc(studentsCol, sId);
+        batch.update(sRef, { currentSemester: semester });
+    }
+
     await batch.commit();
 };

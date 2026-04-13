@@ -77,9 +77,9 @@ export function StudentGradesDashboard() {
     <div>
         {unitsWithGrades.length > 0 ? (
              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {unitsWithGrades.map((unit) => (
+                {unitsWithGrades.map((unit, index) => (
                     <StudentUnitGradesCard 
-                        key={unit.id} 
+                        key={`${unit.id}-${unit.period}-${index}`} 
                         unit={unit} 
                         record={unit.record} 
                         onSelect={() => setSelectedUnit(unit)}
