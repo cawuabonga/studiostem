@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddIndicatorForm } from './AddIndicatorForm';
 import { IndicatorItem } from './IndicatorItem';
 import { Separator } from '../ui/separator';
+import { EditIndicatorDialog } from './EditIndicatorDialog';
 
 interface IndicatorsManagerProps {
   unit: Unit;
@@ -22,6 +23,10 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
   const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
   const [loading, setLoading] = useState(true);
   const [version, setVersion] = useState(0);
+  
+  // Edit Dialog States
+  const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const fetchIndicators = useCallback(async () => {
     if (!instituteId || !unit.id) return;
@@ -52,11 +57,14 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
   };
 
   const handleEdit = (indicator: AchievementIndicator) => {
-    // TODO: Implement edit functionality, likely opening a dialog
-    toast({
-        title: "Función no implementada",
-        description: `La edición para "${indicator.name}" estará disponible pronto.`,
-    })
+    setSelectedIndicator(indicator);
+    setIsEditOpen(true);
+  };
+
+  const handleCloseEdit = (updated?: boolean) => {
+      setIsEditOpen(false);
+      setSelectedIndicator(null);
+      if (updated) handleDataChanged();
   };
 
   return (
@@ -95,6 +103,15 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
             </div>
         </CardContent>
       </Card>
+
+      {selectedIndicator && (
+          <EditIndicatorDialog 
+            unit={unit}
+            indicator={selectedIndicator}
+            isOpen={isEditOpen}
+            onClose={handleCloseEdit}
+          />
+      )}
     </div>
   );
 }

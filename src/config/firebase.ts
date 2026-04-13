@@ -204,7 +204,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
+    const imageDocRef = doc(db, 'config/loginDesign/images', image.id);
     await deleteDoc(imageDocRef);
     const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
     try {
@@ -1341,6 +1341,11 @@ export const addAchievementIndicator = async (instituteId: string, unitId: strin
     await addDoc(indicatorsCol, data);
 }
 
+export const updateAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string, data: Partial<AchievementIndicator>) => {
+    const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
+    await updateDoc(indicatorRef, data);
+}
+
 export const deleteAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string) => {
     const indicatorRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId);
     await deleteDoc(indicatorRef);
@@ -1692,7 +1697,7 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
             'student:unit:view': true,
             'student:grades:view': true,
             'student:payments:manage': true,
-            'student:efsrt:view': true, // Added permission
+            'student:efsrt:view': true, 
         };
         return permissions as Record<Permission, boolean>;
     }
