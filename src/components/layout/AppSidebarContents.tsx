@@ -53,7 +53,6 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, permission: 'student:unit:view' },
     { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPin, permission: 'student:efsrt:view' },
     { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, permission: 'student:grades:view' },
-    { href: '/dashboard/gestion-administrativa/mis-pagos', label: 'Mis Pagos', icon: History, permission: 'student:payments:manage' },
     { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: Pencil, permission: 'user:supplies:request' },
     { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: Package, permission: 'user:supplies:request' },
 ];

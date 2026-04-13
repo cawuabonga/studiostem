@@ -1692,6 +1692,7 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
             'student:unit:view': true,
             'student:grades:view': true,
             'student:payments:manage': true,
+            'student:efsrt:view': true, // Added permission
         };
         return permissions as Record<Permission, boolean>;
     }
