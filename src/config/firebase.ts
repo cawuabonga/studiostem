@@ -632,6 +632,21 @@ export const updateStudentProfile = async (instituteId: string, documentId: stri
     await updateDoc(studentRef, updateData);
 }
 
+export const deleteStudentProfile = async (instituteId: string, documentId: string) => {
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', documentId);
+    await deleteDoc(studentRef);
+}
+
+export const bulkDeleteStudents = async (instituteId: string, documentIds: string[]): Promise<void> => {
+    const batch = writeBatch(db);
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    documentIds.forEach(id => {
+        const docRef = doc(studentsCol, id);
+        batch.delete(docRef);
+    });
+    await batch.commit();
+}
+
 export const bulkAddStudents = async (instituteId: string, studentList: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
     const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');

@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getStudentProfiles, getPrograms, bulkCreateMatriculations, getUnits } from '@/config/firebase';
+import { getStudentProfiles, getPrograms, bulkCreateMatriculations, getUnits, deleteStudentProfile, bulkDeleteStudents } from '@/config/firebase';
 import type { StudentProfile, Program, Unit, UnitTurno } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, ArrowRight, Edit2, Eye, Loader2, CheckCircle2, ListChecks } from 'lucide-react';
+import { MoreHorizontal, ArrowRight, Edit2, Eye, Loader2, CheckCircle2, ListChecks, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import { ScrollArea } from '../ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
 
 interface StudentsTableProps {
     instituteId: string;
@@ -64,6 +65,9 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   // Edit states
   const [selectedProfile, setSelectedProfile] = useState<StudentProfile | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Delete states
+  const [profileToDelete, setProfileToDelete] = useState<StudentProfile | null>(null);
 
   // Bulk Matriculation states
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
@@ -131,7 +135,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
 
   const totalPages = Math.ceil(filteredProfiles.length / PAGE_SIZE);
 
-  const handleSelectAll = (checked: boolean) => {
+  const handleSelectAll = (checked: boolean | string) => {
     if (checked) setSelectedIds(new Set(filteredProfiles.map(p => p.documentId)));
     else setSelectedIds(new Set());
   };
@@ -152,7 +156,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
     return allUnits.filter(u => u.programId === programFilter && u.semester === sem);
   }, [allUnits, bulkData.semester, programFilter]);
 
-  const handleSelectAllUnitsBulk = (checked: boolean) => {
+  const handleSelectAllUnitsBulk = (checked: boolean | string) => {
     if (checked) setSelectedUnitIdsBulk(new Set(availableUnitsBulk.map(u => u.id)));
     else setSelectedUnitIdsBulk(new Set());
   };
@@ -183,6 +187,38 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
         setIsSubmitting(false);
     }
   };
+
+  const handleDeleteProfile = async () => {
+    if (!instituteId || !profileToDelete) return;
+    setIsSubmitting(true);
+    try {
+        await deleteStudentProfile(instituteId, profileToDelete.documentId);
+        toast({ title: "Perfil Eliminado", description: "El estudiante ha sido borrado correctamente." });
+        setProfileToDelete(null);
+        fetchData(instituteId);
+        onDataChange();
+    } catch (error: any) {
+        toast({ title: "Error", description: "No se pudo eliminar el perfil.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (!instituteId || selectedIds.size === 0) return;
+    setIsSubmitting(true);
+    try {
+        await bulkDeleteStudents(instituteId, Array.from(selectedIds));
+        toast({ title: "Eliminación Masiva Exitosa", description: `${selectedIds.size} estudiantes eliminados.` });
+        setSelectedIds(new Set());
+        fetchData(instituteId);
+        onDataChange();
+    } catch (error: any) {
+        toast({ title: "Error", description: "No se pudo realizar la eliminación masiva.", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  }
 
   if (loading) return <div className="space-y-4"><Skeleton className="h-10 w-full" />{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>;
 
@@ -223,23 +259,54 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                 </SelectContent>
             </Select>
         </div>
-        {isMatriculaMode && selectedIds.size > 0 && (
-            <Button className="bg-green-600 hover:bg-green-700" onClick={() => {
-                setSelectedUnitIdsBulk(new Set());
-                setIsBulkDialogOpen(true);
-            }}>
-                <CheckCircle2 className="mr-2 h-4 w-4" /> Matricular ({selectedIds.size})
-            </Button>
-        )}
       </div>
+
+      {selectedIds.size > 0 && (
+         <div className="mb-4 flex items-center justify-between bg-muted p-3 rounded-lg border">
+            <p className="text-sm font-medium text-primary flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4" />
+                {selectedIds.size} estudiante(s) seleccionado(s)
+            </p>
+            <div className="flex gap-2">
+                {isMatriculaMode && (
+                    <Button className="bg-green-600 hover:bg-green-700 h-8 text-xs" onClick={() => {
+                        setSelectedUnitIdsBulk(new Set());
+                        setIsBulkDialogOpen(true);
+                    }}>
+                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" /> Matricular Grupo
+                    </Button>
+                )}
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="h-8 text-xs">
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Eliminar Grupo
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>¿Confirmar eliminación masiva?</AlertDialogTitle>
+                            <AlertDialogDescription>Esta acción no se puede deshacer y eliminará permanentemente a {selectedIds.size} estudiantes.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
+                                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                Sí, eliminar todo
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        </div>
+      )}
 
       <div className="rounded-md border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              {isMatriculaMode && (
-                <TableHead className="w-[50px]"><Checkbox checked={selectedIds.size === filteredProfiles.length && filteredProfiles.length > 0} onCheckedChange={handleSelectAll}/></TableHead>
-              )}
+              <TableHead className="w-[50px]">
+                <Checkbox checked={selectedIds.size === paginatedProfiles.length && paginatedProfiles.length > 0} onCheckedChange={handleSelectAll}/>
+              </TableHead>
               <TableHead className="w-[40px] text-center">N°</TableHead>
               <TableHead>DNI</TableHead>
               <TableHead>Estudiante</TableHead>
@@ -253,10 +320,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             {paginatedProfiles.map((p, index) => {
               const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
               return (
-                <TableRow key={p.documentId}>
-                  {isMatriculaMode && (
-                    <TableCell><Checkbox checked={selectedIds.has(p.documentId)} onCheckedChange={() => handleSelectOne(p.documentId)}/></TableCell>
-                  )}
+                <TableRow key={p.documentId} data-state={selectedIds.has(p.documentId) && "selected"}>
+                  <TableCell><Checkbox checked={selectedIds.has(p.documentId)} onCheckedChange={() => handleSelectOne(p.documentId)}/></TableCell>
                   <TableCell className="text-center font-bold text-muted-foreground">{(currentPage - 1) * PAGE_SIZE + index + 1}</TableCell>
                   <TableCell className="font-mono text-xs">{p.documentId}</TableCell>
                   <TableCell>
@@ -274,7 +339,31 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                             <Link href={`/dashboard/gestion-academica/matricula/${p.documentId}`}>Matricular <ArrowRight className="ml-2 h-4 w-4" /></Link>
                         </Button>
                     ) : (
-                        <Button variant="ghost" size="icon" onClick={() => { setSelectedProfile(p); setIsEditDialogOpen(true); }}><Edit2 className="h-4 w-4"/></Button>
+                        <div className="inline-flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => { setSelectedProfile(p); setIsEditDialogOpen(true); }} title="Editar">
+                                <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" title="Eliminar">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Eliminar perfil de estudiante?</AlertDialogTitle>
+                                        <AlertDialogDescription>Esta acción eliminará permanentemente a {p.fullName} del sistema.</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => { setProfileToDelete(p); handleDeleteProfile(); }} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
+                                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                            Eliminar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     )}
                   </TableCell>
                 </TableRow>
