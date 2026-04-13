@@ -15,6 +15,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -144,25 +145,41 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                                  {getIconForType(content)}
                                  <div className="truncate">
                                     <p className="font-bold text-sm truncate">{content.title}</p>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-bold">{content.type}</p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold">
+                                        {content.type === 'text' ? 'Nota de Texto' : content.type}
+                                    </p>
                                  </div>
                                </div>
                                <div className="flex items-center gap-2">
-                                    {(ytId || isPdf) && (
+                                    {content.type === 'text' ? (
                                         <Button 
                                             variant="secondary" 
                                             size="sm" 
                                             className="h-8 text-[10px] font-bold uppercase tracking-tight"
                                             onClick={() => setPreviewContent(content)}
                                         >
-                                            {ytId ? <PlayCircle className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
-                                            {ytId ? "Reproducir" : "Ver PDF"}
+                                            <FileText className="mr-1 h-3 w-3" />
+                                            Leer Nota
                                         </Button>
+                                    ) : (
+                                        <>
+                                            {(ytId || isPdf) && (
+                                                <Button 
+                                                    variant="secondary" 
+                                                    size="sm" 
+                                                    className="h-8 text-[10px] font-bold uppercase tracking-tight"
+                                                    onClick={() => setPreviewContent(content)}
+                                                >
+                                                    {ytId ? <PlayCircle className="mr-1 h-3 w-3" /> : <Eye className="mr-1 h-3 w-3" />}
+                                                    {ytId ? "Reproducir" : "Ver PDF"}
+                                                </Button>
+                                            )}
+                                            
+                                            <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-tight" asChild>
+                                                <a href={content.value} target="_blank" rel="noopener noreferrer">Abrir</a>
+                                            </Button>
+                                        </>
                                     )}
-                                    
-                                    <Button variant="ghost" size="sm" className="h-8 text-[10px] font-bold uppercase tracking-tight" asChild>
-                                        <a href={content.value} target="_blank" rel="noopener noreferrer">Abrir</a>
-                                    </Button>
 
                                     {!isStudentView && (
                                         <AlertDialog>
@@ -232,8 +249,14 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                 <DialogHeader className="p-4 border-b">
                     <DialogTitle>{previewContent?.title}</DialogTitle>
                 </DialogHeader>
-                <div className="flex-1 bg-black flex items-center justify-center">
-                    {previewContent && getYouTubeId(previewContent.value) ? (
+                <div className="flex-1 bg-black flex items-center justify-center overflow-hidden">
+                    {previewContent?.type === 'text' ? (
+                        <div className="flex-1 bg-background p-8 overflow-y-auto w-full h-full">
+                            <div className="max-w-3xl mx-auto whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                                {previewContent.value}
+                            </div>
+                        </div>
+                    ) : previewContent && getYouTubeId(previewContent.value) ? (
                         <iframe
                             width="100%"
                             height="100%"
@@ -259,6 +282,9 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                         </div>
                     )}
                 </div>
+                <DialogFooter className="p-4 border-t bg-muted/20">
+                    <Button variant="ghost" onClick={() => setPreviewContent(null)}>Cerrar Visor</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </Card>
