@@ -632,8 +632,8 @@ export const updateStudentProfile = async (instituteId: string, documentId: stri
     await updateDoc(studentRef, updateData);
 }
 
-export const deleteStudentProfile = async (instituteId: string, documentId: string) => {
-    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', documentId);
+export const deleteStudentProfile = async (instituteId: string, studentId: string) => {
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
     await deleteDoc(studentRef);
 }
 
@@ -2444,6 +2444,14 @@ export const getAllEFSRTAssignments = async (instituteId: string): Promise<EFSRT
 
 export const programEFSRT = async (instituteId: string, data: any) => {
     await addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), { ...data, status: 'Programado', visits: [], createdAt: Timestamp.now() });
+};
+
+export const updateEFSRTAssignment = async (instituteId: string, assignmentId: string, data: Partial<EFSRTAssignment>) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), data);
+};
+
+export const deleteEFSRTAssignment = async (instituteId: string, assignmentId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId));
 };
 
 export const registerEFSRTVisit = async (instituteId: string, assignmentId: string, visit: any) => {

@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getStudentProfiles, getPrograms, getTeachers, programEFSRT, getAllEFSRTAssignments } from '@/config/firebase';
+import { getStudentProfiles, getPrograms, getTeachers, programEFSRT, getAllEFSRTAssignments, updateEFSRTAssignment, deleteEFSRTAssignment } from '@/config/firebase';
 import type { StudentProfile, Program, Teacher, EFSRTAssignment, UnitPeriod, EFSRTStatus } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,22 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -52,7 +62,9 @@ export default function AdminEFSRTPage() {
     const [moduleFilterProg, setModuleFilterProg] = useState<string>('all');
 
     const [isProgramDialogOpen, setIsProgramDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null);
+    const [selectedAssignment, setSelectedAssignment] = useState<EFSRTAssignment | null>(null);
     
     const [formData, setFormData] = useState({
         moduleId: '',
@@ -150,11 +162,52 @@ export default function AdminEFSRTPage() {
 
     const handleOpenProgram = (student: StudentProfile) => {
         setSelectedStudent(student);
-        setFormData(prev => ({
-            ...prev,
+        setSelectedAssignment(null);
+        setFormData({
             moduleId: moduleFilterProg !== 'all' ? moduleFilterProg : '',
-        }));
+            supervisorId: '',
+            location: '',
+            startDate: '',
+            endDate: '',
+        });
         setIsProgramDialogOpen(true);
+    };
+
+    const handleOpenEdit = (assignment: EFSRTAssignment) => {
+        const student = students.find(s => s.documentId === assignment.studentId);
+        if (!student) return;
+        
+        setSelectedStudent(student);
+        setSelectedAssignment(assignment);
+        setFormData({
+            moduleId: assignment.moduleId,
+            supervisorId: assignment.supervisorId,
+            location: assignment.location,
+            startDate: assignment.startDate.toDate().toISOString().split('T')[0],
+            endDate: assignment.endDate.toDate().toISOString().split('T')[0],
+        });
+        setIsProgramDialogOpen(true);
+    };
+
+    const handleOpenDelete = (assignment: EFSRTAssignment) => {
+        setSelectedAssignment(assignment);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!instituteId || !selectedAssignment) return;
+        setIsSubmitting(true);
+        try {
+            await deleteEFSRTAssignment(instituteId, selectedAssignment.id);
+            toast({ title: "Registro Eliminado", description: "La programación de EFSRT ha sido eliminada." });
+            setIsDeleteDialogOpen(false);
+            setSelectedAssignment(null);
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo eliminar el registro.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleSave = async () => {
@@ -169,7 +222,7 @@ export default function AdminEFSRTPage() {
             const prog = programs.find(p => p.id === selectedStudent.programId);
             const module = prog?.modules.find(m => m.code === formData.moduleId);
 
-            await programEFSRT(instituteId, {
+            const data = {
                 studentId: selectedStudent.documentId,
                 studentName: selectedStudent.fullName,
                 programId: selectedStudent.programId,
@@ -180,14 +233,22 @@ export default function AdminEFSRTPage() {
                 location: formData.location,
                 startDate: Timestamp.fromDate(new Date(formData.startDate)),
                 endDate: Timestamp.fromDate(new Date(formData.endDate)),
-            });
+            };
 
-            toast({ title: "EFSRT Programada", description: `Se han programado las prácticas para ${selectedStudent.fullName}.` });
+            if (selectedAssignment) {
+                await updateEFSRTAssignment(instituteId, selectedAssignment.id, data);
+                toast({ title: "EFSRT Actualizada", description: `Se ha modificado la programación para ${selectedStudent.fullName}.` });
+            } else {
+                await programEFSRT(instituteId, data);
+                toast({ title: "EFSRT Programada", description: `Se han programado las prácticas para ${selectedStudent.fullName}.` });
+            }
+
             setIsProgramDialogOpen(false);
             setFormData({ moduleId: '', supervisorId: '', location: '', startDate: '', endDate: '' });
+            setSelectedAssignment(null);
             fetchData();
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo programar.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo procesar la solicitud.", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -292,6 +353,7 @@ export default function AdminEFSRTPage() {
                                             <TableHead>Empresa</TableHead>
                                             <TableHead className="text-center">Visitas</TableHead>
                                             <TableHead>Estado Actual</TableHead>
+                                            <TableHead className="text-right">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -309,10 +371,20 @@ export default function AdminEFSRTPage() {
                                                     <TableCell className="text-xs">{a.location}</TableCell>
                                                     <TableCell className="text-center"><Badge variant="outline">{a.visits?.length || 0}</Badge></TableCell>
                                                     <TableCell><Badge className={getStatusColor(status)}>{status}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(a)}>
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleOpenDelete(a)}>
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
                                                 </TableRow>
                                             );
                                         }) : (
-                                            <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground italic">No se encontraron registros.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground italic">No se encontraron registros.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
@@ -397,11 +469,11 @@ export default function AdminEFSRTPage() {
                 </TabsContent>
             </Tabs>
 
-            <Dialog open={isProgramDialogOpen} onOpenChange={setIsProgramDialogOpen}>
+            <Dialog open={isProgramDialogOpen} onOpenChange={(open) => !open && setIsProgramDialogOpen(false)}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
-                        <DialogTitle>Programar EFSRT: {selectedStudent?.fullName}</DialogTitle>
-                        <DialogDescription>Asigna los detalles de la práctica profesional.</DialogDescription>
+                        <DialogTitle>{selectedAssignment ? 'Editar' : 'Programar'} EFSRT: {selectedStudent?.fullName}</DialogTitle>
+                        <DialogDescription>Asigna o modifica los detalles de la práctica profesional.</DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -437,10 +509,29 @@ export default function AdminEFSRTPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsProgramDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleSave} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : "Confirmar Programación"}</Button>
+                        <Button onClick={handleSave} disabled={isSubmitting}>{isSubmitting ? <Loader2 className="animate-spin" /> : (selectedAssignment ? "Guardar Cambios" : "Confirmar Programación")}</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro de eliminar este registro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará permanentemente la programación de prácticas de <strong>{selectedAssignment?.studentName}</strong>. 
+                            Se perderán también todas las visitas registradas en la bitácora.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90" disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Trash2 className="mr-2 h-4 w-4" />}
+                            Eliminar Registro
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
