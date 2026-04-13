@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -139,6 +139,11 @@ export default function AdminEFSRTPage() {
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
     const studentsToProgram = useMemo(() => {
+        // Si no hay filtros aplicados, devolver lista vacía para evitar carga innecesaria
+        if (!filterProg && semesterFilterProg === 'all') {
+            return [];
+        }
+
         const myProgramStudents = isFullAdmin && !userProgramId 
             ? students 
             : students.filter(s => s.programId === userProgramId);
@@ -459,7 +464,18 @@ export default function AdminEFSRTPage() {
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
-                                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">No hay estudiantes pendientes.</TableCell></TableRow>
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
+                                                    {!filterProg && semesterFilterProg === 'all' 
+                                                        ? (
+                                                            <div className="flex flex-col items-center gap-2">
+                                                                <Info className="h-5 w-5 opacity-50" />
+                                                                <p>Utilice los filtros superiores (DNI, Nombre o Semestre) para buscar estudiantes.</p>
+                                                            </div>
+                                                        )
+                                                        : "No se encontraron estudiantes que coincidan con la búsqueda."}
+                                                </TableCell>
+                                            </TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
