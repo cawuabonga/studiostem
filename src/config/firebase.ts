@@ -488,7 +488,7 @@ export const saveSingleAssignment = async (
   unitId: string,
   teacherId: string | null
 ): Promise<void> => {
-    const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
+    const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_programId`);
 
     if (teacherId) {
         await setDoc(assignmentDocRef, { 
@@ -2527,17 +2527,31 @@ export const getTaskSubmissions = async (instituteId: string, unitId: string, we
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as TaskSubmission));
 };
 
-export const submitTask = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, studentProfile: StudentProfile, file: File) => {
-    const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/submissions/${studentProfile.documentId}`;
-    const fileUrl = await uploadFileAndGetURL(file, storagePath);
+export const submitTask = async (
+    instituteId: string, 
+    unitId: string, 
+    weekNumber: number, 
+    taskId: string, 
+    studentProfile: StudentProfile, 
+    file?: File,
+    link?: string
+) => {
+    let fileUrl = '';
+    if (file) {
+        const storagePath = `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/submissions/${studentProfile.documentId}`;
+        fileUrl = await uploadFileAndGetURL(file, storagePath);
+    }
     
     const submissionRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentProfile.documentId);
     
-    await setDoc(submissionRef, {
+    const submissionData: any = {
         studentName: studentProfile.fullName,
-        fileUrl,
         submittedAt: Timestamp.now()
-    }, { merge: true });
+    };
+    if (fileUrl) submissionData.fileUrl = fileUrl;
+    if (link) submissionData.link = link;
+    
+    await setDoc(submissionRef, submissionData, { merge: true });
 };
 
 export const gradeTaskSubmission = async (

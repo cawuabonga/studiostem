@@ -424,7 +424,8 @@ export interface Task {
 export interface TaskSubmission {
     id: string; // student documentId
     studentName: string;
-    fileUrl: string;
+    fileUrl?: string;
+    link?: string; // New field for external URLs
     submittedAt: Timestamp;
     grade?: number;
     feedback?: string;
