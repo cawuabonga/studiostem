@@ -366,7 +366,7 @@ export const deleteUnit = async (instituteId: string, unitId: string) => {
     await deleteDoc(unitRef);
 }
 
-export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'imageUrl'>[]) => {
+export const bulkAddUnits = async (instituteId: string, units: Omit<Unit, 'id' | 'totalHours' | 'imageUrl'>[]) => {
     const unitsCol = getSubCollectionRef(instituteId, 'unidadesDidacticas');
     
     for (const unitData of units) {
@@ -1864,7 +1864,7 @@ export const getMatriculationReportData = async (
         let students: StudentProfile[] = [];
         if (studentIds.length > 0) {
             const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
-            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentDocIds));
+            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
             const studentSnap = await getDocs(studentQuery);
             students = studentSnap.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
         }
@@ -1921,6 +1921,17 @@ export const getEnvironmentsForBuilding = async (instituteId: string, buildingId
     const q = query(envCol, orderBy("name"));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, buildingId, ...docSnap.data() } as Environment));
+};
+
+export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
+    const buildings = await getBuildings(instituteId);
+    let allEnvironments: Environment[] = [];
+
+    for (const building of buildings) {
+        const envs = await getEnvironmentsForBuilding(instituteId, building.id);
+        allEnvironments = allEnvironments.concat(envs);
+    }
+    return allEnvironments;
 };
 
 export const updateEnvironment = async (instituteId: string, buildingId: string, envId: string, data: Partial<Environment>): Promise<void> => {
