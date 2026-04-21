@@ -65,12 +65,8 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
     const getWeekDateForDay = (weekNum: number, dayName: string): string | null => {
         if (!periodStartDate) return null;
         try {
-            // Asumimos que el periodo empieza en la semana 1. 
-            // Calculamos el lunes de la semana 1
             const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
-            // Calculamos el lunes de la semana objetivo
             const startOfTargetWeek = addDays(startOfFirstWeek, (weekNum - 1) * 7);
-            // Obtenemos el índice del día (Lunes=0 en el offset de addDays si empezamos desde lunes)
             const dayOffset = dayNameToIndex[dayName] - 1;
             const dateOfDay = addDays(startOfTargetWeek, dayOffset);
             return format(dateOfDay, 'dd/MM');
@@ -79,25 +75,25 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
 
     return (
         <div className="space-y-4">
-            <div className="relative w-full overflow-auto rounded-xl border shadow-md">
-                <Table>
+            <div className="relative w-full overflow-auto rounded-xl border shadow-md max-h-[70vh]">
+                <Table className="border-separate border-spacing-0">
                     <TableHeader>
                         <TableRow className="bg-slate-100 hover:bg-slate-100 h-10">
-                            <TableHead className="w-[40px] sticky left-0 bg-slate-100 z-40 text-center font-bold text-[10px] uppercase border-r">N°</TableHead>
-                            <TableHead className="w-[280px] sticky left-[40px] bg-slate-100 z-40 font-bold text-[10px] uppercase border-r">Apellidos y Nombres</TableHead>
+                            <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-50 text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
+                            <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-50 font-bold text-[10px] uppercase border-r border-b">Apellidos y Nombres</TableHead>
                             {weeksInRange.map(week => (
-                                <TableHead key={week} colSpan={scheduledDays.length} className="text-center border-r bg-primary/5 font-black text-[11px] py-1">
+                                <TableHead key={week} colSpan={scheduledDays.length} className="sticky top-0 z-30 text-center border-r border-b bg-primary/5 font-black text-[11px] py-1">
                                     SEMANA {week}
                                 </TableHead>
                             ))}
-                            <TableHead className="text-center min-w-[150px] sticky right-0 bg-slate-200 z-40 font-black text-[10px] uppercase">RESUMEN (1-{totalWeeks})</TableHead>
+                            <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-50 font-black text-[10px] uppercase border-l border-b">RESUMEN (1-{totalWeeks})</TableHead>
                         </TableRow>
                         <TableRow className="bg-slate-50 hover:bg-slate-50 h-12">
-                            <TableHead className="sticky left-0 bg-slate-50 z-30 border-r"></TableHead>
-                            <TableHead className="sticky left-[40px] bg-slate-50 z-30 border-r"></TableHead>
+                            <TableHead className="sticky left-0 top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
+                            <TableHead className="sticky left-[40px] top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
                             {weeksInRange.map(week => (
                                 scheduledDays.map((day, dIdx) => (
-                                    <TableHead key={`${week}-${day}`} className="text-center p-1 min-w-[60px] border-r">
+                                    <TableHead key={`${week}-${day}`} className="sticky top-10 z-30 text-center p-1 min-w-[60px] border-r border-b bg-slate-50">
                                         <div className="flex flex-col items-center leading-tight">
                                             <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
                                             <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day)}</span>
@@ -113,7 +109,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                     </TableHead>
                                 ))
                             ))}
-                            <TableHead className="sticky right-0 bg-slate-50 z-30 text-center text-[9px] uppercase font-black text-muted-foreground border-l">Inasistencias</TableHead>
+                            <TableHead className="sticky right-0 top-10 bg-slate-50 z-50 text-center text-[9px] uppercase font-black text-muted-foreground border-l border-b">Inasistencias</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -137,10 +133,10 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
 
                             return (
                                 <TableRow key={student.documentId} className={cn("h-9 hover:bg-slate-50 transition-colors", isAtRisk && "bg-red-50/70")}>
-                                    <TableCell className="text-center sticky left-0 bg-white z-20 font-mono text-[10px] text-muted-foreground border-r">{index + 1}</TableCell>
-                                    <TableCell className="sticky left-[40px] bg-white z-20 border-r py-1">
+                                    <TableCell className="text-center sticky left-0 bg-white z-20 font-mono text-[10px] text-muted-foreground border-r border-b">{index + 1}</TableCell>
+                                    <TableCell className="sticky left-[40px] bg-white z-20 border-r border-b py-1">
                                         <div className="flex flex-col leading-none">
-                                            <span className={cn("text-[11px] font-bold uppercase", isAtRisk ? "text-red-700" : "text-slate-700")}>
+                                            <span className={cn("text-[11px] font-bold uppercase whitespace-nowrap", isAtRisk ? "text-red-700" : "text-slate-700")}>
                                                 {student.lastName}, {student.firstName}
                                             </span>
                                             <span className="text-[9px] font-mono text-muted-foreground mt-0.5">{student.documentId}</span>
@@ -150,7 +146,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                         scheduledDays.map((day, dIdx) => {
                                             const status = attendanceRecord?.records[student.documentId]?.[`week_${week}`]?.[dIdx] || 'U';
                                             return (
-                                                <TableCell key={`${week}-${dIdx}`} className="p-0.5 text-center border-r">
+                                                <TableCell key={`${week}-${dIdx}`} className="p-0.5 text-center border-r border-b">
                                                      <Select
                                                         value={status}
                                                         onValueChange={(val) => onAttendanceChange(student.documentId, week, dIdx, val)}
@@ -175,7 +171,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                             );
                                         })
                                     ))}
-                                    <TableCell className="sticky right-0 bg-white z-20 text-center border-l shadow-[-4px_0_8px_rgba(0,0,0,0.05)] py-1">
+                                    <TableCell className="sticky right-0 bg-white z-20 text-center border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.05)] py-1">
                                         <div className="flex flex-col gap-0.5 items-center">
                                             <div className="flex gap-1">
                                                 <TooltipProvider>
