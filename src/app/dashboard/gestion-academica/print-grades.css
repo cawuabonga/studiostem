@@ -1,4 +1,9 @@
 
+/* Ocultar elementos de impresión por defecto en la pantalla */
+.print-only {
+  display: none !important;
+}
+
 @media print {
   body {
     background: white !important;

@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { StudentProfile, AchievementIndicator, AcademicRecord, Unit, Task } from '@/types';
-import { PlusCircle, Trash2, CalendarDays, Calculator, ArrowDown, ArrowUp } from 'lucide-react';
+import { PlusCircle, Trash2, Calculator } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import { cn } from '@/lib/utils';
 
@@ -72,16 +72,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
 
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center bg-muted/40 p-4 rounded-lg border border-primary/10">
-                <div className="flex gap-4 items-center">
-                    <div className="p-2 bg-primary/10 rounded-md">
-                        <CalendarDays className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-lg leading-none">{indicator.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-1">Vigencia: Semanas {indicator.startWeek} a {indicator.endWeek}</p>
-                    </div>
-                </div>
+            <div className="flex justify-end">
                 {!isActaClosed && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>

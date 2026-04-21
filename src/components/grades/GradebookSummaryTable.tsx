@@ -5,7 +5,7 @@ import React from 'react';
 import type { StudentProfile, AchievementIndicator, AcademicRecord } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
-import { Calculator, LayoutDashboard } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 
 interface GradebookSummaryTableProps {
     students: StudentProfile[];
@@ -14,7 +14,7 @@ interface GradebookSummaryTableProps {
 }
 
 const calculateAverage = (grades: (number | null)[]): number | null => {
-    const validGrades = grades.filter(g => typeof g === 'number' && !isNaN(g)) as number[];
+    const validGrades = grades.filter(g => g !== null && g !== undefined && !isNaN(g)) as number[];
     if (validGrades.length === 0) return null;
     const sum = validGrades.reduce((acc, grade) => acc + grade, 0);
     return Math.round(sum / validGrades.length);
@@ -23,16 +23,6 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 export function GradebookSummaryTable({ students, indicators, records }: GradebookSummaryTableProps) {
     return (
         <div className="space-y-4 animate-in fade-in duration-500">
-             <div className="flex items-center gap-3 bg-muted/40 p-4 rounded-lg border border-primary/10">
-                <div className="p-2 bg-primary/10 rounded-md">
-                    <LayoutDashboard className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                    <h3 className="font-bold text-lg leading-none">Resumen Consolidado de Calificaciones</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Visión general de los promedios por indicador y nota final de la unidad.</p>
-                </div>
-            </div>
-
             <div className="relative w-full overflow-hidden rounded-xl border shadow-md bg-background">
                 <div className="overflow-x-auto overflow-y-auto max-h-[70vh] min-w-0">
                     <Table className="border-separate border-spacing-0 table-auto w-full">
