@@ -10,7 +10,6 @@ import { getEnrolledStudentProfiles, getAttendanceForUnit, saveAttendance, getAc
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { AttendanceSheet } from './AttendanceSheet';
-import { differenceInWeeks } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { BookCheck } from 'lucide-react';
@@ -53,7 +52,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
             const startDate = academicPeriods?.[unit.period]?.startDate?.toDate();
             setPeriodStartDate(startDate);
 
-            // 1. ORDENAR POR APELLIDOS
+            // ORDENAR POR APELLIDOS
             setStudents(enrolledStudents.sort((a, b) => a.lastName.localeCompare(b.lastName)));
             setScheduledDays(scheduledDaysForUnit);
             
