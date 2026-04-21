@@ -82,18 +82,18 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                             <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-50 text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
                             <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-50 font-bold text-[10px] uppercase border-r border-b">Apellidos y Nombres</TableHead>
                             {weeksInRange.map(week => (
-                                <TableHead key={week} colSpan={scheduledDays.length} className="sticky top-0 z-30 text-center border-r border-b bg-primary/5 font-black text-[11px] py-1">
+                                <TableHead key={week} colSpan={scheduledDays.length} className="sticky top-0 z-30 text-center border-r border-b bg-primary/5 font-black text-[11px] py-1 min-w-[150px]">
                                     SEMANA {week}
                                 </TableHead>
                             ))}
-                            <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-50 font-black text-[10px] uppercase border-l border-b">RESUMEN (1-{totalWeeks})</TableHead>
+                            <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-50 font-black text-[10px] uppercase border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.1)]">RESUMEN (1-{totalWeeks})</TableHead>
                         </TableRow>
                         <TableRow className="bg-slate-50 hover:bg-slate-50 h-12">
                             <TableHead className="sticky left-0 top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
                             <TableHead className="sticky left-[40px] top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
                             {weeksInRange.map(week => (
                                 scheduledDays.map((day, dIdx) => (
-                                    <TableHead key={`${week}-${day}`} className="sticky top-10 z-30 text-center p-1 min-w-[60px] border-r border-b bg-slate-50">
+                                    <TableHead key={`${week}-${day}`} className="sticky top-10 z-30 text-center p-1 min-w-[70px] border-r border-b bg-slate-50">
                                         <div className="flex flex-col items-center leading-tight">
                                             <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
                                             <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day)}</span>
@@ -109,19 +109,17 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                     </TableHead>
                                 ))
                             ))}
-                            <TableHead className="sticky right-0 top-10 bg-slate-50 z-50 text-center text-[9px] uppercase font-black text-muted-foreground border-l border-b">Inasistencias</TableHead>
+                            <TableHead className="sticky right-0 top-10 bg-slate-50 z-50 text-center text-[9px] uppercase font-black text-muted-foreground border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.1)]">Inasistencias</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {students.map((student, index) => {
                             const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
-                            let totalSessionsRecorded = 0;
                             
                             if (attendanceRecord?.records[student.documentId]) {
                                 Object.values(attendanceRecord.records[student.documentId]).forEach(weekData => {
                                     weekData.forEach(status => {
                                         globalSummary[status as AttendanceStatus]++;
-                                        if (status !== 'U') totalSessionsRecorded++;
                                     });
                                 });
                             }
@@ -171,7 +169,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                             );
                                         })
                                     ))}
-                                    <TableCell className="sticky right-0 bg-white z-20 text-center border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.05)] py-1">
+                                    <TableCell className="sticky right-0 bg-white z-20 text-center border-l border-b shadow-[-4px_0_12px_rgba(0,0,0,0.08)] py-1">
                                         <div className="flex flex-col gap-0.5 items-center">
                                             <div className="flex gap-1">
                                                 <TooltipProvider>
@@ -207,7 +205,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                     <div className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-50 border border-gray-200 rounded-sm"></span> <span>S.M: Sin Marcar</span></div>
                 </div>
                 <div className="flex gap-3 items-center">
-                    <p className="italic">Estudiantes ordenados por apellidos.</p>
+                    <p className="italic">Desliza horizontalmente para ver más semanas.</p>
                     <div className="flex items-center gap-1 text-red-600 font-bold"><AlertTriangle className="h-3 w-3" /> Límite 30% Inasistencias</div>
                 </div>
             </div>
