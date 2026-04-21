@@ -13,11 +13,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { StudentProfile, AchievementIndicator, AcademicRecord, ManualEvaluation, Unit, GradeEntry, Task } from '@/types';
-import { PlusCircle, Trash2, CalendarDays, Calculator } from 'lucide-react';
+import type { StudentProfile, AchievementIndicator, AcademicRecord, Unit, Task } from '@/types';
+import { PlusCircle, Trash2, CalendarDays, Calculator, ArrowDown, ArrowUp } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -45,17 +44,14 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
         return Object.values(records).some(r => r.status === 'aprobado' || r.status === 'desaprobado');
     }, [records]);
 
-    // Flatten all evaluations (tasks and manual) into a single ordered list for the table header
     const flattenedEvaluations = useMemo(() => {
         const firstRecord = Object.values(records)[0];
         const list: { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[] = [];
 
-        // 1. Tasks from the planner that belong to this indicator (based on indicatorId or weeks)
         tasks.filter(t => t.indicatorId === indicator.id).forEach(t => {
             list.push({ id: t.id, label: t.title, type: 'task', weekNumber: t.weekNumber });
         });
 
-        // 2. Manual evaluations
         if (firstRecord && firstRecord.evaluations && firstRecord.evaluations[indicator.id]) {
             firstRecord.evaluations[indicator.id].forEach(e => {
                 if (!list.some(x => x.id === e.id)) {
@@ -64,7 +60,6 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
             });
         }
 
-        // Sort by week number
         return list.sort((a, b) => a.weekNumber - b.weekNumber);
     }, [records, indicator.id, tasks]);
 
@@ -76,20 +71,23 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
     if (students.length === 0) return <p className="text-center py-12 text-muted-foreground">No hay estudiantes en esta sección.</p>;
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-                <div className="flex gap-2">
-                    <Badge variant="outline" className="px-3 py-1 bg-primary/5 border-primary/20">
-                        <CalendarDays className="h-3.5 w-3.5 mr-2 text-primary" />
-                        Vigencia del Indicador: Semanas {indicator.startWeek} a {indicator.endWeek}
-                    </Badge>
+        <div className="space-y-4 animate-in fade-in duration-500">
+            <div className="flex justify-between items-center bg-muted/40 p-4 rounded-lg border border-primary/10">
+                <div className="flex gap-4 items-center">
+                    <div className="p-2 bg-primary/10 rounded-md">
+                        <CalendarDays className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-lg leading-none">{indicator.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Vigencia: Semanas {indicator.startWeek} a {indicator.endWeek}</p>
+                    </div>
                 </div>
                 {!isActaClosed && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="default" size="sm" className="shadow-sm">
+                            <Button variant="outline" size="sm" className="shadow-sm">
                                 <PlusCircle className="mr-2 h-4 w-4" /> 
-                                Añadir Evaluación Manual
+                                Nueva Evaluación Manual
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -104,20 +102,20 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                 )}
             </div>
 
-            <div className="rounded-xl border shadow-sm bg-background overflow-hidden">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="bg-muted/50 hover:bg-muted/50">
-                                <TableHead className="w-[50px] text-center font-bold">N°</TableHead>
-                                <TableHead className="min-w-[250px] font-bold sticky left-0 bg-muted/50 z-20">Apellidos y Nombres</TableHead>
+            <div className="relative w-full overflow-hidden rounded-xl border shadow-md bg-background">
+                <div className="overflow-x-auto overflow-y-auto max-h-[70vh] min-w-0">
+                    <Table className="border-separate border-spacing-0 table-auto w-full">
+                        <TableHeader className="sticky top-0 z-50">
+                            <TableRow className="bg-slate-100 hover:bg-slate-100">
+                                <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-[60] text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
+                                <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Apellidos y Nombres</TableHead>
                                 {flattenedEvaluations.map(ev => (
-                                    <TableHead key={ev.id} className="text-center min-w-[120px] p-2">
+                                    <TableHead key={ev.id} className="text-center p-2 min-w-[120px] border-r border-b bg-slate-50">
                                         <div className="flex flex-col items-center gap-1 group">
-                                            <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tight">Sem. {ev.weekNumber}</span>
-                                            <span className="text-xs font-bold leading-tight line-clamp-2 max-w-[100px]">{ev.label}</span>
+                                            <span className="text-[9px] uppercase text-muted-foreground font-black tracking-tight">Sem. {ev.weekNumber}</span>
+                                            <span className="text-[10px] font-bold leading-tight line-clamp-2 max-w-[100px] text-primary">{ev.label}</span>
                                             <div className="flex items-center gap-1">
-                                                <Badge variant="outline" className={cn("text-[9px] px-1 h-4", ev.type === 'task' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50")}>
+                                                <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", ev.type === 'task' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50")}>
                                                     {ev.type === 'task' ? 'Tarea' : 'Manual'}
                                                 </Badge>
                                                 {ev.type === 'manual' && !isActaClosed && (
@@ -132,12 +130,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                         </div>
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-center font-bold bg-primary/5 min-w-[100px] border-l">
-                                    <div className="flex flex-col items-center">
-                                        <Calculator className="h-3.5 w-3.5 mb-1 text-primary" />
-                                        <span>PROMEDIO</span>
-                                    </div>
-                                </TableHead>
+                                <TableHead className="text-center w-[100px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">Promedio</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -147,24 +140,26 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                 const avg = calculateAverage(allGrades);
 
                                 return (
-                                    <TableRow key={student.documentId} className="hover:bg-muted/20 transition-colors">
-                                        <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                                    <TableRow key={student.documentId} className="h-10 hover:bg-slate-50 transition-colors">
+                                        <TableCell className="text-center sticky left-0 bg-white z-10 font-mono text-[10px] text-muted-foreground border-r border-b">
                                             {index + 1}
                                         </TableCell>
-                                        <TableCell className="font-semibold sticky left-0 bg-background z-10 border-r">
-                                            <div className="flex flex-col">
-                                                <span>{student.fullName}</span>
-                                                <span className="text-[10px] font-mono text-muted-foreground">{student.documentId}</span>
+                                        <TableCell className="sticky left-[40px] bg-white z-10 border-r border-b py-1 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                            <div className="flex flex-col leading-none">
+                                                <span className="text-[11px] font-bold uppercase whitespace-nowrap text-slate-700">
+                                                    {student.lastName}, {student.firstName}
+                                                </span>
+                                                <span className="text-[9px] font-mono text-muted-foreground mt-0.5">{student.documentId}</span>
                                             </div>
                                         </TableCell>
                                         {flattenedEvaluations.map(ev => {
                                             const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                             return (
-                                                <TableCell key={ev.id} className="p-1">
+                                                <TableCell key={ev.id} className="p-0.5 text-center border-r border-b">
                                                     <Input 
                                                         type="number" 
                                                         className={cn(
-                                                            "w-full h-9 text-center font-bold border-transparent hover:border-input focus:bg-background",
+                                                            "w-full h-8 text-center font-black border-transparent hover:border-input focus:bg-background text-[11px]",
                                                             (gradeEntry?.grade ?? 0) > 0 && (gradeEntry?.grade ?? 0) < 13 ? "text-destructive" : "text-primary"
                                                         )}
                                                         value={gradeEntry?.grade ?? ''}
@@ -181,8 +176,8 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                             );
                                         })}
                                         <TableCell className={cn(
-                                            "text-center font-black text-base border-l bg-primary/5",
-                                            avg !== null && avg < 13 ? "text-destructive" : "text-primary"
+                                            "sticky right-0 bg-white z-10 text-center font-black text-xs border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)]",
+                                            avg !== null && avg < 13 ? "text-red-600" : "text-blue-700"
                                         )}>
                                             {avg !== null ? avg : '--'}
                                         </TableCell>
@@ -191,6 +186,16 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                             })}
                         </TableBody>
                     </Table>
+                </div>
+            </div>
+
+            <div className="flex justify-between items-center px-2 text-[10px] text-muted-foreground font-medium bg-slate-50 p-2 rounded-lg border border-dashed">
+                <div className="flex gap-4">
+                    <p>Nota aprobatoria: 13</p>
+                    <p className="italic">Usa la barra de scroll inferior si hay muchas evaluaciones.</p>
+                </div>
+                <div className="flex items-center gap-1 text-red-600 font-bold">
+                    <Calculator className="h-3 w-3" /> Promedio calculado automáticamente
                 </div>
             </div>
 

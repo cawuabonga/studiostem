@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, UnitPeriod, Program, Teacher, GradeEntry } from '@/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, Program, Teacher } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -21,13 +21,15 @@ import {
 } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, ArrowLeft, Printer, Lock, CheckCircle2 } from 'lucide-react';
+import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
 import { GradebookSummaryTable } from './GradebookSummaryTable';
 import '@/app/dashboard/gestion-academica/print-grades.css';
 import { PrintLayout } from '../printing/PrintLayout';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from '../ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,7 +41,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -66,8 +67,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
-    const [selectedIndicator, setSelectedIndicator] = useState<AchievementIndicator | null>(null);
     
+    // View control
+    const [viewMode, setViewMode] = useState<string>('summary'); // 'summary' or indicatorId
+
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
         setLoading(true);
@@ -102,7 +105,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 setTeacher(assignedTeacher);
             }
             
-            setStudents(enrolledStudents);
+            setStudents(enrolledStudents.sort((a, b) => a.lastName.localeCompare(b.lastName)));
             const sortedIndicators = achievementIndicators.sort((a,b) => a.name.localeCompare(b.name));
             setIndicators(sortedIndicators);
 
@@ -124,7 +127,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                         status: 'cursando',
                     };
                 } else {
-                    // Critical Protection: Ensure mandatory maps exist for data consistency
                     if (!existingRecord.grades) existingRecord.grades = {};
                     if (!existingRecord.evaluations) existingRecord.evaluations = {};
                 }
@@ -147,13 +149,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const studentRecord = draft[studentId];
             if (!studentRecord) return;
 
-            // Ensure maps exist before accessing them
-            if (!studentRecord.grades) {
-                studentRecord.grades = {};
-            }
-            if (!studentRecord.evaluations) {
-                studentRecord.evaluations = {};
-            }
+            if (!studentRecord.grades) studentRecord.grades = {};
+            if (!studentRecord.evaluations) studentRecord.evaluations = {};
 
             if (!studentRecord.grades[indicatorId]) {
                 studentRecord.grades[indicatorId] = [];
@@ -190,7 +187,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         if (!instituteId) return;
         try {
             const currentYear = new Date().getFullYear().toString();
-            const studentIds = students.map(s => s.documentId);
             await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
             toast({ title: "Evaluación Eliminada" });
             fetchData();
@@ -255,86 +251,104 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         return Object.values(records).some(r => r.status === 'aprobado' || r.status === 'desaprobado');
     }, [records]);
 
+    const selectedIndicator = useMemo(() => 
+        indicators.find(i => i.id === viewMode),
+    [indicators, viewMode]);
+
     if (loading) return <div className="space-y-6"><Skeleton className="h-24 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
     return (
         <div className="space-y-6">
             <div className="screen-only">
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>Registro de Calificaciones</CardTitle>
-                            <CardDescription>Gestione los promedios por indicador y cierre el acta de la unidad.</CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                            {isAnyRecordClosed ? (
-                                <Badge variant="default" className="bg-green-600 px-4 py-2 text-sm">
-                                    <CheckCircle2 className="mr-2 h-4 w-4" /> ACTA CERRADA
-                                </Badge>
-                            ) : (
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="secondary">
-                                            <Lock className="mr-2 h-4 w-4" /> Cerrar Acta
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>¿Está seguro de cerrar el acta?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Esta acción calculará los promedios finales y actualizará el estado de la matrícula de todos los estudiantes a "Aprobado" o "Desaprobado". Esto es irreversible desde este panel.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleCloseUnit} disabled={isClosing}>
-                                                {isClosing ? "Cerrando..." : "Sí, Cerrar Acta Oficial"}
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            )}
-                            <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Imprimir</Button>
-                            <Button onClick={handleSaveChanges} disabled={isSaving || isAnyRecordClosed}><Save className="mr-2 h-4 w-4" /> Guardar Cambios</Button>
+                    <CardHeader>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <CardTitle>Registro de Calificaciones</CardTitle>
+                                <CardDescription>Gestione las evaluaciones de los alumnos por cada indicador de logro.</CardDescription>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {isAnyRecordClosed ? (
+                                    <Badge variant="default" className="bg-green-600 px-4 py-2 text-sm h-10">
+                                        <CheckCircle2 className="mr-2 h-4 w-4" /> ACTA CERRADA
+                                    </Badge>
+                                ) : (
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="secondary" className="h-10">
+                                                <Lock className="mr-2 h-4 w-4" /> Cerrar Acta
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Está seguro de cerrar el acta?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción calculará los promedios finales y actualizará el estado de la matrícula de todos los estudiantes a "Aprobado" o "Desaprobado". Esto es irreversible desde este panel.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={handleCloseUnit} disabled={isClosing}>
+                                                    {isClosing ? "Cerrando..." : "Sí, Cerrar Acta Oficial"}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                                <Button variant="outline" onClick={() => window.print()} className="h-10">
+                                    <Printer className="mr-2 h-4 w-4" /> Imprimir
+                                </Button>
+                                <Button onClick={handleSaveChanges} disabled={isSaving || isAnyRecordClosed} className="h-10">
+                                    {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                                    Guardar Calificaciones
+                                </Button>
+                            </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                            {indicators.map(indicator => (
-                                <Card key={indicator.id} className="hover:shadow-md cursor-pointer transition-all border-l-4 border-l-primary" onClick={() => setSelectedIndicator(indicator)}>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">{indicator.name}</CardTitle>
-                                        <CardDescription className="line-clamp-2">{indicator.description}</CardDescription>
-                                    </CardHeader>
-                                </Card>
-                            ))}
+                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 bg-muted/30 rounded-lg border border-dashed">
+                            <Label htmlFor="indicator-select" className="font-bold text-primary flex items-center gap-2 whitespace-nowrap">
+                                <LayoutDashboard className="h-4 w-4" /> SELECCIONAR VISTA:
+                            </Label>
+                            <Select value={viewMode} onValueChange={setViewMode}>
+                                <SelectTrigger id="indicator-select" className="w-full md:w-[400px] bg-background">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="summary" className="font-bold">
+                                        <LayoutDashboard className="mr-2 h-4 w-4 inline" />
+                                        RESUMEN CONSOLIDADO DE NOTAS (PROMEDIOS)
+                                    </SelectItem>
+                                    <SelectItem value="sep" disabled className="text-muted-foreground">───────── INDICADORES ─────────</SelectItem>
+                                    {indicators.map(ind => (
+                                        <SelectItem key={ind.id} value={ind.id}>
+                                            <NotebookPen className="mr-2 h-4 w-4 inline" />
+                                            {ind.name} (Semanas {ind.startWeek}-{ind.endWeek})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </CardContent>
                 </Card>
-            </div>
 
-            {selectedIndicator && (
-                <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm p-4 md:p-10 overflow-y-auto">
-                    <div className="max-w-6xl mx-auto space-y-6">
-                        <Button variant="ghost" onClick={() => setSelectedIndicator(null)}><ArrowLeft className="mr-2 h-4 w-4" /> Volver al Resumen</Button>
-                        <Card>
-                            <CardHeader><CardTitle>Calificando: {selectedIndicator.name}</CardTitle></CardHeader>
-                            <CardContent>
-                                <IndicatorGradebook 
-                                    students={students} 
-                                    indicator={selectedIndicator} 
-                                    records={records} 
-                                    unit={unit}
-                                    tasks={unitTasks}
-                                    onGradeChange={handleGradeChange} 
-                                    onManualEvaluationAdded={handleManualEvaluationAdded} 
-                                    onManualEvaluationDeleted={handleManualEvaluationDeleted}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
+                <div className="mt-6">
+                    {viewMode === 'summary' ? (
+                        <GradebookSummaryTable students={students} indicators={indicators} records={records} />
+                    ) : selectedIndicator ? (
+                        <IndicatorGradebook 
+                            students={students} 
+                            indicator={selectedIndicator} 
+                            records={records} 
+                            unit={unit}
+                            tasks={unitTasks}
+                            onGradeChange={handleGradeChange} 
+                            onManualEvaluationAdded={handleManualEvaluationAdded} 
+                            onManualEvaluationDeleted={handleManualEvaluationDeleted}
+                        />
+                    ) : null}
                 </div>
-            )}
+            </div>
 
             <div className="print-only">
                 <PrintLayout institute={institute} program={program} unit={unit} teacher={teacher} title="REGISTRO CONSOLIDADO DE EVALUACIÓN">
