@@ -225,21 +225,21 @@ export const getAllUsersPaginated = async (options: {
     
     const usersCol = collection(db, 'users');
     
-    const queryConstraints: any[] = [];
+    const q_parts: any[] = [];
     
     if (options.instituteId && options.instituteId !== 'all') {
-        queryConstraints.push(where("instituteId", "==", options.instituteId));
+        q_parts.push(where("instituteId", "==", options.instituteId));
     }
 
-    queryConstraints.push(orderBy("displayName"));
+    q_parts.push(orderBy("displayName"));
     
     if (options.startAfter) {
-        queryConstraints.push(startAfter(options.startAfter));
+        q_parts.push(startAfter(options.startAfter));
     }
     
-    queryConstraints.push(limit(options.limit));
+    q_parts.push(limit(options.limit));
     
-    const q = query(usersCol, ...queryConstraints);
+    const q = query(usersCol, ...q_parts);
     
     const querySnapshot = await getDocs(q);
     
@@ -488,7 +488,7 @@ export const saveSingleAssignment = async (
   unitId: string,
   teacherId: string | null
 ): Promise<void> => {
-    const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_programId`);
+    const assignmentDocRef = doc(db, 'institutes', instituteId, 'assignments', `${year}_${programId}`);
 
     if (teacherId) {
         await setDoc(assignmentDocRef, { 
@@ -1947,13 +1947,13 @@ export const deleteEnvironment = async (instituteId: string, buildingId: string,
 export const getAssetTypes = async (instituteId: string, options?: { search?: string; limit?: number }): Promise<AssetType[]> => {
     const assetTypesCol = getSubCollectionRef(instituteId, 'assetTypes');
     const pageSize = options?.limit || 20;
-    const queries: any[] = [];
+    const q_parts: any[] = [];
     if (options?.search) {
         const searchQuery = options.search.toUpperCase(); 
-        queries.push(where('name', '>=', searchQuery));
-        queries.push(where('name', '<=', searchQuery + '\uf8ff'));
+        q_parts.push(where('name', '>=', searchQuery));
+        q_parts.push(where('name', '<=', searchQuery + '\uf8ff'));
     }
-    const q = query(assetTypesCol, ...queries, orderBy("name"), limit(pageSize));
+    const q = query(assetTypesCol, ...q_parts, orderBy("name"), limit(pageSize));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AssetType));
 };
@@ -2555,14 +2555,20 @@ export const submitTask = async (
 };
 
 export const gradeTaskSubmission = async (
-    instituteId: string, unitId: string, weekNumber: number, taskId: string, taskTitle: string,
-    studentId: string, grade: number, feedback: string
+    instituteId: string, 
+    unitId: string, 
+    period: UnitPeriod,
+    weekNumber: number, 
+    taskId: string, 
+    taskTitle: string,
+    studentId: string, 
+    grade: number, 
+    feedback: string
 ) => {
     const submissionRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', studentId);
     await updateDoc(submissionRef, { grade, feedback });
 
     const currentYear = new Date().getFullYear().toString();
-    const period = weekNumber <= 8 ? 'MAR-JUL' : 'AGO-DIC'; 
     const recordId = `${unitId}_${studentId}_${currentYear}_${period}`;
     const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
     
@@ -2579,7 +2585,14 @@ export const gradeTaskSubmission = async (
         if (index !== -1) grades[indicator.id][index] = gradeEntry;
         else grades[indicator.id].push(gradeEntry);
 
-        await setDoc(recordRef, { grades }, { merge: true });
+        await setDoc(recordRef, { 
+            id: recordId,
+            studentId,
+            unitId,
+            year: currentYear,
+            period,
+            grades 
+        }, { merge: true });
     }
 };
 

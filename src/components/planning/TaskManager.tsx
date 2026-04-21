@@ -128,8 +128,15 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
       setIsSubmitting(true);
       try {
           await gradeTaskSubmission(
-              instituteId, unit.id, weekNumber, selectedTaskForGrading.id, selectedTaskForGrading.title,
-              gradingData.studentId, Number(gradingData.grade), gradingData.feedback
+              instituteId, 
+              unit.id, 
+              unit.period,
+              weekNumber, 
+              selectedTaskForGrading.id, 
+              selectedTaskForGrading.title,
+              gradingData.studentId, 
+              Number(gradingData.grade), 
+              gradingData.feedback
           );
           toast({ title: "Nota Guardada", description: "La calificación ha sido registrada." });
           const updatedSubs = await getTaskSubmissions(instituteId, unit.id, weekNumber, selectedTaskForGrading.id);
