@@ -1,11 +1,33 @@
 
 @media print {
-  body.printing, .no-print {
+  body {
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Reset layout constraints to ensure table doesn't get cut */
+  html, body, main, .printable-content, .sidebar-inset {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .no-print, 
+  [data-sidebar="trigger"],
+  header.page-header,
+  .sidebar-container,
+  button,
+  .screen-only {
     display: none !important;
   }
   
   .printable-area {
     display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   
   .page-break {
@@ -15,73 +37,64 @@
   .print-only {
     display: block !important;
     visibility: visible !important;
-  }
-  
-  .screen-only {
-    display: none !important;
+    width: 100% !important;
   }
   
   table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed; /* Important for column widths */
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: auto !important;
+    page-break-inside: auto;
   }
   
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
   th, td {
-    border: 1px solid #aaa;
-    padding: 4px 6px;
+    border: 1px solid #000 !important;
+    padding: 2px 4px !important;
     text-align: left;
     word-wrap: break-word;
-    vertical-align: top;
+    vertical-align: middle;
+    font-size: 8pt !important;
+    color: #000 !important;
   }
   
   th {
-    background-color: #e9ecef !important;
-    color: #212529 !important;
+    background-color: #f3f4f6 !important;
+    font-weight: bold !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   
-  /* Hide scrollbars in print */
-  .overflow-x-auto::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .overflow-x-auto {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    overflow-x: initial;
-  }
-  
-  h1, h2, h3, h4, p {
-    color: #000;
-  }
-  
   .print-header {
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 2px solid #000;
+    padding-bottom: 0.5rem;
   }
   
   .print-title {
     text-align: center;
-    font-size: 1.2rem;
+    font-size: 11pt;
     font-weight: bold;
-    margin-bottom: 0.5rem;
+    margin: 0.5rem 0;
+    text-transform: uppercase;
   }
   
   .print-info-table {
     width: 100%;
-    border: 1px solid #aaa;
-    border-collapse: collapse;
     margin-bottom: 1rem;
   }
   
   .print-info-table td {
-    border: 1px solid #aaa;
-    padding: 4px 8px;
+    padding: 2px 4px !important;
   }
   
   .print-info-table .label {
     font-weight: bold;
     width: 15%;
+    background-color: #f9fafb !important;
   }
 }

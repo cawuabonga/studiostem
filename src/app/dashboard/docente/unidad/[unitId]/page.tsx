@@ -116,7 +116,7 @@ export default function UnitManagementPage() {
 
         return (
             <div>
-                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4">
+                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4 no-print">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver al menú de la unidad
                 </Button>
@@ -127,7 +127,7 @@ export default function UnitManagementPage() {
 
     return (
         <div className="space-y-6">
-            <Card>
+            <Card className="no-print">
                 <CardHeader>
                     <CardTitle className="text-2xl">{unit.name}</CardTitle>
                     <CardDescription>
