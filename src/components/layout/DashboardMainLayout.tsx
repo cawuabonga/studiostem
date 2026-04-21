@@ -41,13 +41,13 @@ export default function DashboardMainLayout({
 
   return (
     <SidebarProvider defaultOpen={true} >
-      <div className="flex w-full">
+      <div className="flex w-full overflow-hidden">
         <Sidebar variant="sidebar" collapsible="icon" side="left" className="sidebar-container no-print">
             <AppSidebarContents />
         </Sidebar>
         <SidebarRail className="sidebar-container no-print" />
-         <main className="flex-1">
-            <header className={cn("page-header sticky top-0 z-10 flex h-[57px] items-center gap-1 border-b bg-background px-4", "no-print")}>
+         <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden">
+            <header className={cn("page-header sticky top-0 z-10 flex h-[57px] shrink-0 items-center gap-1 border-b bg-background px-4", "no-print")}>
                 <SidebarTrigger className="md:hidden" />
                 <div className="ml-auto flex items-center gap-2 md:ml-0">
                 {institute?.logoUrl ? (
@@ -55,12 +55,12 @@ export default function DashboardMainLayout({
                 ) : (
                     <Building2 className="h-6 w-6" />
                 )}
-                <h1 className="text-xl font-semibold font-headline">
+                <h1 className="text-xl font-semibold font-headline truncate">
                     {getHeaderTitle()}
                 </h1>
                 </div>
             </header>
-            <div className="p-4 md:p-6 printable-content">
+            <div className="flex-1 overflow-auto p-4 md:p-6 printable-content">
                 {children}
             </div>
         </main>

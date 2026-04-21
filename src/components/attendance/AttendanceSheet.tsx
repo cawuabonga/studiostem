@@ -75,126 +75,130 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
 
     return (
         <div className="space-y-4">
-            <div className="relative w-full overflow-auto rounded-xl border shadow-md max-h-[70vh]">
-                <Table className="border-separate border-spacing-0">
-                    <TableHeader>
-                        <TableRow className="bg-slate-100 hover:bg-slate-100 h-10">
-                            <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-50 text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
-                            <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-50 font-bold text-[10px] uppercase border-r border-b">Apellidos y Nombres</TableHead>
-                            {weeksInRange.map(week => (
-                                <TableHead key={week} colSpan={scheduledDays.length} className="sticky top-0 z-30 text-center border-r border-b bg-primary/5 font-black text-[11px] py-1 min-w-[150px]">
-                                    SEMANA {week}
-                                </TableHead>
-                            ))}
-                            <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-50 font-black text-[10px] uppercase border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.1)]">RESUMEN (1-{totalWeeks})</TableHead>
-                        </TableRow>
-                        <TableRow className="bg-slate-50 hover:bg-slate-50 h-12">
-                            <TableHead className="sticky left-0 top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
-                            <TableHead className="sticky left-[40px] top-10 bg-slate-50 z-50 border-r border-b"></TableHead>
-                            {weeksInRange.map(week => (
-                                scheduledDays.map((day, dIdx) => (
-                                    <TableHead key={`${week}-${day}`} className="sticky top-10 z-30 text-center p-1 min-w-[70px] border-r border-b bg-slate-50">
-                                        <div className="flex flex-col items-center leading-tight">
-                                            <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
-                                            <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day)}</span>
-                                            <Button 
-                                                variant="ghost" 
-                                                size="icon" 
-                                                className="h-5 w-5 mt-1 text-green-600 hover:bg-green-100 rounded-full"
-                                                onClick={() => onBulkMark(week, dIdx, 'P')}
-                                            >
-                                                <CheckCircle2 className="h-3 w-3" />
-                                            </Button>
-                                        </div>
+            <div className="relative w-full overflow-hidden rounded-xl border shadow-md bg-background">
+                <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
+                    <Table className="border-separate border-spacing-0 table-auto w-full">
+                        <TableHeader className="sticky top-0 z-50">
+                            <TableRow className="bg-slate-100 hover:bg-slate-100">
+                                <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-[60] text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
+                                <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Apellidos y Nombres</TableHead>
+                                {weeksInRange.map(week => (
+                                    <TableHead key={week} colSpan={scheduledDays.length} className="text-center border-r border-b bg-primary/5 font-black text-[11px] py-1 min-w-[150px]">
+                                        SEMANA {week}
                                     </TableHead>
-                                ))
-                            ))}
-                            <TableHead className="sticky right-0 top-10 bg-slate-50 z-50 text-center text-[9px] uppercase font-black text-muted-foreground border-l border-b shadow-[-4px_0_8px_rgba(0,0,0,0.1)]">Inasistencias</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {students.map((student, index) => {
-                            const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
-                            
-                            if (attendanceRecord?.records[student.documentId]) {
-                                Object.values(attendanceRecord.records[student.documentId]).forEach(weekData => {
-                                    weekData.forEach(status => {
-                                        globalSummary[status as AttendanceStatus]++;
-                                    });
-                                });
-                            }
-
-                            const totalScheduledSessions = totalWeeks * scheduledDays.length;
-                            const totalAbsences = globalSummary.F + globalSummary.J;
-                            const absencePercentage = totalScheduledSessions > 0 ? (totalAbsences / totalScheduledSessions) * 100 : 0;
-                            const isAtRisk = absencePercentage >= 30;
-
-                            return (
-                                <TableRow key={student.documentId} className={cn("h-9 hover:bg-slate-50 transition-colors", isAtRisk && "bg-red-50/70")}>
-                                    <TableCell className="text-center sticky left-0 bg-white z-20 font-mono text-[10px] text-muted-foreground border-r border-b">{index + 1}</TableCell>
-                                    <TableCell className="sticky left-[40px] bg-white z-20 border-r border-b py-1">
-                                        <div className="flex flex-col leading-none">
-                                            <span className={cn("text-[11px] font-bold uppercase whitespace-nowrap", isAtRisk ? "text-red-700" : "text-slate-700")}>
-                                                {student.lastName}, {student.firstName}
-                                            </span>
-                                            <span className="text-[9px] font-mono text-muted-foreground mt-0.5">{student.documentId}</span>
-                                        </div>
-                                    </TableCell>
-                                    {weeksInRange.map(week => (
-                                        scheduledDays.map((day, dIdx) => {
-                                            const status = attendanceRecord?.records[student.documentId]?.[`week_${week}`]?.[dIdx] || 'U';
-                                            return (
-                                                <TableCell key={`${week}-${dIdx}`} className="p-0.5 text-center border-r border-b">
-                                                     <Select
-                                                        value={status}
-                                                        onValueChange={(val) => onAttendanceChange(student.documentId, week, dIdx, val)}
-                                                    >
-                                                        <SelectTrigger className={cn(
-                                                            "w-full h-7 border rounded-sm focus:ring-0 text-[11px] font-black p-0 justify-center", 
-                                                            getStatusColor(status as AttendanceStatus)
-                                                        )}>
-                                                            <SelectValue>
-                                                                {statusOptions.find(o => o.value === status)?.short}
-                                                            </SelectValue>
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {statusOptions.map(opt => (
-                                                                <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                                                                    <span className="font-bold mr-2">{opt.short}</span> {opt.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                            );
-                                        })
-                                    ))}
-                                    <TableCell className="sticky right-0 bg-white z-20 text-center border-l border-b shadow-[-4px_0_12px_rgba(0,0,0,0.08)] py-1">
-                                        <div className="flex flex-col gap-0.5 items-center">
-                                            <div className="flex gap-1">
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild><Badge variant="outline" className="text-[9px] px-1 h-4 border-red-200 text-red-700">F:{globalSummary.F}</Badge></TooltipTrigger>
-                                                        <TooltipContent><p>Faltas Totales</p></TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[10px] font-black px-1.5 h-4", 
-                                                    isAtRisk ? "bg-red-600 text-white border-red-600 animate-pulse" : "bg-slate-100 text-slate-700"
-                                                )}>
-                                                    {absencePercentage.toFixed(0)}%
-                                                </Badge>
+                                ))}
+                                <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">RESUMEN (1-{totalWeeks})</TableHead>
+                            </TableRow>
+                            <TableRow className="bg-slate-50 hover:bg-slate-50">
+                                <TableHead className="sticky left-0 top-[40px] bg-slate-50 z-[60] border-r border-b"></TableHead>
+                                <TableHead className="sticky left-[40px] top-[40px] bg-slate-50 z-[60] border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)]"></TableHead>
+                                {weeksInRange.map(week => (
+                                    scheduledDays.map((day, dIdx) => (
+                                        <TableHead key={`${week}-${day}`} className="text-center p-1 min-w-[70px] border-r border-b bg-slate-50">
+                                            <div className="flex flex-col items-center leading-tight">
+                                                <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
+                                                <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day)}</span>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-5 w-5 mt-1 text-green-600 hover:bg-green-100 rounded-full"
+                                                    onClick={() => onBulkMark(week, dIdx, 'P')}
+                                                >
+                                                    <CheckCircle2 className="h-3 w-3" />
+                                                </Button>
                                             </div>
-                                            {isAtRisk && (
-                                                <span className="text-[8px] font-black text-red-600 uppercase tracking-tighter">Inhabilitado</span>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )
-                        })}
-                    </TableBody>
-                </Table>
+                                        </TableHead>
+                                    ))
+                                ))}
+                                <TableHead className="sticky right-0 top-[40px] bg-slate-50 z-[60] text-center text-[9px] font-black text-muted-foreground border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">Inasistencias</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {students.map((student, index) => {
+                                const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
+                                
+                                if (attendanceRecord?.records[student.documentId]) {
+                                    Object.values(attendanceRecord.records[student.documentId]).forEach(weekData => {
+                                        weekData.forEach(status => {
+                                            globalSummary[status as AttendanceStatus]++;
+                                        });
+                                    });
+                                }
+
+                                const totalScheduledSessions = totalWeeks * scheduledDays.length;
+                                const totalAbsences = globalSummary.F + globalSummary.J;
+                                const absencePercentage = totalScheduledSessions > 0 ? (totalAbsences / totalScheduledSessions) * 100 : 0;
+                                const isAtRisk = absencePercentage >= 30;
+
+                                return (
+                                    <TableRow key={student.documentId} className={cn("h-9 hover:bg-slate-50 transition-colors", isAtRisk && "bg-red-50/70")}>
+                                        <TableCell className="text-center sticky left-0 bg-white z-10 font-mono text-[10px] text-muted-foreground border-r border-b">
+                                            {index + 1}
+                                        </TableCell>
+                                        <TableCell className="sticky left-[40px] bg-white z-10 border-r border-b py-1 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                                            <div className="flex flex-col leading-none">
+                                                <span className={cn("text-[11px] font-bold uppercase whitespace-nowrap", isAtRisk ? "text-red-700" : "text-slate-700")}>
+                                                    {student.lastName}, {student.firstName}
+                                                </span>
+                                                <span className="text-[9px] font-mono text-muted-foreground mt-0.5">{student.documentId}</span>
+                                            </div>
+                                        </TableCell>
+                                        {weeksInRange.map(week => (
+                                            scheduledDays.map((day, dIdx) => {
+                                                const status = attendanceRecord?.records[student.documentId]?.[`week_${week}`]?.[dIdx] || 'U';
+                                                return (
+                                                    <TableCell key={`${week}-${dIdx}`} className="p-0.5 text-center border-r border-b">
+                                                         <Select
+                                                            value={status}
+                                                            onValueChange={(val) => onAttendanceChange(student.documentId, week, dIdx, val)}
+                                                        >
+                                                            <SelectTrigger className={cn(
+                                                                "w-full h-7 border rounded-sm focus:ring-0 text-[11px] font-black p-0 justify-center", 
+                                                                getStatusColor(status as AttendanceStatus)
+                                                            )}>
+                                                                <SelectValue>
+                                                                    {statusOptions.find(o => o.value === status)?.short}
+                                                                </SelectValue>
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {statusOptions.map(opt => (
+                                                                    <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                                                                        <span className="font-bold mr-2">{opt.short}</span> {opt.label}
+                                                                    </SelectItem>
+                                                                ))}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </TableCell>
+                                                );
+                                            })
+                                        ))}
+                                        <TableCell className="sticky right-0 bg-white z-10 text-center border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)] py-1">
+                                            <div className="flex flex-col gap-0.5 items-center">
+                                                <div className="flex gap-1">
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild><Badge variant="outline" className="text-[9px] px-1 h-4 border-red-200 text-red-700">F:{globalSummary.F}</Badge></TooltipTrigger>
+                                                            <TooltipContent><p>Faltas Totales</p></TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                    <Badge variant="outline" className={cn(
+                                                        "text-[10px] font-black px-1.5 h-4", 
+                                                        isAtRisk ? "bg-red-600 text-white border-red-600 animate-pulse" : "bg-slate-100 text-slate-700"
+                                                    )}>
+                                                        {absencePercentage.toFixed(0)}%
+                                                    </Badge>
+                                                </div>
+                                                {isAtRisk && (
+                                                    <span className="text-[8px] font-black text-red-600 uppercase tracking-tighter">Inhabilitado</span>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )
+                            })}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
             <div className="flex flex-wrap justify-between items-center px-2 text-[10px] text-muted-foreground font-medium bg-slate-50 p-2 rounded-lg border border-dashed">
                 <div className="flex gap-4">
@@ -205,7 +209,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                     <div className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-50 border border-gray-200 rounded-sm"></span> <span>S.M: Sin Marcar</span></div>
                 </div>
                 <div className="flex gap-3 items-center">
-                    <p className="italic">Desliza horizontalmente para ver más semanas.</p>
+                    <p className="italic">Usa la barra de scroll inferior para navegar entre semanas.</p>
                     <div className="flex items-center gap-1 text-red-600 font-bold"><AlertTriangle className="h-3 w-3" /> Límite 30% Inasistencias</div>
                 </div>
             </div>
