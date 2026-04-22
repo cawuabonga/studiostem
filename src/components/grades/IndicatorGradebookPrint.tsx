@@ -45,7 +45,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                 <thead>
                     <tr className="bg-gray-100">
                         <th className="border border-black p-1 text-center w-[30px]">N°</th>
-                        <th className="border border-black p-1 text-left w-[220px]">APELLIDOS Y NOMBRES</th>
+                        <th className="border border-black p-1 text-left w-[200px]">APELLIDOS Y NOMBRES</th>
                         {flattenedEvaluations.map(ev => (
                             <th key={ev.id} className="border border-black p-1 text-center grade-col">
                                 <div className="flex flex-col leading-tight">
@@ -66,7 +66,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         return (
                             <tr key={student.documentId}>
                                 <td className="border border-black text-center p-1">{index + 1}</td>
-                                <td className="border border-black p-1 uppercase font-semibold text-[7pt]">
+                                <td className="border border-black p-1 uppercase font-semibold text-[7pt] leading-tight">
                                     {student.lastName}, {student.firstName}
                                     <span className="block text-[6pt] font-normal text-gray-500">{student.documentId}</span>
                                 </td>
