@@ -1,7 +1,7 @@
+
 "use client";
 
 import React from 'react';
-import Image from 'next/image';
 import type { Institute, Program, Unit, Teacher } from '@/types';
 import { format } from 'date-fns';
 
@@ -18,15 +18,20 @@ export function PrintLayout({ institute, program, unit, teacher, title, children
     const today = new Date();
 
     return (
-        <div className="printable-area">
+        <div className="printable-area bg-white text-black">
             <header className="print-header flex items-center justify-between border-b-2 border-black pb-2 mb-4">
                 <div className="flex items-center gap-4">
                     {institute?.logoUrl && (
-                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={60} height={60} className="object-contain" />
+                        /* Use standard img for better print support */
+                        <img 
+                            src={institute.logoUrl} 
+                            alt={`${institute.name} Logo`} 
+                            className="w-[80px] h-[80px] object-contain" 
+                        />
                     )}
                     <div>
                          <h1 className="text-base font-bold leading-tight">{institute?.name || 'Nombre del Instituto'}</h1>
-                         <p className="text-[8pt] text-gray-600 uppercase tracking-tight">Sistema de Gestión Académica</p>
+                         <p className="text-[8pt] text-gray-600 uppercase tracking-tight font-bold">Sistema de Gestión Académica</p>
                     </div>
                 </div>
                  <div className="flex flex-col items-end justify-center">

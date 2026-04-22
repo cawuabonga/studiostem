@@ -9,6 +9,8 @@
     background: white !important;
     padding: 0 !important;
     margin: 0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* Reset layout constraints to ensure table doesn't get cut */
@@ -95,11 +97,17 @@
   
   .print-info-table td {
     padding: 2px 4px !important;
+    border: 1px solid #000 !important;
   }
   
   .print-info-table .label {
     font-weight: bold;
     width: 15%;
     background-color: #f9fafb !important;
+  }
+
+  /* Specific fix for tables with relative positioning from UI components */
+  .relative {
+    position: static !important;
   }
 }
