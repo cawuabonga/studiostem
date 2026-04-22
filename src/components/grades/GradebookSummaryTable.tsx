@@ -23,9 +23,7 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 export function GradebookSummaryTable({ students, indicators, records }: GradebookSummaryTableProps) {
     return (
         <div className="space-y-4 print:space-y-2">
-            {/* The animation is removed to prevent invisibility during print capture */}
             <div className="relative w-full overflow-hidden rounded-xl border shadow-md bg-background print:shadow-none print:border-none print:overflow-visible">
-                {/* Fixed max-height and overflow hidden for print */}
                 <div className="overflow-x-auto overflow-y-auto max-h-[70vh] min-w-0 print:max-h-none print:overflow-visible">
                     <Table className="border-separate border-spacing-0 table-auto w-full print:border-collapse">
                         <TableHeader className="sticky top-0 z-50 print:relative print:z-0">
@@ -33,14 +31,14 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                 <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-[60] text-center font-bold text-[10px] uppercase border-r border-b print:relative print:border-black">N°</TableHead>
                                 <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)] print:relative print:border-black print:shadow-none">Apellidos y Nombres</TableHead>
                                 {indicators.map(indicator => (
-                                    <TableHead key={indicator.id} className="text-center p-2 min-w-[150px] border-r border-b bg-slate-50 print:relative print:border-black print:bg-gray-50">
+                                    <TableHead key={indicator.id} className="text-center p-2 min-w-[80px] print:min-w-[40px] border-r border-b bg-slate-50 print:relative print:border-black print:bg-gray-50">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-[9px] uppercase text-muted-foreground font-black tracking-tight print:text-black">Indicador</span>
-                                            <span className="text-[10px] font-bold leading-tight line-clamp-1 max-w-[130px] text-primary print:text-black">{indicator.name}</span>
+                                            <span className="text-[8px] uppercase text-muted-foreground font-black tracking-tight print:text-black">Ind.</span>
+                                            <span className="text-[10px] font-bold leading-tight line-clamp-1 max-w-[70px] text-primary print:text-black">{indicator.name}</span>
                                         </div>
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-center w-[120px] sticky right-0 top-0 bg-primary/10 text-primary z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)] print:relative print:border-black print:text-black print:shadow-none">PROMEDIO FINAL</TableHead>
+                                <TableHead className="text-center w-[100px] print:w-[60px] sticky right-0 top-0 bg-primary/10 text-primary z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)] print:relative print:border-black print:text-black print:shadow-none">PROM. FINAL</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -67,14 +65,14 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                         </TableCell>
                                         {indicatorAverages.map((avg, i) => (
                                             <TableCell key={indicators[i].id} className={cn(
-                                                "text-center font-bold text-[11px] border-r border-b print:border-black",
+                                                "text-center font-bold text-[11px] border-r border-b print:border-black grade-col",
                                                 avg !== null && avg < 13 ? 'text-destructive print:text-red-700' : 'text-slate-600 print:text-black'
                                             )}>
                                                 {avg !== null ? avg : '--'}
                                             </TableCell>
                                         ))}
                                         <TableCell className={cn(
-                                            "sticky right-0 bg-primary/5 z-10 text-center font-black text-sm border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)] print:relative print:border-black print:bg-transparent print:shadow-none",
+                                            "sticky right-0 bg-primary/5 z-10 text-center font-black text-sm border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)] print:relative print:border-black print:bg-transparent print:shadow-none grade-col",
                                             finalAverage !== null && finalAverage < 13 ? "text-red-600" : "text-primary print:text-black"
                                         )}>
                                             {finalAverage !== null ? finalAverage : '--'}

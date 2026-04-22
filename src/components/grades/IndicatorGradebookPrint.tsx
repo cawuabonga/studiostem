@@ -47,14 +47,14 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         <th className="border border-black p-1 text-center w-[30px]">N°</th>
                         <th className="border border-black p-1 text-left w-[250px]">APELLIDOS Y NOMBRES</th>
                         {flattenedEvaluations.map(ev => (
-                            <th key={ev.id} className="border border-black p-1 text-center min-w-[50px]">
+                            <th key={ev.id} className="border border-black p-1 text-center min-w-[40px]">
                                 <div className="flex flex-col leading-tight">
                                     <span className="text-[6pt] uppercase font-normal">Sem {ev.weekNumber}</span>
-                                    <span className="font-bold text-[7pt] truncate max-w-[80px]">{ev.label}</span>
+                                    <span className="font-bold text-[7pt] truncate max-w-[60px]">{ev.label}</span>
                                 </div>
                             </th>
                         ))}
-                        <th className="border border-black p-1 text-center w-[60px] bg-gray-50">PROM.</th>
+                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50">PROM.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,7 +75,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                     const grade = gradeEntry?.grade;
                                     return (
                                         <td key={ev.id} className={cn(
-                                            "border border-black text-center p-1 font-bold",
+                                            "border border-black text-center p-1 font-bold grade-col",
                                             grade !== null && grade !== undefined && grade < 13 && "text-red-600"
                                         )}>
                                             {grade !== null && grade !== undefined ? grade : '--'}
@@ -83,7 +83,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                     );
                                 })}
                                 <td className={cn(
-                                    "border border-black text-center p-1 font-black bg-gray-50 text-[9pt]",
+                                    "border border-black text-center p-1 font-black bg-gray-50 text-[9pt] grade-col",
                                     avg !== null && avg < 13 ? "text-red-700" : "text-black"
                                 )}>
                                     {avg !== null ? avg : '--'}
