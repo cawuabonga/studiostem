@@ -44,17 +44,21 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
             <table className="w-full border-collapse border border-black text-[7.5pt]">
                 <thead>
                     <tr className="bg-gray-100">
-                        <th className="border border-black p-1 text-center w-[30px]">N°</th>
-                        <th className="border border-black p-1 text-left w-auto whitespace-nowrap">APELLIDOS Y NOMBRES</th>
+                        <th className="border border-black p-1 text-center w-[30px]" rowSpan={2}>N°</th>
+                        <th className="border border-black p-1 text-left w-auto whitespace-nowrap" rowSpan={2}>APELLIDOS Y NOMBRES</th>
                         {flattenedEvaluations.map(ev => (
-                            <th key={ev.id} className="border border-black p-1 text-center grade-col print:w-[32px]">
-                                <div className="flex flex-col items-center leading-tight">
-                                    <span className="text-[6pt] uppercase font-normal">Sem {ev.weekNumber}</span>
-                                    <span className="font-bold text-[6pt] truncate max-w-[30px]">{ev.label}</span>
-                                </div>
+                            <th key={ev.id} className="border border-black p-1 text-center grade-col">
+                                <span className="text-[6pt] uppercase font-normal">SEM {ev.weekNumber}</span>
                             </th>
                         ))}
-                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50 grade-col">PROM.</th>
+                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50 grade-col" rowSpan={2}>PROM.</th>
+                    </tr>
+                    <tr className="bg-gray-100">
+                        {flattenedEvaluations.map(ev => (
+                            <th key={`label-${ev.id}`} className="border border-black p-1 text-center font-bold text-[6pt] truncate max-w-[32px] grade-col">
+                                {ev.label.substring(0, 5)}
+                            </th>
+                        ))}
                     </tr>
                 </thead>
                 <tbody>
@@ -66,7 +70,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         return (
                             <tr key={student.documentId} className="h-auto">
                                 <td className="border border-black text-center p-1">{index + 1}</td>
-                                <td className="border border-black p-1 uppercase font-semibold text-[10pt] leading-tight whitespace-nowrap">
+                                <td className="border border-black p-1 uppercase font-semibold text-[9pt] leading-tight whitespace-nowrap">
                                     {student.lastName}, {student.firstName}
                                     <span className="block text-[6pt] font-normal text-gray-500">{student.documentId}</span>
                                 </td>
@@ -75,7 +79,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                     const grade = gradeEntry?.grade;
                                     return (
                                         <td key={ev.id} className={cn(
-                                            "border border-black text-center p-1 font-bold grade-col print:w-[32px]",
+                                            "border border-black text-center p-1 font-bold grade-col",
                                             grade !== null && grade !== undefined && grade < 13 && "text-red-600"
                                         )}>
                                             {grade !== null && grade !== undefined ? grade : '--'}
@@ -94,7 +98,18 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                 </tbody>
             </table>
             
-            <div className="mt-8 flex justify-around no-print-break">
+            <div className="mt-4 grid grid-cols-2 gap-8 text-[7pt] uppercase">
+                <div className="space-y-1">
+                    <p className="font-bold">Leyenda de Evaluaciones:</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        {flattenedEvaluations.map(ev => (
+                            <p key={ev.id}>{ev.label.substring(0,5)}: {ev.label}</p>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-16 flex justify-around no-print-break">
                 <div className="border-t border-black px-12 pt-1 text-center">
                     <p className="font-bold uppercase text-[8pt]">Firma del Docente</p>
                 </div>

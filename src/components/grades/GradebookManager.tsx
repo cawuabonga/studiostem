@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, ManualEvaluation, Program, Teacher } from '@/types';
+import type { Unit, StudentProfile, AchievementIndicator, AcademicRecord, Task, Program, Teacher } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -69,8 +69,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     
-    // View control
-    const [viewMode, setViewMode] = useState<string>('summary'); // 'summary' or indicatorId
+    const [viewMode, setViewMode] = useState<string>('summary'); 
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -107,7 +106,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             }
             
             setStudents(enrolledStudents.sort((a, b) => a.lastName.localeCompare(b.lastName)));
-            const sortedIndicators = achievementIndicators.sort((a,b) => a.name.localeCompare(b.name));
+            const sortedIndicators = achievementIndicators.sort((a, b) => a.startWeek - b.startWeek);
             setIndicators(sortedIndicators);
 
             const recordsMap: Record<string, AcademicRecord> = {};
@@ -134,7 +133,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                  recordsMap[student.documentId] = existingRecord;
             });
             setRecords(recordsMap);
-            setInitialRecords(recordsMap);
+            setInitialRecords(JSON.parse(JSON.stringify(recordsMap)));
         } catch (error) {
             console.error("Error fetching gradebook data:", error);
             toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
@@ -149,13 +148,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         setRecords(produce(draft => {
             const studentRecord = draft[studentId];
             if (!studentRecord) return;
-
             if (!studentRecord.grades) studentRecord.grades = {};
-            if (!studentRecord.evaluations) studentRecord.evaluations = {};
-
-            if (!studentRecord.grades[indicatorId]) {
-                studentRecord.grades[indicatorId] = [];
-            }
+            if (!studentRecord.grades[indicatorId]) studentRecord.grades[indicatorId] = [];
+            
             const gradeEntryIndex = studentRecord.grades[indicatorId].findIndex(g => g.refId === refId);
             if (gradeEntryIndex !== -1) {
                 if (grade === null) studentRecord.grades[indicatorId].splice(gradeEntryIndex, 1);
@@ -176,11 +171,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 label,
                 weekNumber
             });
-            toast({ title: "Evaluación Añadida", description: `Se ha creado la columna "${label}" para el registro.` });
+            toast({ title: "Evaluación Añadida", description: `Se ha creado la columna "${label}".` });
             fetchData();
         } catch (error) {
-            console.error("Error adding manual evaluation:", error);
-            toast({ title: "Error", description: "No se pudo añadir la evaluación manual.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo añadir la evaluación.", variant: "destructive" });
         }
     };
 
@@ -192,7 +186,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             toast({ title: "Evaluación Eliminada" });
             fetchData();
         } catch (error) {
-            console.error("Error deleting manual evaluation:", error);
             toast({ title: "Error", description: "No se pudo eliminar la evaluación.", variant: "destructive" });
         }
     };
@@ -208,13 +201,13 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 }
             }
             if (updatedRecords.length === 0) {
-                toast({ title: "Sin Cambios", description: "No se han realizado cambios." });
+                toast({ title: "Sin Cambios", description: "No se han realizado modificaciones." });
                 setIsSaving(false);
                 return;
             }
             await batchUpdateAcademicRecords(instituteId, updatedRecords);
             toast({ title: "¡Éxito!", description: "Calificaciones guardadas correctamente." });
-            setInitialRecords(records);
+            setInitialRecords(JSON.parse(JSON.stringify(records)));
         } catch(error) {
             toast({ title: "Error", description: "No se pudo guardar las notas.", variant: "destructive" });
         } finally {
@@ -239,10 +232,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
 
             await closeUnitGrades(instituteId, unit.id, currentYear, unit.period, results);
-            toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada y las matrículas actualizadas." });
+            toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada oficialmente." });
             fetchData();
         } catch (error) {
-            toast({ title: "Error al cerrar", description: "Ocurrió un error técnico al intentar cerrar el acta.", variant: "destructive" });
+            toast({ title: "Error al cerrar", variant: "destructive" });
         } finally {
             setIsClosing(false);
         }
@@ -256,6 +249,10 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         indicators.find(i => i.id === viewMode),
     [indicators, viewMode]);
 
+    const handlePrint = () => {
+        window.print();
+    };
+
     if (loading) return <div className="space-y-6"><Skeleton className="h-24 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
     return (
@@ -265,8 +262,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
-                                <CardTitle>Registro de Calificaciones</CardTitle>
-                                <CardDescription>Gestione las evaluaciones de los alumnos por cada indicador de logro.</CardDescription>
+                                <CardTitle>Control de Calificaciones</CardTitle>
+                                <CardDescription>Registro auxiliar de evaluación modular por indicadores.</CardDescription>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {isAnyRecordClosed ? (
@@ -282,48 +279,40 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Está seguro de cerrar el acta?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción calculará los promedios finales y actualizará el estado de la matrícula de todos los estudiantes a "Aprobado" o "Desaprobado". Esto es irreversible desde este panel.
-                                                </AlertDialogDescription>
+                                                <AlertDialogTitle>¿Cerrar acta de evaluación?</AlertDialogTitle>
+                                                <AlertDialogDescription>Esta acción es irreversible y actualizará la situación académica de todos los estudiantes matriculados.</AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleCloseUnit} disabled={isClosing}>
-                                                    {isClosing ? "Cerrando..." : "Sí, Cerrar Acta Oficial"}
-                                                </AlertDialogAction>
+                                                <AlertDialogAction onClick={handleCloseUnit} disabled={isClosing}>Confirmar Cierre</AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
                                 )}
-                                <Button variant="outline" onClick={() => window.print()} className="h-10">
-                                    <Printer className="mr-2 h-4 w-4" /> Imprimir
+                                <Button variant="outline" onClick={handlePrint} className="h-10">
+                                    <Printer className="mr-2 h-4 w-4" /> Imprimir Registro
                                 </Button>
                                 <Button onClick={handleSaveChanges} disabled={isSaving || isAnyRecordClosed} className="h-10">
                                     {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                                    Guardar Calificaciones
+                                    Guardar Cambios
                                 </Button>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 bg-muted/30 rounded-lg border border-dashed">
+                        <div className="flex flex-col md:flex-row items-center gap-4 p-4 bg-muted/30 rounded-lg border border-dashed">
                             <Label htmlFor="indicator-select" className="font-bold text-primary flex items-center gap-2 whitespace-nowrap">
-                                <LayoutDashboard className="h-4 w-4" /> SELECCIONAR VISTA:
+                                <LayoutDashboard className="h-4 w-4" /> VISTA ACTUAL:
                             </Label>
                             <Select value={viewMode} onValueChange={setViewMode}>
-                                <SelectTrigger id="indicator-select" className="w-full md:w-[400px] bg-background">
+                                <SelectTrigger id="indicator-select" className="w-full md:w-[450px] bg-background">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="summary" className="font-bold">
-                                        <LayoutDashboard className="mr-2 h-4 w-4 inline" />
-                                        RESUMEN CONSOLIDADO DE NOTAS (PROMEDIOS)
-                                    </SelectItem>
-                                    <SelectItem value="sep" disabled className="text-muted-foreground">───────── INDICADORES ─────────</SelectItem>
+                                    <SelectItem value="summary" className="font-bold">RESUMEN CONSOLIDADO (ACTA DE PROMEDIOS)</SelectItem>
+                                    <SelectItem value="sep" disabled className="text-muted-foreground text-center">--- INDICADORES DE LOGRO ---</SelectItem>
                                     {indicators.map(ind => (
                                         <SelectItem key={ind.id} value={ind.id}>
-                                            <NotebookPen className="mr-2 h-4 w-4 inline" />
                                             {ind.name} (Semanas {ind.startWeek}-{ind.endWeek})
                                         </SelectItem>
                                     ))}
@@ -357,7 +346,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     program={program} 
                     unit={unit} 
                     teacher={teacher} 
-                    title={viewMode === 'summary' ? "REGISTRO CONSOLIDADO DE EVALUACIÓN" : `REGISTRO DE EVALUACIÓN - INDICADOR: ${selectedIndicator?.name}`}
+                    title={viewMode === 'summary' ? "REGISTRO CONSOLIDADO DE EVALUACIÓN MODULAR" : `DETALLE DE EVALUACIÓN - INDICADOR: ${selectedIndicator?.name}`}
                 >
                     {viewMode === 'summary' ? (
                         <GradebookSummaryTable students={students} indicators={indicators} records={records} />

@@ -4,10 +4,16 @@
   display: none !important;
 }
 
+@media screen {
+  .screen-only {
+    display: block;
+  }
+}
+
 @media print {
   @page {
     margin: 1cm;
-    /* Permitir que el navegador elija la mejor orientación o respete la del usuario */
+    /* Permitimos que el navegador use landscape o portrait según sea necesario */
   }
 
   body {
@@ -59,7 +65,7 @@
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    table-layout: auto !important; /* El navegador ajusta según espacio */
+    table-layout: auto !important;
     page-break-inside: auto;
   }
   
@@ -70,7 +76,7 @@
 
   th, td {
     border: 1px solid #000 !important;
-    padding: 1px 2px !important;
+    padding: 1px 3px !important;
     text-align: left;
     word-wrap: break-word;
     vertical-align: middle;
@@ -134,8 +140,13 @@
     height: auto !important;
   }
 
-  /* Specific fix for tables with relative positioning from UI components */
-  .relative {
+  /* Desactivar sticky en impresión */
+  .sticky {
     position: static !important;
+  }
+  
+  .shadow-[2px_0_5px_rgba(0,0,0,0.1)],
+  .shadow-[-2px_0_5px_rgba(0,0,0,0.1)] {
+    box-shadow: none !important;
   }
 }
