@@ -49,6 +49,18 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  // Configuración de Webpack para resolver problemas de dependencias de Genkit/Handlebars en el cliente
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        os: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

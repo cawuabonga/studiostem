@@ -145,8 +145,8 @@
     position: static !important;
   }
   
-  .shadow-[2px_0_5px_rgba(0,0,0,0.1)],
-  .shadow-[-2px_0_5px_rgba(0,0,0,0.1)] {
+  /* Eliminar sombras en impresión usando un selector universal de atributo para evitar errores de sintaxis */
+  [class*="shadow-"] {
     box-shadow: none !important;
   }
 }
