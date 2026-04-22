@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { IndicatorGradebookPrint } from './IndicatorGradebookPrint';
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -351,8 +352,23 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             </div>
 
             <div className="print-only">
-                <PrintLayout institute={institute} program={program} unit={unit} teacher={teacher} title="REGISTRO CONSOLIDADO DE EVALUACIÓN">
-                    <GradebookSummaryTable students={students} indicators={indicators} records={records} />
+                <PrintLayout 
+                    institute={institute} 
+                    program={program} 
+                    unit={unit} 
+                    teacher={teacher} 
+                    title={viewMode === 'summary' ? "REGISTRO CONSOLIDADO DE EVALUACIÓN" : `REGISTRO DE EVALUACIÓN - INDICADOR: ${selectedIndicator?.name}`}
+                >
+                    {viewMode === 'summary' ? (
+                        <GradebookSummaryTable students={students} indicators={indicators} records={records} />
+                    ) : selectedIndicator ? (
+                        <IndicatorGradebookPrint 
+                            students={students} 
+                            indicator={selectedIndicator} 
+                            records={records} 
+                            tasks={unitTasks}
+                        />
+                    ) : null}
                 </PrintLayout>
             </div>
         </div>
