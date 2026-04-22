@@ -45,16 +45,16 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                 <thead>
                     <tr className="bg-gray-100">
                         <th className="border border-black p-1 text-center w-[30px]">N°</th>
-                        <th className="border border-black p-1 text-left w-[150px]">APELLIDOS Y NOMBRES</th>
+                        <th className="border border-black p-1 text-left w-[150px] print:w-auto">APELLIDOS Y NOMBRES</th>
                         {flattenedEvaluations.map(ev => (
-                            <th key={ev.id} className="border border-black p-1 text-center grade-col">
-                                <div className="flex flex-col leading-tight">
+                            <th key={ev.id} className="border border-black p-1 text-center grade-col print:w-[32px]">
+                                <div className="flex flex-col items-center leading-tight">
                                     <span className="text-[6pt] uppercase font-normal">Sem {ev.weekNumber}</span>
-                                    <span className="font-bold text-[7pt] truncate max-w-[50px]">{ev.label}</span>
+                                    <span className="font-bold text-[6pt] truncate max-w-[30px]">{ev.label}</span>
                                 </div>
                             </th>
                         ))}
-                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50">PROM.</th>
+                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50 grade-col">PROM.</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -64,7 +64,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         const avg = calculateAverage(allGrades);
 
                         return (
-                            <tr key={student.documentId} className="h-8">
+                            <tr key={student.documentId} className="h-auto">
                                 <td className="border border-black text-center p-1">{index + 1}</td>
                                 <td className="border border-black p-1 uppercase font-semibold text-[10pt] leading-tight">
                                     {student.lastName}, {student.firstName}
@@ -75,7 +75,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                     const grade = gradeEntry?.grade;
                                     return (
                                         <td key={ev.id} className={cn(
-                                            "border border-black text-center p-1 font-bold grade-col",
+                                            "border border-black text-center p-1 font-bold grade-col print:w-[32px]",
                                             grade !== null && grade !== undefined && grade < 13 && "text-red-600"
                                         )}>
                                             {grade !== null && grade !== undefined ? grade : '--'}
