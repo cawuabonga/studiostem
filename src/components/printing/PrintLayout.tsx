@@ -18,53 +18,47 @@ export function PrintLayout({ institute, program, unit, teacher, title, children
     const today = new Date();
 
     return (
-        <div className="printable-area bg-white text-black">
+        <div className="printable-area bg-white text-black p-2">
             <header className="print-header flex items-center justify-between border-b-2 border-black pb-2 mb-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-6">
                     {institute?.logoUrl && (
-                        /* Use standard img for better print support */
+                        /* Use standard img for better print support and cross-origin compatibility */
                         <img 
                             src={institute.logoUrl} 
                             alt={`${institute.name} Logo`} 
-                            className="w-[80px] h-[80px] object-contain" 
+                            className="w-[70px] h-[70px] object-contain" 
                         />
                     )}
                     <div>
-                         <h1 className="text-base font-bold leading-tight">{institute?.name || 'Nombre del Instituto'}</h1>
-                         <p className="text-[8pt] text-gray-600 uppercase tracking-tight font-bold">Sistema de Gestión Académica</p>
+                         <h1 className="text-lg font-bold leading-tight">{institute?.name || 'Nombre del Instituto'}</h1>
+                         <p className="text-[9pt] text-gray-700 uppercase tracking-wider font-black">Sistema de Gestión Académica</p>
                     </div>
                 </div>
                  <div className="flex flex-col items-end justify-center">
-                     <p className="text-[7pt] text-right leading-tight font-medium">
-                        Fecha de Emisión: {format(today, 'dd/MM/yyyy')}<br/>
-                        Hora de Emisión: {format(today, 'HH:mm')}
+                     <p className="text-[8pt] text-right leading-tight font-bold">
+                        FECHA: {format(today, 'dd/MM/yyyy')}<br/>
+                        HORA: {format(today, 'HH:mm')}
                     </p>
                 </div>
             </header>
 
             <div className="text-center my-4">
-                <h2 className="text-sm font-bold uppercase border-y border-black py-1">{title}</h2>
+                <h2 className="text-base font-black uppercase border-y-2 border-black py-2 tracking-widest bg-gray-50">{title}</h2>
             </div>
             
             <table className="print-info-table w-full mb-6">
-                <tbody className="text-[8pt]">
+                <tbody className="text-[9pt]">
                     <tr>
-                        <td className="label font-bold bg-gray-100 border border-black p-1 w-[15%]">Institución:</td>
-                        <td className="border border-black p-1 w-[35%] font-medium">{institute?.name}</td>
-                        <td className="label font-bold bg-gray-100 border border-black p-1 w-[15%]">Programa:</td>
-                        <td className="border border-black p-1 w-[35%] font-medium">{program?.name}</td>
+                        <td className="label font-bold bg-gray-100 border border-black p-1.5 w-[12%]">Programa:</td>
+                        <td className="border border-black p-1.5 w-[38%] font-semibold uppercase">{program?.name}</td>
+                        <td className="label font-bold bg-gray-100 border border-black p-1.5 w-[12%]">Docente:</td>
+                        <td className="border border-black p-1.5 w-[38%] font-semibold uppercase">{teacher?.fullName || 'No asignado'}</td>
                     </tr>
                     <tr>
-                        <td className="label font-bold bg-gray-100 border border-black p-1">Unidad:</td>
-                        <td className="border border-black p-1 font-medium">{unit.name}</td>
-                         <td className="label font-bold bg-gray-100 border border-black p-1">Docente:</td>
-                        <td className="border border-black p-1 font-medium">{teacher?.fullName || 'No asignado'}</td>
-                    </tr>
-                     <tr>
-                        <td className="label font-bold bg-gray-100 border border-black p-1">Periodo:</td>
-                        <td className="border border-black p-1 font-medium">{unit.period}</td>
-                        <td className="label font-bold bg-gray-100 border border-black p-1">Turno:</td>
-                        <td className="border border-black p-1 font-medium">{unit.turno}</td>
+                        <td className="label font-bold bg-gray-100 border border-black p-1.5">Unidad:</td>
+                        <td className="border border-black p-1.5 font-semibold uppercase">{unit.name}</td>
+                        <td className="label font-bold bg-gray-100 border border-black p-1.5">Ciclo/Turno:</td>
+                        <td className="border border-black p-1.5 font-semibold uppercase">{unit.semester}° Ciclo - {unit.turno}</td>
                     </tr>
                 </tbody>
             </table>

@@ -5,6 +5,11 @@
 }
 
 @media print {
+  @page {
+    size: A4 landscape;
+    margin: 1cm;
+  }
+
   body {
     background: white !important;
     padding: 0 !important;
@@ -25,7 +30,8 @@
   header.page-header,
   .sidebar-container,
   button,
-  .screen-only {
+  .screen-only,
+  .no-print-break {
     display: none !important;
   }
   
@@ -61,11 +67,11 @@
 
   th, td {
     border: 1px solid #000 !important;
-    padding: 2px 3px !important;
+    padding: 2px 4px !important;
     text-align: left;
     word-wrap: break-word;
     vertical-align: middle;
-    font-size: 7.5pt !important;
+    font-size: 8pt !important;
     color: #000 !important;
   }
   
@@ -77,14 +83,14 @@
   }
   
   .print-header {
-    margin-bottom: 0.5rem;
+    margin-bottom: 1rem;
     border-bottom: 2px solid #000;
     padding-bottom: 0.5rem;
   }
   
   .print-title {
     text-align: center;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: bold;
     margin: 0.5rem 0;
     text-transform: uppercase;
@@ -96,7 +102,7 @@
   }
   
   .print-info-table td {
-    padding: 2px 4px !important;
+    padding: 3px 5px !important;
     border: 1px solid #000 !important;
   }
   
@@ -108,9 +114,10 @@
 
   /* Specific styles for grade columns to keep them narrow */
   .grade-col {
-    width: 40px !important;
+    width: 35px !important;
     text-align: center !important;
     padding: 2px 1px !important;
+    font-weight: bold !important;
   }
 
   /* Specific fix for tables with relative positioning from UI components */
