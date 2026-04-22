@@ -7,6 +7,7 @@
 @media print {
   @page {
     margin: 1cm;
+    /* Permitir que el navegador elija la mejor orientación o respete la del usuario */
   }
 
   body {
@@ -24,13 +25,15 @@
     display: block !important;
   }
 
+  /* Elementos que NO deben salir en el papel */
   .no-print, 
   [data-sidebar="trigger"],
   header.page-header,
   .sidebar-container,
   button,
   .screen-only,
-  .no-print-break {
+  .no-print-break,
+  .no-print * {
     display: none !important;
   }
   
@@ -52,10 +55,11 @@
     width: 100% !important;
   }
   
+  /* Configuración de la tabla oficial */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    table-layout: auto !important; /* Permitir que el navegador ajuste los anchos */
+    table-layout: auto !important; /* El navegador ajusta según espacio */
     page-break-inside: auto;
   }
   
@@ -95,6 +99,7 @@
     text-transform: uppercase;
   }
   
+  /* Tabla de información del encabezado */
   .print-info-table {
     width: 100%;
     margin-bottom: 1rem;
@@ -112,7 +117,7 @@
     background-color: #f9fafb !important;
   }
 
-  /* Specific styles for grade columns to keep them very narrow */
+  /* ESTILO CRÍTICO: Columnas de notas ultra-estrechas */
   .grade-col {
     width: 32px !important;
     min-width: 32px !important;
@@ -121,6 +126,12 @@
     padding: 1px !important;
     font-weight: bold !important;
     overflow: hidden;
+  }
+
+  /* Asegurar que el logo sea visible */
+  img {
+    max-width: 80px !important;
+    height: auto !important;
   }
 
   /* Specific fix for tables with relative positioning from UI components */
