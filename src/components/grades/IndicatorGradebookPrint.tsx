@@ -66,7 +66,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         return (
                             <tr key={student.documentId} className="h-8">
                                 <td className="border border-black text-center p-1">{index + 1}</td>
-                                <td className="border border-black p-1 uppercase font-semibold text-[7.5pt] leading-tight">
+                                <td className="border border-black p-1 uppercase font-semibold text-[10pt] leading-tight">
                                     {student.lastName}, {student.firstName}
                                     <span className="block text-[6pt] font-normal text-gray-500">{student.documentId}</span>
                                 </td>

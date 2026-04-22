@@ -99,7 +99,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                         <TableHeader className="sticky top-0 z-50">
                             <TableRow className="bg-slate-100 hover:bg-slate-100">
                                 <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-[60] text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
-                                <TableHead className="w-full sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)] min-w-[200px]">Apellidos y Nombres</TableHead>
+                                <TableHead className="w-[350px] min-w-[300px] sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Apellidos y Nombres</TableHead>
                                 {flattenedEvaluations.map(ev => (
                                     <TableHead key={ev.id} className="text-center p-2 w-[80px] min-w-[80px] border-r border-b bg-slate-50">
                                         <div className="flex flex-col items-center gap-1 group">
@@ -137,7 +137,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                         </TableCell>
                                         <TableCell className="sticky left-[40px] bg-white z-10 border-r border-b py-1 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
                                             <div className="flex flex-col leading-none">
-                                                <span className="text-[11px] font-bold uppercase whitespace-nowrap text-slate-700">
+                                                <span className="text-[13px] font-bold uppercase whitespace-nowrap text-slate-700">
                                                     {student.lastName}, {student.firstName}
                                                 </span>
                                                 <span className="text-[9px] font-mono text-muted-foreground mt-0.5">{student.documentId}</span>
