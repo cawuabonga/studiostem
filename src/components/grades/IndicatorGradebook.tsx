@@ -99,15 +99,15 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                         <TableHeader className="sticky top-0 z-50">
                             <TableRow className="bg-slate-100 hover:bg-slate-100">
                                 <TableHead className="w-[40px] sticky left-0 top-0 bg-slate-100 z-[60] text-center font-bold text-[10px] uppercase border-r border-b">N°</TableHead>
-                                <TableHead className="w-[280px] sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)]">Apellidos y Nombres</TableHead>
+                                <TableHead className="w-full sticky left-[40px] top-0 bg-slate-100 z-[60] font-bold text-[10px] uppercase border-r border-b shadow-[2px_0_5px_rgba(0,0,0,0.1)] min-w-[200px]">Apellidos y Nombres</TableHead>
                                 {flattenedEvaluations.map(ev => (
-                                    <TableHead key={ev.id} className="text-center p-2 min-w-[120px] border-r border-b bg-slate-50">
+                                    <TableHead key={ev.id} className="text-center p-2 w-[80px] min-w-[80px] border-r border-b bg-slate-50">
                                         <div className="flex flex-col items-center gap-1 group">
                                             <span className="text-[9px] uppercase text-muted-foreground font-black tracking-tight">Sem. {ev.weekNumber}</span>
-                                            <span className="text-[10px] font-bold leading-tight line-clamp-2 max-w-[100px] text-primary">{ev.label}</span>
+                                            <span className="text-[10px] font-bold leading-tight line-clamp-1 max-w-[70px] text-primary">{ev.label}</span>
                                             <div className="flex items-center gap-1">
                                                 <Badge variant="outline" className={cn("text-[8px] px-1 h-3.5", ev.type === 'task' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50")}>
-                                                    {ev.type === 'task' ? 'Tarea' : 'Manual'}
+                                                    {ev.type === 'task' ? 'T' : 'M'}
                                                 </Badge>
                                                 {ev.type === 'manual' && !isActaClosed && (
                                                     <Button 
@@ -121,7 +121,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                         </div>
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-center w-[100px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">Promedio</TableHead>
+                                <TableHead className="text-center w-[80px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">Promedio</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -146,7 +146,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                         {flattenedEvaluations.map(ev => {
                                             const gradeEntry = studentRecord?.grades?.[indicator.id]?.find(g => g.refId === ev.id);
                                             return (
-                                                <TableCell key={ev.id} className="p-0.5 text-center border-r border-b">
+                                                <TableCell key={ev.id} className="p-0.5 text-center border-r border-b w-[80px]">
                                                     <Input 
                                                         type="number" 
                                                         className={cn(
@@ -167,7 +167,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                             );
                                         })}
                                         <TableCell className={cn(
-                                            "sticky right-0 bg-white z-10 text-center font-black text-xs border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)]",
+                                            "sticky right-0 bg-white z-10 text-center font-black text-xs border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.05)] w-[80px]",
                                             avg !== null && avg < 13 ? "text-red-600" : "text-blue-700"
                                         )}>
                                             {avg !== null ? avg : '--'}

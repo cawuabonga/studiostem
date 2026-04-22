@@ -1,4 +1,5 @@
 
+
 /* Ocultar elementos de impresión por defecto en la pantalla */
 .print-only {
   display: none !important;
@@ -56,7 +57,7 @@
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    table-layout: auto !important;
+    table-layout: fixed !important; /* Forzar el respeto de anchos de columna */
     page-break-inside: auto;
   }
   
@@ -99,6 +100,7 @@
   .print-info-table {
     width: 100%;
     margin-bottom: 1rem;
+    table-layout: auto !important;
   }
   
   .print-info-table td {
@@ -112,12 +114,15 @@
     background-color: #f9fafb !important;
   }
 
-  /* Specific styles for grade columns to keep them narrow */
+  /* Specific styles for grade columns to keep them very narrow */
   .grade-col {
-    width: 30px !important;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
     text-align: center !important;
     padding: 1px !important;
     font-weight: bold !important;
+    overflow: hidden;
   }
 
   /* Specific fix for tables with relative positioning from UI components */
