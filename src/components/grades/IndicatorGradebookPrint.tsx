@@ -41,16 +41,16 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
 
     return (
         <div className="w-full overflow-visible">
-            <table className="w-full border-collapse border border-black text-[8pt]">
+            <table className="w-full border-collapse border border-black text-[7.5pt]">
                 <thead>
                     <tr className="bg-gray-100">
                         <th className="border border-black p-1 text-center w-[30px]">N°</th>
-                        <th className="border border-black p-1 text-left w-[200px]">APELLIDOS Y NOMBRES</th>
+                        <th className="border border-black p-1 text-left w-[150px]">APELLIDOS Y NOMBRES</th>
                         {flattenedEvaluations.map(ev => (
                             <th key={ev.id} className="border border-black p-1 text-center grade-col">
                                 <div className="flex flex-col leading-tight">
                                     <span className="text-[6pt] uppercase font-normal">Sem {ev.weekNumber}</span>
-                                    <span className="font-bold text-[7pt] truncate max-w-[60px]">{ev.label}</span>
+                                    <span className="font-bold text-[7pt] truncate max-w-[50px]">{ev.label}</span>
                                 </div>
                             </th>
                         ))}
@@ -64,9 +64,9 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                         const avg = calculateAverage(allGrades);
 
                         return (
-                            <tr key={student.documentId}>
+                            <tr key={student.documentId} className="h-8">
                                 <td className="border border-black text-center p-1">{index + 1}</td>
-                                <td className="border border-black p-1 uppercase font-semibold text-[7pt] leading-tight">
+                                <td className="border border-black p-1 uppercase font-semibold text-[7.5pt] leading-tight">
                                     {student.lastName}, {student.firstName}
                                     <span className="block text-[6pt] font-normal text-gray-500">{student.documentId}</span>
                                 </td>
@@ -83,7 +83,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                     );
                                 })}
                                 <td className={cn(
-                                    "border border-black text-center p-1 font-black bg-gray-50 text-[9pt] grade-col",
+                                    "border border-black text-center p-1 font-black bg-gray-50 text-[8.5pt] grade-col",
                                     avg !== null && avg < 13 ? "text-red-700" : "text-black"
                                 )}>
                                     {avg !== null ? avg : '--'}
