@@ -130,15 +130,23 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
         if (!instituteId || !weekData) return;
         setIsUpdating(true);
         try {
-            await saveWeekSyllabusData(instituteId, unit.id, weekNumber, {
-                capacityElement: weekData.capacityElement,
-                learningActivities: weekData.learningActivities,
-                basicContents: weekData.basicContents,
-            });
+            // Validate data to avoid sending undefined values to Firebase
+            const updatePayload = {
+                capacityElement: weekData.capacityElement || '',
+                learningActivities: weekData.learningActivities || '',
+                basicContents: weekData.basicContents || '',
+            };
+            
+            await saveWeekSyllabusData(instituteId, unit.id, weekNumber, updatePayload);
             toast({ title: "¡Éxito!", description: "Información del sílabo guardada correctamente." });
             onDataChanged();
-        } catch (error) {
-            toast({ title: "Error", description: "No se pudo guardar la información.", variant: "destructive" });
+        } catch (error: any) {
+            console.error("Save Syllabus Error:", error);
+            toast({ 
+                title: "Error de Guardado", 
+                description: error.message || "No se pudo guardar la información académica.", 
+                variant: "destructive" 
+            });
         } finally {
             setIsUpdating(false);
         }
@@ -202,6 +210,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
                                         placeholder="Describe el elemento de capacidad de esta semana"
                                         value={weekData?.capacityElement || ''}
                                         onChange={e => setWeekData(prev => prev ? ({ ...prev, capacityElement: e.target.value }) : null)}
+                                        disabled={isUpdating}
                                     />
                                 )}
                             </div>
@@ -215,6 +224,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
                                         placeholder="Describe las actividades de aprendizaje de esta semana"
                                         value={weekData?.learningActivities || ''}
                                         onChange={e => setWeekData(prev => prev ? ({ ...prev, learningActivities: e.target.value }) : null)}
+                                        disabled={isUpdating}
                                     />
                                 )}
                             </div>

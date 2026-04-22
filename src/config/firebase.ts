@@ -7,6 +7,8 @@ import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, se
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission } from '@/types';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -1665,7 +1667,24 @@ export const getWeeksVisibility = async (instituteId: string, unitId: string): P
 
 export const saveWeekSyllabusData = async (instituteId: string, unitId: string, weekNumber: number, data: Partial<WeekData>) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
-    await setDoc(weekDocRef, data, { merge: true });
+    // Ensure all undefined values are replaced with empty strings for Firebase compatibility
+    const safeData = {
+        ...data,
+        weekNumber,
+        capacityElement: data.capacityElement || '',
+        learningActivities: data.learningActivities || '',
+        basicContents: data.basicContents || ''
+    };
+    
+    setDoc(weekDocRef, safeData, { merge: true })
+        .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: weekDocRef.path,
+                operation: 'write',
+                requestResourceData: safeData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        });
 };
 
 
