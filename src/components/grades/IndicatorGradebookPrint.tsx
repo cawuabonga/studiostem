@@ -51,12 +51,12 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                                 <span className="text-[6pt] uppercase font-normal">SEM {ev.weekNumber}</span>
                             </th>
                         ))}
-                        <th className="border border-black p-1 text-center w-[50px] bg-gray-50 grade-col" rowSpan={2}>PROM.</th>
+                        <th className="border border-black p-1 text-center w-[60px] bg-gray-50 grade-col" rowSpan={2}>PROM.</th>
                     </tr>
                     <tr className="bg-gray-100">
                         {flattenedEvaluations.map(ev => (
-                            <th key={`label-${ev.id}`} className="border border-black p-1 text-center font-bold text-[6pt] truncate max-w-[32px] grade-col">
-                                {ev.label.substring(0, 5)}
+                            <th key={`label-${ev.id}`} className="border border-black p-1 text-center font-bold text-[6pt] truncate max-w-[42px] grade-col">
+                                {ev.label.substring(0, 6)}
                             </th>
                         ))}
                     </tr>
@@ -103,7 +103,7 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
                     <p className="font-bold">Leyenda de Evaluaciones:</p>
                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                         {flattenedEvaluations.map(ev => (
-                            <p key={ev.id}>{ev.label.substring(0,5)}: {ev.label}</p>
+                            <p key={ev.id}>{ev.label.substring(0,6)}: {ev.label}</p>
                         ))}
                     </div>
                 </div>

@@ -123,11 +123,11 @@
     background-color: #f9fafb !important;
   }
 
-  /* ESTILO CRÍTICO: Columnas de notas ultra-estrechas */
+  /* ESTILO CRÍTICO: Columnas de notas optimizadas */
   .grade-col {
-    width: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
     text-align: center !important;
     padding: 1px !important;
     font-weight: bold !important;
