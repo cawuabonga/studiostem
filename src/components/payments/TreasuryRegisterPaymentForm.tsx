@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Save, Send } from 'lucide-react';
+import { CalendarIcon, Loader2, Save, Send, CreditCard, Receipt } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
@@ -75,7 +76,6 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
     }
   }, [instituteId]);
 
-  // Update fullName if profile changes (e.g. from search)
   useEffect(() => {
     if (profile) {
         form.setValue('fullName', profile.fullName || (profile as any).displayName || '');
@@ -105,7 +105,7 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
             payerName: data.fullName,
             payerType: profile.type,
             payerAuthUid: user.uid,
-            operationNumber: data.receiptNumber, // Reuse receiptNumber as operationNumber if needed
+            operationNumber: data.receiptNumber,
         }, 
         voucher?.[0],
         {
@@ -130,44 +130,39 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {profile.type === 'external' && (
             <FormField
                 control={form.control}
                 name="fullName"
                 render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Nombre y Apellidos</FormLabel>
+                <FormItem className="animate-in slide-in-from-left-4">
+                    <FormLabel className="font-bold">Nombre Completo del Pagador</FormLabel>
                     <FormControl>
                         <Input 
                             {...field} 
-                            placeholder="Nombre del pagador" 
-                            disabled={profile.type !== 'external'} 
-                            className={profile.type !== 'external' ? "bg-muted font-semibold" : ""}
+                            placeholder="Ingrese nombre y apellidos..." 
+                            className="h-12 border-primary/30 focus-visible:ring-primary"
                         />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
             />
-            <div className="space-y-2">
-                <FormLabel>Documento de Identidad</FormLabel>
-                <Input value={profile.documentId} disabled className="bg-muted font-mono" />
-            </div>
-        </div>
+        )}
 
-        <Separator />
-
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-8">
           <FormField
             control={form.control}
             name="concept"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Concepto de Pago</FormLabel>
+                <FormLabel className="flex items-center gap-2 font-bold">
+                    <Receipt className="h-4 w-4 text-primary" /> Concepto de Pago
+                </FormLabel>
                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Seleccione concepto..." /></SelectTrigger>
+                      <SelectTrigger className="h-12 border-primary/20"><SelectValue placeholder="Seleccione concepto..." /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {paymentConcepts.map((concept) => (
@@ -186,29 +181,38 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Monto a Cobrar (S/)</FormLabel>
+                <FormLabel className="flex items-center gap-2 font-bold">
+                    <CreditCard className="h-4 w-4 text-primary" /> Monto a Cobrar (S/)
+                </FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    {...field} 
+                    readOnly 
+                    className="h-12 bg-muted font-black text-xl text-primary border-dashed" 
+                  />
                 </FormControl>
-                <FormDescription>Se auto-rellena según el catálogo de tasas.</FormDescription>
+                <FormDescription>Monto fijo según tasa oficial.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
         
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-8">
             <FormField
                 control={form.control}
                 name="paymentDate"
                 render={({ field }) => (
-                    <FormItem className="flex flex-col pt-2">
-                        <FormLabel className="mb-2">Fecha del Pago</FormLabel>
+                    <FormItem className="flex flex-col">
+                        <FormLabel className="mb-2 font-bold">Fecha del Pago</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <FormControl>
-                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? ( format(field.value, "PPP") ) : ( <span>Fecha del voucher</span> )}
+                                <Button variant={"outline"} className={cn("w-full h-12 pl-3 text-left font-normal border-primary/20", !field.value && "text-muted-foreground")}>
+                                    {field.value ? ( format(field.value, "PPP", { locale: es }) ) : ( <span>Fecha del voucher</span> )}
                                     <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                 </Button>
                                 </FormControl>
@@ -227,8 +231,14 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
                 name="receiptNumber"
                 render={({ field }) => (
                 <FormItem>
-                    <FormLabel>N° Comprobante / Boleta</FormLabel>
-                    <FormControl><Input placeholder="Ej: B001-000123" {...field} /></FormControl>
+                    <FormLabel className="font-bold">N° Comprobante Físico (Boleta)</FormLabel>
+                    <FormControl>
+                        <Input 
+                            placeholder="Ej: B001-000123" 
+                            {...field} 
+                            className="h-12 border-primary/20 font-mono uppercase" 
+                        />
+                    </FormControl>
                     <FormMessage />
                 </FormItem>
                 )}
@@ -239,18 +249,19 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
           control={form.control}
           name="voucher"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Foto del Voucher (Opcional en registro manual)</FormLabel>
-              <FormControl><Input type="file" accept="image/*" {...form.register('voucher')} disabled={loading} /></FormControl>
+            <FormItem className="bg-muted/50 p-6 rounded-xl border-2 border-dashed border-primary/10">
+              <FormLabel className="font-bold">Digitalización de Voucher (Opcional)</FormLabel>
+              <FormControl><Input type="file" accept="image/*" {...form.register('voucher')} disabled={loading} className="bg-background mt-2" /></FormControl>
+              <FormDescription>Suba una captura si desea que el registro tenga respaldo digital.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="flex justify-end gap-3 pt-4">
-            <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                Registrar y Aprobar Cobro
+        <div className="flex justify-end pt-4">
+            <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto h-14 px-8 text-lg shadow-xl shadow-primary/20">
+                {loading ? <Loader2 className="mr-2 h-6 w-6 animate-spin" /> : <Save className="mr-2 h-6 w-6" />}
+                Registrar y Finalizar Cobro
             </Button>
         </div>
       </form>

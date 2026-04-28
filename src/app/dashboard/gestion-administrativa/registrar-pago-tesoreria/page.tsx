@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Search, UserCircle, Briefcase, GraduationCap, ArrowLeft, UserPlus } from 'lucide-react';
+import { Loader2, Search, UserCircle, Briefcase, GraduationCap, ArrowLeft, UserPlus, Fingerprint, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProfile, getStaffProfileByDocumentId, getPrograms, getRoles } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { TreasuryRegisterPaymentForm } from '@/components/payments/TreasuryRegisterPaymentForm';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 const searchSchema = z.object({
   documentId: z.string().min(1, { message: 'Ingrese un número de documento.' }),
@@ -37,7 +38,7 @@ export default function TreasuryPaymentRegistrationPage() {
   const [loading, setLoading] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<PayerProfile | null>(null);
   
-  const form = useForm<SearchFormValues>({
+  const searchForm = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
     defaultValues: { documentId: '' },
   });
@@ -46,7 +47,6 @@ export default function TreasuryPaymentRegistrationPage() {
     if (!instituteId) return;
     setLoading(true);
     try {
-      // 1. Fetch auxiliary data for names
       const [programs, roles] = await Promise.all([
           getPrograms(instituteId),
           getRoles(instituteId)
@@ -54,7 +54,6 @@ export default function TreasuryPaymentRegistrationPage() {
       const programMap = new Map(programs.map(p => [p.id, p.name]));
       const roleMap = new Map(roles.map(r => [r.id, r.name]));
 
-      // 2. Search for Student
       const student = await getStudentProfile(instituteId, data.documentId);
       if (student) {
         setSelectedProfile({
@@ -68,7 +67,6 @@ export default function TreasuryPaymentRegistrationPage() {
         return;
       }
 
-      // 3. Search for Staff
       const staff = await getStaffProfileByDocumentId(instituteId, data.documentId);
       if (staff) {
         setSelectedProfile({
@@ -82,7 +80,6 @@ export default function TreasuryPaymentRegistrationPage() {
         return;
       }
       
-      // 4. Not found
       toast({
           title: "Documento no registrado",
           description: "No se encontró un perfil con ese documento. Puede registrarlo como pagador externo.",
@@ -97,7 +94,7 @@ export default function TreasuryPaymentRegistrationPage() {
   };
 
   const handleExternalPayer = () => {
-      const docId = form.getValues('documentId');
+      const docId = searchForm.getValues('documentId');
       if (!docId) {
           toast({ title: "Atención", description: "Ingrese un documento primero.", variant: "destructive" });
           return;
@@ -113,7 +110,7 @@ export default function TreasuryPaymentRegistrationPage() {
 
   const resetSelection = () => {
       setSelectedProfile(null);
-      form.reset({ documentId: '' });
+      searchForm.reset({ documentId: '' });
   };
 
   if (authLoading || !hasPermission('admin:payments:validate')) {
@@ -121,131 +118,129 @@ export default function TreasuryPaymentRegistrationPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
-        <Card className="border-primary/20 shadow-md">
-            <CardHeader className="bg-primary/5 rounded-t-lg">
-                <CardTitle className="flex items-center gap-2">
-                    <UserCircle className="h-6 w-6 text-primary" />
-                    Búsqueda de Pagador
-                </CardTitle>
-                <CardDescription>
-                    Ingrese el documento de identidad para cargar los datos automáticamente.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSearch)} className="flex flex-col sm:flex-row gap-4 items-end">
-                        <FormField
-                            control={form.control}
-                            name="documentId"
-                            render={({ field }) => (
-                            <FormItem className="flex-1">
-                                <FormLabel>Número de Documento (DNI, Pasaporte, etc.)</FormLabel>
-                                <FormControl>
-                                    <Input 
-                                        placeholder="Ej: 12345678" 
-                                        {...field} 
-                                        disabled={!!selectedProfile || loading}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                form.handleSubmit(onSearch)();
-                                            }
-                                        }}
-                                    />
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}
-                        />
-                        {!selectedProfile ? (
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <Button type="submit" disabled={loading} className="flex-1 sm:flex-none">
-                                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                    Buscar
-                                </Button>
-                                <Button type="button" variant="outline" onClick={handleExternalPayer} disabled={loading}>
-                                    <UserPlus className="mr-2 h-4 w-4" />
-                                    Es Externo
-                                </Button>
-                            </div>
-                        ) : (
-                            <Button type="button" variant="ghost" onClick={resetSelection} className="text-muted-foreground">
+    <div className="space-y-6 pb-12">
+        {!selectedProfile ? (
+            <div className="max-w-xl mx-auto pt-12 animate-in fade-in zoom-in-95 duration-500">
+                <Card className="border-primary/20 shadow-2xl">
+                    <CardHeader className="text-center bg-primary/5 rounded-t-lg">
+                        <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
+                            <Fingerprint className="h-8 w-8 text-primary" />
+                        </div>
+                        <CardTitle className="text-2xl">Terminal de Cobranza</CardTitle>
+                        <CardDescription>
+                            Ingrese el documento del pagador para iniciar el registro.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-8">
+                        <Form {...searchForm}>
+                            <form onSubmit={searchForm.handleSubmit(onSearch)} className="space-y-6">
+                                <FormField
+                                    control={searchForm.control}
+                                    name="documentId"
+                                    render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="font-bold">Número de Documento de Identidad</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                                placeholder="DNI, Pasaporte o Carné de Extranjería" 
+                                                {...field} 
+                                                className="h-12 text-lg text-center font-mono tracking-widest"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                    )}
+                                />
+                                <div className="flex flex-col gap-2">
+                                    <Button type="submit" size="lg" disabled={loading} className="w-full h-12 text-base">
+                                        {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Search className="mr-2 h-5 w-5" />}
+                                        Buscar Pagador
+                                    </Button>
+                                    <Button type="button" variant="ghost" onClick={handleExternalPayer} disabled={loading} className="text-muted-foreground">
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Registrar como Pagador Externo
+                                    </Button>
+                                </div>
+                            </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+            </div>
+        ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* Lateral: Búsqueda y Perfil */}
+                <div className="lg:col-span-4 space-y-6">
+                    <Card className="border-primary/20 shadow-sm">
+                        <CardHeader className="py-4">
+                            <CardTitle className="text-sm font-bold uppercase text-muted-foreground">Cambiar Pagador</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                             <Button type="button" variant="outline" onClick={resetSelection} className="w-full justify-start text-muted-foreground">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Cambiar Pagador
+                                Nueva Búsqueda
                             </Button>
-                        )}
-                    </form>
-                </Form>
-            </CardContent>
-        </Card>
+                        </CardContent>
+                    </Card>
 
-        {selectedProfile && (
-            <div className="animate-in fade-in slide-in-from-top-4 duration-300 space-y-6">
-                {/* Perfil Header */}
-                <Card className="bg-muted/30 border-dashed">
-                    <CardContent className="pt-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Nombre Completo</p>
-                                <p className="font-semibold">{selectedProfile.fullName || (selectedProfile.type === 'external' ? 'Por ingresar...' : '---')}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Rol / Cargo</p>
-                                <Badge variant="secondary" className="bg-primary/10 text-primary">{selectedProfile.roleName}</Badge>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Programa de Estudios</p>
-                                <div className="flex items-center gap-1 text-sm">
-                                    <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span>{selectedProfile.programName}</span>
+                    <Card className="bg-primary text-primary-foreground border-t-8 border-t-accent shadow-lg sticky top-20">
+                        <CardHeader className="pb-2">
+                             <div className="flex justify-between items-center mb-4">
+                                <div className="bg-white/20 p-2 rounded-lg">
+                                    <UserCircle className="h-8 w-8 text-white" />
+                                </div>
+                                <Badge variant="secondary" className="bg-accent text-accent-foreground border-none font-black uppercase text-[10px]">
+                                    {selectedProfile.roleName}
+                                </Badge>
+                             </div>
+                             <CardTitle className="text-xl leading-tight">{selectedProfile.fullName || 'PAGADOR EXTERNO'}</CardTitle>
+                             <CardDescription className="text-primary-foreground/70 font-mono">
+                                ID: {selectedProfile.documentId}
+                             </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-2">
+                            <Separator className="bg-white/10" />
+                            <div className="space-y-3">
+                                <div className="flex gap-3">
+                                    <Briefcase className="h-4 w-4 shrink-0 opacity-70" />
+                                    <div className="space-y-0.5">
+                                        <p className="text-[10px] uppercase font-bold opacity-60">Categoría</p>
+                                        <p className="text-sm font-medium">{selectedProfile.type.toUpperCase()}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <GraduationCap className="h-4 w-4 shrink-0 opacity-70" />
+                                    <div className="space-y-0.5">
+                                        <p className="text-[10px] uppercase font-bold opacity-60">Programa de Estudios</p>
+                                        <p className="text-sm font-medium leading-tight">{selectedProfile.programName}</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Estado Búsqueda</p>
-                                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" /> Documento Validado
+                            <div className="pt-4">
+                                <Badge variant="outline" className="w-full justify-center bg-green-500/10 text-green-300 border-green-500/20 py-1">
+                                    <ShieldCheck className="h-3 w-3 mr-2" /> Identidad Validada
                                 </Badge>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                {/* Formulario de Pago */}
-                <Card className="shadow-lg border-t-4 border-t-primary">
-                    <CardHeader>
-                        <CardTitle>Detalles del Registro de Pago</CardTitle>
-                        <CardDescription>Complete la información del comprobante y adjunte el voucher.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <TreasuryRegisterPaymentForm 
-                            profile={selectedProfile as any} 
-                            onSuccess={resetSelection}
-                        />
-                    </CardContent>
-                </Card>
+                {/* Principal: Formulario de Pago */}
+                <div className="lg:col-span-8">
+                    <Card className="shadow-2xl border-none h-full">
+                        <CardHeader className="bg-muted/30 border-b">
+                            <CardTitle className="text-2xl font-black text-primary">Detalles del Registro de Pago</CardTitle>
+                            <CardDescription>Ingrese la información del comprobante físico entregado al usuario.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-8">
+                            <TreasuryRegisterPaymentForm 
+                                profile={selectedProfile as any} 
+                                onSuccess={resetSelection}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         )}
     </div>
   );
-}
-
-function CheckCircle2({ className }: { className?: string }) {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className={className}
-        >
-            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
-            <path d="m9 12 2 2 4-4" />
-        </svg>
-    )
 }
