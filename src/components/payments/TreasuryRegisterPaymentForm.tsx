@@ -7,49 +7,62 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2 } from 'lucide-react';
+import { CalendarIcon, Loader2, Save, Send } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
-import { useRouter } from 'next/navigation';
 import type { PaymentConcept, StudentProfile, StaffProfile } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Separator } from '../ui/separator';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const paymentSchema = z.object({
+  fullName: z.string().min(3, { message: 'El nombre es requerido.' }),
   concept: z.string({ required_error: 'Debe seleccionar un concepto.' }).min(1, 'Debe seleccionar un concepto.'),
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor a cero.'),
   paymentDate: z.date({ required_error: 'La fecha de pago es requerida.' }),
-  receiptNumber: z.string().optional(),
+  receiptNumber: z.string().min(1, { message: 'Ingrese el número de comprobante o boleta.' }),
   voucher: z.instanceof(FileList).optional()
-    .refine(files => !files || files.length === 0 || files?.[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 5MB.`)
+    .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 5MB.`)
     .refine(
       files => !files || files.length === 0 || ACCEPTED_IMAGE_TYPES.includes(files?.[0]?.type),
       "Solo se aceptan formatos .jpg, .jpeg, .png y .webp."
     ),
 });
 
-
 type PaymentFormValues = z.infer<typeof paymentSchema>;
 
 type PayerProfile = (StudentProfile | StaffProfile) & { type: 'student' | 'staff' | 'external' };
+
 interface TreasuryRegisterPaymentFormProps {
     profile: PayerProfile;
+    onSuccess: () => void;
 }
 
-export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPaymentFormProps) {
+export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegisterPaymentFormProps) {
   const { user, instituteId } = useAuth();
   const { toast } = useToast();
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paymentConcepts, setPaymentConcepts] = useState<PaymentConcept[]>([]);
+
+  const form = useForm<PaymentFormValues>({
+    resolver: zodResolver(paymentSchema),
+    defaultValues: {
+      fullName: profile.fullName || (profile as any).displayName || '',
+      concept: "",
+      amount: 0,
+      receiptNumber: '',
+      paymentDate: new Date(),
+      voucher: undefined,
+    }
+  });
 
   useEffect(() => {
     if (instituteId) {
@@ -62,16 +75,12 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
     }
   }, [instituteId]);
 
-  const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      concept: "",
-      amount: 0,
-      receiptNumber: '',
-      paymentDate: new Date(),
-      voucher: undefined,
+  // Update fullName if profile changes (e.g. from search)
+  useEffect(() => {
+    if (profile) {
+        form.setValue('fullName', profile.fullName || (profile as any).displayName || '');
     }
-  });
+  }, [profile, form]);
 
   const selectedConceptName = form.watch('concept');
 
@@ -87,14 +96,16 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
     setLoading(true);
     try {
       const { voucher, ...paymentData } = data;
+      
       await registerPayment(
         instituteId, 
         { 
             ...paymentData, 
             payerId: profile.documentId, 
-            payerName: (profile as StudentProfile).fullName || (profile as StaffProfile).displayName,
+            payerName: data.fullName,
             payerType: profile.type,
             payerAuthUid: user.uid,
+            operationNumber: data.receiptNumber, // Reuse receiptNumber as operationNumber if needed
         }, 
         voucher?.[0],
         {
@@ -102,11 +113,13 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
             receiptNumber: data.receiptNumber
         }
       );
+
       toast({
-        title: '¡Pago Registrado y Aprobado!',
-        description: `El pago para ${profile.fullName || profile.displayName} ha sido guardado correctamente.`,
+        title: '¡Pago Registrado!',
+        description: `El pago para ${data.fullName} ha sido procesado con éxito.`,
       });
-      router.push('/dashboard/gestion-administrativa/validar-pagos');
+      
+      onSuccess();
     } catch (error: any) {
       console.error("Payment registration error:", error);
       toast({ title: "Error", description: error.message || "No se pudo registrar el pago.", variant: "destructive" });
@@ -118,7 +131,34 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="fullName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Nombre y Apellidos</FormLabel>
+                    <FormControl>
+                        <Input 
+                            {...field} 
+                            placeholder="Nombre del pagador" 
+                            disabled={profile.type !== 'external'} 
+                            className={profile.type !== 'external' ? "bg-muted font-semibold" : ""}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <div className="space-y-2">
+                <FormLabel>Documento de Identidad</FormLabel>
+                <Input value={profile.documentId} disabled className="bg-muted font-mono" />
+            </div>
+        </div>
+
+        <Separator />
+
+        <div className="grid md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="concept"
@@ -127,7 +167,7 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
                 <FormLabel>Concepto de Pago</FormLabel>
                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger><SelectValue placeholder="Selecciona un concepto..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Seleccione concepto..." /></SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {paymentConcepts.map((concept) => (
@@ -146,68 +186,73 @@ export function TreasuryRegisterPaymentForm({ profile }: TreasuryRegisterPayment
             name="amount"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Monto Pagado (S/)</FormLabel>
+                <FormLabel>Monto a Cobrar (S/)</FormLabel>
                 <FormControl>
-                  <Input type="number" step="0.01" placeholder="0.00" {...field} readOnly className="bg-muted" />
+                  <Input type="number" step="0.01" placeholder="0.00" {...field} />
                 </FormControl>
+                <FormDescription>Se auto-rellena según el catálogo de tasas.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
         
-        <FormField
-            control={form.control}
-            name="paymentDate"
-            render={({ field }) => (
-                <FormItem className="flex flex-col pt-2">
-                    <FormLabel className="mb-2">Fecha del Pago</FormLabel>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                {field.value ? ( format(field.value, "PPP") ) : ( <span>Seleccione la fecha del voucher</span> )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("2020-01-01")} initialFocus />
-                        </PopoverContent>
-                    </Popover>
+        <div className="grid md:grid-cols-2 gap-6">
+            <FormField
+                control={form.control}
+                name="paymentDate"
+                render={({ field }) => (
+                    <FormItem className="flex flex-col pt-2">
+                        <FormLabel className="mb-2">Fecha del Pago</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <FormControl>
+                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                    {field.value ? ( format(field.value, "PPP") ) : ( <span>Fecha del voucher</span> )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                                </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus />
+                            </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}
+            />
+                
+            <FormField
+                control={form.control}
+                name="receiptNumber"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel>N° Comprobante / Boleta</FormLabel>
+                    <FormControl><Input placeholder="Ej: B001-000123" {...field} /></FormControl>
                     <FormMessage />
                 </FormItem>
-            )}
-        />
-            
-         <FormField
-            control={form.control}
-            name="receiptNumber"
-            render={({ field }) => (
-            <FormItem>
-                <FormLabel>Comprobante de banco o boleta electronica</FormLabel>
-                <FormControl><Input placeholder="Ej: B001-0012345" {...field} /></FormControl>
-                <FormMessage />
-            </FormItem>
-            )}
-        />
+                )}
+            />
+        </div>
 
         <FormField
           control={form.control}
           name="voucher"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Adjuntar Voucher</FormLabel>
+              <FormLabel>Foto del Voucher (Opcional en registro manual)</FormLabel>
               <FormControl><Input type="file" accept="image/*" {...form.register('voucher')} disabled={loading} /></FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {loading ? 'Registrando...' : 'Registrar y Aprobar Pago'}
-        </Button>
+        <div className="flex justify-end gap-3 pt-4">
+            <Button type="submit" size="lg" disabled={loading} className="w-full sm:w-auto">
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Registrar y Aprobar Cobro
+            </Button>
+        </div>
       </form>
     </Form>
   );
