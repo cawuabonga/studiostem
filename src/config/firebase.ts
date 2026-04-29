@@ -941,6 +941,18 @@ export const getPaymentsByStatus = async (
     return { payments, newLastVisible };
 };
 
+export const getRecentApprovedPayments = async (instituteId: string, limitCount: number = 6): Promise<Payment[]> => {
+    const paymentsCol = getSubCollectionRef(instituteId, 'payments');
+    const q = query(
+        paymentsCol,
+        where("status", "==", "Aprobado"),
+        orderBy("processedAt", "desc"),
+        limit(limitCount)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment));
+};
+
 export const getApprovedPaymentsInDateRange = async (instituteId: string, from: Date, to: Date): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const q = query(
