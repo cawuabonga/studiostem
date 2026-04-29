@@ -1,9 +1,10 @@
+
 'use server';
 /**
  * @fileOverview A flow for generating a syllabus summary (sumilla).
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, getActiveAIModel} from '@/ai/genkit';
 import {z} from 'zod';
 
 const GenerateSyllabusSummaryInputSchema = z.object({
@@ -18,7 +19,9 @@ export const generateSyllabusSummary = ai.defineFlow(
     outputSchema: z.string(),
   },
   async ({unitName}) => {
+    const model = await getActiveAIModel();
     const {text} = await ai.generate({
+      model,
       prompt: `Eres un experto diseñador de currículos académicos. Genera una sumilla concisa y profesional para una unidad didáctica titulada "${unitName}". La sumilla debe describir la naturaleza, propósito y contenido principal de la unidad. El resultado debe ser únicamente el texto de la sumilla, sin títulos ni introducciones.`,
     });
     return text;

@@ -21,6 +21,17 @@ export interface AppUser {
   turno?: UnitTurno; // Para estudiantes
 }
 
+// AI Configuration Types
+export type AIProvider = 'google' | 'ollama';
+
+export interface AIConfig {
+    activeProvider: AIProvider;
+    ollamaUrl: string;
+    ollamaModel: string;
+    lastUpdated?: Timestamp;
+    updatedBy?: string;
+}
+
 // Represents a pre-created profile for a staff member, identified by Document ID.
 // This is created by an admin and can be "claimed" by a user.
 export interface StaffProfile {

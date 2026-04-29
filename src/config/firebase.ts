@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -46,6 +46,18 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
+};
+
+// --- AI CONFIGURATION ---
+export const getAIConfig = async (): Promise<AIConfig | null> => {
+    const docRef = doc(db, 'config', 'aiConfig');
+    const snap = await getDoc(docRef);
+    return snap.exists() ? snap.data() as AIConfig : null;
+};
+
+export const saveAIConfig = async (config: Partial<AIConfig>): Promise<void> => {
+    const docRef = doc(db, 'config', 'aiConfig');
+    await setDoc(docRef, { ...config, lastUpdated: Timestamp.now() }, { merge: true });
 };
 
 
@@ -1427,7 +1439,7 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
 
     records.forEach(record => {
         const docRef = doc(recordsCol, record.id);
-        batch.set(docRef, record, { merge: true });
+        batch.set(record, { merge: true });
     });
 
     await batch.commit();
@@ -2036,7 +2048,7 @@ export const updateAssetType = async (instituteId: string, assetTypeId: string, 
 };
 
 export const deleteAssetType = async (instituteId: string, assetTypeId: string): Promise<void> => {
-    const assetTypeRef = doc(db, 'institutes', instituteId, 'assetTypes', assetTypeId);
+    const assetTypeRef = doc(instituteId, 'assetTypes', assetTypeId);
     await deleteDoc(assetTypeRef);
 };
 

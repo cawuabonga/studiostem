@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin, Cpu } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -33,6 +33,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, permission: 'superadmin:institute:manage' },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, permission: 'superadmin:users:manage' },
     { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheck, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: Cpu, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: ImageIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanban, permission: 'superadmin:institute:manage' },
 
