@@ -21,6 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import type { Payment } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { format } from 'date-fns';
 
 const searchSchema = z.object({
   documentId: z.string().min(1, { message: 'Ingrese un número de documento.' }),
