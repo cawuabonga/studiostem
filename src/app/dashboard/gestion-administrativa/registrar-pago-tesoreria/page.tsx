@@ -9,13 +9,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Search, UserCircle, Briefcase, GraduationCap, ArrowLeft, UserPlus, Fingerprint, ShieldCheck } from 'lucide-react';
+import { Loader2, Search, UserCircle, Briefcase, GraduationCap, ArrowLeft, UserPlus, Fingerprint, ShieldCheck, Upload } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProfile, getStaffProfileByDocumentId, getPrograms, getRoles } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { TreasuryRegisterPaymentForm } from '@/components/payments/TreasuryRegisterPaymentForm';
+import { BulkUploadPayments } from '@/components/payments/BulkUploadPayments';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const searchSchema = z.object({
   documentId: z.string().min(1, { message: 'Ingrese un número de documento.' }),
@@ -119,6 +121,32 @@ export default function TreasuryPaymentRegistrationPage() {
 
   return (
     <div className="space-y-6 pb-12">
+        <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="bulk-upload" className="border-none">
+                <AccordionTrigger className="bg-muted/50 px-6 rounded-lg hover:no-underline">
+                    <div className="flex items-center gap-2">
+                        <Upload className="h-5 w-5 text-primary" />
+                        <span className="text-base font-bold">Carga Masiva de Pagos desde Excel</span>
+                    </div>
+                </AccordionTrigger>
+                <AccordionContent className="pt-6 px-4">
+                    <Card className="border-dashed">
+                        <CardHeader>
+                            <CardTitle>Importación por Lotes</CardTitle>
+                            <CardDescription>
+                                Utilice esta herramienta para registrar múltiples pagos a la vez. Los montos ingresados en el Excel serán respetados independientemente de las tasas actuales.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <BulkUploadPayments onUploadSuccess={resetSelection} />
+                        </CardContent>
+                    </Card>
+                </AccordionContent>
+            </AccordionItem>
+        </Accordion>
+
+        <Separator className="my-6" />
+
         {!selectedProfile ? (
             <div className="max-w-xl mx-auto pt-12 animate-in fade-in zoom-in-95 duration-500">
                 <Card className="border-primary/20 shadow-2xl">
@@ -126,7 +154,7 @@ export default function TreasuryPaymentRegistrationPage() {
                         <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mb-4">
                             <Fingerprint className="h-8 w-8 text-primary" />
                         </div>
-                        <CardTitle className="text-2xl">Terminal de Cobranza</CardTitle>
+                        <CardTitle className="text-2xl">Terminal de Cobranza Manual</CardTitle>
                         <CardDescription>
                             Ingrese el documento del pagador para iniciar el registro.
                         </CardDescription>
@@ -142,7 +170,7 @@ export default function TreasuryPaymentRegistrationPage() {
                                         <FormLabel className="font-bold">Número de Documento de Identidad</FormLabel>
                                         <FormControl>
                                             <Input 
-                                                placeholder="DNI, Pasaporte o Carné de Extranjería" 
+                                                placeholder="DNI, Pasaporte o Carné" 
                                                 {...field} 
                                                 className="h-12 text-lg text-center font-mono tracking-widest"
                                             />

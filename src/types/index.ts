@@ -302,6 +302,7 @@ export interface Payment {
   receiptNumber?: string; 
   rejectionReason?: string;
   annulmentReason?: string;
+  observations?: string;
 }
 
 

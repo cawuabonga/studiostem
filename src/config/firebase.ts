@@ -884,6 +884,25 @@ export const registerPayment = async (
     await setDoc(paymentDocRef, paymentData);
 }
 
+export const bulkRegisterPayments = async (instituteId: string, payments: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'>[]) => {
+    const batch = writeBatch(db);
+    const paymentsCol = getSubCollectionRef(instituteId, 'payments');
+
+    payments.forEach(paymentData => {
+        const docRef = doc(paymentsCol);
+        batch.set(docRef, {
+            ...paymentData,
+            status: 'Aprobado',
+            voucherUrl: '', // Bulk upload usually doesn't have images
+            createdAt: Timestamp.now(),
+            processedAt: Timestamp.now(),
+        });
+    });
+
+    await batch.commit();
+};
+
+
 export const getStudentPaymentsByStatus = async (instituteId: string, payerId: string, status: PaymentStatus): Promise<Payment[]> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const q = query(
@@ -2588,7 +2607,7 @@ export const gradeTaskSubmission = async (
     await updateDoc(submissionRef, { grade, feedback });
 
     const currentYear = new Date().getFullYear().toString();
-    const recordId = `${unitId}_${studentId}_${currentYear}_${period}`;
+    const recordId = `${unitId}_${studentId}_currentYear_${period}`;
     const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
     
     const recordSnap = await getDoc(recordRef);

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Save, Send, CreditCard, Receipt } from 'lucide-react';
+import { CalendarIcon, Loader2, Save, Send, CreditCard, Receipt, MessageSquareText } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -19,7 +19,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
 import type { PaymentConcept, StudentProfile, StaffProfile } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Separator } from '../ui/separator';
+import { Textarea } from '../ui/textarea';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -30,6 +30,7 @@ const paymentSchema = z.object({
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor a cero.'),
   paymentDate: z.date({ required_error: 'La fecha de pago es requerida.' }),
   receiptNumber: z.string().min(1, { message: 'Ingrese el número de comprobante o boleta.' }),
+  observations: z.string().optional(),
   voucher: z.instanceof(FileList).optional()
     .refine(files => !files || files.length === 0 || files[0]?.size <= MAX_FILE_SIZE, `El tamaño máximo es de 5MB.`)
     .refine(
@@ -61,6 +62,7 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
       amount: 0,
       receiptNumber: '',
       paymentDate: new Date(),
+      observations: '',
       voucher: undefined,
     }
   });
@@ -78,7 +80,15 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
 
   useEffect(() => {
     if (profile) {
-        form.setValue('fullName', profile.fullName || (profile as any).displayName || '');
+        form.reset({
+            fullName: profile.fullName || (profile as any).displayName || '',
+            concept: "",
+            amount: 0,
+            receiptNumber: '',
+            paymentDate: new Date(),
+            observations: '',
+            voucher: undefined,
+        });
     }
   }, [profile, form]);
 
@@ -160,7 +170,7 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
                 <FormLabel className="flex items-center gap-2 font-bold">
                     <Receipt className="h-4 w-4 text-primary" /> Concepto de Pago
                 </FormLabel>
-                 <Select onValueChange={field.onChange} defaultValue={field.value}>
+                 <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="h-12 border-primary/20"><SelectValue placeholder="Seleccione concepto..." /></SelectTrigger>
                     </FormControl>
@@ -194,12 +204,32 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
                     className="h-12 bg-muted font-black text-xl text-primary border-dashed" 
                   />
                 </FormControl>
-                <FormDescription>Monto fijo según tasa oficial.</FormDescription>
+                <FormDescription>Monto fijo según tasa oficial actual.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+            control={form.control}
+            name="observations"
+            render={({ field }) => (
+            <FormItem>
+                <FormLabel className="flex items-center gap-2 font-bold">
+                    <MessageSquareText className="h-4 w-4 text-primary" /> Observaciones o Detalles
+                </FormLabel>
+                <FormControl>
+                    <Textarea 
+                        {...field} 
+                        placeholder="Ej: Cuota 1 de 2, Matrícula Módulo II, etc." 
+                        className="resize-none h-20 border-primary/10"
+                    />
+                </FormControl>
+                <FormMessage />
+            </FormItem>
+            )}
+        />
         
         <div className="grid md:grid-cols-2 gap-8">
             <FormField
