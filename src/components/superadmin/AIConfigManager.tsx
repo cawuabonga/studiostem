@@ -16,6 +16,7 @@ import type { AIConfig, AIProvider } from '@/types';
 import { Loader2, Save, Wifi, WifiOff, Cpu, Globe, Info } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
+import { testOllamaConnection } from '@/ai/actions/test-ollama-connection';
 
 const aiConfigSchema = z.object({
   activeProvider: z.enum(['google', 'ollama']),
@@ -63,25 +64,22 @@ export function AIConfigManager() {
 
     setIsTesting(true);
     setConnectionStatus('none');
-    try {
-      // Intentamos consultar los modelos de Ollama para validar el túnel
-      const response = await fetch(`${url}/api/tags`, { 
-        method: 'GET',
-        headers: { 'Accept': 'application/json' }
-      });
+    
+    // Ahora llamamos a la acción de servidor que es inmune a CORS y salta la advertencia de ngrok
+    const isAlive = await testOllamaConnection(url);
 
-      if (response.ok) {
-        setConnectionStatus('success');
-        toast({ title: "¡Conexión Exitosa!", description: "Ollama está respondiendo correctamente a través del túnel." });
-      } else {
-        throw new Error();
-      }
-    } catch (error) {
+    if (isAlive) {
+      setConnectionStatus('success');
+      toast({ title: "¡Conexión Exitosa!", description: "Ollama está respondiendo correctamente a través del servidor." });
+    } else {
       setConnectionStatus('failed');
-      toast({ title: "Error de Conexión", description: "No se pudo conectar con Ollama. Asegúrese de que el túnel de ngrok esté activo y apuntando al puerto 11434.", variant: "destructive" });
-    } finally {
-        setIsTesting(false);
+      toast({ 
+        title: "Error de Conexión", 
+        description: "No se pudo conectar con Ollama. Verifica que ngrok esté activo y el comando use --host-header=\"localhost:11434\".", 
+        variant: "destructive" 
+      });
     }
+    setIsTesting(false);
   };
 
   const onSubmit = async (data: AIConfigFormValues) => {
