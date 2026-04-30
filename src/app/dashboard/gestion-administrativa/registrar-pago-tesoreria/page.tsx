@@ -20,7 +20,6 @@ import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import type { Payment } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 
 const searchSchema = z.object({
@@ -143,173 +142,184 @@ export default function TreasuryPaymentRegistrationPage() {
 
   return (
     <div className="space-y-8 pb-12">
-        {/* Superior: Terminal de Cobranza */}
-        <div className="max-w-6xl mx-auto">
-            {!selectedProfile ? (
-                <Card className="border-primary/20 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-500">
-                    <CardHeader className="bg-primary/5 border-b flex flex-row items-center gap-4 py-4">
-                        <div className="bg-primary/10 p-2 rounded-full">
-                            <Fingerprint className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                            <CardTitle className="text-xl">Terminal de Cobranza Manual</CardTitle>
-                            <CardDescription>Ingrese el documento del pagador para iniciar el registro.</CardDescription>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <Form {...searchForm}>
-                            <form onSubmit={searchForm.handleSubmit(onSearch)} className="flex flex-col sm:flex-row gap-4 items-end">
-                                <FormField
-                                    control={searchForm.control}
-                                    name="documentId"
-                                    render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormLabel className="text-xs font-bold uppercase text-muted-foreground">Número de Documento</FormLabel>
-                                        <FormControl>
-                                            <Input 
-                                                placeholder="DNI, Pasaporte o Carné" 
-                                                {...field} 
-                                                className="h-12 text-lg font-mono tracking-widest"
-                                                onKeyDown={(e) => e.key === 'Enter' && searchForm.handleSubmit(onSearch)()}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                    )}
-                                />
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <Button type="submit" size="lg" disabled={loading} className="flex-1 sm:w-48 h-12 shadow-md">
-                                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                                        Buscar
-                                    </Button>
-                                    <Button type="button" variant="ghost" size="lg" onClick={handleExternalPayer} disabled={loading} className="h-12 px-4">
-                                        <UserPlus className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                            </form>
-                        </Form>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
-                    {/* Perfil Seleccionado */}
-                    <div className="md:col-span-4">
-                        <Card className="bg-primary text-primary-foreground border-t-8 border-t-accent shadow-lg sticky top-20">
-                            <CardHeader className="pb-4">
-                                <div className="flex justify-between items-start mb-2">
-                                    <Avatar className="w-16 h-16 border-2 border-white/20">
-                                        <AvatarImage src={selectedProfile.photoURL} />
-                                        <AvatarFallback className="bg-white/10 text-xl font-bold">
-                                            {selectedProfile.fullName ? selectedProfile.fullName.charAt(0) : 'E'}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                    <Button variant="ghost" size="icon" onClick={resetSelection} className="text-white/60 hover:text-white hover:bg-white/10">
-                                        <ArrowLeft className="h-5 w-5" />
-                                    </Button>
-                                </div>
-                                <CardTitle className="text-lg leading-tight">{selectedProfile.fullName || 'PAGADOR EXTERNO'}</CardTitle>
-                                <CardDescription className="text-primary-foreground/70 font-mono text-xs">{selectedProfile.documentId}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-3 pt-0 text-sm">
-                                <Separator className="bg-white/10 mb-4" />
-                                <div className="flex items-center gap-2"><Briefcase className="h-4 w-4 opacity-70" /> <span>{selectedProfile.roleName}</span></div>
-                                <div className="flex items-center gap-2"><GraduationCap className="h-4 w-4 opacity-70" /> <span className="line-clamp-1">{selectedProfile.programName}</span></div>
-                                <Badge variant="outline" className="w-full justify-center bg-green-500/10 text-green-300 border-green-500/20 py-1 mt-4">
-                                    <ShieldCheck className="h-3 w-3 mr-2" /> Validado
-                                </Badge>
-                            </CardContent>
-                        </Card>
-                    </div>
-                    {/* Formulario Principal */}
-                    <div className="md:col-span-8">
-                        <Card className="shadow-2xl border-none">
-                            <CardHeader className="bg-muted/30 border-b py-4">
-                                <CardTitle className="text-lg font-bold">Detalles del Cobro</CardTitle>
-                            </CardHeader>
-                            <CardContent className="pt-6">
-                                <TreasuryRegisterPaymentForm 
-                                    profile={selectedProfile as any} 
-                                    onSuccess={resetSelection}
-                                />
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            )}
-        </div>
-
-        {/* Actividad Reciente: Diseño en 3 Columnas con Tarjetas Pequeñas */}
-        <div className="max-w-6xl mx-auto space-y-4">
-            <div className="flex items-center gap-2 px-1">
-                <History className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-bold uppercase tracking-tight text-primary">Actividad Reciente</h2>
-            </div>
+        {/* Superior: Grid de Operación en Vivo */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-7xl mx-auto">
             
-            {recentPayments.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {recentPayments.map((p) => (
-                        <Card key={p.id} className="hover:shadow-md transition-shadow group border-primary/5 bg-card/50 backdrop-blur-sm overflow-hidden">
-                            <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
-                                    <Avatar className="h-10 w-10 border-2 border-primary/10 group-hover:border-primary/30 transition-all shrink-0">
-                                        <AvatarFallback className="bg-primary/5 text-primary text-xs font-black">
-                                            {p.payerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            {/* IZQUIERDA: Terminal de Cobranza */}
+            <div className="lg:col-span-8">
+                {!selectedProfile ? (
+                    <Card className="border-primary/20 shadow-xl overflow-hidden h-full">
+                        <CardHeader className="bg-primary/5 border-b flex flex-row items-center gap-4 py-4">
+                            <div className="bg-primary/10 p-2 rounded-full">
+                                <Fingerprint className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-xl font-black uppercase tracking-tight">Caja de Cobranza</CardTitle>
+                                <CardDescription>Busque al usuario por DNI para registrar su pago.</CardDescription>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-8 pb-12">
+                            <Form {...searchForm}>
+                                <form onSubmit={searchForm.handleSubmit(onSearch)} className="flex flex-col sm:flex-row gap-4 items-end">
+                                    <FormField
+                                        control={searchForm.control}
+                                        name="documentId"
+                                        render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Documento de Identidad</FormLabel>
+                                            <FormControl>
+                                                <Input 
+                                                    placeholder="DNI, Pasaporte o Carné" 
+                                                    {...field} 
+                                                    className="h-14 text-2xl font-mono tracking-[0.3em] text-center"
+                                                    onKeyDown={(e) => e.key === 'Enter' && searchForm.handleSubmit(onSearch)()}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
+                                    <div className="flex gap-2 w-full sm:w-auto">
+                                        <Button type="submit" size="lg" disabled={loading} className="flex-1 sm:w-48 h-14 shadow-lg">
+                                            {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Search className="mr-2 h-5 w-5" />}
+                                            BUSCAR
+                                        </Button>
+                                        <Button type="button" variant="outline" size="lg" onClick={handleExternalPayer} disabled={loading} className="h-14 px-6 border-2">
+                                            <UserPlus className="h-6 w-6" />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </Form>
+                            <div className="mt-8 p-4 bg-muted/30 rounded-lg border border-dashed flex items-center gap-3">
+                                <Info className="h-5 w-5 text-muted-foreground" />
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                    Los perfiles identificados autocompletarán el nombre y asignarán el pago a su historial personal. 
+                                    Use el botón del icono (+) para cobros a personas externas al instituto.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4 animate-in fade-in slide-in-from-left-4 duration-500">
+                        {/* Perfil Seleccionado Lateral */}
+                        <div className="md:col-span-4">
+                            <Card className="bg-primary text-primary-foreground border-none shadow-xl h-full">
+                                <CardHeader className="pb-4">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <Avatar className="w-20 h-20 border-4 border-white/20 shadow-2xl">
+                                            <AvatarImage src={selectedProfile.photoURL} />
+                                            <AvatarFallback className="bg-white/10 text-2xl font-black">
+                                                {selectedProfile.fullName ? selectedProfile.fullName.charAt(0) : 'E'}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <Button variant="ghost" size="icon" onClick={resetSelection} className="text-white/60 hover:text-white hover:bg-white/10 rounded-full">
+                                            <ArrowLeft className="h-6 w-6" />
+                                        </Button>
+                                    </div>
+                                    <CardTitle className="text-xl font-bold leading-tight uppercase tracking-tighter">
+                                        {selectedProfile.fullName || 'PAGADOR EXTERNO'}
+                                    </CardTitle>
+                                    <CardDescription className="text-primary-foreground/70 font-mono text-sm tracking-widest">{selectedProfile.documentId}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4 pt-0 text-sm">
+                                    <Separator className="bg-white/10" />
+                                    <div className="flex items-center gap-3"><Briefcase className="h-5 w-5 opacity-60" /> <span>{selectedProfile.roleName}</span></div>
+                                    <div className="flex items-center gap-3"><GraduationCap className="h-5 w-5 opacity-60" /> <span className="line-clamp-2 leading-snug">{selectedProfile.programName}</span></div>
+                                    <Badge variant="outline" className="w-full justify-center bg-green-500/20 text-green-300 border-green-500/30 py-2 mt-4 text-xs font-bold uppercase">
+                                        <ShieldCheck className="h-4 w-4 mr-2" /> Identidad Verificada
+                                    </Badge>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        {/* Formulario Principal */}
+                        <div className="md:col-span-8">
+                            <Card className="shadow-2xl border-none h-full">
+                                <CardHeader className="bg-muted/30 border-b py-4">
+                                    <CardTitle className="text-lg font-black uppercase text-primary">Detalles de la Transacción</CardTitle>
+                                </CardHeader>
+                                <CardContent className="pt-6">
+                                    <TreasuryRegisterPaymentForm 
+                                        profile={selectedProfile as any} 
+                                        onSuccess={resetSelection}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* DERECHA: Actividad Reciente (Estilo Usuarios Activos) */}
+            <div className="lg:col-span-4 h-full">
+                <Card className="h-full border-primary/5 shadow-inner bg-slate-50/50">
+                    <CardHeader className="pb-4">
+                        <div className="flex items-center gap-2">
+                            <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse" />
+                            <CardTitle className="text-sm font-black uppercase tracking-widest text-primary">Operaciones en Vivo</CardTitle>
+                        </div>
+                        <CardDescription className="text-[10px]">Últimos cobros registrados hoy en el sistema.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                        {recentPayments.length > 0 ? (
+                            recentPayments.map((p) => (
+                                <div key={p.id} className="flex items-center gap-3 p-3 bg-white rounded-xl border border-primary/5 shadow-sm hover:shadow-md hover:border-primary/20 transition-all cursor-default group">
+                                    <Avatar className="h-10 w-10 border-2 border-slate-100 group-hover:border-primary/20 transition-all">
+                                        <AvatarImage src={p.voucherUrl} className="object-cover" />
+                                        <AvatarFallback className="bg-primary/5 text-primary text-[10px] font-black uppercase">
+                                            {p.payerName.split(' ').map(n => n[0]).join('').substring(0, 2)}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start gap-1">
-                                            <p className="text-xs font-bold truncate text-foreground group-hover:text-primary transition-colors">{p.payerName}</p>
-                                            <p className="text-xs font-black text-primary whitespace-nowrap">S/ {p.amount.toFixed(0)}</p>
+                                        <div className="flex justify-between items-baseline">
+                                            <p className="text-[11px] font-bold truncate pr-2 uppercase text-slate-800">{p.payerName}</p>
+                                            <p className="text-[12px] font-black text-primary">S/ {p.amount.toFixed(0)}</p>
                                         </div>
-                                        <div className="mt-1 flex flex-col gap-0.5">
-                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter truncate">{p.concept}</p>
-                                            <p className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
-                                                <History className="h-2.5 w-2.5" />
-                                                {p.processedAt ? format(p.processedAt.toDate(), 'dd/MM HH:mm') : ''}
+                                        <div className="flex justify-between items-center mt-0.5">
+                                            <p className="text-[9px] text-muted-foreground font-medium truncate uppercase tracking-tighter w-2/3">{p.concept}</p>
+                                            <p className="text-[8px] text-slate-400 font-mono">
+                                                {p.processedAt ? format(p.processedAt.toDate(), 'HH:mm') : ''}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-            ) : (
-                <Card className="bg-muted/30 border-dashed">
-                    <CardContent className="py-10 text-center opacity-30 flex flex-col items-center">
-                        <User className="h-12 w-12 mb-2" />
-                        <p className="text-sm font-bold uppercase">Sin pagos recientes hoy</p>
+                            ))
+                        ) : (
+                            <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                                <History className="h-12 w-12 mb-2" />
+                                <p className="text-[10px] font-black uppercase">Sin actividad reciente</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
-            )}
+            </div>
         </div>
 
-        {/* Inferior: Carga Masiva */}
-        <div className="max-w-6xl mx-auto">
+        {/* INFERIOR: Carga Masiva */}
+        <div className="max-w-7xl mx-auto">
             <Accordion type="single" collapsible className="w-full">
-                <AccordionItem value="bulk-upload" className="border rounded-xl shadow-sm overflow-hidden bg-card">
-                    <AccordionTrigger className="px-6 hover:no-underline hover:bg-muted/30 transition-colors">
+                <AccordionItem value="bulk-upload" className="border rounded-2xl shadow-sm overflow-hidden bg-card">
+                    <AccordionTrigger className="px-6 h-16 hover:no-underline hover:bg-muted/30 transition-colors">
                         <div className="flex items-center gap-3">
                             <div className="bg-primary/5 p-2 rounded-lg">
                                 <Upload className="h-5 w-5 text-primary" />
                             </div>
-                            <span className="text-base font-bold text-primary">Carga Masiva de Pagos (Importar Excel)</span>
+                            <span className="text-base font-black uppercase tracking-tight text-primary">Carga Masiva de Pagos (Importar Excel)</span>
                         </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pt-6 px-6 pb-8 border-t border-dashed">
+                    <AccordionContent className="pt-8 px-6 pb-10 border-t border-dashed">
                         <div className="max-w-4xl mx-auto">
-                            <Card className="border-dashed bg-muted/20">
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Herramienta de Importación por Lotes</CardTitle>
-                                    <CardDescription>
+                            <div className="bg-muted/20 rounded-2xl p-8 border-2 border-dashed">
+                                <CardHeader className="px-0 pt-0">
+                                    <CardTitle className="text-xl">Herramienta de Importación por Lotes</CardTitle>
+                                    <CardDescription className="text-sm">
                                         Ideal para registrar pagos de convenios, planillas o saldos históricos. 
-                                        Los montos del Excel serán respetados individualmente.
+                                        El sistema identificará a los estudiantes y personal automáticamente por DNI.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <div className="mt-4">
                                     <BulkUploadPayments onUploadSuccess={fetchRecent} />
-                                </CardContent>
-                            </Card>
+                                </div>
+                            </div>
                         </div>
                     </AccordionContent>
                 </AccordionItem>
