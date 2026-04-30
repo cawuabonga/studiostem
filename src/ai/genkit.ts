@@ -17,24 +17,33 @@ export const ai = genkit({
 
 /**
  * Ayudante para obtener el modelo activo basado en la configuración guardada en Firestore.
- * Esto permite que la plataforma use el túnel de ngrok si el SuperAdmin lo activa.
  */
 export async function getActiveAIModel() {
     try {
         const config = await getAIConfig();
         
-        // Priorizar Ollama si está activo y tiene una URL configurada
-        if (config?.activeProvider === 'ollama' && config.ollamaUrl) {
-            console.log(`[CEREBRO IA] Redirigiendo petición a Ollama Local: ${config.ollamaUrl}`);
-            return ollama.model({
-                name: config.ollamaModel || 'llama3',
-                address: config.ollamaUrl,
-            });
+        console.log("[CEREBRO IA] Configuración leída de Firestore:", config);
+
+        // Verificación estricta del proveedor Ollama
+        if (config?.activeProvider === 'ollama') {
+            if (config.ollamaUrl) {
+                console.log(`[CEREBRO IA] MODO LOCAL ACTIVO. Conectando a Ollama en: ${config.ollamaUrl} con modelo: ${config.ollamaModel || 'llama3'}`);
+                return ollama.model({
+                    name: config.ollamaModel || 'llama3',
+                    address: config.ollamaUrl,
+                });
+            } else {
+                console.warn("[CEREBRO IA] Proveedor es Ollama pero la URL está vacía. Abortando para evitar error de cuota en Google.");
+                throw new Error("ERROR_CONFIG_OLLAMA: Has seleccionado Ollama pero no has configurado la URL de ngrok.");
+            }
         }
-    } catch (error) {
-        console.warn("[CEREBRO IA] No se pudo leer la configuración de Firestore, se intentará usar Google AI como respaldo.");
+        
+        console.log("[CEREBRO IA] MODO NUBE ACTIVO. Usando Google Gemini.");
+    } catch (error: any) {
+        console.error("[CEREBRO IA] Error al obtener configuración:", error.message);
+        if (error.message.includes("ERROR_CONFIG_OLLAMA")) throw error;
     }
     
-    // Fallback a Google AI (Gemini)
+    // Fallback a Google AI (Gemini) solo si no se forzó Ollama
     return googleAI.model('gemini-2.0-flash');
 }
