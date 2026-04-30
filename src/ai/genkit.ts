@@ -25,17 +25,16 @@ export async function getActiveAIModel() {
         
         // Priorizar Ollama si está activo y tiene una URL configurada
         if (config?.activeProvider === 'ollama' && config.ollamaUrl) {
-            console.log(`[CEREBRO IA] Usando Ollama Local en: ${config.ollamaUrl}`);
+            console.log(`[CEREBRO IA] Redirigiendo petición a Ollama Local: ${config.ollamaUrl}`);
             return ollama.model({
                 name: config.ollamaModel || 'llama3',
                 address: config.ollamaUrl,
             });
         }
     } catch (error) {
-        console.error("[CEREBRO IA] Error al leer configuración, usando Google AI por defecto:", error);
+        console.warn("[CEREBRO IA] No se pudo leer la configuración de Firestore, se intentará usar Google AI como respaldo.");
     }
     
-    // Fallback a Google AI (Gemini) si Ollama no está configurado o falla
-    console.log(`[CEREBRO IA] Usando Google AI Cloud (Gemini)`);
+    // Fallback a Google AI (Gemini)
     return googleAI.model('gemini-2.0-flash');
 }
