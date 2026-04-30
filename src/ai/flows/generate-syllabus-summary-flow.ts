@@ -1,18 +1,27 @@
-
 'use server';
 /**
- * @fileOverview A flow for generating a syllabus summary (sumilla).
+ * @fileOverview Flow para la generación de sumillas académicas.
+ * 
+ * - generateSyllabusSummary: Función que genera una sumilla profesional para una unidad didáctica.
+ * - GenerateSyllabusSummaryInput: Interfaz para la entrada del flujo.
  */
 
 import {ai, getActiveAIModel} from '@/ai/genkit';
-import {z} from 'zod';
+import {z} from 'genkit';
 
 const GenerateSyllabusSummaryInputSchema = z.object({
   unitName: z.string().describe('The name of the didactic unit.'),
 });
-type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
+export type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
 
-export const generateSyllabusSummary = ai.defineFlow(
+/**
+ * Genera una sumilla profesional para una unidad didáctica.
+ */
+export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
+  return generateSyllabusSummaryFlow(input);
+}
+
+const generateSyllabusSummaryFlow = ai.defineFlow(
   {
     name: 'generateSyllabusSummaryFlow',
     inputSchema: GenerateSyllabusSummaryInputSchema,
