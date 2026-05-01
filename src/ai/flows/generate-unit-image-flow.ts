@@ -14,13 +14,6 @@ const GenerateUnitImageInputSchema = z.object({
 });
 export type GenerateUnitImageInput = z.infer<typeof GenerateUnitImageInputSchema>;
 
-/**
- * Genera una imagen conceptual para una unidad didáctica.
- */
-export async function generateUnitImage(input: GenerateUnitImageInput): Promise<string> {
-    return generateUnitImageFlow(input);
-}
-
 const generateUnitImageFlow = ai.defineFlow(
   {
     name: 'generateUnitImageFlow',
@@ -35,3 +28,10 @@ const generateUnitImageFlow = ai.defineFlow(
     return placeholderUrl;
   }
 );
+
+/**
+ * Función pública envuelta para ser usada como Server Action.
+ */
+export async function generateUnitImage(input: GenerateUnitImageInput): Promise<string> {
+    return generateUnitImageFlow(input);
+}

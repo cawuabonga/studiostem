@@ -14,24 +14,6 @@ const GenerateSyllabusSummaryInputSchema = z.object({
 });
 export type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
 
-/**
- * Genera una sumilla profesional para una unidad didáctica.
- */
-export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
-  try {
-    return await generateSyllabusSummaryFlow(input);
-  } catch (error: any) {
-    console.error("[IA FLOW ERROR]", error);
-    
-    // Capturamos específicamente el error de cuota de Google
-    if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
-      throw new Error("CUOTA_AGOTADA: El servicio de Google AI ha agotado sus créditos gratuitos. Por favor, asegúrate de haber guardado Ollama como proveedor activo en el panel de SuperAdmin.");
-    }
-    
-    throw new Error(error.message || "Error desconocido al procesar la solicitud de IA.");
-  }
-}
-
 const generateSyllabusSummaryFlow = ai.defineFlow(
   {
     name: 'generateSyllabusSummaryFlow',
@@ -52,3 +34,21 @@ const generateSyllabusSummaryFlow = ai.defineFlow(
     return text;
   }
 );
+
+/**
+ * Función pública envuelta para ser usada como Server Action.
+ */
+export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
+  try {
+    return await generateSyllabusSummaryFlow(input);
+  } catch (error: any) {
+    console.error("[IA FLOW ERROR]", error);
+    
+    // Capturamos específicamente el error de cuota de Google
+    if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
+      throw new Error("CUOTA_AGOTADA: El servicio de Google AI ha agotado sus créditos gratuitos. Por favor, asegúrate de haber guardado Ollama como proveedor activo en el panel de SuperAdmin.");
+    }
+    
+    throw new Error(error.message || "Error desconocido al procesar la solicitud de IA.");
+  }
+}
