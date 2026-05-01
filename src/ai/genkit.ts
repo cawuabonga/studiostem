@@ -24,7 +24,6 @@ export async function getActiveAIModel() {
         
         console.log("[CEREBRO IA] Configuración leída de Firestore:", config);
 
-        // Verificación estricta del proveedor Ollama
         if (config?.activeProvider === 'ollama') {
             if (config.ollamaUrl) {
                 console.log(`[CEREBRO IA] MODO LOCAL ACTIVO. Conectando a Ollama en: ${config.ollamaUrl} con modelo: ${config.ollamaModel || 'llama3'}`);
@@ -33,7 +32,7 @@ export async function getActiveAIModel() {
                     address: config.ollamaUrl,
                 });
             } else {
-                console.warn("[CEREBRO IA] Proveedor es Ollama pero la URL está vacía. Abortando para evitar error de cuota en Google.");
+                console.warn("[CEREBRO IA] Proveedor es Ollama pero la URL está vacía.");
                 throw new Error("ERROR_CONFIG_OLLAMA: Has seleccionado Ollama pero no has configurado la URL de ngrok.");
             }
         }
@@ -44,6 +43,5 @@ export async function getActiveAIModel() {
         if (error.message.includes("ERROR_CONFIG_OLLAMA")) throw error;
     }
     
-    // Fallback a Google AI (Gemini) solo si no se forzó Ollama
     return googleAI.model('gemini-2.0-flash');
 }
