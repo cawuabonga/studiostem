@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -9,16 +10,18 @@ import { getApprovedPaymentsInDateRange, getPaymentConcepts } from '@/config/fir
 import type { Payment, PaymentConcept } from '@/types';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
-import { startOfMonth, endOfMonth } from 'date-fns';
-import { DollarSign, Receipt, BarChart, TrendingUp, Printer } from 'lucide-react';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear, setMonth, setYear } from 'date-fns';
+import { DollarSign, Receipt, BarChart, TrendingUp, Printer, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { RevenueByConceptChart } from './RevenueByConceptChart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Button } from '../ui/button';
 import { PrintPaymentsReport } from './PrintPaymentsReport';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description?: string }) => (
     <Card>
@@ -33,6 +36,24 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
     </Card>
 );
 
+const months = [
+    { value: 'all', label: 'Todo el año' },
+    { value: '0', label: 'Enero' },
+    { value: '1', label: 'Febrero' },
+    { value: '2', label: 'Marzo' },
+    { value: '3', label: 'Abril' },
+    { value: '4', label: 'Mayo' },
+    { value: '5', label: 'Junio' },
+    { value: '6', label: 'Julio' },
+    { value: '7', label: 'Agosto' },
+    { value: '8', label: 'Septiembre' },
+    { value: '9', label: 'Octubre' },
+    { value: '10', label: 'Noviembre' },
+    { value: '11', label: 'Diciembre' },
+];
+
+const currentYear = new Date().getFullYear();
+const years = Array.from({ length: 10 }, (_, i) => (currentYear - 5 + i).toString());
 
 export function PaymentsReportDashboard() {
     const { instituteId, institute } = useAuth();
@@ -41,6 +62,14 @@ export function PaymentsReportDashboard() {
     const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Filter Mode: 'period' (Year/Month) or 'custom' (Calendar)
+    const [filterMode, setFilterMode] = useState<'period' | 'custom'>('period');
+    
+    // Period state
+    const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
+    const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
+
+    // Custom range state
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
@@ -48,6 +77,27 @@ export function PaymentsReportDashboard() {
     
     const [dniSearch, setDniSearch] = useState('');
     const [conceptSearch, setConceptSearch] = useState('all');
+
+    // Effect to update dateRange based on period selection
+    useEffect(() => {
+        if (filterMode === 'period') {
+            const year = parseInt(selectedYear);
+            if (selectedMonth === 'all') {
+                const date = new Date(year, 0, 1);
+                setDateRange({
+                    from: startOfYear(date),
+                    to: endOfYear(date),
+                });
+            } else {
+                const month = parseInt(selectedMonth);
+                const date = new Date(year, month, 1);
+                setDateRange({
+                    from: startOfMonth(date),
+                    to: endOfMonth(date),
+                });
+            }
+        }
+    }, [filterMode, selectedYear, selectedMonth]);
 
     const fetchData = useCallback(async () => {
         if (!instituteId || !dateRange?.from || !dateRange?.to) {
@@ -143,38 +193,84 @@ export function PaymentsReportDashboard() {
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Reporte de Ingresos</CardTitle>
-                    <CardDescription>
-                        Filtra por fecha para analizar los ingresos de tu instituto.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
-                        <div className="space-y-2">
-                            <Label htmlFor="date-range">Rango de Fechas</Label>
-                            <DateRangePicker id="date-range" date={dateRange} onDateChange={setDateRange} />
+                <CardHeader className="pb-4">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <CardTitle>Análisis de Ingresos Institucionales</CardTitle>
+                            <CardDescription>
+                                Consulta y filtra la recaudación por tiempo, alumno o concepto de pago.
+                            </CardDescription>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="dni-search">Buscar por DNI</Label>
-                            <Input id="dni-search" placeholder="Filtrar por DNI..." value={dniSearch} onChange={e => setDniSearch(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="concept-search">Filtrar por Concepto</Label>
-                            <Select value={conceptSearch} onValueChange={setConceptSearch}>
-                                <SelectTrigger id="concept-search"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todos los conceptos</SelectItem>
-                                    {concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                     </div>
-                      <div className="flex justify-end mt-4">
-                        <Button onClick={handlePrint} variant="outline">
+                        <Button onClick={handlePrint} variant="outline" className="shadow-sm">
                             <Printer className="mr-2 h-4 w-4" />
                             Imprimir Reporte
                         </Button>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex flex-col gap-6">
+                        <div className="flex items-center justify-between border-b pb-4">
+                            <div className="flex items-center gap-4">
+                                <Tabs value={filterMode} onValueChange={(v) => setFilterMode(v as any)} className="w-auto">
+                                    <TabsList className="grid w-[400px] grid-cols-2">
+                                        <TabsTrigger value="period" className="flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4" />
+                                            Por Mes / Año
+                                        </TabsTrigger>
+                                        <TabsTrigger value="custom" className="flex items-center gap-2">
+                                            <Filter className="h-4 w-4" />
+                                            Rango Libre
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                            {filterMode === 'period' ? (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label>Año Académico</Label>
+                                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Mes</Label>
+                                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="col-span-1 md:col-span-2 space-y-2">
+                                    <Label>Rango de Días Específicos</Label>
+                                    <DateRangePicker date={dateRange} onDateChange={setDateRange} className="w-full" />
+                                </div>
+                            )}
+                            
+                            <div className="space-y-2">
+                                <Label>DNI del Alumno</Label>
+                                <Input placeholder="Escriba para buscar..." value={dniSearch} onChange={e => setDniSearch(e.target.value)} />
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label>Concepto</Label>
+                                <Select value={conceptSearch} onValueChange={setConceptSearch}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos los conceptos</SelectItem>
+                                        {concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -189,25 +285,25 @@ export function PaymentsReportDashboard() {
                         title="Ingresos Totales" 
                         value={`S/ ${stats.totalRevenue.toFixed(2)}`} 
                         icon={DollarSign} 
-                        description={`Basado en ${stats.totalPayments} pagos`} 
+                        description={`En el período seleccionado`} 
                     />
                     <StatCard 
                         title="Total de Pagos" 
                         value={stats.totalPayments} 
                         icon={Receipt} 
-                        description="Transacciones aprobadas en el período" 
+                        description="Transacciones liquidadas" 
                     />
                     <StatCard 
                         title="Pago Promedio" 
                         value={`S/ ${stats.avgPayment.toFixed(2)}`} 
                         icon={BarChart} 
-                        description="Monto promedio por transacción" 
+                        description="Monto medio por boleta" 
                     />
                      <StatCard 
-                        title="Concepto Principal" 
+                        title="Más Recaudado" 
                         value={stats.topConcept.name} 
                         icon={TrendingUp} 
-                        description={`Generó S/ ${stats.topConcept.amount.toFixed(2)}`} 
+                        description={`Aportó S/ ${stats.topConcept.amount.toFixed(2)}`} 
                     />
                 </div>
             )}
@@ -215,7 +311,7 @@ export function PaymentsReportDashboard() {
             <div className="grid gap-6 md:grid-cols-12">
                  <Card className="md:col-span-7">
                     <CardHeader>
-                        <CardTitle>Ingresos por Concepto de Pago</CardTitle>
+                        <CardTitle>Recaudación por Concepto</CardTitle>
                     </CardHeader>
                     <CardContent>
                         {loading ? <Skeleton className="h-80 w-full" /> : <RevenueByConceptChart data={stats.revenueByConceptChartData} />}
@@ -223,32 +319,33 @@ export function PaymentsReportDashboard() {
                 </Card>
                  <Card className="md:col-span-5">
                     <CardHeader>
-                        <CardTitle>Últimos Pagos Aprobados</CardTitle>
+                        <CardTitle>Registros en el Período</CardTitle>
                     </CardHeader>
                      <CardContent>
                         {loading ? <Skeleton className="h-80 w-full" /> : (
                              <div className="overflow-auto rounded-md border">
                                  <Table>
                                     <TableHeader>
-                                        <TableRow>
+                                        <TableRow className="bg-muted/50">
                                             <TableHead>Pagador</TableHead>
-                                            <TableHead>Concepto</TableHead>
                                             <TableHead className="text-right">Monto</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {recentPayments.length > 0 ? recentPayments.map(p => (
-                                            <TableRow key={p.id}>
+                                            <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
                                                 <TableCell>
-                                                    <div className="font-medium">{p.payerName}</div>
-                                                    <div className="text-xs text-muted-foreground">{format(p.paymentDate.toDate(), 'dd/MM/yy')}</div>
+                                                    <div className="font-bold text-sm uppercase">{p.payerName}</div>
+                                                    <div className="text-[10px] text-muted-foreground flex gap-2">
+                                                        <span>{format(p.paymentDate.toDate(), 'dd/MM/yy')}</span>
+                                                        <span className="font-mono">{p.concept}</span>
+                                                    </div>
                                                 </TableCell>
-                                                <TableCell>{p.concept}</TableCell>
-                                                <TableCell className="text-right">S/ {p.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-black text-primary">S/ {p.amount.toFixed(2)}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={3} className="h-24 text-center">No hay pagos aprobados en este período.</TableCell>
+                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground italic">No se encontraron pagos para este período.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
