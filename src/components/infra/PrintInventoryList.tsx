@@ -1,9 +1,11 @@
+
 "use client";
 
 import React from 'react';
 import type { Asset, Institute, Building, Environment } from '@/types';
 import { format } from 'date-fns';
 import { Archive, CheckCircle, Wrench, XCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PrintInventoryListProps {
     assets: Asset[];
