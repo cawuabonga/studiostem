@@ -10,7 +10,7 @@ import { getApprovedPaymentsInDateRange, getPaymentConcepts } from '@/config/fir
 import type { Payment, PaymentConcept } from '@/types';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import type { DateRange } from 'react-day-picker';
-import { startOfMonth, endOfMonth, startOfYear, endOfYear, setMonth, setYear } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { DollarSign, Receipt, BarChart, TrendingUp, Printer, Calendar as CalendarIcon, Filter } from 'lucide-react';
 import { RevenueByConceptChart } from './RevenueByConceptChart';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,16 +22,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Button } from '../ui/button';
 import { PrintPaymentsReport } from './PrintPaymentsReport';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import '@/app/dashboard/gestion-academica/print-grades.css';
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description?: string }) => (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{title}</CardTitle>
-            <Icon className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+            <CardTitle className="text-[10px] uppercase font-black tracking-widest text-muted-foreground">{title}</CardTitle>
+            <Icon className="h-3.5 w-3.5 text-muted-foreground/60" />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
-            {description && <p className="text-xs text-muted-foreground">{description}</p>}
+            <div className="text-xl font-black tracking-tight">{value}</div>
+            {description && <p className="text-[9px] text-muted-foreground mt-0.5 leading-none">{description}</p>}
         </CardContent>
     </Card>
 );
@@ -62,14 +63,10 @@ export function PaymentsReportDashboard() {
     const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Filter Mode: 'period' (Year/Month) or 'custom' (Calendar)
     const [filterMode, setFilterMode] = useState<'period' | 'custom'>('period');
-    
-    // Period state
     const [selectedYear, setSelectedYear] = useState<string>(currentYear.toString());
     const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
 
-    // Custom range state
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
         from: startOfMonth(new Date()),
         to: endOfMonth(new Date()),
@@ -78,7 +75,6 @@ export function PaymentsReportDashboard() {
     const [dniSearch, setDniSearch] = useState('');
     const [conceptSearch, setConceptSearch] = useState('all');
 
-    // Effect to update dateRange based on period selection
     useEffect(() => {
         if (filterMode === 'period') {
             const year = parseInt(selectedYear);
@@ -158,41 +154,13 @@ export function PaymentsReportDashboard() {
     const recentPayments = useMemo(() => filteredPayments.slice(0, 5), [filteredPayments]);
 
     const handlePrint = () => {
-        const printContent = document.getElementById('print-area')?.innerHTML;
-        const styles = Array.from(document.styleSheets)
-            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
-            .join('');
-
-        const printWindow = window.open('', '_blank');
-        if (printWindow && printContent) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Reporte de Ingresos</title>
-                        ${styles}
-                         <style>
-                            @media print {
-                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                .print-block { display: block !important; }
-                            }
-                        </style>
-                    </head>
-                    <body>${printContent}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 500);
-        }
+        window.print();
     };
 
 
     return (
         <div className="space-y-6">
-            <Card>
+            <Card className="no-print border-primary/10 shadow-sm">
                 <CardHeader className="pb-4">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
@@ -230,7 +198,7 @@ export function PaymentsReportDashboard() {
                             {filterMode === 'period' ? (
                                 <>
                                     <div className="space-y-2">
-                                        <Label>Año Académico</Label>
+                                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Año Académico</Label>
                                         <Select value={selectedYear} onValueChange={setSelectedYear}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -239,7 +207,7 @@ export function PaymentsReportDashboard() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Mes</Label>
+                                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Mes</Label>
                                         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>
@@ -250,18 +218,18 @@ export function PaymentsReportDashboard() {
                                 </>
                             ) : (
                                 <div className="col-span-1 md:col-span-2 space-y-2">
-                                    <Label>Rango de Días Específicos</Label>
+                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Rango de Días Específicos</Label>
                                     <DateRangePicker date={dateRange} onDateChange={setDateRange} className="w-full" />
                                 </div>
                             )}
                             
                             <div className="space-y-2">
-                                <Label>DNI del Alumno</Label>
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">DNI del Alumno</Label>
                                 <Input placeholder="Escriba para buscar..." value={dniSearch} onChange={e => setDniSearch(e.target.value)} />
                             </div>
                             
                             <div className="space-y-2">
-                                <Label>Concepto</Label>
+                                <Label className="text-[10px] font-bold uppercase text-muted-foreground">Concepto</Label>
                                 <Select value={conceptSearch} onValueChange={setConceptSearch}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>
@@ -276,14 +244,14 @@ export function PaymentsReportDashboard() {
             </Card>
 
             {loading ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 no-print">
                     {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full"/>)}
                 </div>
             ) : (
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 no-print">
                     <StatCard 
                         title="Ingresos Totales" 
-                        value={`S/ ${stats.totalRevenue.toFixed(2)}`} 
+                        value={`S/ ${stats.totalRevenue.toFixed(0)}`} 
                         icon={DollarSign} 
                         description={`En el período seleccionado`} 
                     />
@@ -291,25 +259,25 @@ export function PaymentsReportDashboard() {
                         title="Total de Pagos" 
                         value={stats.totalPayments} 
                         icon={Receipt} 
-                        description="Transacciones liquidadas" 
+                        description="Transacciones" 
                     />
                     <StatCard 
                         title="Pago Promedio" 
-                        value={`S/ ${stats.avgPayment.toFixed(2)}`} 
+                        value={`S/ ${stats.avgPayment.toFixed(0)}`} 
                         icon={BarChart} 
-                        description="Monto medio por boleta" 
+                        description="Monto medio" 
                     />
                      <StatCard 
                         title="Más Recaudado" 
                         value={stats.topConcept.name} 
                         icon={TrendingUp} 
-                        description={`Aportó S/ ${stats.topConcept.amount.toFixed(2)}`} 
+                        description={`Aportó S/ ${stats.topConcept.amount.toFixed(0)}`} 
                     />
                 </div>
             )}
 
-            <div className="grid gap-6 md:grid-cols-12">
-                 <Card className="md:col-span-7">
+            <div className="grid gap-6 md:grid-cols-12 no-print">
+                 <Card className="md:col-span-7 border-primary/10 shadow-sm">
                     <CardHeader>
                         <CardTitle>Recaudación por Concepto</CardTitle>
                     </CardHeader>
@@ -317,9 +285,9 @@ export function PaymentsReportDashboard() {
                         {loading ? <Skeleton className="h-80 w-full" /> : <RevenueByConceptChart data={stats.revenueByConceptChartData} />}
                     </CardContent>
                 </Card>
-                 <Card className="md:col-span-5">
+                 <Card className="md:col-span-5 border-primary/10 shadow-sm">
                     <CardHeader>
-                        <CardTitle>Registros en el Período</CardTitle>
+                        <CardTitle>Registros Recientes</CardTitle>
                     </CardHeader>
                      <CardContent>
                         {loading ? <Skeleton className="h-80 w-full" /> : (
@@ -335,17 +303,17 @@ export function PaymentsReportDashboard() {
                                         {recentPayments.length > 0 ? recentPayments.map(p => (
                                             <TableRow key={p.id} className="hover:bg-muted/30 transition-colors">
                                                 <TableCell>
-                                                    <div className="font-bold text-sm uppercase">{p.payerName}</div>
-                                                    <div className="text-[10px] text-muted-foreground flex gap-2">
+                                                    <div className="font-bold text-xs uppercase">{p.payerName}</div>
+                                                    <div className="text-[9px] text-muted-foreground flex gap-2">
                                                         <span>{format(p.paymentDate.toDate(), 'dd/MM/yy')}</span>
                                                         <span className="font-mono">{p.concept}</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-right font-black text-primary">S/ {p.amount.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-black text-primary text-sm">S/ {p.amount.toFixed(0)}</TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground italic">No se encontraron pagos para este período.</TableCell>
+                                                <TableCell colSpan={2} className="h-24 text-center text-muted-foreground italic">No se encontraron pagos.</TableCell>
                                             </TableRow>
                                         )}
                                     </TableBody>
@@ -355,7 +323,8 @@ export function PaymentsReportDashboard() {
                     </CardContent>
                 </Card>
             </div>
-            <div id="print-area" className="hidden">
+
+            <div className="print-only">
                  <PrintPaymentsReport 
                     payments={filteredPayments} 
                     stats={stats} 
@@ -367,3 +336,4 @@ export function PaymentsReportDashboard() {
         </div>
     );
 }
+
