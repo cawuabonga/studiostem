@@ -136,7 +136,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
         <DialogHeader>
           <DialogTitle>Editar Perfil de Estudiante</DialogTitle>
           <DialogDescription>
-            Modificando el perfil para {profile.fullName} (DNI: {profile.documentId}).
+            Modificando el perfil para {profile.fullName} (Documento: {profile.documentId}).
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

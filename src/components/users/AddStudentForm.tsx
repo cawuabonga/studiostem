@@ -33,7 +33,7 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/web
 const addStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   lastName: z.string().min(2, { message: 'El apellido debe tener al menos 2 caracteres.' }),
-  documentId: z.string().min(8, 'El DNI debe tener 8 dígitos.').max(8, 'El DNI debe tener 8 dígitos.'),
+  documentId: z.string().min(5, 'El documento debe tener al menos 5 caracteres.').max(20, 'El documento es demasiado largo.'),
   email: z.string().email({ message: 'Email inválido.' }),
   phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos.' }).optional().or(z.literal('')),
   address: z.string().min(5, { message: 'La dirección es requerida.' }).optional().or(z.literal('')),
@@ -125,7 +125,11 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
   const handleDniLookup = async () => {
     const dni = form.getValues('documentId');
     if (dni.length !== 8) {
-        form.setError('documentId', { type: 'manual', message: 'El DNI debe tener 8 dígitos.' });
+        toast({ 
+            title: 'Consulta no disponible', 
+            description: 'La consulta automática solo funciona para DNI peruanos de 8 dígitos.',
+            variant: 'default'
+        });
         return;
     }
     setIsConsultingDni(true);
@@ -215,17 +219,18 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                 name="documentId"
                 render={({ field }) => (
                     <FormItem>
-                    <FormLabel>N° Documento</FormLabel>
+                    <FormLabel>N° Documento (DNI, Pasaporte, CE, etc.)</FormLabel>
                         <div className="flex gap-2">
                              <FormControl>
-                                <Input placeholder="12345678" {...field} />
+                                <Input placeholder="Ingrese número de documento" {...field} />
                             </FormControl>
-                            <Button type="button" onClick={handleDniLookup} disabled={isConsultingDni}>
+                            <Button type="button" onClick={handleDniLookup} disabled={isConsultingDni} variant="secondary">
                                 {isConsultingDni ? <Loader2 className="h-4 w-4 animate-spin"/> : <Search className="h-4 w-4"/>}
-                                <span className="ml-2 hidden sm:inline">Consultar DNI</span>
+                                <span className="ml-2 hidden sm:inline">Validar DNI</span>
                             </Button>
                         </div>
                     <FormMessage />
+                    <FormDescription>La validación automática solo aplica para DNI peruano de 8 dígitos.</FormDescription>
                     </FormItem>
                 )}
             />
