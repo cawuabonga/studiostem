@@ -19,10 +19,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { MoveAssetsDialog } from './MoveAssetsDialog';
 import { PrintInventoryList } from './PrintInventoryList';
 
-const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 const assetStatuses = ['Operativo', 'En Mantenimiento', 'De Baja'] as const;
 type AssetStatus = typeof assetStatuses[number];
 
+const assetTypes = ['Equipamiento Electrónico', 'Mobiliario', 'Material Didáctico', 'Otro'];
 
 const StatCard = ({ title, value, icon: Icon, description }: { title: string, value: string | number, icon: React.ElementType, description?: string }) => (
     <Card>
@@ -142,9 +142,13 @@ export function InventoryReportDashboard() {
         if (checked) {
             setSelectedAssetIds(new Set(filteredAssets.map(a => a.id)));
         } else {
-            setSelectedAssetIds(new Set());
+            setSelectedIds(new Set());
         }
     };
+
+    const setSelectedIds = (newSet: Set<string>) => {
+        setSelectedAssetIds(newSet);
+    }
     
     const handleSelectOne = (assetId: string) => {
         const newSet = new Set(selectedAssetIds);
@@ -200,7 +204,7 @@ export function InventoryReportDashboard() {
 
     return (
         <div className="space-y-6">
-            <Card className="no-print">
+            <Card className="print:hidden">
                 <CardHeader>
                     <CardTitle>Gestor y Reporte de Inventario</CardTitle>
                     <CardDescription>
@@ -245,18 +249,18 @@ export function InventoryReportDashboard() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 no-print">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 print:hidden">
                 <StatCard title="Total de Activos" value={stats.total} icon={Archive} description="Activos que coinciden con el filtro" />
                 <StatCard title="Operativos" value={stats.operative} icon={CheckCircle} description="Activos en buen estado" />
                 <StatCard title="En Mantenimiento" value={stats.maintenance} icon={Wrench} description="Activos en reparación" />
                 <StatCard title="De Baja" value={stats.decommissioned} icon={XCircle} description="Activos dados de baja" />
             </div>
             
-            <div className="no-print">
+            <div className="print:hidden">
                 <AssetCharts data={chartData} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:hidden">
                 <div className="lg:col-span-3">
                      <Card>
                         <CardHeader>
@@ -325,6 +329,7 @@ export function InventoryReportDashboard() {
                     </Card>
                 </div>
             </div>
+
              <MoveAssetsDialog 
                 isOpen={isMoveDialogOpen}
                 onClose={() => setIsMoveDialogOpen(false)}
@@ -334,7 +339,9 @@ export function InventoryReportDashboard() {
                 isSubmitting={isSubmitting}
                 assetCount={selectedAssetIds.size}
             />
-            <div className="print-only">
+
+            {/* Este bloque es el reporte oficial, solo visible al imprimir */}
+            <div className="hidden print:block">
                  <PrintInventoryList 
                     assets={filteredAssets} 
                     stats={stats}
