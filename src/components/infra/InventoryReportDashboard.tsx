@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -109,36 +108,7 @@ export function InventoryReportDashboard() {
     }, [allAssets, buildingFilter, environmentFilter, typeFilter, statusFilter, textFilter]);
 
     const handlePrint = () => {
-        const printContent = document.getElementById('print-area')?.innerHTML;
-        const styles = Array.from(document.styleSheets)
-            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
-            .join('');
-
-        const printWindow = window.open('', '_blank');
-        if (printWindow && printContent) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Reporte de Inventario</title>
-                        ${styles}
-                         <style>
-                            @media print {
-                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                .no-print { display: none !important; }
-                                .page-break { page-break-after: always; }
-                            }
-                        </style>
-                    </head>
-                    <body>${printContent}</body>
-                </html>
-            `);
-            printWindow.document.close();
-            printWindow.focus();
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-            }, 500);
-        }
+        window.print();
     };
 
     const chartData = useMemo(() => {
@@ -230,7 +200,7 @@ export function InventoryReportDashboard() {
 
     return (
         <div className="space-y-6">
-            <Card>
+            <Card className="no-print">
                 <CardHeader>
                     <CardTitle>Gestor y Reporte de Inventario</CardTitle>
                     <CardDescription>
@@ -269,22 +239,24 @@ export function InventoryReportDashboard() {
                       <div className="flex justify-end mt-4">
                         <Button onClick={handlePrint} variant="outline">
                             <Printer className="mr-2 h-4 w-4" />
-                            Imprimir Vista Actual
+                            Imprimir Reporte
                         </Button>
                     </div>
                 </CardContent>
             </Card>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 no-print">
                 <StatCard title="Total de Activos" value={stats.total} icon={Archive} description="Activos que coinciden con el filtro" />
                 <StatCard title="Operativos" value={stats.operative} icon={CheckCircle} description="Activos en buen estado" />
                 <StatCard title="En Mantenimiento" value={stats.maintenance} icon={Wrench} description="Activos en reparación" />
                 <StatCard title="De Baja" value={stats.decommissioned} icon={XCircle} description="Activos dados de baja" />
             </div>
             
-            <AssetCharts data={chartData} />
+            <div className="no-print">
+                <AssetCharts data={chartData} />
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
                 <div className="lg:col-span-3">
                      <Card>
                         <CardHeader>
@@ -362,9 +334,10 @@ export function InventoryReportDashboard() {
                 isSubmitting={isSubmitting}
                 assetCount={selectedAssetIds.size}
             />
-            <div id="print-area" className="hidden">
+            <div className="print-only">
                  <PrintInventoryList 
                     assets={filteredAssets} 
+                    stats={stats}
                     institute={institute}
                     filters={{buildingFilter, environmentFilter, typeFilter, statusFilter, textFilter}}
                     buildings={buildings}
