@@ -22,13 +22,13 @@ interface PrintPaymentsReportProps {
 }
 
 const StatCardPrint = ({ title, value, icon: Icon }: { title: string, value: string | number, icon: React.ElementType }) => (
-    <div className="border p-4 rounded-lg">
-        <div className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <h3 className="text-sm font-medium">{title}</h3>
-            <Icon className="h-4 w-4 text-gray-500" />
+    <div className="border p-3 rounded-md bg-gray-50/30">
+        <div className="flex flex-row items-center justify-between space-y-0 pb-1.5">
+            <h3 className="text-[8pt] uppercase font-bold text-gray-600 leading-tight">{title}</h3>
+            <Icon className="h-3 w-3 text-gray-400" />
         </div>
         <div>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-[12pt] font-black tracking-tight truncate">{value}</div>
         </div>
     </div>
 );
@@ -52,87 +52,106 @@ export function PrintPaymentsReport({ payments, stats, filters, institute, conce
     }
 
     return (
-        <div className="p-8 font-sans text-black">
-            <header className="flex items-center justify-between mb-4 border-b pb-4">
-                <div className="flex items-center gap-4">
-                    {institute?.logoUrl && (
-                        <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={60} height={60} className="object-contain" />
-                    )}
-                    <div>
-                        <h1 className="text-lg font-bold">{institute?.name || 'Nombre del Instituto'}</h1>
-                        <p className="text-sm">Sistema de Gestión Administrativa</p>
+        <div className="printable-area p-8 font-sans text-black">
+            <div className="page-break">
+                <header className="flex items-center justify-between mb-4 border-b pb-4">
+                    <div className="flex items-center gap-4">
+                        {institute?.logoUrl && (
+                            <img src={institute.logoUrl} alt={`${institute.name} Logo`} className="w-[60px] h-[60px] object-contain" />
+                        )}
+                        <div>
+                            <h1 className="text-lg font-bold leading-tight">{institute?.name || 'Nombre del Instituto'}</h1>
+                            <p className="text-[9pt] uppercase tracking-wider font-semibold text-gray-600">Sistema de Gestión Administrativa</p>
+                        </div>
+                    </div>
+                    <div className="text-[8pt] text-right leading-tight">
+                        <p className="font-bold">FECHA DE EMISIÓN:</p>
+                        <p>{format(today, 'dd/MM/yyyy')}</p>
+                        <p>{format(today, 'HH:mm')}</p>
+                    </div>
+                </header>
+
+                <div className="text-center my-6">
+                    <h2 className="text-xl font-black uppercase tracking-widest border-y-2 border-black py-2">Reporte de Ingresos</h2>
+                    <p className="text-[9pt] text-gray-600 mt-2">Filtros aplicados: {getFilterDescription()}</p>
+                </div>
+
+                <div className="grid grid-cols-4 gap-3 mb-8">
+                    <StatCardPrint 
+                        title="Ingresos Totales" 
+                        value={`S/ ${stats.totalRevenue.toFixed(2)}`} 
+                        icon={DollarSign} 
+                    />
+                    <StatCardPrint 
+                        title="Total de Pagos" 
+                        value={stats.totalPayments} 
+                        icon={Receipt} 
+                    />
+                    <StatCardPrint 
+                        title="Pago Promedio" 
+                        value={`S/ ${stats.avgPayment.toFixed(2)}`} 
+                        icon={BarChart} 
+                    />
+                    <StatCardPrint 
+                        title="Concepto Principal" 
+                        value={stats.topConcept.name} 
+                        icon={TrendingUp} 
+                    />
+                </div>
+
+                <h3 className="font-bold text-[10pt] mb-3 uppercase tracking-tight border-b border-black pb-1">Detalle de Pagos Aprobados</h3>
+                <table className="w-full text-[8pt] border-collapse border border-black">
+                    <thead className="bg-gray-100">
+                        <tr>
+                            <th className="border border-black p-1.5 text-center w-[30px]">N°</th>
+                            <th className="border border-black p-1.5 text-left">FECHA PAGO</th>
+                            <th className="border border-black p-1.5 text-left">COMPROBANTE</th>
+                            <th className="border border-black p-1.5 text-left">PAGADOR / DNI</th>
+                            <th className="border border-black p-1.5 text-left">CONCEPTO</th>
+                            <th className="border border-black p-1.5 text-right w-[100px]">MONTO (S/)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {payments.map((payment, index) => (
+                            <tr key={payment.id} className="h-auto">
+                                <td className="border border-black p-1 text-center font-mono">{index + 1}</td>
+                                <td className="border border-black p-1">{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</td>
+                                <td className="border border-black p-1 font-mono">{payment.receiptNumber || 'S/N'}</td>
+                                <td className="border border-black p-1 leading-tight">
+                                    <span className="font-bold block">{payment.payerName}</span>
+                                    <span className="text-[7pt] font-mono text-gray-600">{payment.payerId}</span>
+                                </td>
+                                <td className="border border-black p-1">{payment.concept}</td>
+                                <td className="border border-black p-1 text-right font-bold">
+                                    {payment.amount.toFixed(2)}
+                                </td>
+                            </tr>
+                        ))}
+                        {payments.length === 0 && (
+                            <tr>
+                                <td colSpan={6} className="border border-black p-8 text-center text-gray-500 italic">No se encontraron pagos con los filtros seleccionados.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                    <tfoot className="bg-gray-50">
+                        <tr>
+                            <td colSpan={5} className="border border-black p-2 text-right font-black uppercase text-[10pt]">TOTAL RECAUDADO</td>
+                            <td className="border border-black p-2 text-right font-black text-[11pt] bg-gray-100">
+                                S/ {stats.totalRevenue.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div className="mt-16 flex justify-around no-print-break">
+                    <div className="border-t border-black px-12 pt-1 text-center">
+                        <p className="font-bold uppercase text-[9pt]">Firma de Tesorería</p>
+                    </div>
+                    <div className="border-t border-black px-12 pt-1 text-center">
+                        <p className="font-bold uppercase text-[9pt]">V° B° Administración</p>
                     </div>
                 </div>
-                <div className="text-xs text-right">
-                    <p>Fecha de Emisión: {format(today, 'dd/MM/yyyy')}</p>
-                    <p>Hora de Emisión: {format(today, 'HH:mm')}</p>
-                </div>
-            </header>
-
-            <div className="text-center my-6">
-                <h2 className="text-xl font-bold uppercase">Reporte de Ingresos</h2>
-                <p className="text-sm text-gray-600">Filtros aplicados: {getFilterDescription()}</p>
             </div>
-
-            <div className="grid grid-cols-4 gap-4 mb-6">
-                 <StatCardPrint 
-                    title="Ingresos Totales" 
-                    value={`S/ ${stats.totalRevenue.toFixed(2)}`} 
-                    icon={DollarSign} 
-                />
-                <StatCardPrint 
-                    title="Total de Pagos" 
-                    value={stats.totalPayments} 
-                    icon={Receipt} 
-                />
-                <StatCardPrint 
-                    title="Pago Promedio" 
-                    value={`S/ ${stats.avgPayment.toFixed(2)}`} 
-                    icon={BarChart} 
-                />
-                <StatCardPrint 
-                    title="Concepto Principal" 
-                    value={stats.topConcept.name} 
-                    icon={TrendingUp} 
-                />
-            </div>
-
-            <h3 className="font-bold text-base mb-2">Detalle de Pagos Aprobados</h3>
-            <table className="w-full text-xs border-collapse border border-gray-400">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="border p-2 text-left">Fecha Pago</th>
-                        <th className="border p-2 text-left">N° Comprobante</th>
-                        <th className="border p-2 text-left">Pagador</th>
-                        <th className="border p-2 text-left">DNI</th>
-                        <th className="border p-2 text-left">Concepto</th>
-                        <th className="border p-2 text-right">Monto (S/)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                     {payments.map((payment) => (
-                        <tr key={payment.id} className="[&>td]:p-2">
-                            <td className="border">{format(payment.paymentDate.toDate(), 'dd/MM/yyyy')}</td>
-                            <td className="border">{payment.receiptNumber}</td>
-                            <td className="border">{payment.payerName}</td>
-                            <td className="border">{payment.payerId}</td>
-                            <td className="border">{payment.concept}</td>
-                            <td className="border text-right">{payment.amount.toFixed(2)}</td>
-                        </tr>
-                    ))}
-                    {payments.length === 0 && (
-                        <tr>
-                            <td colSpan={6} className="border p-4 text-center text-gray-500">No se encontraron pagos con los filtros seleccionados.</td>
-                        </tr>
-                    )}
-                </tbody>
-                 <tfoot>
-                    <tr>
-                        <td colSpan={5} className="border p-2 text-right font-bold">TOTAL INGRESOS</td>
-                        <td className="border p-2 text-right font-bold">{stats.totalRevenue.toFixed(2)}</td>
-                    </tr>
-                </tfoot>
-            </table>
         </div>
     );
 }
