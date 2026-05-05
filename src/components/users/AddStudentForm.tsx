@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -23,9 +22,6 @@ import { Timestamp } from 'firebase/firestore';
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
-const currentYear = new Date().getFullYear();
-// Ampliamos el rango de años de 2015 a 2035
-const years = Array.from({ length: 21 }, (_, i) => (2015 + i).toString());
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -41,7 +37,7 @@ const addStudentSchema = z.object({
   age: z.number(),
   gender: z.enum(genders, { required_error: 'Debe seleccionar un género.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
-  admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
+  admissionYear: z.string({ required_error: 'Debe ingresar el año de admisión.' }),
   admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
   turno: z.enum(turnos, { required_error: 'Debe seleccionar un turno.' }),
   photoURL: z.instanceof(FileList).optional()
@@ -409,14 +405,9 @@ export function AddStudentForm({ instituteId, onProfileCreated, initialData = nu
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Año de Admisión</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger><SelectValue/></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <FormControl>
+                        <Input placeholder="Ej: 2024" {...field} />
+                    </FormControl>
                     <FormMessage />
                     </FormItem>
                 )}

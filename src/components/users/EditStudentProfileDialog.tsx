@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -33,9 +32,6 @@ import { Timestamp } from 'firebase/firestore';
 const genders = ['Masculino', 'Femenino'] as const;
 const periods: UnitPeriod[] = ['MAR-JUL', 'AGO-DIC'];
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
-const currentYear = new Date().getFullYear();
-// Ampliamos el rango de años de 2015 a 2035
-const years = Array.from({ length: 21 }, (_, i) => (2015 + i).toString());
 
 const editStudentSchema = z.object({
   firstName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -47,7 +43,7 @@ const editStudentSchema = z.object({
   age: z.number(),
   gender: z.enum(genders, { required_error: 'Debe seleccionar un género.' }),
   programId: z.string({ required_error: 'Debe seleccionar un programa.' }),
-  admissionYear: z.string({ required_error: 'Debe seleccionar el año de admisión.' }),
+  admissionYear: z.string({ required_error: 'Debe ingresar el año de admisión.' }),
   admissionPeriod: z.enum(periods, { required_error: 'Debe seleccionar el período de admisión.' }),
   turno: z.enum(turnos, { required_error: 'Debe seleccionar un turno.' }),
   rfidCardId: z.string().optional().or(z.literal('')),
@@ -295,12 +291,9 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Año Admisión</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                            <SelectContent>
-                            {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <FormControl>
+                            <Input placeholder="Ej: 2024" {...field} />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
@@ -312,7 +305,7 @@ export function EditStudentProfileDialog({ profile, instituteId, isOpen, onClose
                         <FormItem>
                         <FormLabel>Período Admisión</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione..."/></SelectTrigger></FormControl>
                             <SelectContent>
                             {periods.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                             </SelectContent>
