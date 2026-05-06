@@ -675,6 +675,17 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
     });
     await batch.commit();
 };
+
+export const getGraduates = async (instituteId: string, options: { year?: string, programId?: string } = {}): Promise<StudentProfile[]> => {
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    const q_parts = [where("academicStatus", "==", "Egresado")];
+    if (options.year && options.year !== 'all') q_parts.push(where("graduationYear", "==", options.year));
+    if (options.programId && options.programId !== 'all') q_parts.push(where("programId", "==", options.programId));
+    
+    const q = query(studentsCol, ...q_parts, orderBy("graduationYear", "desc"), orderBy("lastName", "asc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+};
     
 // --- Profile Linking ---
 export const linkUserToProfile = async (uid: string, documentId: string, email: string) => {
@@ -1927,8 +1938,8 @@ export const getMatriculationReportData = async (
         if (studentIds.length > 0) {
             const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
             const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
-            const studentSnap = await getDocs(studentQuery);
-            students = studentSnap.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
+            const studentSnapshot = await getDocs(studentQuery);
+            students = studentSnapshot.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
         }
 
         return {
@@ -2656,6 +2667,25 @@ export const gradeTaskSubmission = async (
             grades 
         }, { merge: true });
     }
+};
+
+export const gradeFinalGrade = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
+    const batch = writeBatch(db);
+    
+    for (const res of results) {
+        const recordId = `${unitId}_${res.studentId}_${year}_${period}`;
+        const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+        batch.update(recordRef, { finalGrade: res.finalGrade, status: res.status });
+
+        const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+        const q = query(matriculationsCol, where("studentId", "==", res.studentId), where("unitId", "==", unitId), where("year", "==", year));
+        const mSnap = await getDocs(q);
+        mSnap.forEach(mDoc => {
+            batch.update(mDoc.ref, { status: res.status });
+        });
+    }
+    
+    await batch.commit();
 };
 
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
