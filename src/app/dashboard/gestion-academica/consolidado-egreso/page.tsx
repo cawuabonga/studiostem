@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Award, Loader2, Info, AlertTriangle, UserCheck, Search, Printer, GraduationCap } from 'lucide-react';
+import { CheckCircle, Award, Loader2, Info, AlertTriangle, UserCheck, Search, Printer, GraduationCap, ListChecks, Archive } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -391,4 +390,3 @@ export default function ConsolidadoEgresoPage() {
         </div>
     );
 }
-
