@@ -278,26 +278,12 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "graduationYear",
-          "order": "DESCENDING"
-        },
-        {
-          "fieldPath": "lastName",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "studentProfiles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
           "fieldPath": "programId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "academicStatus",
-          "order": "ASCENDING"
+          "fieldPath": "graduationYear",
+          "order": "DESCENDING"
         },
         {
           "fieldPath": "lastName",
