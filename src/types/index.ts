@@ -775,3 +775,9 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         ],
     },
 ];
+
+export interface StudentEgresoAudit {
+    eligible: boolean;
+    pendingUnits: string[];
+    pendingEFSRT: string[];
+}

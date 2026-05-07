@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -627,6 +627,58 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
+
+export const getStudentsPaginated = async (options: { 
+    instituteId: string;
+    programId?: string;
+    admissionYear?: string;
+    turno?: UnitTurno;
+    semester?: number;
+    limitCount: number;
+    startAfterDoc?: DocumentSnapshot | null;
+    excludeEgresados?: boolean;
+}): Promise<{ students: StudentProfile[], lastVisible: DocumentSnapshot | null }> => {
+    const studentsCol = getSubCollectionRef(options.instituteId, 'studentProfiles');
+    const q_parts: any[] = [];
+    
+    if (options.excludeEgresados) {
+        q_parts.push(where("academicStatus", "!=", "Egresado"));
+    }
+    if (options.programId && options.programId !== 'all') {
+        q_parts.push(where("programId", "==", options.programId));
+    }
+    if (options.admissionYear) {
+        q_parts.push(where("admissionYear", "==", options.admissionYear));
+    }
+    if (options.turno && options.turno !== 'all') {
+        q_parts.push(where("turno", "==", options.turno));
+    }
+
+    q_parts.push(orderBy("lastName"));
+
+    if (options.startAfterDoc) {
+        q_parts.push(startAfter(options.startAfterDoc));
+    }
+    
+    q_parts.push(limit(options.limitCount));
+
+    const q = query(studentsCol, ...q_parts);
+    const snapshot = await getDocs(q);
+    
+    let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+    
+    // Client-side filtering for semester if needed, as it depends on dynamic calculation
+    if (options.semester) {
+        students = students.filter(p => {
+             const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
+             return currentSem === options.semester;
+        });
+    }
+
+    const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+    return { students, lastVisible };
+};
+
 
 export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
     const studentRef = doc(getSubCollectionRef(instituteId, 'studentProfiles'), studentId);
@@ -2557,7 +2609,7 @@ export const saveEFSRTReportUrl = async (instituteId: string, assignmentId: stri
     await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId), { [type === 'student' ? 'studentReportUrl' : 'supervisorReportUrl']: url });
 };
 
-export const checkEgresoEligibility = async (instituteId: string, studentId: string): Promise<{ eligible: boolean; pendingUnits: string[]; pendingEFSRT: string[] }> => {
+export const checkEgresoEligibility = async (instituteId: string, studentId: string): Promise<StudentEgresoAudit> => {
     const [matriculations, assignments, studentData] = await Promise.all([
         getMatriculationsForStudent(instituteId, studentId),
         getEFSRTAssignmentsForStudent(instituteId, studentId),
