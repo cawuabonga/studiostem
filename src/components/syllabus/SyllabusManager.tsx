@@ -11,12 +11,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSyllabus, saveSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher } from '@/types';
+import { getSyllabus, saveSyllabus } from '@/config/firebase';
+import type { Unit, Syllabus } from '@/types';
 import { Loader2, Save, Printer, Wand2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import '@/app/dashboard/gestion-academica/print-grades.css';
-import { SyllabusPrintLayout } from './SyllabusPrintLayout';
 import { generateSyllabusSummary } from '@/ai/flows/generate-syllabus-summary-flow';
 
 const syllabusSchema = z.object({
@@ -33,18 +31,11 @@ interface SyllabusManagerProps {
 }
 
 export function SyllabusManager({ unit }: SyllabusManagerProps) {
-  const { instituteId, institute } = useAuth();
+  const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [printableData, setPrintableData] = useState<{
-        program: Program | null;
-        teacher: Teacher | null;
-        syllabus: Syllabus | null;
-        weeklyData: WeekData[];
-        indicators: AchievementIndicator[];
-    } | null>(null);
 
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
@@ -60,42 +51,17 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     if (!instituteId) return;
     setLoading(true);
     try {
-        const currentYear = new Date().getFullYear().toString();
-        const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
-
-        const [
-            syllabusData,
-            allPrograms,
-            allTeachers,
-            weeklyResults,
-            indicators
-        ] = await Promise.all([
-            getSyllabus(instituteId, unit.id),
-            getPrograms(instituteId),
-            getTeachers(instituteId),
-            Promise.all(weekPromises),
-            getAchievementIndicators(instituteId, unit.id)
-        ]);
-      
+        const syllabusData = await getSyllabus(instituteId, unit.id);
         if (syllabusData) {
             form.reset(syllabusData);
         }
-
-        const program = allPrograms.find(p => p.id === unit.programId) || null;
-        const assignments = await getAssignments(instituteId, currentYear, unit.programId);
-        const teacherId = assignments[unit.period]?.[unit.id];
-        const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
-        
-        const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
-
-        setPrintableData({ program, teacher, syllabus: syllabusData, weeklyData, indicators });
     } catch (error) {
       console.error("Error fetching syllabus data:", error);
       toast({ title: "Error", description: "No se pudo cargar la información del sílabo.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit, form, toast]);
+  }, [instituteId, unit.id, form, toast]);
 
   useEffect(() => {
     fetchSyllabusData();
@@ -107,7 +73,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     try {
       await saveSyllabus(instituteId, unit.id, data);
       toast({ title: "¡Éxito!", description: "La información del sílabo ha sido guardada." });
-      setPrintableData(prev => prev ? { ...prev, syllabus: data } : null);
     } catch (error: any) {
       toast({ title: "Error", description: "No se pudo guardar la información del sílabo.", variant: "destructive" });
     } finally {
@@ -130,7 +95,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   };
 
   const handlePrint = () => {
-    window.print();
+    // Abrir ruta de impresión dedicada en una nueva pestaña
+    window.open(`/dashboard/docente/unidad/${unit.id}/print`, '_blank');
   };
 
   if (loading) {
@@ -151,7 +117,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
 
   return (
     <div className="space-y-6">
-        <Card className="no-print">
+        <Card>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardHeader>
@@ -163,8 +129,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handlePrint} disabled={loading}>
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Printer className="mr-2 h-4 w-4" />}
+                        <Button type="button" variant="outline" onClick={handlePrint}>
+                            <Printer className="mr-2 h-4 w-4" />
                             Imprimir Sílabo (PDF)
                         </Button>
                         <Button type="submit" disabled={isSaving}>
@@ -237,22 +203,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
             </form>
           </Form>
         </Card>
-
-        {/* Versión imprimible - oculta en pantalla, visible al imprimir */}
-        <div className="print-only">
-            {printableData && (
-                <SyllabusPrintLayout
-                    institute={institute}
-                    unit={unit}
-                    {...printableData}
-                    designOptions={{
-                        showLogo: true,
-                        showInfoTable: true,
-                        showSignature: true
-                    }}
-                />
-            )}
-        </div>
     </div>
   );
 }

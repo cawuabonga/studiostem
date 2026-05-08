@@ -1,5 +1,4 @@
 
-
 /* Estilos globales de impresión optimizados para documentos institucionales */
 
 @media screen {
@@ -11,36 +10,54 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 0; /* Let component handle margins for better control */
+    margin: 1.5cm;
   }
 
-  body {
+  /* Reset de estilos para impresión */
+  html, body {
     background: white !important;
     color: black !important;
     font-family: 'Lato', serif !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
     overflow: visible !important;
     height: auto !important;
+    width: 100% !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  .no-print {
+  /* Ocultar elementos innecesarios */
+  .no-print, 
+  header, 
+  nav, 
+  aside, 
+  .sidebar-container, 
+  .page-header,
+  .screen-only {
     display: none !important;
+  }
+
+  /* Contenedores de contenido */
+  .main-content, .printable-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    overflow: visible !important;
+    display: block !important;
   }
 
   .print-only {
     display: block !important;
   }
 
-  /* Contenedor principal de impresión */
+  /* Layout Base de Reportes (Notas/Asistencia) */
   .printable-area {
     display: block !important;
-    width: 210mm !important;
-    margin: 0 auto !important;
-    padding: 1.5cm 2cm !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: white !important;
-    box-shadow: none !important;
-    min-height: 100%;
   }
 
   /* Tipografía formal */
@@ -51,64 +68,40 @@
     text-transform: uppercase;
   }
 
-  /* Estructura de tablas institucional */
+  /* Tablas de Reporte */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
     margin-bottom: 1rem;
-    page-break-inside: auto;
-  }
-
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
+    table-layout: auto !important;
   }
 
   th {
     background-color: #f3f4f6 !important;
     color: black !important;
     font-weight: 700 !important;
-    font-size: 8.5pt !important;
+    font-size: 8pt !important;
     border: 1px solid #000 !important;
-    padding: 6px 4px !important;
+    padding: 4px !important;
     text-align: center;
   }
 
   td {
     border: 1px solid #000 !important;
-    padding: 5px 6px !important;
-    font-size: 8pt !important;
-    vertical-align: top;
-    line-height: 1.4;
+    padding: 4px !important;
+    font-size: 7.5pt !important;
+    vertical-align: middle;
     color: black !important;
   }
 
-  /* Cabecera repetitiva en cada página */
-  .inst-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 2px solid #000;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    width: 100%;
+  /* Columnas de notas angostas */
+  .grade-col {
+    width: 35px !important;
+    min-width: 35px !important;
+    max-width: 35px !important;
   }
 
-  /* Pie de página */
-  .inst-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    font-size: 7.5pt;
-    text-align: center;
-    border-top: 1px solid #ccc;
-    padding-top: 8px;
-    color: #666;
-    background: white;
-  }
-
-  /* Forzar saltos de página manuales */
+  /* Saltos de página */
   .page-break {
     page-break-after: always !important;
     display: block !important;
@@ -125,21 +118,18 @@
     page-break-inside: avoid !important;
   }
 
-  /* Estilos específicos para la carátula */
-  .cover-page {
-    height: 297mm;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    margin: 0 !important;
-    padding: 2cm !important;
+  /* Específicos para el SÍLABO (Ruta dedicada) */
+  .syllabus-print-container {
+    padding: 0 !important;
   }
 
-  /* Ajuste de imágenes */
-  img {
-    max-height: none !important;
-    width: auto;
+  .syllabus-cover {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2cm !important;
+    text-align: center;
   }
 }

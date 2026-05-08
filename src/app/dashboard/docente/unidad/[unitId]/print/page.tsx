@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions, AcademicYearSettings } from '@/types';
+import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
 import { getUnit, getSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments, getAcademicPeriods } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -17,8 +17,9 @@ function PrintSyllabusContent() {
     const searchParams = useSearchParams();
     const { toast } = useToast();
     
-    const pathSegments = pathname.split('/');
-    const unitId = pathSegments[pathSegments.length - 2] || '';
+    // Obtener unitId desde la URL: /dashboard/docente/unidad/[unitId]/print
+    const segments = pathname.split('/');
+    const unitId = segments[segments.length - 2] || '';
 
     const [loading, setLoading] = useState(true);
     const [printableData, setPrintableData] = useState<{
@@ -52,6 +53,13 @@ function PrintSyllabusContent() {
                 return;
             }
 
+            // Cargar datos académicos para las fechas
+            const academicYearData = await getAcademicPeriods(instituteId, currentYear);
+            const academicDates = {
+                start: academicYearData?.[unit.period]?.startDate?.toDate(),
+                end: academicYearData?.[unit.period]?.endDate?.toDate()
+            };
+
             const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
             const [
                 allPrograms,
@@ -59,14 +67,12 @@ function PrintSyllabusContent() {
                 syllabus,
                 weeklyResults,
                 indicators,
-                academicYearData
             ] = await Promise.all([
                 getPrograms(instituteId),
                 getTeachers(instituteId),
                 getSyllabus(instituteId, unit.id),
                 Promise.all(weekPromises),
                 getAchievementIndicators(instituteId, unit.id),
-                getAcademicPeriods(instituteId, currentYear)
             ]);
 
             const program = allPrograms.find(p => p.id === unit.programId) || null;
@@ -74,19 +80,22 @@ function PrintSyllabusContent() {
             const teacherId = assignments[unit.period]?.[unit.id];
             const teacher = allTeachers.find(t => t.documentId === teacherId) || null;
             
-            const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
-
-            // Extract academic dates for the info table
-            const academicDates = {
-                start: academicYearData?.[unit.period]?.startDate?.toDate(),
-                end: academicYearData?.[unit.period]?.endDate?.toDate()
-            };
+            const weeklyData = weeklyResults.map((data, index) => data || { 
+                weekNumber: index + 1, 
+                contents: [], 
+                tasks: [], 
+                capacityElement: '', 
+                learningActivities: '', 
+                basicContents: '', 
+                isVisible: false 
+            });
 
             setPrintableData({ unit, program, teacher, syllabus, weeklyData, indicators, academicDates });
 
-             setTimeout(() => {
+            // Disparar impresión automáticamente después de una breve pausa
+            setTimeout(() => {
                 window.print();
-            }, 800);
+            }, 1000);
 
         } catch (error) {
             console.error("Error preparing print data:", error);
@@ -107,6 +116,7 @@ function PrintSyllabusContent() {
                 <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-10 w-1/3" />
                 <Skeleton className="h-64 w-full" />
+                <p className="text-center animate-pulse">Preparando documento para impresión oficial...</p>
             </div>
         );
     }
@@ -116,7 +126,7 @@ function PrintSyllabusContent() {
     }
 
     return (
-        <div className="bg-white text-black p-4">
+        <div className="bg-white">
             <SyllabusPrintLayout
                 institute={institute}
                 {...printableData}
@@ -129,7 +139,7 @@ function PrintSyllabusContent() {
 
 export default function PrintSyllabusPage() {
     return (
-        <Suspense fallback={<p>Cargando...</p>}>
+        <Suspense fallback={<p className="p-8">Cargando motor de impresión...</p>}>
             <PrintSyllabusContent />
         </Suspense>
     )
