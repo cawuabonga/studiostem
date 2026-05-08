@@ -13,8 +13,8 @@
     margin: 1.5cm;
   }
 
-  /* Reset de estilos para impresión */
-  html, body {
+  /* Reset radical para evitar que contenedores de React/Next corten el flujo */
+  html, body, #root, #__next, main, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
     background: white !important;
     color: black !important;
     font-family: 'Lato', serif !important;
@@ -22,7 +22,10 @@
     padding: 0 !important;
     overflow: visible !important;
     height: auto !important;
+    min-height: 0 !important;
     width: 100% !important;
+    display: block !important;
+    position: static !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -34,17 +37,9 @@
   aside, 
   .sidebar-container, 
   .page-header,
-  .screen-only {
+  .screen-only,
+  button {
     display: none !important;
-  }
-
-  /* Contenedores de contenido */
-  .main-content, .printable-content {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    overflow: visible !important;
-    display: block !important;
   }
 
   .print-only {
@@ -94,42 +89,17 @@
     color: black !important;
   }
 
-  /* Columnas de notas angostas */
-  .grade-col {
-    width: 35px !important;
-    min-width: 35px !important;
-    max-width: 35px !important;
-  }
-
   /* Saltos de página */
   .page-break {
+    break-after: page !important;
     page-break-after: always !important;
     display: block !important;
     clear: both !important;
-  }
-
-  .page-break-before {
-    page-break-before: always !important;
-    display: block !important;
-    clear: both !important;
+    position: relative !important;
   }
 
   .no-print-break {
     page-break-inside: avoid !important;
-  }
-
-  /* Específicos para el SÍLABO (Ruta dedicada) */
-  .syllabus-print-container {
-    padding: 0 !important;
-  }
-
-  .syllabus-cover {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    padding: 2cm !important;
-    text-align: center;
+    break-inside: avoid !important;
   }
 }
