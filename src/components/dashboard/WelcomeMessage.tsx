@@ -9,17 +9,59 @@ import { EditProfileDialog } from '../profile/EditProfileDialog';
 import { useState } from 'react';
 import { LinkProfileDialog } from '../profile/LinkProfileDialog';
 import Link from 'next/link';
+import { Badge } from '../ui/badge';
+import { 
+    Github, 
+    Linkedin, 
+    Facebook, 
+    Instagram, 
+    Globe, 
+    Mail, 
+    Smartphone, 
+    Fingerprint, 
+    MapPin, 
+    GraduationCap, 
+    CalendarCheck, 
+    ExternalLink, 
+    UserCircle,
+    UserCheck,
+    Briefcase
+} from 'lucide-react';
+import { Separator } from '../ui/separator';
+
+const SocialButton = ({ href, icon: Icon, color }: { href?: string, icon: any, color: string }) => {
+    if (!href) return null;
+    return (
+        <Button variant="outline" size="icon" className={`h-8 w-8 rounded-full border-muted hover:${color} transition-all`} asChild>
+            <a href={href} target="_blank" rel="noopener noreferrer">
+                <Icon className="h-4 w-4" />
+            </a>
+        </Button>
+    )
+}
+
+const InfoRow = ({ icon: Icon, label, value, color = "text-primary" }: { icon: any, label: string, value?: string, color?: string }) => (
+    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
+        <div className={`p-2 rounded-md bg-muted ${color}`}>
+            <Icon className="h-4 w-4" />
+        </div>
+        <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest">{label}</p>
+            <p className="text-sm font-bold truncate">{value || 'No especificado'}</p>
+        </div>
+    </div>
+)
 
 export default function WelcomeMessage() {
-  const { user, reloadUser } = useAuth();
+  const { user, reloadUser, institute } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isLinkProfileOpen, setIsLinkProfileOpen] = useState(false);
 
-  if (!user) {
-    return null; 
-  }
+  if (!user) return null;
   
   const isUnlinked = !user.documentId && user.role === 'Student';
+  const displayName = user.displayName || 'Usuario';
+  const roleName = user.role === 'Student' ? 'Estudiante' : user.role;
 
   const handleProfileLinked = async () => {
     await reloadUser();
@@ -27,63 +69,149 @@ export default function WelcomeMessage() {
   }
 
   return (
-    <>
-      <Card className="w-full max-w-2xl mx-auto shadow-lg">
-        <CardHeader className="items-center text-center">
-          <Avatar className="w-24 h-24 mb-4">
-            <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.[0] || 'U'}`} alt={user.displayName || "Avatar de usuario"} data-ai-hint="profile avatar" />
-            <AvatarFallback className="text-3xl">{user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}</AvatarFallback>
-          </Avatar>
-          <CardTitle className="text-3xl font-headline">¡Bienvenido, {user.displayName || 'Usuario'}!</CardTitle>
-          <CardDescription className="text-lg">
-            Has iniciado sesión como {user.role}.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-             {isUnlinked ? (
-                <p className="text-center text-accent-foreground bg-accent/20 p-4 rounded-md">
-                    ¡Casi listo! Para acceder a todas tus funcionalidades, primero necesitas vincular tu cuenta a tu perfil de estudiante. Haz clic en el botón de abajo.
-                </p>
-             ) : (
-                <p className="text-center text-muted-foreground">
-                    {user.instituteId 
-                        ? 'Utiliza el menú lateral para navegar por las diferentes secciones de la aplicación.'
-                        : 'Este es tu panel de control. Un SuperAdmin debe asignarte un instituto.'
-                    }
-                </p>
-            )}
-        </CardContent>
-        <CardFooter className="flex justify-center gap-4">
-            {isUnlinked ? (
-                 <Button onClick={() => setIsLinkProfileOpen(true)} size="lg">Vincular mi Perfil</Button>
-            ) : (
-              <>
-                <Button onClick={() => setIsEditOpen(true)}>Editar Perfil</Button>
-                {user.documentId && (
-                  <Button variant="outline" asChild>
-                    <Link href={`/profile/${user.documentId}`} target="_blank">
-                      Ver mi Perfil Público
-                    </Link>
-                  </Button>
-                )}
-              </>
-            )}
-        </CardFooter>
-      </Card>
-
-      {user && (
-          <EditProfileDialog 
-            user={user}
-            isOpen={isEditOpen}
-            onClose={() => setIsEditOpen(false)}
-          />
+    <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* SECCIÓN UNLINKED: Alerta para vincular perfil */}
+      {isUnlinked && (
+        <Card className="border-accent bg-accent/5 border-2 shadow-lg">
+            <CardContent className="pt-6 flex flex-col md:flex-row items-center gap-6">
+                <div className="bg-accent/20 p-4 rounded-full">
+                    <UserCircle className="h-12 w-12 text-accent-foreground" />
+                </div>
+                <div className="flex-1 text-center md:text-left">
+                    <h3 className="text-xl font-black uppercase tracking-tighter">Vincule su Cuenta</h3>
+                    <p className="text-muted-foreground text-sm">Para acceder a sus notas, unidades didácticas y trámites, necesitamos conectar su usuario con su perfil oficial en el instituto.</p>
+                </div>
+                <Button onClick={() => setIsLinkProfileOpen(true)} size="lg" className="bg-accent text-accent-foreground hover:bg-accent/80 font-black px-8">
+                    VINCULAR AHORA
+                </Button>
+            </CardContent>
+        </Card>
       )}
 
-      <LinkProfileDialog
-        isOpen={isLinkProfileOpen}
-        onClose={() => setIsLinkProfileOpen(false)}
-        onProfileLinked={handleProfileLinked}
-      />
-    </>
+      {/* DASHBOARD PRINCIPAL */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Columna Izquierda: Perfil e Identidad */}
+        <div className="lg:col-span-4 space-y-6">
+            <Card className="overflow-hidden border-primary/10 shadow-xl">
+                <div className="h-24 w-full bg-primary relative">
+                     <div className="absolute inset-0 opacity-20 bg-[url('https://picsum.photos/seed/pattern/400/100')] bg-cover" />
+                </div>
+                <div className="px-6 pb-6 text-center">
+                    <div className="relative -mt-12 mb-4 inline-block">
+                        <Avatar className="w-24 h-24 border-4 border-background shadow-lg">
+                            <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${displayName[0]}`} alt={displayName} />
+                            <AvatarFallback className="text-2xl font-black">{displayName[0].toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="absolute bottom-1 right-1 bg-green-500 h-4 w-4 rounded-full border-2 border-background" title="En línea" />
+                    </div>
+                    
+                    <h2 className="text-2xl font-black tracking-tighter uppercase leading-none">{displayName}</h2>
+                    <p className="text-xs font-bold text-primary mt-1 uppercase tracking-widest">{roleName}</p>
+                    
+                    <div className="mt-4 flex justify-center gap-2">
+                        <SocialButton href={user.socialLinks?.linkedin} icon={Linkedin} color="text-blue-600" />
+                        <SocialButton href={user.socialLinks?.github} icon={Github} color="text-black" />
+                        <SocialButton href={user.socialLinks?.facebook} icon={Facebook} color="text-blue-800" />
+                        <SocialButton href={user.socialLinks?.instagram} icon={Instagram} color="text-pink-600" />
+                        <SocialButton href={user.socialLinks?.web} icon={Globe} color="text-primary" />
+                    </div>
+
+                    <Separator className="my-6" />
+
+                    <div className="text-left space-y-1">
+                        <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Sobre mí</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed italic">
+                            {user.bio || "No has añadido una biografía todavía. Cuéntanos quién eres."}
+                        </p>
+                    </div>
+
+                    <div className="mt-6 flex flex-col gap-2">
+                        <Button className="w-full font-bold" onClick={() => setIsEditOpen(true)}>
+                            <Pencil className="h-4 w-4 mr-2" /> Editar mi Perfil
+                        </Button>
+                        {user.documentId && (
+                            <Button variant="outline" className="w-full font-bold" asChild>
+                                <Link href={`/profile/${user.documentId}`} target="_blank">
+                                    <ExternalLink className="h-4 w-4 mr-2" /> Perfil Público
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            </Card>
+        </div>
+
+        {/* Columna Derecha: Detalles e Información */}
+        <div className="lg:col-span-8 space-y-6">
+            
+            {/* Ficha de Información Personal */}
+            <Card className="shadow-lg border-primary/5">
+                <CardHeader className="pb-2 border-b mb-4">
+                    <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" /> Datos de Identidad y Contacto
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InfoRow icon={Fingerprint} label="Documento de Identidad" value={user.documentId} />
+                    <InfoRow icon={Mail} label="Correo Institucional" value={user.email || ''} />
+                    <InfoRow icon={Smartphone} label="Celular / WhatsApp" value={(user as any).phone} color="text-green-600" />
+                    <InfoRow icon={MapPin} label="Dirección de Residencia" value={(user as any).address} color="text-red-500" />
+                </CardContent>
+            </Card>
+
+            {/* Ficha Institucional */}
+            {!isUnlinked && (
+                <Card className="shadow-lg border-primary/5 bg-primary/5">
+                    <CardHeader className="pb-2 border-b border-primary/10 mb-4">
+                        <CardTitle className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <Briefcase className="h-4 w-4" /> Situación Académica
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-primary p-3 rounded-lg text-primary-foreground">
+                                    <GraduationCap className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Programa de Estudios</p>
+                                    <p className="text-base font-bold leading-tight">{user.programName || 'No asignado'}</p>
+                                    <Badge variant="outline" className="mt-1 bg-white">ID: {user.programId}</Badge>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 bg-background rounded-xl border shadow-sm text-center">
+                                <p className="text-[9px] font-black uppercase text-muted-foreground mb-1">Semestre</p>
+                                <p className="text-2xl font-black text-primary">{user.currentSemester || '-'}</p>
+                            </div>
+                            <div className="p-4 bg-background rounded-xl border shadow-sm text-center">
+                                <p className="text-[9px] font-black uppercase text-muted-foreground mb-1">Turno</p>
+                                <p className="text-2xl font-black text-primary">{user.turno || '-'}</p>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Footer con Info del Instituto */}
+            <div className="flex items-center gap-2 px-2">
+                 <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                    Miembro de {institute?.name || 'STEM Platform'} desde {(user as any).admissionYear || 'recientemente'}
+                 </p>
+            </div>
+        </div>
+      </div>
+
+      <EditProfileDialog user={user} isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} />
+      <LinkProfileDialog isOpen={isLinkProfileOpen} onClose={() => setIsLinkProfileOpen(false)} onProfileLinked={handleProfileLinked} />
+    </div>
   );
 }
+
+const Pencil = ({ className, ...props }: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+)

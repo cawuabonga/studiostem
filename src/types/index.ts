@@ -3,6 +3,14 @@ import type { Timestamp } from 'firebase/firestore';
 
 export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
 
+export interface SocialLinks {
+    linkedin?: string;
+    github?: string;
+    facebook?: string;
+    instagram?: string;
+    web?: string;
+}
+
 export interface AppUser {
   uid: string;
   email: string | null;
@@ -11,47 +19,20 @@ export interface AppUser {
   role: UserRole;
   documentId?: string;
   instituteId: string | null;
-  // This will hold the dynamic role ID, e.g., "admin_custom", "contador"
   roleId?: string; 
-  // Will hold the specific permissions for the user's role
   permissions?: Permission[];
-  programId?: string; // ID del programa al que pertenece
+  programId?: string;
   programName?: string;
-  currentSemester?: number; // Para estudiantes
-  turno?: UnitTurno; // Para estudiantes
-}
-
-// AI Configuration Types
-export type AIProvider = 'google' | 'ollama';
-
-export interface AIConfig {
-    activeProvider: AIProvider;
-    ollamaUrl: string;
-    ollamaModel: string;
-    lastUpdated?: Timestamp;
-    updatedBy?: string;
-}
-
-// Represents a pre-created profile for a staff member, identified by Document ID.
-// This is created by an admin and can be "claimed" by a user.
-export interface StaffProfile {
-  documentId: string;
-  displayName: string;
-  email: string;
-  phone?: string;
-  role: UserRole; // This can be deprecated in favor of roleId over time
-  roleId: string; // ID of the role document from the 'roles' collection
-  condition: 'NOMBRADO' | 'CONTRATADO';
-  programId: string;
-  rfidCardId?: string; // For Arduino/RFID integration
-  // This will be null until a user account is linked
-  linkedUserUid?: string | null;
+  currentSemester?: number;
+  turno?: UnitTurno;
+  bio?: string;
+  socialLinks?: SocialLinks;
 }
 
 export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
 
 export interface StudentProfile {
-  id?: string; // Firestore document ID
+  id?: string;
   documentId: string;
   firstName: string;
   lastName:string;
@@ -69,17 +50,34 @@ export interface StudentProfile {
   turno: UnitTurno;
   role: 'Student';
   roleId: 'student';
-  condition?: 'NOMBRADO' | 'CONTRATADO'; // Not typically used for students but for consistency
-  rfidCardId?: string; // For Arduino/RFID integration
+  condition?: 'NOMBRADO' | 'CONTRATADO';
+  rfidCardId?: string;
   linkedUserUid?: string | null;
   academicStatus?: StudentAcademicStatus;
   graduationYear?: string;
-  currentSemester?: number; // Added to track actual academic progress
+  currentSemester?: number;
+  bio?: string;
+  socialLinks?: SocialLinks;
+}
+
+export interface StaffProfile {
+  documentId: string;
+  displayName: string;
+  email: string;
+  phone?: string;
+  role: UserRole;
+  roleId: string;
+  condition: 'NOMBRADO' | 'CONTRATADO';
+  programId: string;
+  rfidCardId?: string;
+  linkedUserUid?: string | null;
+  bio?: string;
+  socialLinks?: SocialLinks;
 }
 
 export interface AccessPoint {
-    id: string; // Firestore Document ID
-    accessPointId: string; // User-defined ID (e.g., LAB-01)
+    id: string;
+    accessPointId: string;
     name: string;
     description?: string;
     allowedRoleIds?: string[];
@@ -92,15 +90,14 @@ export interface AccessLog {
     status: 'Permitido' | 'Denegado';
     userDocumentId?: string;
     userName?: string;
-    userRole?: string; // Human-readable role name, e.g., "Docente"
-    userRoleId?: string; // ID of the role, e.g., "teacher"
+    userRole?: string;
+    userRoleId?: string;
     accessPointId: string;
     accessPointName?: string;
     rfidCardId?: string;
     instituteId?: string;
 }
 
-// NEW: Document to hold the last access state for a user
 export interface AccessState {
     lastStateByAccessPoint: {
         [accessPointDocId: string]: {
@@ -109,7 +106,6 @@ export interface AccessState {
         };
     };
 }
-
 
 export interface LoginDesign {
   imageUrl?: string;
@@ -123,7 +119,6 @@ export interface LoginDesign {
   sloganSize?: 'text-base' | 'text-lg' | 'text-xl';
 }
 
-
 export interface LoginImage {
   id: string;
   name: string;
@@ -131,12 +126,11 @@ export interface LoginImage {
   createdAt: Timestamp;
 }
 
-
 export interface Institute {
   id: string;
   name: string;
   logoUrl?: string;
-  primaryColor?: string; // HSL format e.g., "225 65% 32%"
+  primaryColor?: string;
   publicProfile?: InstitutePublicProfile;
 }
 
@@ -173,7 +167,6 @@ export interface Photo {
     createdAt: Timestamp;
 }
 
-
 export interface ProgramModule {
   name: string;
   code: string;
@@ -206,31 +199,27 @@ export interface Unit {
   unitType: UnitType;
   turno: UnitTurno;
   programId: string;
-  moduleId: string; // The code of the module, e.g., "MODULO 1 - ET"
+  moduleId: string;
   semester: number;
   imageUrl?: string;
 }
 
-// This type is now based on StaffProfile for consistency.
-// The `id` is derived from `documentId` for list keys.
 export interface Teacher {
-  id: string; // Document ID
+  id: string;
   documentId: string;
   fullName: string;
   email: string;
   phone: string;
   specialty: string;
-  active: boolean; // Could be derived from linked status or a specific field
+  active: boolean;
   condition: 'NOMBRADO' | 'CONTRATADO';
   programId: string;
   programName?: string;
 }
 
 export interface Assignment {
-  [unitId: string]: string; // unitId -> teacherId (Document ID)
+  [unitId: string]: string;
 }
-
-// --- NON-TEACHING ACTIVITIES ---
 
 export interface NonTeachingActivity {
     id: string;
@@ -241,16 +230,14 @@ export interface NonTeachingActivity {
 
 export interface NonTeachingAssignment {
     id: string;
-    teacherId: string; // Document ID of the staff member
+    teacherId: string;
     activityId: string;
-    activityName: string; // Denormalized for easy display
+    activityName: string;
     assignedHours: number;
     year: string;
     period: UnitPeriod;
 }
 
-
-// --- EFSRT (PRACTICAS) ---
 export type EFSRTStatus = 'Programado' | 'En Curso' | 'Por Evaluar' | 'Aprobado' | 'Desaprobado';
 
 export interface EFSRTVisit {
@@ -262,14 +249,14 @@ export interface EFSRTVisit {
 
 export interface EFSRTAssignment {
     id: string;
-    studentId: string; // documentId
+    studentId: string;
     studentName: string;
     programId: string;
-    moduleId: string; // module code
+    moduleId: string;
     moduleName: string;
-    supervisorId: string; // teacher documentId
+    supervisorId: string;
     supervisorName: string;
-    location: string; // Company name
+    location: string;
     address?: string;
     startDate: Timestamp;
     endDate: Timestamp;
@@ -282,8 +269,6 @@ export interface EFSRTAssignment {
     createdAt: Timestamp;
 }
 
-
-// --- PAYMENTS ---
 export type PaymentStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Anulado';
 export type PayerType = 'student' | 'staff' | 'external';
 
@@ -298,10 +283,10 @@ export interface PaymentConcept {
 
 export interface Payment {
   id: string;
-  payerId: string; // documentId of the payer
+  payerId: string;
   payerName: string;
   payerType: PayerType;
-  payerAuthUid: string; // UID of user who registered the payment.
+  payerAuthUid: string;
   concept: string; 
   amount: number;
   paymentDate: Timestamp;
@@ -316,8 +301,6 @@ export interface Payment {
   observations?: string;
 }
 
-
-// --- SUPPLIES & INVENTORY ---
 export type SupplyUnitOfMeasure = 'Unidad' | 'Caja' | 'Paquete' | 'Resma' | 'Galón' | 'Kilo' | 'Metro' | 'Litro';
 export type SupplyCategory = 'Oficina' | 'Aseo' | 'Bebidas' | 'Snacks' | 'Accesorios' | 'Otro';
 
@@ -336,9 +319,9 @@ export interface StockHistoryLog {
     timestamp: Timestamp;
     userId: string;
     userName: string;
-    change: number; // e.g., +50 or -5
+    change: number;
     newStock: number;
-    notes?: string; // e.g., "Compra OC-123" or "Entrega a Juan Perez"
+    notes?: string;
 }
 
 export type SupplyRequestStatus = 'Pendiente' | 'Aprobado' | 'Rechazado' | 'Entregado' | 'Anulado';
@@ -348,19 +331,19 @@ export interface SupplyRequestItem {
     name: string;
     unitOfMeasure: SupplyUnitOfMeasure;
     requestedQuantity: number;
-    approvedQuantity?: number; // Set on approval
+    approvedQuantity?: number;
 }
 
 export interface SupplyRequest {
     id: string;
-    code: string; // e.g., PED-2024-0001
-    requesterId: string; // User's documentId
+    code: string;
+    requesterId: string;
     requesterName: string;
-    requesterAuthUid: string; // UID of user who made the request
+    requesterAuthUid: string;
     status: SupplyRequestStatus;
     items: SupplyRequestItem[];
     createdAt: Timestamp;
-    processedAt?: Timestamp; // Date of approval, rejection or delivery
+    processedAt?: Timestamp;
     rejectionReason?: string;
     annulmentReason?: string;
     approvedById?: string;
@@ -369,11 +352,8 @@ export interface SupplyRequest {
     deliveredByName?: string;
     annulledById?: string;
     annulledByName?: string;
-    pecosaCode?: string; // Optional code for the final delivery document
+    pecosaCode?: string;
 }
-
-
-// --- ACADEMIC & MATRICULATION TYPES ---
 
 export interface AcademicPeriodSettings {
     startDate: Timestamp;
@@ -381,13 +361,12 @@ export interface AcademicPeriodSettings {
 }
 
 export interface AcademicYearSettings {
-    [period: string]: AcademicPeriodSettings; // e.g., 'MAR-JUL', 'AGO-DIC'
+    [period: string]: AcademicPeriodSettings;
 }
 
-
 export interface Matriculation {
-    id?: string; // Firestore document ID
-    studentId: string; // The student's document ID
+    id?: string;
+    studentId: string;
     unitId: string;
     programId: string;
     year: string;
@@ -400,9 +379,8 @@ export interface Matriculation {
 
 export interface EnrolledUnit extends Unit {
     programName: string;
-    teacherName?: string; // To be added later
+    teacherName?: string;
 }
-
 
 export interface AchievementIndicator {
   id: string;
@@ -418,7 +396,7 @@ export interface Content {
   id: string;
   title: string;
   type: ContentType;
-  value: string; // URL for file/link, or markdown text
+  value: string;
   createdAt: Timestamp;
 }
 
@@ -427,23 +405,21 @@ export interface Task {
   title: string;
   description: string;
   dueDate: Timestamp | Date;
-  fileUrl?: string; // URL to an attached file from the teacher
+  fileUrl?: string;
   createdAt: Timestamp;
-  indicatorId?: string; // Vínculo con el indicador
+  indicatorId?: string;
 }
 
-// New type for task submissions
 export interface TaskSubmission {
-    id: string; // student documentId
+    id: string;
     studentName: string;
     fileUrl?: string;
-    link?: string; // New field for external URLs
+    link?: string;
     submittedAt: Timestamp;
     grade?: number;
     feedback?: string;
 }
 
-// New type for the weekly document in Firestore
 export interface WeekData {
   weekNumber: number;
   isVisible: boolean;
@@ -454,28 +430,25 @@ export interface WeekData {
   basicContents: string;
 }
 
-
 export interface Submission {
   id: string;
   studentUid: string;
   studentName: string;
   taskId: string;
-  fileUrl: string; // URL to the student's submitted file
+  fileUrl: string;
   submittedAt: Timestamp;
   grade?: number;
   feedback?: string;
 }
 
-// Represents a single grade entry for an evaluation
 export interface GradeEntry {
   type: 'task' | 'manual';
-  refId: string; // El ID de la tarea original, o un ID generado para una entrada manual
-  label: string; // Título de la tarea o evaluación manual
+  refId: string;
+  label: string;
   grade: number | null;
   weekNumber: number;
 }
 
-// Represents a manually added evaluation column by the teacher for an indicator
 export interface ManualEvaluation {
     id: string;
     indicatorId: string;
@@ -484,33 +457,27 @@ export interface ManualEvaluation {
     createdAt: Timestamp;
 }
 
-
-// Represents the academic record of a student in a specific unit for a specific period.
 export interface AcademicRecord {
-  id: string; // Composite key, e.g., `${unitId}_${studentId}_${year}_${period}`
+  id: string;
   studentId: string;
   unitId: string;
   programId: string;
   year: string;
   period: UnitPeriod;
-  // A map where each key is an indicator ID, and the value is an array of grade entries
   grades: { [indicatorId: string]: GradeEntry[] };
-  // A map of evaluations manually added by the teacher
   evaluations: { [indicatorId: string]: ManualEvaluation[] };
   finalGrade: number | null;
   attendancePercentage: number;
   status: 'cursando' | 'aprobado' | 'desaprobado' | 'inhabilitado' | 'retirado';
 }
 
-// --- ATTENDANCE TYPES ---
-export type AttendanceStatus = 'P' | 'T' | 'F' | 'J' | 'U'; // Presente, Tarde, Falta, Justificada, Unmarked
+export type AttendanceStatus = 'P' | 'T' | 'F' | 'J' | 'U';
 
 export interface AttendanceRecord {
-    id: string; // Composite key, e.g., `${unitId}_${year}_${period}`
+    id: string;
     unitId: string;
     year: string;
     period: UnitPeriod;
-    // Map of studentId -> { week_N: [status, status, status, status, status] }
     records: {
         [studentId: string]: {
             [week: string]: AttendanceStatus[];
@@ -518,7 +485,6 @@ export interface AttendanceRecord {
     };
 }
 
-// --- SYLLABUS ---
 export interface Syllabus {
     summary: string;
     competence: string;
@@ -532,7 +498,6 @@ export interface SyllabusDesignOptions {
     showSignature: boolean;
 }
 
-// --- Report Data ---
 export interface MatriculationReportData {
     program: Program;
     units: {
@@ -541,8 +506,6 @@ export interface MatriculationReportData {
         students: StudentProfile[];
     }[];
 }
-
-// --- INFRASTRUCTURE ---
 
 export interface Building {
   id: string;
@@ -559,7 +522,7 @@ export interface Environment {
   code: string;
   type: 'Aula' | 'Laboratorio' | 'Oficina' | 'Auditorio' | 'Taller' | 'Otro';
   capacity: number;
-  buildingId: string; // Link to the parent building
+  buildingId: string;
   floor?: number;
 }
 
@@ -571,50 +534,45 @@ export interface AssetHistoryLog {
     userId: string;
     userName: string;
     action: AssetAction;
-    details: string; // E.g., "Cambió el estado de 'Operativo' a 'En Mantenimiento'."
+    details: string;
 }
 
 export type AssetGroup = "MAQUINARIAS, EQUIPOS Y MOBILIARIO" | "VEHICULOS" | "OTROS";
 export type AssetClass = "EQUIPO" | "MOBILIARIO" | "VEHICULO" | "TERRENO";
 
-
 export interface AssetType {
     id: string;
-    name: string; // Denominación
-    patrimonialCode: string; // Código Patrimonial
+    name: string;
+    patrimonialCode: string;
     group: AssetGroup;
     class: AssetClass;
     description?: string;
-    lastAssignedNumber: number; // Para el correlativo
+    lastAssignedNumber: number;
 }
 
 export interface Asset {
     id: string;
     buildingId: string;
     environmentId: string;
-    assetTypeId: string; // Link to the AssetType in the catalog
-    name: string; // Denormalized from AssetType: Denominación
-    codeOrSerial: string; // Código patrimonial completo o S/N del fabricante
-    type: AssetClass; // Denormalized from AssetType
-    quantity: 1; // For individual assets, this is always 1
+    assetTypeId: string;
+    name: string;
+    codeOrSerial: string;
+    type: AssetClass;
+    quantity: 1;
     status: 'Operativo' | 'En Mantenimiento' | 'De Baja';
     acquisitionDate?: Timestamp;
     notes?: string;
-    characteristics?: Record<string, any>; // For dynamic fields: marca, modelo, etc.
-    // Denormalized data for reporting
+    characteristics?: Record<string, any>;
     environmentName?: string;
     buildingName?: string;
     instituteId: string;
 }
 
-
-
-// --- SCHEDULES / HORARIOS ---
 export interface ScheduleBlock {
     id: string;
     dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes';
-    startTime: string; // e.g., "08:00"
-    endTime: string; // e.g., "09:30"
+    startTime: string;
+    endTime: string;
     unitId: string;
     teacherId?: string;
     environmentId?: string;
@@ -627,10 +585,10 @@ export type TimeBlockType = 'clase' | 'receso';
 
 export interface TimeBlock {
     id?: string;
-    startTime: string; // "HH:mm"
-    endTime: string; // "HH:mm"
+    startTime: string;
+    endTime: string;
     type: TimeBlockType;
-    label?: string; // Optional label e.g., "Receso"
+    label?: string;
 }
 
 export interface ScheduleTemplate {
@@ -644,10 +602,7 @@ export interface ScheduleTemplate {
     isDefault: boolean;
 }
 
-
-// --- PERMISSIONS AND ROLES ---
 export type Permission = 
-  // Academic Management
   | 'academic:program:manage'
   | 'academic:unit:manage'
   | 'academic:unit:manage:own'
@@ -658,7 +613,6 @@ export type Permission =
   | 'academic:periods:manage'
   | 'academic:load:view'
   | 'academic:efsrt:manage'
-  // Administrative Management
   | 'admin:fees:manage'
   | 'admin:payments:validate'
   | 'admin:access-control:manage'
@@ -667,33 +621,26 @@ export type Permission =
   | 'admin:infra:manage'
   | 'admin:supplies:manage'
   | 'admin:deliveries:view'
-  // User Management
   | 'users:staff:manage'
   | 'users:student:manage'
-  // Planning & Schedules
   | 'planning:schedule:manage'
   | 'planning:environment:manage'
   | 'planning:schedule:view:own'
-  // User-specific actions
   | 'user:supplies:request'
-  // SuperAdmin
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
   | 'superadmin:design:manage'
   | 'superadmin:roles:manage'
-  // Teacher
   | 'teacher:unit:view'
   | 'teacher:efsrt:supervise'
-  // Student
   | 'student:unit:view'
   | 'student:grades:view'
   | 'student:payments:manage'
   | 'student:efsrt:view';
 
-
 export interface Role {
-  id: string; // e.g., "admin_custom", "contador_jr"
-  name: string; // e.g., "Administrador Custom", "Contador Junior"
+  id: string;
+  name: string;
   description: string;
   permissions: Record<Permission, boolean>;
 }
