@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,16 +12,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyllabus, saveSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
+import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher } from '@/types';
 import { Loader2, Save, Printer, Wand2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
-import { useRouter } from 'next/navigation';
 import '@/app/dashboard/gestion-academica/print-grades.css';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { SyllabusPrintLayout } from './SyllabusPrintLayout';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
-import { Separator } from '../ui/separator';
 import { generateSyllabusSummary } from '@/ai/flows/generate-syllabus-summary-flow';
 
 const syllabusSchema = z.object({
@@ -40,11 +35,9 @@ interface SyllabusManagerProps {
 export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const { instituteId, institute } = useAuth();
   const { toast } = useToast();
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [printableData, setPrintableData] = useState<{
         program: Program | null;
         teacher: Teacher | null;
@@ -52,12 +45,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
         weeklyData: WeekData[];
         indicators: AchievementIndicator[];
     } | null>(null);
-
-  const [designOptions, setDesignOptions] = useState<SyllabusDesignOptions>({
-      showLogo: true,
-      showInfoTable: true,
-      showSignature: true,
-  });
 
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
@@ -143,19 +130,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   };
 
   const handlePrint = () => {
-    const optionsQuery = new URLSearchParams(designOptions as any).toString();
-    const printUrl = `/dashboard/docente/unidad/${unit.id}/print?${optionsQuery}`;
-    window.open(printUrl, '_blank');
+    window.print();
   };
-
-  const handleOpenPreview = () => {
-    fetchSyllabusData().then(() => setIsPreviewOpen(true));
-  }
-
-  const handleDesignOptionChange = (option: keyof SyllabusDesignOptions, value: boolean) => {
-    setDesignOptions(prev => ({...prev, [option]: value }));
-  }
-
 
   if (loading) {
     return (
@@ -174,8 +150,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   }
 
   return (
-    <>
-        <Card className="screen-only">
+    <div className="space-y-6">
+        <Card className="no-print">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <CardHeader>
@@ -187,9 +163,9 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handleOpenPreview} disabled={loading}>
+                        <Button type="button" variant="outline" onClick={handlePrint} disabled={loading}>
                             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Printer className="mr-2 h-4 w-4" />}
-                            Visualizar y Diseñar Sílabo
+                            Imprimir Sílabo (PDF)
                         </Button>
                         <Button type="submit" disabled={isSaving}>
                             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
@@ -262,61 +238,21 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
           </Form>
         </Card>
 
-        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-            <DialogContent className="max-w-6xl h-[95vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Previsualización y Diseño del Sílabo</DialogTitle>
-                    <DialogDescription>
-                       Modifica el diseño en tiempo real usando las opciones de la izquierda. Cuando esté listo, procede a imprimir.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid grid-cols-12 gap-6 flex-1 min-h-0">
-                    {/* Editor Panel */}
-                    <div className="col-span-3 border-r pr-6 space-y-4">
-                        <h3 className="font-semibold text-lg">Opciones de Diseño</h3>
-                        <Separator />
-                        <div className="space-y-4">
-                             <div className="flex items-center space-x-2">
-                                <Switch id="show-logo" checked={designOptions.showLogo} onCheckedChange={(val) => handleDesignOptionChange('showLogo', val)} />
-                                <Label htmlFor="show-logo">Mostrar Logo</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <Switch id="show-info-table" checked={designOptions.showInfoTable} onCheckedChange={(val) => handleDesignOptionChange('showInfoTable', val)} />
-                                <Label htmlFor="show-info-table">Mostrar Tabla de Información</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch id="show-signature" checked={designOptions.showSignature} onCheckedChange={(val) => handleDesignOptionChange('showSignature', val)} />
-                                <Label htmlFor="show-signature">Mostrar Firma del Docente</Label>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Preview Panel */}
-                    <div className="col-span-9 overflow-y-auto bg-gray-100 p-4 rounded-md">
-                        {printableData ? (
-                           <div style={{ transform: 'scale(0.8)', transformOrigin: 'top left' }}>
-                                <SyllabusPrintLayout
-                                    institute={institute}
-                                    unit={unit}
-                                    {...printableData}
-                                    designOptions={designOptions}
-                                />
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full">
-                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                            </div>
-                        )}
-                    </div>
-                </div>
-                 <div className="flex justify-end gap-2 mt-4 flex-shrink-0">
-                    <Button variant="ghost" onClick={() => setIsPreviewOpen(false)}>Cerrar</Button>
-                    <Button onClick={handlePrint}>
-                        <Printer className="mr-2 h-4 w-4" />
-                        Proceder a Imprimir
-                    </Button>
-                </div>
-            </DialogContent>
-        </Dialog>
-    </>
+        {/* Versión imprimible - oculta en pantalla, visible al imprimir */}
+        <div className="print-only">
+            {printableData && (
+                <SyllabusPrintLayout
+                    institute={institute}
+                    unit={unit}
+                    {...printableData}
+                    designOptions={{
+                        showLogo: true,
+                        showInfoTable: true,
+                        showSignature: true
+                    }}
+                />
+            )}
+        </div>
+    </div>
   );
 }
