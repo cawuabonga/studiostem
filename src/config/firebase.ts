@@ -1989,7 +1989,7 @@ export const getMatriculationReportData = async (
         let students: StudentProfile[] = [];
         if (studentIds.length > 0) {
             const studentProfilesCol = getSubCollectionRef(instituteId, 'studentProfiles');
-            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentIds));
+            const studentQuery = query(studentProfilesCol, where('documentId', 'in', studentDocIds));
             const studentSnapshot = await getDocs(studentQuery);
             students = studentSnapshot.docs.map(d => d.data() as StudentProfile).sort((a,b) => a.lastName.localeCompare(b.lastName));
         }
@@ -2044,7 +2044,7 @@ export const addEnvironment = async (instituteId: string, buildingId: string, da
 export const getEnvironmentsForBuilding = async (instituteId: string, buildingId: string): Promise<Environment[]> => {
     const envCol = collection(db, 'institutes', instituteId, 'buildings', buildingId, 'environments');
     const q = query(envCol, orderBy("name"));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(envCol);
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, buildingId, ...docSnap.data() } as Environment));
 };
 
@@ -2796,4 +2796,57 @@ export const bulkCreateMatriculations = async (
     }
 
     await batch.commit();
+};
+
+export const registerHistoricalMatriculation = async (
+    instituteId: string, 
+    studentId: string, 
+    unit: Unit, 
+    data: { year: string, period: UnitPeriod, grade: number }
+) => {
+    const batch = writeBatch(db);
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const docRef = doc(matriculationsCol);
+    
+    const matriculationData: Omit<Matriculation, 'id'> = {
+        studentId,
+        unitId: unit.id,
+        programId: unit.programId,
+        year: data.year,
+        period: data.period,
+        semester: unit.semester,
+        moduleId: unit.moduleId,
+        status: 'aprobado',
+        createdAt: Timestamp.now()
+    };
+    batch.set(docRef, matriculationData);
+    
+    const recordId = `${unit.id}_${studentId}_${data.year}_${data.period}`;
+    const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+    batch.set(recordRef, {
+        id: recordId,
+        studentId,
+        unitId: unit.id,
+        programId: unit.programId,
+        year: data.year,
+        period: data.period,
+        finalGrade: data.grade,
+        status: 'aprobado',
+        grades: {},
+        evaluations: {}
+    }, { merge: true });
+
+    await batch.commit();
+};
+
+export const registerHistoricalEFSRT = async (
+    instituteId: string, 
+    data: Omit<EFSRTAssignment, 'id' | 'createdAt' | 'visits' | 'status'>
+) => {
+    await addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), {
+        ...data,
+        status: 'Aprobado',
+        visits: [],
+        createdAt: Timestamp.now()
+    });
 };
