@@ -101,15 +101,15 @@ export function SyllabusPrintLayout({
                             </h2>
                         </div>
                         
-                        {/* Título de la Unidad (Reducido a 16pt) */}
-                        <div className="border-y-2 border-black py-6 w-full text-center my-4 bg-gray-50">
-                            <h2 className="text-[16pt] font-black tracking-[0.1em] text-black px-4">
+                        {/* Título de la Unidad (Ajustado a 20pt) */}
+                        <div className="border-y-2 border-black py-8 w-full text-center my-4 bg-gray-50">
+                            <h2 className="text-[20pt] font-black tracking-[0.1em] text-black px-4">
                                 SÍLABO DE {unit.name.toUpperCase()}
                             </h2>
                         </div>
                     </div>
 
-                    {/* Footer de Portada - Ahora garantizado en la misma página */}
+                    {/* Footer de Portada */}
                     <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pt-8 border-t-2 border-black">
                         <div className="space-y-1">
                             <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
@@ -123,102 +123,131 @@ export function SyllabusPrintLayout({
                 </div>
             </div>
 
-            {/* --- PÁGINA 2: INFORMACIÓN GENERAL Y SUMILLA --- */}
+            {/* --- PÁGINA 2: INFO GENERAL, SUMILLA, COMPETENCIA E INDICADORES --- */}
             <div className="page-break py-4">
                 <PageHeader institute={institute} />
                 
                 <div className="mt-6 space-y-8 px-4">
                     <section>
-                        <h3 className="text-[12pt] font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-3 py-0.5 text-[9pt]">I</span>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">I</span>
                             INFORMACIÓN GENERAL
                         </h3>
                         <table className="w-full border-collapse border-2 border-black">
-                            <tbody className="text-[9pt]">
+                            <tbody className="text-[8.5pt]">
                                 <tr>
-                                    <th className="w-[30%] text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Programa de Estudios</th>
-                                    <td className="p-2 border border-black font-semibold uppercase text-black">{program?.name}</td>
+                                    <th className="w-[30%] text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Programa de Estudios</th>
+                                    <td className="p-1.5 border border-black font-semibold uppercase text-black">{program?.name}</td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Módulo Profesional</th>
-                                    <td className="p-2 border border-black uppercase text-black">{currentModule?.name} ({currentModule?.code})</td>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Módulo Profesional</th>
+                                    <td className="p-1.5 border border-black uppercase text-black">{currentModule?.name} ({currentModule?.code})</td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Unidad Didáctica</th>
-                                    <td className="p-2 border border-black font-black uppercase text-[10pt] text-black">{unit.name}</td>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Unidad Didáctica</th>
+                                    <td className="p-1.5 border border-black font-black uppercase text-[9.5pt] text-black">{unit.name}</td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Ciclo / Semestre</th>
-                                    <td className="p-2 border border-black text-black">{unit.semester}° Semestre</td>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Ciclo / Semestre</th>
+                                    <td className="p-1.5 border border-black text-black">{unit.semester}° Semestre</td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Créditos</th>
-                                    <td className="p-2 border border-black text-black">
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Créditos</th>
+                                    <td className="p-1.5 border border-black text-black">
                                         Total: <span className="font-bold">{unit.credits}</span> | Teoría: {unit.theoreticalHours > 0 ? (unit.credits / 2).toFixed(1) : 0} | Práctica: {unit.practicalHours > 0 ? (unit.credits / 2).toFixed(1) : 0}
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Horas Semanales / Totales</th>
-                                    <td className="p-2 border border-black text-black">
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Horas Semanales / Totales</th>
+                                    <td className="p-1.5 border border-black text-black">
                                         {(unit.totalHours / (unit.totalWeeks || 16)).toFixed(0)} h/s (T: {unit.theoreticalHours}h / P: {unit.practicalHours}h) | Total: <span className="font-bold">{unit.totalHours} horas</span>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Turno / Periodo</th>
-                                    <td className="p-2 border border-black font-bold uppercase text-black">{unit.turno} | {unit.period} {currentYear}</td>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Turno / Periodo</th>
+                                    <td className="p-1.5 border border-black font-bold uppercase text-black">{unit.turno} | {unit.period} {currentYear}</td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Vigencia (Cronograma)</th>
-                                    <td className="p-2 border border-black italic text-black">
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Vigencia (Cronograma)</th>
+                                    <td className="p-1.5 border border-black italic text-black">
                                         Desde: {academicDates?.start ? format(academicDates.start, 'dd/MM/yyyy') : '---'} hasta {academicDates?.end ? format(academicDates.end, 'dd/MM/yyyy') : '---'}
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th className="text-left bg-gray-100 p-2 border border-black uppercase font-bold text-black">Docente Responsable</th>
-                                    <td className="p-2 border border-black font-bold uppercase text-black">{teacher?.fullName} ({teacher?.email})</td>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Docente Responsable</th>
+                                    <td className="p-1.5 border border-black font-bold uppercase text-black">{teacher?.fullName} ({teacher?.email})</td>
                                 </tr>
                             </tbody>
                         </table>
                     </section>
 
                     <section>
-                        <h3 className="text-[12pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-3 py-0.5 text-[9pt]">II</span>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">II</span>
                             SUMILLA
                         </h3>
-                        <div className="text-justify pl-6 text-[9.5pt] leading-relaxed border-l-4 border-gray-100 text-black">
+                        <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.summary)}
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">III</span>
+                            COMPETENCIA DE LA UNIDAD DIDÁCTICA
+                        </h3>
+                        <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
+                            {renderHtml(syllabus?.competence)}
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">IV</span>
+                            INDICADORES DE LOGRO
+                        </h3>
+                        <div className="pl-6 space-y-3">
+                            {indicators.map((ind, idx) => (
+                                <div key={ind.id} className="flex gap-4 items-start">
+                                    <span className="font-bold text-[9pt] text-primary whitespace-nowrap">{(idx + 1).toString().padStart(2, '0')}.</span>
+                                    <div className="text-[9pt]">
+                                        <p className="font-bold uppercase leading-tight">{ind.name}</p>
+                                        <p className="text-gray-600 mt-1">{ind.description}</p>
+                                        <p className="text-[8pt] text-gray-400 italic mt-0.5">Periodo: Semanas {ind.startWeek} a {ind.endWeek}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </section>
                 </div>
             </div>
 
-            {/* --- PÁGINA 3+: ORGANIZACIÓN DE ACTIVIDADES --- */}
+            {/* --- PÁGINA 3: ORGANIZACIÓN DE ACTIVIDADES --- */}
             <div className="page-break py-4">
                 <PageHeader institute={institute} />
                 <div className="px-4">
-                    <h3 className="text-[12pt] font-black border-b-2 border-black pb-1 my-4 flex items-center gap-2 text-black">
-                        <span className="bg-black text-white px-3 py-0.5 text-[9pt]">III</span>
+                    <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 my-4 flex items-center gap-2 text-black">
+                        <span className="bg-black text-white px-2 py-0.5 text-[8pt]">V</span>
                         ORGANIZACIÓN DE ACTIVIDADES Y CONTENIDOS
                     </h3>
-                    <table className="w-full border-collapse border-2 border-black text-[8pt]">
+                    <table className="w-full border-collapse border-2 border-black text-[7.5pt]">
                         <thead>
                             <tr className="bg-gray-100 font-bold uppercase text-black">
-                                <th className="border-2 border-black p-2 w-[5%]">SEM.</th>
-                                <th className="border-2 border-black p-2 w-[30%]">ELEMENTOS DE CAPACIDAD</th>
-                                <th className="border-2 border-black p-2 w-[30%]">ACTIVIDADES DE APRENDIZAJE</th>
-                                <th className="border-2 border-black p-2 w-[25%]">CONTENIDOS BÁSICOS</th>
-                                <th className="border-2 border-black p-2 w-[10%]">TAREAS</th>
+                                <th className="border-2 border-black p-1.5 w-[5%]">SEM.</th>
+                                <th className="border-2 border-black p-1.5 w-[30%]">ELEMENTOS DE CAPACIDAD</th>
+                                <th className="border-2 border-black p-1.5 w-[30%]">ACTIVIDADES DE APRENDIZAJE</th>
+                                <th className="border-2 border-black p-1.5 w-[25%]">CONTENIDOS BÁSICOS</th>
+                                <th className="border-2 border-black p-1.5 w-[10%]">TAREAS</th>
                             </tr>
                         </thead>
                         <tbody>
                             {weeklyData.map(week => (
                                 <tr key={week.weekNumber} className="border-black">
                                     <td className="border border-black text-center font-bold bg-gray-50 text-black">{week.weekNumber}</td>
-                                    <td className="border border-black p-2 align-top text-black">{renderHtml(week.capacityElement)}</td>
-                                    <td className="border border-black p-2 align-top text-black">{renderHtml(week.learningActivities)}</td>
-                                    <td className="border border-black p-2 align-top font-medium italic text-black">{renderHtml(week.basicContents)}</td>
-                                    <td className="border border-black p-2 text-center align-top text-black">
+                                    <td className="border border-black p-1.5 align-top text-black">{renderHtml(week.capacityElement)}</td>
+                                    <td className="border border-black p-1.5 align-top text-black">{renderHtml(week.learningActivities)}</td>
+                                    <td className="border border-black p-1.5 align-top font-medium italic text-black">{renderHtml(week.basicContents)}</td>
+                                    <td className="border border-black p-1.5 text-center align-top text-black">
                                         {(week.tasks || []).length > 0 ? `${(week.tasks || []).length} ent.` : '--'}
                                     </td>
                                 </tr>
@@ -228,21 +257,43 @@ export function SyllabusPrintLayout({
                 </div>
             </div>
 
-            {/* --- ÚLTIMA PÁGINA: FIRMAS --- */}
-            <div className="py-6 overflow-visible">
+            {/* --- ÚLTIMA PÁGINA: METODOLOGÍA, BIBLIOGRAFÍA Y FIRMAS --- */}
+            <div className="py-4">
                 <PageHeader institute={institute} />
-                <section className="pt-20 px-4">
-                    <div className="flex justify-around items-end">
-                        <div className="text-center w-72 border-t-2 border-black pt-2">
-                            <p className="font-black text-[10pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
-                            <p className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">Docente Responsable</p>
+                <div className="mt-6 space-y-8 px-4">
+                    <section>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">VI</span>
+                            METODOLOGÍA
+                        </h3>
+                        <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
+                            {renderHtml(syllabus?.methodology)}
                         </div>
-                        <div className="text-center w-72 border-t-2 border-black pt-2">
-                            <p className="font-black text-[10pt] uppercase text-black">Secretaría Académica</p>
-                            <p className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">V° B° Coordinación</p>
+                    </section>
+
+                    <section>
+                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">VII</span>
+                            FUENTES DE INFORMACIÓN Y BIBLIOGRAFÍA
+                        </h3>
+                        <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
+                            {renderHtml(syllabus?.bibliography)}
                         </div>
-                    </div>
-                </section>
+                    </section>
+
+                    <section className="pt-20">
+                        <div className="flex justify-around items-end">
+                            <div className="text-center w-72 border-t-2 border-black pt-2">
+                                <p className="font-black text-[10pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
+                                <p className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">Docente Responsable</p>
+                            </div>
+                            <div className="text-center w-72 border-t-2 border-black pt-2">
+                                <p className="font-black text-[10pt] uppercase text-black">Secretaría Académica</p>
+                                <p className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">V° B° Coordinación</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
     );
