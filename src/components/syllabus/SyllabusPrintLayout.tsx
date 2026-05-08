@@ -73,7 +73,8 @@ export function SyllabusPrintLayout({
             {/* --- PÁGINA 1: PORTADA INSTITUCIONAL --- */}
             <div className="page-break py-12 flex flex-col items-center">
                 <div className="w-full flex flex-col items-center justify-between min-h-[250mm]">
-                    <div className="w-full space-y-10 flex flex-col items-center">
+                    <div className="w-full space-y-8 flex flex-col items-center">
+                        {/* Nombre del Instituto */}
                         <div className="text-center space-y-4">
                             <h1 className="text-[26pt] font-black tracking-tight leading-tight max-w-4xl text-black">
                                 {institute?.name.toUpperCase()}
@@ -81,30 +82,34 @@ export function SyllabusPrintLayout({
                             <div className="h-2 w-64 bg-black mx-auto"></div>
                         </div>
 
-                        <div className="text-center space-y-2 pt-4">
+                        {/* Logo Mediano debajo del Nombre */}
+                        <div className="py-4">
+                            {designOptions.showLogo && institute?.logoUrl && (
+                                <img 
+                                    src={institute.logoUrl} 
+                                    alt="Logo Institucional" 
+                                    className="w-[200px] h-[200px] object-contain" 
+                                />
+                            )}
+                        </div>
+
+                        {/* Programa de Estudios */}
+                        <div className="text-center space-y-2 pt-2">
                             <p className="text-[12pt] font-bold text-gray-600 uppercase tracking-[0.4em]">Programa de Estudios</p>
                             <h2 className="text-[18pt] font-black uppercase px-12 leading-snug text-black">
                                 {program?.name.toUpperCase()}
                             </h2>
                         </div>
                         
-                        <div className="border-y-4 border-black py-8 w-full text-center my-6 bg-gray-50">
-                            <h2 className="text-[24pt] font-black tracking-[0.1em] text-black px-4">
+                        {/* Título de la Unidad */}
+                        <div className="border-y-4 border-black py-8 w-full text-center my-4 bg-gray-50">
+                            <h2 className="text-[22pt] font-black tracking-[0.1em] text-black px-4">
                                 SÍLABO DE {unit.name.toUpperCase()}
                             </h2>
                         </div>
-
-                        <div className="py-12">
-                            {designOptions.showLogo && institute?.logoUrl && (
-                                <img 
-                                    src={institute.logoUrl} 
-                                    alt="Logo Institucional" 
-                                    className="w-[380px] h-[380px] object-contain" 
-                                />
-                            )}
-                        </div>
                     </div>
 
+                    {/* Footer de Portada */}
                     <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pt-12 border-t-2 border-black">
                         <div className="space-y-2">
                             <p className="text-[10pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
