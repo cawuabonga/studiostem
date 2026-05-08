@@ -121,7 +121,7 @@ export function SyllabusPrintLayout({ institute, program, unit, teacher, syllabu
                                     <td>{renderHtml(week.capacityElement)}</td>
                                     <td>{renderHtml(week.learningActivities)}</td>
                                     <td>{renderHtml(week.basicContents)}</td>
-                                    <td>{week.tasks.map(t => t.title).join(', ')}</td>
+                                    <td>{(week.tasks || []).map(t => t.title).join(', ')}</td>
                                 </tr>
                             ))}
                         </tbody>
