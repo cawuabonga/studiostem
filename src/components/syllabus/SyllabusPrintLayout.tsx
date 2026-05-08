@@ -101,9 +101,9 @@ export function SyllabusPrintLayout({
                             </h2>
                         </div>
                         
-                        {/* Título de la Unidad */}
+                        {/* Título de la Unidad (Reducido de 22pt a 16pt) */}
                         <div className="border-y-4 border-black py-8 w-full text-center my-4 bg-gray-50">
-                            <h2 className="text-[22pt] font-black tracking-[0.1em] text-black px-4">
+                            <h2 className="text-[16pt] font-black tracking-[0.1em] text-black px-4">
                                 SÍLABO DE {unit.name.toUpperCase()}
                             </h2>
                         </div>
