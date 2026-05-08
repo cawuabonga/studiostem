@@ -36,6 +36,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const form = useForm<SyllabusFormValues>({
     resolver: zodResolver(syllabusSchema),
@@ -95,8 +96,32 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   };
 
   const handlePrint = () => {
-    // Abrir ruta de impresión dedicada en una nueva pestaña
-    window.open(`/dashboard/docente/unidad/${unit.id}/print`, '_blank');
+    // Para evitar abrir una nueva ventana, usamos un iframe oculto que carga la página de impresión
+    setIsPrinting(true);
+    const iframeId = 'silent-print-iframe';
+    let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+    
+    if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = iframeId;
+        // El iframe debe ser invisible pero estar en el DOM
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        document.body.appendChild(iframe);
+    }
+    
+    // La página de impresión tiene un script que llama a window.print() automáticamente
+    // al cargar, lo cual disparará el diálogo de impresión para el contenido del iframe.
+    iframe.src = `/dashboard/docente/unidad/${unit.id}/print`;
+    
+    // Rehabilitamos el botón después de un tiempo prudencial
+    setTimeout(() => {
+        setIsPrinting(false);
+    }, 5000);
   };
 
   if (loading) {
@@ -129,8 +154,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </CardDescription>
                     </div>
                     <div className="flex gap-2">
-                        <Button type="button" variant="outline" onClick={handlePrint}>
-                            <Printer className="mr-2 h-4 w-4" />
+                        <Button type="button" variant="outline" onClick={handlePrint} disabled={isPrinting}>
+                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                             Imprimir Sílabo (PDF)
                         </Button>
                         <Button type="submit" disabled={isSaving}>
