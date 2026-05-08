@@ -1,4 +1,5 @@
 
+
 /* Estilos globales de impresión optimizados para documentos institucionales */
 
 @media screen {
@@ -10,7 +11,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.5cm 2cm;
+    margin: 0; /* Let component handle margins for better control */
   }
 
   body {
@@ -19,6 +20,8 @@
     font-family: 'Lato', serif !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    overflow: visible !important;
+    height: auto !important;
   }
 
   .no-print {
@@ -32,9 +35,12 @@
   /* Contenedor principal de impresión */
   .printable-area {
     display: block !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 1.5cm 2cm !important;
+    background: white !important;
+    box-shadow: none !important;
+    min-height: 100%;
   }
 
   /* Tipografía formal */
@@ -74,6 +80,7 @@
     font-size: 8pt !important;
     vertical-align: top;
     line-height: 1.4;
+    color: black !important;
   }
 
   /* Cabecera repetitiva en cada página */
@@ -87,7 +94,7 @@
     width: 100%;
   }
 
-  /* Pie de página repetitivo */
+  /* Pie de página */
   .inst-footer {
     position: fixed;
     bottom: 0;
@@ -98,26 +105,41 @@
     border-top: 1px solid #ccc;
     padding-top: 8px;
     color: #666;
+    background: white;
   }
 
   /* Forzar saltos de página manuales */
   .page-break {
-    page-break-after: always;
+    page-break-after: always !important;
+    display: block !important;
+    clear: both !important;
+  }
+
+  .page-break-before {
+    page-break-before: always !important;
+    display: block !important;
+    clear: both !important;
+  }
+
+  .no-print-break {
+    page-break-inside: avoid !important;
   }
 
   /* Estilos específicos para la carátula */
   .cover-page {
-    height: 100vh;
+    height: 297mm;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
+    margin: 0 !important;
+    padding: 2cm !important;
   }
 
   /* Ajuste de imágenes */
   img {
-    max-height: 80px;
+    max-height: none !important;
     width: auto;
   }
 }
