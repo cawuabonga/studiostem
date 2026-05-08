@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
-import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
-import { getUnit, getSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments } from '@/config/firebase';
+import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions, AcademicYearSettings } from '@/types';
+import { getUnit, getSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments, getAcademicPeriods } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +28,7 @@ function PrintSyllabusContent() {
         syllabus: Syllabus | null;
         weeklyData: WeekData[];
         indicators: AchievementIndicator[];
+        academicDates: { start?: Date; end?: Date };
     } | null>(null);
 
     const designOptions: SyllabusDesignOptions = {
@@ -58,12 +59,14 @@ function PrintSyllabusContent() {
                 syllabus,
                 weeklyResults,
                 indicators,
+                academicYearData
             ] = await Promise.all([
                 getPrograms(instituteId),
                 getTeachers(instituteId),
                 getSyllabus(instituteId, unit.id),
                 Promise.all(weekPromises),
-                getAchievementIndicators(instituteId, unit.id)
+                getAchievementIndicators(instituteId, unit.id),
+                getAcademicPeriods(instituteId, currentYear)
             ]);
 
             const program = allPrograms.find(p => p.id === unit.programId) || null;
@@ -73,11 +76,17 @@ function PrintSyllabusContent() {
             
             const weeklyData = weeklyResults.map((data, index) => data || { weekNumber: index + 1, contents: [], tasks: [], capacityElement: '', learningActivities: '', basicContents: '', isVisible: false });
 
-            setPrintableData({ unit, program, teacher, syllabus, weeklyData, indicators });
+            // Extract academic dates for the info table
+            const academicDates = {
+                start: academicYearData?.[unit.period]?.startDate?.toDate(),
+                end: academicYearData?.[unit.period]?.endDate?.toDate()
+            };
+
+            setPrintableData({ unit, program, teacher, syllabus, weeklyData, indicators, academicDates });
 
              setTimeout(() => {
                 window.print();
-            }, 500);
+            }, 800);
 
         } catch (error) {
             console.error("Error preparing print data:", error);
