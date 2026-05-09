@@ -9,26 +9,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
-import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
+import { VirtualClassroom } from '@/components/planning/VirtualClassroom';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades';
+type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom';
 
 const moduleConfig = [
     { id: 'syllabus', title: 'Sílabo', icon: FileText, description: 'Edita la información general del sílabo y genera el documento para imprimir.', component: SyllabusManager },
     { id: 'indicators', title: 'Indicadores de Logro', icon: NotebookText, description: 'Define los indicadores de logro que los estudiantes deben alcanzar.', component: IndicatorsManager },
     { id: 'planning', title: 'Planificación Semanal', icon: CalendarDays, description: 'Organiza contenidos, actividades y tareas para cada semana.', component: WeeklyPlanner },
+    { id: 'virtual-classroom', title: 'Aula Virtual STEM', icon: MonitorPlay, description: 'Inicia sesiones de videoclase en vivo con tus alumnos de forma segura.', component: VirtualClassroom },
     { id: 'attendance', title: 'Registro de Asistencias', icon: CalendarCheck, description: 'Lleva el control de la asistencia de los estudiantes matriculados.', component: AttendanceManager },
     { id: 'grades', title: 'Registro de Calificaciones', icon: Percent, description: 'Ingresa y gestiona las calificaciones de los estudiantes por indicador.', component: GradebookManager },
 ] as const;
 
 
 export default function UnitManagementPage() {
-    const { instituteId } = useAuth();
+    const { instituteId, user } = useAuth();
     const pathname = usePathname();
     const unitId = pathname.split('/').pop() || '';
     
@@ -88,21 +90,29 @@ export default function UnitManagementPage() {
         if (activeView === 'menu') {
             return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {moduleConfig.map((module) => (
-                        <Card 
-                            key={module.id} 
-                            onClick={() => setActiveView(module.id as ActiveView)}
-                            className="flex flex-col cursor-pointer hover:bg-muted/50 transition-colors"
-                        >
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-lg font-medium">{module.title}</CardTitle>
-                                <module.icon className="h-6 w-6 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="text-sm text-muted-foreground">{module.description}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {moduleConfig.map((module) => {
+                        // Si el usuario es estudiante, ocultar módulos que no le corresponden
+                        const isStudent = user?.role === 'Student';
+                        if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades')) {
+                            return null;
+                        }
+
+                        return (
+                            <Card 
+                                key={module.id} 
+                                onClick={() => setActiveView(module.id as ActiveView)}
+                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card"
+                            >
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
+                                    <module.icon className="h-6 w-6 text-primary" />
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <p className="text-sm text-muted-foreground">{module.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             );
         }
@@ -111,12 +121,11 @@ export default function UnitManagementPage() {
         if (!selectedModule) return null;
 
         const Component = selectedModule.component;
-        // The WeeklyPlanner component has a different prop structure
-        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: false } : { unit };
+        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit };
 
         return (
-            <div>
-                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4 no-print">
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4 no-print hover:bg-primary/10">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver al menú de la unidad
                 </Button>
@@ -126,19 +135,17 @@ export default function UnitManagementPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <Card className="no-print">
+        <div className="space-y-6 max-w-7xl mx-auto">
+            <Card className="no-print border-none shadow-md bg-primary text-primary-foreground overflow-hidden relative">
+                 <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <MonitorPlay className="h-24 w-24" />
+                </div>
                 <CardHeader>
-                    <CardTitle className="text-2xl">{unit.name}</CardTitle>
-                    <CardDescription>
-                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.totalWeeks} Semanas
+                    <CardTitle className="text-3xl font-black tracking-tighter uppercase">{unit.name}</CardTitle>
+                    <CardDescription className="text-primary-foreground/80 font-medium">
+                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.turno}
                     </CardDescription>
                 </CardHeader>
-                 {activeView === 'menu' && (
-                    <CardContent>
-                        <p className="text-muted-foreground">Selecciona un módulo para empezar a gestionar la unidad didáctica.</p>
-                    </CardContent>
-                )}
             </Card>
 
             {renderContent()}
