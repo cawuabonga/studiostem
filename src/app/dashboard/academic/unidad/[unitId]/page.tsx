@@ -9,25 +9,41 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotebookText, CalendarDays, Percent, CalendarCheck } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay, BarChart3 } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
+import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
+import { VirtualClassroom } from '@/components/planning/VirtualClassroom';
+import { UnitProgressSummary } from '@/components/student/UnitProgressSummary';
 import { usePathname } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
-export default function UnitManagementPage() {
-    const { user, instituteId } = useAuth();
+type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom' | 'unit-progress';
+
+const moduleConfig = [
+    { id: 'unit-progress', title: 'Mi Progreso Académico', icon: BarChart3, description: 'Consulta tu promedio parcial, porcentaje de asistencia y tareas pendientes.', component: UnitProgressSummary },
+    { id: 'syllabus', title: 'Sílabo', icon: FileText, description: 'Edita la información general del sílabo y genera el documento para imprimir.', component: SyllabusManager },
+    { id: 'indicators', title: 'Indicadores de Logro', icon: NotebookText, description: 'Define los indicadores de logro que los estudiantes deben alcanzar.', component: IndicatorsManager },
+    { id: 'planning', title: 'Planificación Semanal', icon: CalendarDays, description: 'Organiza contenidos, actividades y tareas para cada semana.', component: WeeklyPlanner },
+    { id: 'virtual-classroom', title: 'Aula Virtual STEM', icon: MonitorPlay, description: 'Inicia sesiones de videoclase en vivo de forma segura.', component: VirtualClassroom },
+    { id: 'attendance', title: 'Registro de Asistencias', icon: CalendarCheck, description: 'Lleva el control de la asistencia de los estudiantes matriculados.', component: AttendanceManager },
+    { id: 'grades', title: 'Registro de Calificaciones', icon: Percent, description: 'Ingresa y gestiona las calificaciones de los estudiantes por indicador.', component: GradebookManager },
+] as const;
+
+
+export default function StudentUnitDetailPage() {
+    const { instituteId, user } = useAuth();
     const pathname = usePathname();
     const unitId = pathname.split('/').pop() || '';
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [activeView, setActiveView] = useState<ActiveView>('menu');
 
     const fetchUnitDetails = useCallback(async (id: string) => {
         if (!instituteId || !id) {
             setLoading(false);
-            setError("Faltan datos para cargar la unidad.");
             return;
         }
 
@@ -46,7 +62,7 @@ export default function UnitManagementPage() {
             setLoading(false);
         }
     }, [instituteId]);
-
+    
     useEffect(() => {
         if (unitId) {
             fetchUnitDetails(unitId);
@@ -70,66 +86,76 @@ export default function UnitManagementPage() {
     if (!unit) {
         return <p className="text-center">Unidad no encontrada.</p>;
     }
+    
+    const renderContent = () => {
+        if (activeView === 'menu') {
+            return (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {moduleConfig.map((module) => {
+                        const isStudent = user?.role === 'Student';
+                        
+                        // Si el usuario es estudiante, ocultar módulos administrativos
+                        if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades')) {
+                            return null;
+                        }
 
-    const isTeacher = user?.role === 'Teacher';
-    const isStudent = user?.role === 'Student';
+                        // Si el usuario es docente, ocultar módulo de progreso individual
+                        if (!isStudent && module.id === 'unit-progress') {
+                            return null;
+                        }
 
-    const TeacherView = () => (
-         <Tabs defaultValue="indicators" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="indicators">
-                    <NotebookText className="mr-2 h-4 w-4" />
-                    Indicadores de Logro
-                </TabsTrigger>
-                <TabsTrigger value="planning">
-                    <CalendarDays className="mr-2 h-4 w-4" />
-                    Planificación Semanal
-                </TabsTrigger>
-                <TabsTrigger value="attendance">
-                    <CalendarCheck className="mr-2 h-4 w-4" />
-                    Registro de Asistencias
-                </TabsTrigger>
-                <TabsTrigger value="grades">
-                    <Percent className="mr-2 h-4 w-4" />
-                    Registro de Calificaciones
-                </TabsTrigger>
-            </TabsList>
-            <TabsContent value="indicators">
-                <IndicatorsManager unit={unit} />
-            </TabsContent>
-            <TabsContent value="planning">
-                <WeeklyPlanner unit={unit} isStudentView={false} />
-            </TabsContent>
-             <TabsContent value="attendance">
-                <AttendanceManager unit={unit} />
-            </TabsContent>
-            <TabsContent value="grades">
-                <GradebookManager unit={unit} />
-            </TabsContent>
-        </Tabs>
-    );
+                        return (
+                            <Card 
+                                key={module.id} 
+                                onClick={() => setActiveView(module.id as ActiveView)}
+                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card"
+                            >
+                                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                    <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
+                                    <module.icon className="h-6 w-6 text-primary" />
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <p className="text-sm text-muted-foreground">{module.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            );
+        }
 
-    const StudentView = () => (
-         <WeeklyPlanner unit={unit} isStudentView={true} />
-    );
+        const selectedModule = moduleConfig.find(m => m.id === activeView);
+        if (!selectedModule) return null;
+
+        const Component = selectedModule.component;
+        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit };
+
+        return (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <Button variant="ghost" onClick={() => setActiveView('menu')} className="mb-4 no-print hover:bg-primary/10">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver al menú de la unidad
+                </Button>
+                <Component {...componentProps as any} />
+            </div>
+        );
+    };
 
     return (
-        <div className="space-y-6">
-            <Card>
+        <div className="space-y-6 max-w-7xl mx-auto">
+            <Card className="no-print border-none shadow-md bg-primary text-primary-foreground overflow-hidden relative">
+                 <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <MonitorPlay className="h-24 w-24" />
+                </div>
                 <CardHeader>
-                    <CardTitle className="text-2xl">{unit.name}</CardTitle>
-                    <CardDescription>
-                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.totalWeeks} Semanas
+                    <CardTitle className="text-3xl font-black tracking-tighter uppercase">{unit.name}</CardTitle>
+                    <CardDescription className="text-primary-foreground/80 font-medium">
+                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.turno}
                     </CardDescription>
                 </CardHeader>
             </Card>
-            
-            {isTeacher && <TeacherView />}
-            {isStudent && <StudentView />}
 
-            {!isTeacher && !isStudent && (
-                 <p className="text-center text-muted-foreground">Vista no disponible para tu rol.</p>
-            )}
+            {renderContent()}
         </div>
     );
 }
