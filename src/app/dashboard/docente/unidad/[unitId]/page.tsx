@@ -9,17 +9,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
-import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay, BarChart3 } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
 import { VirtualClassroom } from '@/components/planning/VirtualClassroom';
+import { UnitProgressSummary } from '@/components/student/UnitProgressSummary';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom';
+type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom' | 'unit-progress';
 
 const moduleConfig = [
+    { id: 'unit-progress', title: 'Mi Progreso Académico', icon: BarChart3, description: 'Consulta tu promedio parcial, porcentaje de asistencia y tareas pendientes.', component: UnitProgressSummary },
     { id: 'syllabus', title: 'Sílabo', icon: FileText, description: 'Edita la información general del sílabo y genera el documento para imprimir.', component: SyllabusManager },
     { id: 'indicators', title: 'Indicadores de Logro', icon: NotebookText, description: 'Define los indicadores de logro que los estudiantes deben alcanzar.', component: IndicatorsManager },
     { id: 'planning', title: 'Planificación Semanal', icon: CalendarDays, description: 'Organiza contenidos, actividades y tareas para cada semana.', component: WeeklyPlanner },
@@ -91,9 +93,15 @@ export default function UnitManagementPage() {
             return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {moduleConfig.map((module) => {
-                        // Si el usuario es estudiante, ocultar módulos que no le corresponden
                         const isStudent = user?.role === 'Student';
+                        
+                        // Si el usuario es estudiante, ocultar módulos administrativos
                         if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades')) {
+                            return null;
+                        }
+
+                        // Si el usuario es docente, ocultar módulo de progreso individual
+                        if (!isStudent && module.id === 'unit-progress') {
                             return null;
                         }
 
