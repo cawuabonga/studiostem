@@ -21,7 +21,8 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
 
     const isTeacher = user.role === 'Teacher' || user.role === 'Coordinator' || user.role === 'Admin' || user.role === 'SuperAdmin';
     
-    // Generar un nombre de sala único basado en el ID de la unidad
+    // Identificadores de 8x8 JaaS del usuario
+    const APP_ID = "vpaas-magic-cookie-c7c6b1a32df24878a851d88c8e4de4e9";
     const roomName = `STEM_V2_AULA_${unit.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
     if (!startMeeting) {
@@ -33,19 +34,19 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
                     </div>
                     <CardTitle className="text-3xl font-black uppercase tracking-tight">Aula Virtual STEM</CardTitle>
                     <CardDescription className="text-lg">
-                        Sesión de videoclase en vivo para: <span className="font-bold text-foreground underline">{unit.name}</span>
+                        Sesión de videoclase profesional para: <span className="font-bold text-foreground underline">{unit.name}</span>
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col items-center space-y-6 pb-12">
                     <div className="max-w-md text-center space-y-4">
                         <div className="flex items-center gap-2 justify-center text-green-600 font-bold bg-green-50 px-4 py-2 rounded-full border border-green-100">
                             <ShieldCheck className="h-5 w-5" />
-                            Acceso Seguro Verificado
+                            Servicio 8x8 JaaS Conectado
                         </div>
                         <p className="text-muted-foreground leading-relaxed text-sm">
                             {isTeacher 
-                                ? "Como docente, ingresarás con privilegios de moderador para gestionar la sesión."
-                                : "Te unirás a la clase identificado con tu nombre oficial registrado."
+                                ? "Como docente, ingresarás con privilegios de moderador. El tiempo de la sesión es ilimitado bajo tu suscripción."
+                                : "Te unirás a la clase identificado con tu nombre oficial. Asegúrate de tener buena conexión."
                             }
                         </p>
                     </div>
@@ -59,11 +60,11 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
                         {isTeacher ? "INICIAR CLASE AHORA" : "UNIRME A LA CLASE"}
                     </Button>
 
-                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-lg max-w-lg flex gap-3 items-start">
-                        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                        <div className="text-[10px] text-amber-800 leading-tight">
-                            <p className="font-bold uppercase mb-1">Nota sobre el servicio gratuito:</p>
-                            Jitsi Meet (meet.jit.si) es un servicio externo. Para eliminar el mensaje de "demo" y el límite de 5 minutos en producción, se recomienda conectar con una cuenta de 8x8 JaaS (Jitsi as a Service), que ofrece un nivel gratuito para instituciones educativas.
+                    <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg max-w-lg flex gap-3 items-start">
+                        <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="text-[10px] text-blue-800 leading-tight">
+                            <p className="font-bold uppercase mb-1">Configuración de Privacidad:</p>
+                            La sala se ha configurado para permitir el acceso sin tokens externos (JWT) basándose en tu configuración de "Permitir participantes sin autenticación". El nombre de la sala es único para esta unidad didáctica.
                         </div>
                     </div>
                 </CardContent>
@@ -74,8 +75,8 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
     return (
         <div className="w-full h-[750px] rounded-xl overflow-hidden shadow-2xl border bg-black relative animate-in zoom-in-95 duration-500">
             <JitsiMeeting
-                domain="meet.jit.si"
-                roomName={roomName}
+                domain="8x8.vc"
+                roomName={`${APP_ID}/${roomName}`}
                 lang="es"
                 configOverwrite={{
                     startWithAudioMuted: true,
@@ -84,9 +85,9 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
                     startScreenSharing: true,
                     enableEmailInStats: false,
                     disableDeepLinking: true,
-                    prejoinPageEnabled: false, // Salta la pre-sala de Jitsi para evitar bloqueos
+                    prejoinPageEnabled: false,
                     enableWelcomePage: false,
-                    disableInviteFunctions: true, // Desactiva invitar para mayor privacidad
+                    disableInviteFunctions: true,
                     doNotStoreRoom: true,
                     remoteVideoMenu: {
                         disableKick: !isTeacher,
