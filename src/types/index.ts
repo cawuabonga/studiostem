@@ -180,6 +180,9 @@ export interface Program {
   duration: string;
   moduleCount: number;
   modules: ProgramModule[];
+  economicSector?: string;
+  productiveFamily?: string;
+  economicActivity?: string;
 }
 
 export type UnitPeriod = 'MAR-JUL' | 'AGO-DIC';

@@ -27,6 +27,9 @@ const editProgramSchema = z.object({
   code: z.string().min(1, { message: 'El código es requerido.' }),
   abbreviation: z.string().min(1, { message: 'La abreviación es requerida.' }),
   duration: z.string().min(1, { message: 'La duración es requerida (ej: 6 Semestres).' }),
+  economicSector: z.string().min(1, { message: 'El sector económico es requerido.' }),
+  productiveFamily: z.string().min(1, { message: 'La familia productiva es requerida.' }),
+  economicActivity: z.string().min(1, { message: 'La actividad económica es requerida.' }),
   moduleCount: z.coerce.number().min(1, 'Debe haber al menos 1 módulo.').max(10, 'No puede haber más de 10 módulos.'),
   modules: z.array(z.object({
     name: z.string().min(1, 'El nombre del módulo es requerido.'),
@@ -54,6 +57,9 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
       code: program?.code || '',
       abbreviation: program?.abbreviation || '',
       duration: program?.duration || '',
+      economicSector: program?.economicSector || '',
+      productiveFamily: program?.productiveFamily || '',
+      economicActivity: program?.economicActivity || '',
       moduleCount: program?.moduleCount || 1,
       modules: program?.modules || [{ name: '', code: '' }],
     },
@@ -87,7 +93,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
         append({ name: '', code: newCode });
       }
     } else if (newCount < currentCount) {
-      for (let i = currentCount; i > newCount; i--) {
+      for (let i = currentCount; i > moduleCount; i--) {
         remove(i - 1);
       }
     }
@@ -126,7 +132,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] overflow-y-auto max-w-4xl">
         <DialogHeader>
           <DialogTitle>Editar Programa de Estudio</DialogTitle>
           <DialogDescription>
@@ -189,6 +195,50 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                     <FormMessage />
                     </FormItem>
                 )}
+                />
+            </div>
+
+            <Separator className="my-2" />
+            <h3 className="text-lg font-bold text-primary">Clasificación Económica</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                    control={form.control}
+                    name="economicSector"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Sector Económico</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ej: Salud" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="productiveFamily"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Familia Productiva</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ej: Salud" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="economicActivity"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Actividad Económica</FormLabel>
+                        <FormControl>
+                            <Input placeholder="Ej: Actividades de atención de la salud humana" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
                 />
             </div>
 
