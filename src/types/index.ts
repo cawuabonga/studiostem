@@ -205,6 +205,7 @@ export interface Unit {
   moduleId: string;
   semester: number;
   imageUrl?: string;
+  isVirtualClassroomActive?: boolean;
 }
 
 export interface Teacher {

@@ -206,7 +206,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const imageDocRef = doc(db, 'config/loginDesign/images', image.id);
+    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
     const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
     try {
@@ -1958,4 +1958,9 @@ export const registerHistoricalMatriculation = async (instituteId: string, sId: 
 
 export const registerHistoricalEFSRT = async (instituteId: string, data: any) => {
     await addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), { ...data, status: 'Aprobado', visits: [], createdAt: Timestamp.now() });
+};
+
+export const setVirtualClassroomStatus = async (instituteId: string, unitId: string, status: boolean) => {
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    await updateDoc(unitRef, { isVirtualClassroomActive: status });
 };
