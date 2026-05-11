@@ -266,8 +266,8 @@ export function SyllabusPrintLayout({
                                     <React.Fragment key={ind.id}>
                                         {/* Encabezado del Indicador dentro de la tabla */}
                                         <tr className="bg-gray-50">
-                                            <td colSpan={5} className="border-2 border-black p-2 font-black uppercase text-primary bg-blue-50/50">
-                                                LOGRO DE APRENDIZAJE: {ind.name}
+                                            <td colSpan={5} className="border-2 border-black p-2 font-black uppercase text-primary bg-blue-50/50 text-center">
+                                                {ind.name}
                                             </td>
                                         </tr>
                                         {weeksInIndicator.map(week => (
