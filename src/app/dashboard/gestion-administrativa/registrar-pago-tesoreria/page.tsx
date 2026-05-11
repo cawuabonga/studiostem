@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2, Search, Briefcase, GraduationCap, ArrowLeft, UserPlus, Fingerprint, ShieldCheck, Upload, History, Info, CreditCard } from 'lucide-react';
+import { Loader2, Search, Briefcase, GraduationCap, ArrowLeft, UserPlus, Fingerprint, ShieldCheck, Upload, History, Info, CreditCard, Printer } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStudentProfile, getStaffProfileByDocumentId, getPrograms, getRoles, getRecentApprovedPayments } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import type { Payment } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { PrintReceipt } from '@/components/payments/PrintReceipt';
 
 const searchSchema = z.object({
   documentId: z.string().min(1, { message: 'Ingrese un número de documento.' }),
@@ -37,12 +39,13 @@ interface PayerProfile {
 }
 
 export default function TreasuryPaymentRegistrationPage() {
-  const { instituteId, hasPermission, loading: authLoading } = useAuth();
+  const { instituteId, institute, hasPermission, loading: authLoading } = useAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<PayerProfile | null>(null);
   const [recentPayments, setRecentPayments] = useState<Payment[]>([]);
+  const [paymentToPrint, setPaymentToPrint] = useState<Payment | null>(null);
   
   const searchForm = useForm<SearchFormValues>({
     resolver: zodResolver(searchSchema),
@@ -52,7 +55,7 @@ export default function TreasuryPaymentRegistrationPage() {
   const fetchRecent = useCallback(async () => {
     if (!instituteId) return;
     try {
-        const recent = await getRecentApprovedPayments(instituteId, 6);
+        const recent = await getRecentApprovedPayments(instituteId, 10);
         setRecentPayments(recent);
     } catch (e) {
         console.error("Error fetching recent payments", e);
@@ -133,6 +136,28 @@ export default function TreasuryPaymentRegistrationPage() {
       setSelectedProfile(null);
       searchForm.reset({ documentId: '' });
       fetchRecent();
+  };
+
+  const handlePrintRecent = (payment: Payment) => {
+    setPaymentToPrint(payment);
+    setTimeout(() => {
+        const printContent = document.getElementById('recent-receipt-print-area')?.innerHTML;
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printContent) {
+            printWindow.document.write(`<html><head><title>Recibo</title>${styles}</head><body>${printContent}</body></html>`);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+                setPaymentToPrint(null);
+            }, 500);
+        }
+    }, 100);
   };
 
   if (authLoading || !hasPermission('admin:payments:validate')) {
@@ -275,9 +300,19 @@ export default function TreasuryPaymentRegistrationPage() {
                                         </div>
                                         <div className="flex justify-between items-center mt-0.5">
                                             <p className="text-[9px] text-muted-foreground font-medium truncate uppercase tracking-tighter w-2/3">{p.concept}</p>
-                                            <p className="text-[8px] text-slate-400 font-mono">
-                                                {p.processedAt ? format(p.processedAt.toDate(), 'HH:mm') : ''}
-                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[8px] text-slate-400 font-mono">
+                                                    {p.processedAt ? format(p.processedAt.toDate(), 'HH:mm') : ''}
+                                                </p>
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    onClick={() => handlePrintRecent(p)}
+                                                >
+                                                    <Printer className="h-3 w-3" />
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -322,6 +357,13 @@ export default function TreasuryPaymentRegistrationPage() {
                     </AccordionContent>
                 </AccordionItem>
             </Accordion>
+        </div>
+
+        {/* Hidden Print Area for Monitor */}
+        <div id="recent-receipt-print-area" className="hidden">
+            {paymentToPrint && institute && (
+                <PrintReceipt payment={paymentToPrint} institute={institute} />
+            )}
         </div>
     </div>
   );

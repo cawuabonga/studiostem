@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Save, Send, CreditCard, Receipt, MessageSquareText } from 'lucide-react';
+import { CalendarIcon, Loader2, Save, Send, CreditCard, Receipt, MessageSquareText, Printer, CheckCircle2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -17,9 +17,12 @@ import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { registerPayment, getPaymentConcepts } from '@/config/firebase';
-import type { PaymentConcept, StudentProfile, StaffProfile } from '@/types';
+import type { PaymentConcept, StudentProfile, StaffProfile, Payment } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { PrintReceipt } from './PrintReceipt';
+import { Timestamp } from 'firebase/firestore';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -49,10 +52,14 @@ interface TreasuryRegisterPaymentFormProps {
 }
 
 export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegisterPaymentFormProps) {
-  const { user, instituteId } = useAuth();
+  const { user, instituteId, institute } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [paymentConcepts, setPaymentConcepts] = useState<PaymentConcept[]>([]);
+  
+  // Success & Print States
+  const [lastRegisteredPayment, setLastRegisteredPayment] = useState<Payment | null>(null);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
@@ -107,16 +114,22 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
     try {
       const { voucher, ...paymentData } = data;
       
-      await registerPayment(
+      const pData: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'> = { 
+          payerId: profile.documentId, 
+          payerName: data.fullName,
+          payerType: profile.type,
+          payerAuthUid: user.uid,
+          concept: data.concept,
+          amount: data.amount,
+          paymentDate: Timestamp.fromDate(data.paymentDate),
+          operationNumber: data.receiptNumber,
+          receiptNumber: data.receiptNumber,
+          observations: data.observations,
+      };
+
+      const paymentId = await registerPayment(
         instituteId, 
-        { 
-            ...paymentData, 
-            payerId: profile.documentId, 
-            payerName: data.fullName,
-            payerType: profile.type,
-            payerAuthUid: user.uid,
-            operationNumber: data.receiptNumber,
-        }, 
+        pData, 
         voucher?.[0],
         {
             autoApprove: true,
@@ -124,12 +137,18 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
         }
       );
 
-      toast({
-        title: '¡Pago Registrado!',
-        description: `El pago para ${data.fullName} ha sido procesado con éxito.`,
+      // Store payment for printing
+      setLastRegisteredPayment({
+          ...pData,
+          id: paymentId,
+          status: 'Aprobado',
+          voucherUrl: '', // Not needed for receipt print
+          createdAt: Timestamp.now(),
+          processedAt: Timestamp.now(),
       });
+
+      setIsSuccessDialogOpen(true);
       
-      onSuccess();
     } catch (error: any) {
       console.error("Payment registration error:", error);
       toast({ title: "Error", description: error.message || "No se pudo registrar el pago.", variant: "destructive" });
@@ -138,7 +157,46 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
     }
   };
 
+  const handlePrint = () => {
+    const printContent = document.getElementById('receipt-print-area')?.innerHTML;
+    const styles = Array.from(document.styleSheets)
+        .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+        .join('');
+
+    const printWindow = window.open('', '_blank');
+    if (printWindow && printContent) {
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Recibo de Caja - ${lastRegisteredPayment?.receiptNumber}</title>
+                    ${styles}
+                    <style>
+                        @media print {
+                            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px; }
+                            .printable-area { border: 2px dashed #000; padding: 30px; }
+                        }
+                    </style>
+                </head>
+                <body>${printContent}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
+    }
+  };
+
+  const handleFinish = () => {
+      setIsSuccessDialogOpen(false);
+      setLastRegisteredPayment(null);
+      onSuccess();
+  };
+
   return (
+    <>
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         {profile.type === 'external' && (
@@ -296,5 +354,43 @@ export function TreasuryRegisterPaymentForm({ profile, onSuccess }: TreasuryRegi
         </div>
       </form>
     </Form>
+
+    {/* Success Dialog */}
+    <Dialog open={isSuccessDialogOpen} onOpenChange={(open) => !open && handleFinish()}>
+        <DialogContent className="max-w-md">
+            <DialogHeader className="text-center">
+                <div className="mx-auto bg-green-100 p-3 rounded-full w-fit mb-4">
+                    <CheckCircle2 className="h-10 w-10 text-green-600" />
+                </div>
+                <DialogTitle className="text-2xl font-black uppercase text-green-700">¡Cobro Registrado!</DialogTitle>
+                <DialogDescription className="text-base font-medium">
+                    La operación para <span className="font-black text-foreground">{lastRegisteredPayment?.payerName}</span> ha sido guardada correctamente en el sistema.
+                </DialogDescription>
+            </DialogHeader>
+            
+            <div className="p-4 bg-muted rounded-lg space-y-2 text-sm">
+                <div className="flex justify-between"><span>Concepto:</span><span className="font-bold uppercase">{lastRegisteredPayment?.concept}</span></div>
+                <div className="flex justify-between"><span>Comprobante:</span><span className="font-mono font-bold">{lastRegisteredPayment?.receiptNumber}</span></div>
+                <div className="flex justify-between text-lg border-t pt-2 mt-2"><span>Total:</span><span className="font-black text-primary">S/ {lastRegisteredPayment?.amount.toFixed(2)}</span></div>
+            </div>
+
+            <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                <Button variant="outline" className="flex-1 h-12 font-bold" onClick={handlePrint}>
+                    <Printer className="mr-2 h-5 w-5" /> Imprimir Recibo
+                </Button>
+                <Button className="flex-1 h-12 font-bold" onClick={handleFinish}>
+                    Nueva Operación
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
+    {/* Hidden Print Area */}
+    <div id="receipt-print-area" className="hidden">
+        {lastRegisteredPayment && institute && (
+            <PrintReceipt payment={lastRegisteredPayment} institute={institute} />
+        )}
+    </div>
+    </>
   );
 }

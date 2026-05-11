@@ -845,7 +845,7 @@ export const registerPayment = async (
     data: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'>, 
     voucherFile?: File,
     options: { autoApprove?: boolean, receiptNumber?: string } = {}
-): Promise<void> => {
+): Promise<string> => {
     const paymentsCol = getSubCollectionRef(instituteId, 'payments');
     const paymentDocRef = doc(paymentsCol);
     let downloadURL = '';
@@ -861,6 +861,7 @@ export const registerPayment = async (
         createdAt: Timestamp.now()
     };
     await setDoc(paymentDocRef, paymentData);
+    return paymentDocRef.id;
 }
 
 export const bulkRegisterPayments = async (instituteId: string, payments: Omit<Payment, 'id' | 'voucherUrl' | 'status' | 'createdAt' | 'processedAt'>[]) => {
