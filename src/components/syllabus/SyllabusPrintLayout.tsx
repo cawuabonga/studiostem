@@ -136,7 +136,19 @@ export function SyllabusPrintLayout({
                         <table className="w-full border-collapse border-2 border-black">
                             <tbody className="text-[8.5pt]">
                                 <tr>
-                                    <th className="w-[30%] text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Programa de Estudios</th>
+                                    <th className="w-[30%] text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Sector Económico</th>
+                                    <td className="p-1.5 border border-black font-medium uppercase text-black">{program?.economicSector || '---'}</td>
+                                </tr>
+                                <tr>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Familia Productiva</th>
+                                    <td className="p-1.5 border border-black font-medium uppercase text-black">{program?.productiveFamily || '---'}</td>
+                                </tr>
+                                <tr>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Actividad Económica</th>
+                                    <td className="p-1.5 border border-black font-medium uppercase text-black">{program?.economicActivity || '---'}</td>
+                                </tr>
+                                <tr>
+                                    <th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Programa de Estudios</th>
                                     <td className="p-1.5 border border-black font-semibold uppercase text-black">{program?.name}</td>
                                 </tr>
                                 <tr>
