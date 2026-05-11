@@ -118,7 +118,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                 <FormItem>
                 <FormLabel>Nombre del Programa</FormLabel>
                 <FormControl>
-                    <Input placeholder="Ej: Enfermería Técnica" {...field} />
+                    <Input placeholder="Ej: Enfermería Técnica" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -131,7 +131,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                 <FormItem>
                 <FormLabel>Código</FormLabel>
                 <FormControl>
-                    <Input placeholder="Ej: ET01" {...field} />
+                    <Input placeholder="Ej: ET01" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -146,7 +146,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                 <FormItem>
                 <FormLabel>Abreviación</FormLabel>
                 <FormControl>
-                    <Input placeholder="Ej: ET" {...field} />
+                    <Input placeholder="Ej: ET" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -159,7 +159,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                 <FormItem>
                 <FormLabel>Duración</FormLabel>
                 <FormControl>
-                    <Input placeholder="Ej: 6 Semestres" {...field} />
+                    <Input placeholder="Ej: 6 Semestres" {...field} value={field.value || ''} />
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -177,7 +177,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                     <FormItem>
                     <FormLabel>Sector Económico</FormLabel>
                     <FormControl>
-                        <Input placeholder="Ej: Salud" {...field} />
+                        <Input placeholder="Ej: Salud" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -190,7 +190,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                     <FormItem>
                     <FormLabel>Familia Productiva</FormLabel>
                     <FormControl>
-                        <Input placeholder="Ej: Salud" {...field} />
+                        <Input placeholder="Ej: Salud" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -203,7 +203,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                     <FormItem>
                     <FormLabel>Actividad Económica</FormLabel>
                     <FormControl>
-                        <Input placeholder="Ej: Actividades de atención de la salud humana" {...field} />
+                        <Input placeholder="Ej: Actividades de atención de la salud humana" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -222,7 +222,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
             <FormItem>
               <FormLabel>Cantidad de Módulos</FormLabel>
               <FormControl>
-                <Input type="number" min="1" max="10" {...field} />
+                <Input type="number" min="1" max="10" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -239,7 +239,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                         <FormItem>
                         <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
                         <FormControl>
-                            <Input placeholder={`Ej: Módulo de Atención Primaria`} {...field} />
+                            <Input placeholder={`Ej: Módulo de Atención Primaria`} {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -252,7 +252,7 @@ export function AddProgramForm({ instituteId, onProgramAdded }: AddProgramFormPr
                         <FormItem>
                         <FormLabel>Código del Módulo</FormLabel>
                         <FormControl>
-                            <Input {...field} disabled />
+                            <Input {...field} value={field.value || ''} disabled />
                         </FormControl>
                         <FormMessage />
                         </FormItem>

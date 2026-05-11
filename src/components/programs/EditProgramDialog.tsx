@@ -77,6 +77,9 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
     if (program && isOpen) {
       form.reset({
         ...program,
+        economicSector: program.economicSector || '',
+        productiveFamily: program.productiveFamily || '',
+        economicActivity: program.economicActivity || '',
         modules: program.modules.map(mod => ({ ...mod }))
       });
     }
@@ -149,7 +152,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                     <FormItem>
                     <FormLabel>Nombre del Programa</FormLabel>
                     <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -162,7 +165,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                     <FormItem>
                     <FormLabel>Código</FormLabel>
                     <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -177,7 +180,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                     <FormItem>
                     <FormLabel>Abreviación</FormLabel>
                     <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -190,7 +193,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                     <FormItem>
                     <FormLabel>Duración</FormLabel>
                     <FormControl>
-                        <Input {...field} />
+                        <Input {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -208,7 +211,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                         <FormItem>
                         <FormLabel>Sector Económico</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ej: Salud" {...field} />
+                            <Input placeholder="Ej: Salud" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -221,7 +224,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                         <FormItem>
                         <FormLabel>Familia Productiva</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ej: Salud" {...field} />
+                            <Input placeholder="Ej: Salud" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -234,7 +237,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                         <FormItem>
                         <FormLabel>Actividad Económica</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ej: Actividades de atención de la salud humana" {...field} />
+                            <Input placeholder="Ej: Actividades de atención de la salud humana" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -253,7 +256,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                 <FormItem>
                   <FormLabel>Cantidad de Módulos</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" max="10" {...field} />
+                    <Input type="number" min="1" max="10" {...field} value={field.value || ''} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -270,7 +273,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                         <FormItem>
                         <FormLabel>Nombre del Módulo {index + 1}</FormLabel>
                         <FormControl>
-                            <Input {...field} />
+                            <Input {...field} value={field.value || ''} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -283,7 +286,7 @@ export function EditProgramDialog({ program, instituteId, isOpen, onClose }: Edi
                         <FormItem>
                         <FormLabel>Código del Módulo</FormLabel>
                         <FormControl>
-                            <Input {...field} disabled />
+                            <Input {...field} value={field.value || ''} disabled />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
