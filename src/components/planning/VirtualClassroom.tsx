@@ -13,6 +13,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db, setVirtualClassroomStatus } from '@/config/firebase';
 import type { Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface VirtualClassroomProps {
     unit: Unit;
@@ -27,7 +28,15 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
 
     if (!user) return null;
 
-    const isTeacher = user.role === 'Teacher' || user.role === 'Coordinator' || user.role === 'Admin' || user.role === 'SuperAdmin';
+    // Ajuste de validación para soportar roles en inglés y español
+    const isTeacher = 
+        user.role === 'Teacher' || 
+        user.role === 'Docente' || 
+        user.role === 'Coordinator' || 
+        user.role === 'Coordinador' || 
+        user.role === 'Admin' || 
+        user.role === 'Administrador' || 
+        user.role === 'SuperAdmin';
     
     // Identificadores de 8x8 JaaS del usuario
     const APP_ID = "vpaas-magic-cookie-c7c6b1a32df24878a851d88c8e4de4e9";
