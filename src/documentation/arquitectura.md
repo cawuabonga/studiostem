@@ -21,17 +21,18 @@ El sistema se divide en tres capas principales:
 2.  **Capa de Lógica (Server Actions & Flows)**: Los procesos complejos y las llamadas a la IA (Genkit) se ejecutan en el servidor para proteger las llaves de API y mejorar el rendimiento.
 3.  **Capa de Persistencia (BaaS)**: Firebase gestiona la base de datos (Firestore), autenticación (Auth) y archivos (Storage).
 
-### 3. Diagrama de la Estructura de Datos
-```mermaid
-graph TD
-    A[Institutos] --> B(Pabellones/Ambientes)
-    A --> C(Programas de Estudio)
-    C --> D(Unidades Didácticas)
-    D --> E(Syllabus/Planificación)
-    A --> F(Perfiles: Estudiantes/Personal)
-    F --> G(Matrículas/Notas)
-    A --> H(Control de Acceso/Dispositivos)
-```
+### 3. Estructura Jerárquica de Datos (Mapa del Sistema)
+
+Para entender cómo fluye la información, el sistema se organiza de la siguiente manera:
+
+**🏢 NODO RAÍZ: INSTITUTO**
+*   ↳ **📍 INFRAESTRUCTURA**: Pabellones, Ambientes (Aulas, Laboratorios).
+*   ↳ **📚 ACADEMIA**: Programas de Estudio (Carreras).
+    *   ↳ **📖 UNIDADES DIDÁCTICAS**: Cursos y materias.
+        *   ↳ **📅 PLANIFICACIÓN**: Syllabus, Sesiones semanales, Materiales.
+*   ↳ **👥 COMUNIDAD**: Perfiles oficiales de Estudiantes y Personal.
+    *   ↳ **📊 SEGUIMIENTO**: Matrículas, Calificaciones, Asistencias.
+*   ↳ **📟 SEGURIDAD**: Puntos de Acceso, Dispositivos RFID, Logs de Entrada/Salida.
 
 ### 4. Escalabilidad
 Gracias al uso de tecnologías "Serverless", la plataforma puede escalar de 10 a 10,000 usuarios sin necesidad de reconfigurar servidores, ajustando los costos al consumo real.
