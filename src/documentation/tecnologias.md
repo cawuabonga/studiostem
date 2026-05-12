@@ -1,50 +1,37 @@
 ---
 title: 'Pila Tecnológica (Tech Stack)'
-description: 'Listado y descripción de las principales tecnologías, librerías y frameworks utilizados en el proyecto.'
-tags: ['tecnologías', 'frontend', 'backend', 'devops']
+description: 'Listado detallado de las herramientas y lenguajes que dan vida a STEM.'
+tags: ['tecnologías', 'frontend', 'backend', 'ia']
 ---
 
-# Pila Tecnológica de STEM
+# Tecnologías Utilizadas en STEM
 
-Esta es la lista de las tecnologías y herramientas clave que conforman el proyecto.
+El proyecto STEM utiliza un stack de vanguardia para garantizar la mayor velocidad de desarrollo y facilidad de mantenimiento.
 
 ### Frontend
+*   **Framework**: Next.js 15 (App Router).
+*   **Lenguaje**: TypeScript (Tipado estricto para evitar errores).
+*   **Estilos**: Tailwind CSS (Diseño responsivo y utilitario).
+*   **Componentes**: Radix UI + ShadCN (Componentes accesibles y estéticos).
+*   **Gráficos**: Recharts (Visualización de datos de pagos e inventario).
 
-*   **Framework:** Next.js (con App Router)
-*   **Lenguaje:** TypeScript
-*   **Librería de UI:** React
-*   **Componentes UI:** ShadCN/UI
-*   **Estilos CSS:** Tailwind CSS
-*   **Gestión de Formularios:** React Hook Form & Zod (para validación)
-*   **Iconos:** Lucide React
+### Backend (Firebase)
+*   **Firestore**: Base de datos de documentos NoSQL en tiempo real.
+*   **Authentication**: Gestión de usuarios y proveedores OAuth (Google).
+*   **Storage**: Almacenamiento de vouchers, fotos y materiales académicos.
+*   **Hosting**: Despliegue global con certificado SSL automático.
 
-### Backend y Base de Datos
+### Inteligencia Artificial (Genkit)
+*   **Orquestador**: Firebase Genkit (Google AI Toolkit).
+*   **Modelos**: Gemini 2.0 Flash (Nube) y Ollama (Local/Llama3).
+*   **Finalidad**: Generación automática de sumillas, imágenes para cursos y asistentes de tutoría.
 
-*   **Plataforma BaaS:** Firebase
-    *   **Autenticación:** Firebase Authentication
-    *   **Base de Datos:** Firestore (NoSQL)
-    *   **Almacenamiento de Archivos:** Firebase Storage
-*   **Entorno de Servidor:** Node.js (a través de Next.js)
-*   **APIs:** Next.js API Routes (Serverless Functions)
-
-### Funcionalidades de IA
-
-*   **Orquestación de IA:** Genkit (Google AI Toolkit)
-*   **Modelos de Lenguaje:** Gemini (a través de Genkit)
-*   **Generación de Imágenes:** Imagen (a través de Genkit)
-
-### Hardware (IoT)
-
-*   **Microcontrolador:** ESP32
-*   **Sensor:** Lector de tarjetas RFID
-
-### Despliegue y Hosting
-
-*   **Plataforma de Hosting:** Firebase App Hosting
-*   **Gestión de Paquetes:** npm
+### Hardware / IoT
+*   **Lenguaje**: C++ (Arduino Framework).
+*   **Plataforma**: ESP32 DevKit V1.
+*   **Protocolo**: Webhooks HTTPS con autenticación Bearer Token.
 
 ### Herramientas de Desarrollo
-
-*   **Editor de Código:** Visual Studio Code / IDX Project
-*   **Control de Versiones:** Git
-*   **Procesamiento de Excel:** `xlsx` para la carga masiva.
+*   **Control de Versiones**: Git & GitHub.
+*   **Entorno**: Google Cloud Workstations / IDX.
+*   **Procesamiento**: Librería `xlsx` para manejo masivo de registros de estudiantes.
