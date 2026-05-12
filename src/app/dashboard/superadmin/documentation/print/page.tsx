@@ -1,4 +1,3 @@
-
 import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -41,8 +40,23 @@ export default async function FullManualPrintPage() {
   return (
     <div className="bg-white">
       <DocumentationPrintLayout documents={allDocs} />
+      {/* Script optimizado para disparar la impresión automáticamente incluso dentro de un iframe */}
       <script dangerouslySetInnerHTML={{
-          __html: `window.onload = () => { setTimeout(() => window.print(), 1000); }`
+          __html: `
+            (function() {
+              function triggerPrint() {
+                window.print();
+              }
+              // Verificamos si el documento ya está cargado
+              if (document.readyState === 'complete') {
+                setTimeout(triggerPrint, 1000);
+              } else {
+                window.addEventListener('load', function() {
+                  setTimeout(triggerPrint, 1000);
+                });
+              }
+            })();
+          `
       }} />
     </div>
   );

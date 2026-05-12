@@ -1,11 +1,10 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import Link from 'next/link';
-import { ArrowRight, Printer, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ArrowRight, FileText } from 'lucide-react';
+import { PrintManualButton } from '@/components/documentation/PrintManualButton';
 
 interface DocMetadata {
   slug: string;
@@ -52,12 +51,8 @@ export default async function DocumentationIndexPage() {
                 Recursos técnicos, guías y descripciones sobre la arquitectura y funcionamiento del proyecto STEM.
               </CardDescription>
             </div>
-            <Button asChild className="shadow-lg">
-                <Link href="/dashboard/superadmin/documentation/print" target="_blank">
-                    <Printer className="mr-2 h-4 w-4" />
-                    Generar Manual Técnico (PDF)
-                </Link>
-            </Button>
+            {/* Componente cliente que maneja la impresión mediante un iframe oculto */}
+            <PrintManualButton />
           </div>
         </CardHeader>
       </Card>
