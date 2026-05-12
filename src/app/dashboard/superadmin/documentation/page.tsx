@@ -4,7 +4,8 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Printer, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface DocMetadata {
   slug: string;
@@ -42,12 +43,22 @@ export default async function DocumentationIndexPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Documentación del Proyecto</CardTitle>
-          <CardDescription>
-            Recursos técnicos, guías y descripciones sobre la arquitectura y funcionamiento del proyecto STEM.
-          </CardDescription>
+      <Card className="border-primary/10 shadow-sm overflow-hidden">
+        <CardHeader className="bg-primary/5 pb-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <CardTitle className="text-2xl font-black uppercase tracking-tight">Documentación del Proyecto</CardTitle>
+              <CardDescription className="text-base">
+                Recursos técnicos, guías y descripciones sobre la arquitectura y funcionamiento del proyecto STEM.
+              </CardDescription>
+            </div>
+            <Button asChild className="shadow-lg">
+                <Link href="/dashboard/superadmin/documentation/print" target="_blank">
+                    <Printer className="mr-2 h-4 w-4" />
+                    Generar Manual Técnico (PDF)
+                </Link>
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 
@@ -55,24 +66,27 @@ export default async function DocumentationIndexPage() {
         {pages.length > 0 ? (
             pages.map((page) => (
                 <Link href={`/dashboard/superadmin/documentation/${page.slug}`} key={page.slug}>
-                    <Card className="h-full flex flex-col hover:border-primary hover:shadow-lg transition-all">
+                    <Card className="h-full flex flex-col hover:border-primary hover:shadow-xl transition-all group border-primary/5">
                         <CardHeader>
-                            <CardTitle>{page.title}</CardTitle>
+                            <div className="p-2 bg-primary/5 w-fit rounded-lg mb-2 group-hover:bg-primary/10 transition-colors">
+                                <FileText className="h-5 w-5 text-primary" />
+                            </div>
+                            <CardTitle className="text-lg group-hover:text-primary transition-colors">{page.title}</CardTitle>
                         </CardHeader>
                         <CardContent className="flex-grow">
-                            <p className="text-muted-foreground">{page.description}</p>
+                            <p className="text-sm text-muted-foreground leading-relaxed">{page.description}</p>
                         </CardContent>
-                        <CardContent>
-                            <div className="flex items-center text-primary font-semibold">
-                                Leer más <ArrowRight className="ml-2 h-4 w-4" />
+                        <CardContent className="pt-0">
+                            <div className="flex items-center text-primary font-bold text-xs uppercase tracking-widest">
+                                Leer documento <ArrowRight className="ml-2 h-3 w-3 group-hover:translate-x-1 transition-transform" />
                             </div>
                         </CardContent>
                     </Card>
                 </Link>
             ))
         ) : (
-            <p className="text-muted-foreground col-span-full text-center py-8">
-                No se encontraron documentos.
+            <p className="text-muted-foreground col-span-full text-center py-12 italic border-2 border-dashed rounded-xl">
+                No se encontraron documentos en la carpeta de origen.
             </p>
         )}
       </div>
