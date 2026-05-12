@@ -109,11 +109,15 @@ export interface AccessState {
 
 export interface LoginDesign {
   imageUrl?: string;
+  logoUrl?: string;
   backgroundColor?: string;
   textColor?: string;
   layout?: 'side' | 'center';
   title?: string;
   slogan?: string;
+  creationYear?: string;
+  creators?: string;
+  contactInfo?: string;
   textAlign?: 'left' | 'center' | 'right';
   titleSize?: 'text-2xl' | 'text-3xl' | 'text-4xl';
   sloganSize?: 'text-base' | 'text-lg' | 'text-xl';
@@ -438,7 +442,7 @@ export interface Submission {
   id: string;
   studentUid: string;
   studentName: string;
-  taskId: string;
+  title?: string;
   fileUrl: string;
   submittedAt: Timestamp;
   grade?: number;
@@ -731,4 +735,11 @@ export interface StudentEgresoAudit {
     eligible: boolean;
     pendingUnits: string[];
     pendingEFSRT: string[];
+}
+
+export interface AIConfig {
+    activeProvider: 'google' | 'ollama';
+    ollamaUrl?: string;
+    ollamaModel?: string;
+    lastUpdated?: Timestamp;
 }
