@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -7,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
@@ -241,7 +241,14 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
                         render={({ field }) => (
                             <FormItem>
                             <FormLabel>Alineación</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl><SelectContent><SelectItem value="left">Izquierda</SelectItem><SelectItem value="center">Centro</SelectItem><SelectItem value="right">Derecha</SelectItem></SelectContent></Select>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="left">Izquierda</SelectItem>
+                                    <SelectItem value="center">Centro</SelectItem>
+                                    <SelectItem value="right">Derecha</SelectItem>
+                                </SelectContent>
+                            </Select>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -288,4 +295,3 @@ export function LoginDesignForm({ onSettingsSaved }: LoginDesignFormProps) {
     </Form>
   );
 }
-
