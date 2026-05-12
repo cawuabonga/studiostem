@@ -95,7 +95,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
         <div className="w-full h-full flex flex-col p-8 sm:p-16 relative">
             
             {/* Logo de Plataforma - Centrado y más grande */}
-            <div className="mb-12 flex justify-center w-full">
+            <div className="mb-6 flex justify-center w-full">
               {design?.logoUrl ? (
                 <div className="relative h-32 w-72 animate-in fade-in zoom-in duration-1000">
                     <Image src={design.logoUrl} alt="Platform Logo" fill className="object-contain object-center" />
@@ -106,6 +106,28 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
                 </div>
               )}
             </div>
+
+            {/* Título y Slogan debajo del logo */}
+            {(design?.title || design?.slogan) && (
+                <div className="text-center mb-10 space-y-2 animate-in fade-in slide-in-from-top-4 duration-1000">
+                    {design?.title && (
+                        <h1 className={cn(
+                            "font-black font-headline tracking-tighter text-primary uppercase",
+                            design.titleSize || "text-3xl"
+                        )}>
+                            {design.title}
+                        </h1>
+                    )}
+                    {design?.slogan && (
+                        <p className={cn(
+                            "text-muted-foreground font-medium",
+                            design.sloganSize || "text-lg"
+                        )}>
+                            {design.slogan}
+                        </p>
+                    )}
+                </div>
+            )}
             
             <div className="flex-1">
                 {children}
