@@ -99,18 +99,15 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
         {/* Panel Derecho - Formulario y Logo */}
         <div className="w-full h-full flex flex-col p-8 sm:p-16 relative">
             
-            {/* Logo de Plataforma */}
-            <div className={cn(
-              'mb-10 flex',
-              design?.textAlign === 'center' ? 'justify-center' : design?.textAlign === 'right' ? 'justify-end' : 'justify-start'
-            )}>
+            {/* Logo de Plataforma - Centrado y más grande */}
+            <div className="mb-12 flex justify-center w-full">
               {design?.logoUrl ? (
-                <div className="relative h-20 w-48 animate-in fade-in zoom-in duration-1000">
-                    <Image src={design.logoUrl} alt="Platform Logo" fill className="object-contain object-left" />
+                <div className="relative h-32 w-72 animate-in fade-in zoom-in duration-1000">
+                    <Image src={design.logoUrl} alt="Platform Logo" fill className="object-contain object-center" />
                 </div>
               ) : (
-                <div className="bg-primary/10 p-3 rounded-xl">
-                    <span className="text-2xl font-black text-primary tracking-tighter">STEM V2</span>
+                <div className="bg-primary/10 p-4 rounded-2xl">
+                    <span className="text-3xl font-black text-primary tracking-tighter">STEM V2</span>
                 </div>
               )}
             </div>
@@ -118,7 +115,8 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
             <div className={cn(
               'mb-8',
               design?.textAlign === 'center' && 'text-center',
-              design?.textAlign === 'right' && 'text-right'
+              design?.textAlign === 'right' && 'text-right',
+              (!design?.textAlign || design?.textAlign === 'left') && 'text-left'
             )}>
               <h1 className="font-black font-headline text-gray-900 text-3xl tracking-tighter uppercase">
                 Bienvenido al Sistema
@@ -185,4 +183,3 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
 };
 
 export default AuthPageLayout;
-
