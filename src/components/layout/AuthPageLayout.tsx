@@ -78,22 +78,17 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
             {/* Capa de degradado para legibilidad */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
             
-            <div className={cn(
-                "absolute bottom-12 left-12 right-12 z-10",
-                design?.textAlign === 'center' ? 'text-center' : design?.textAlign === 'right' ? 'text-right' : 'text-left'
-            )} style={{ color: textColor }}>
-                <h2 className={cn("font-black font-headline drop-shadow-xl leading-tight", design?.titleSize || 'text-3xl')}>
-                    {design?.title || ''}
-                </h2>
-                <p className={cn("opacity-90 drop-shadow-lg mt-4 font-medium", design?.sloganSize || 'text-lg')}>
-                    {design?.slogan || ''}
-                </p>
-                {design?.creationYear && (
-                    <p className="mt-8 text-[10px] uppercase font-black tracking-[0.3em] opacity-40">
+            {/* Overlay de información (Solo año de creación si existe) */}
+            {design?.creationYear && (
+                <div className={cn(
+                    "absolute bottom-12 left-12 right-12 z-10",
+                    design?.textAlign === 'center' ? 'text-center' : design?.textAlign === 'right' ? 'text-right' : 'text-left'
+                )} style={{ color: textColor }}>
+                    <p className="text-[10px] uppercase font-black tracking-[0.3em] opacity-40">
                         EST. {design.creationYear}
                     </p>
-                )}
-            </div>
+                </div>
+            )}
         </div>
 
         {/* Panel Derecho - Formulario y Logo */}
@@ -110,20 +105,6 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
                     <span className="text-3xl font-black text-primary tracking-tighter">STEM V2</span>
                 </div>
               )}
-            </div>
-
-            <div className={cn(
-              'mb-8',
-              design?.textAlign === 'center' && 'text-center',
-              design?.textAlign === 'right' && 'text-right',
-              (!design?.textAlign || design?.textAlign === 'left') && 'text-left'
-            )}>
-              <h1 className="font-black font-headline text-gray-900 text-3xl tracking-tighter uppercase">
-                {design?.title || 'Bienvenido al Sistema'}
-              </h1>
-              <p className="text-muted-foreground mt-2 font-medium">
-                {design?.slogan || 'Gestión Educativa Modular de Alto Rendimiento'}
-              </p>
             </div>
             
             <div className="flex-1">
