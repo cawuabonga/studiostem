@@ -73,7 +73,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
               fill
               className="object-cover opacity-80"
               priority
-              data-ai-hint="campus university"
+              data-ai-hint="university campus"
             />
             {/* Capa de degradado para legibilidad */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
@@ -119,10 +119,10 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType }) =
               (!design?.textAlign || design?.textAlign === 'left') && 'text-left'
             )}>
               <h1 className="font-black font-headline text-gray-900 text-3xl tracking-tighter uppercase">
-                Bienvenido al Sistema
+                {design?.title || 'Bienvenido al Sistema'}
               </h1>
               <p className="text-muted-foreground mt-2 font-medium">
-                Gestión Educativa Modular de Alto Rendimiento
+                {design?.slogan || 'Gestión Educativa Modular de Alto Rendimiento'}
               </p>
             </div>
             
