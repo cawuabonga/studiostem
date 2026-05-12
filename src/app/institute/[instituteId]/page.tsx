@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { getInstitute, getPrograms, getInstitutes, getNewsList } from '@/config/firebase';
 import { notFound } from 'next/navigation';
@@ -35,8 +34,9 @@ async function getInstituteData(instituteId: string) {
 }
 
 // This remains a Server Component to fetch data
-export default async function InstitutePublicPage({ params }: { params: { instituteId: string } }) {
-    const data = await getInstituteData(params.instituteId);
+export default async function InstitutePublicPage({ params }: { params: Promise<{ instituteId: string }> }) {
+    const { instituteId } = await params;
+    const data = await getInstituteData(instituteId);
 
     if (!data) {
         notFound();

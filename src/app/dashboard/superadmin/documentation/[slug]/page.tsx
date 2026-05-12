@@ -27,8 +27,9 @@ async function getDocumentContent(slug: string) {
   }
 }
 
-export default async function DocumentationPage({ params }: { params: { slug: string } }) {
-  const doc = await getDocumentContent(params.slug);
+export default async function DocumentationPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const doc = await getDocumentContent(slug);
 
   if (!doc) {
     return (
