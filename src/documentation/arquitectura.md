@@ -14,25 +14,47 @@ A diferencia de sistemas tradicionales, STEM utiliza un identificador de institu
 *   **Aislamiento**: Cada consulta de datos está filtrada por el `instituteId` activo en el contexto del usuario.
 *   **Reglas de Seguridad**: Las `Firestore Security Rules` validan en cada lectura/escritura que el usuario autenticado pertenezca realmente al instituto que intenta consultar.
 
-### 2. Flujo de Datos y Capas
+### 2. Capas del Sistema
 El sistema se divide en tres capas principales:
 
-1.  **Capa de Presentación (Frontend)**: Construida con Next.js 15, utilizando React Server Components para velocidad y Client Components para interactividad.
-2.  **Capa de Lógica (Server Actions & Flows)**: Los procesos complejos y las llamadas a la IA (Genkit) se ejecutan en el servidor para proteger las llaves de API y mejorar el rendimiento.
+1.  **Capa de Presentación (Frontend)**: Next.js 15, utilizando React Server Components para velocidad y Client Components para interactividad en tiempo real.
+2.  **Capa de Lógica (Servidor)**: Server Actions para procesos de negocio y Genkit para orquestación de Inteligencia Artificial.
 3.  **Capa de Persistencia (BaaS)**: Firebase gestiona la base de datos (Firestore), autenticación (Auth) y archivos (Storage).
 
-### 3. Estructura Jerárquica de Datos (Mapa del Sistema)
+### 3. Estructura de la Base de Datos (Esquema NoSQL)
 
-Para entender cómo fluye la información, el sistema se organiza de la siguiente manera:
+Para garantizar la velocidad y el aislamiento, la información se organiza en una estructura de colecciones raíz y subcolecciones profundas. A continuación se detalla el diseño de datos:
 
-**🏢 NODO RAÍZ: INSTITUTO**
-*   ↳ **📍 INFRAESTRUCTURA**: Pabellones, Ambientes (Aulas, Laboratorios).
-*   ↳ **📚 ACADEMIA**: Programas de Estudio (Carreras).
-    *   ↳ **📖 UNIDADES DIDÁCTICAS**: Cursos y materias.
-        *   ↳ **📅 PLANIFICACIÓN**: Syllabus, Sesiones semanales, Materiales.
-*   ↳ **👥 COMUNIDAD**: Perfiles oficiales de Estudiantes y Personal.
-    *   ↳ **📊 SEGUIMIENTO**: Matrículas, Calificaciones, Asistencias.
-*   ↳ **📟 SEGURIDAD**: Puntos de Acceso, Dispositivos RFID, Logs de Entrada/Salida.
+**🗄️ COLECCIONES RAÍZ (Globales)**
+*   ↳ **`/users`**: Repositorio global de usuarios del sistema (UID, Email, Rol, InstituteId).
+*   ↳ **`/config`**: Configuraciones globales de la plataforma (Login, Logo, Proveedores de IA).
 
-### 4. Escalabilidad
-Gracias al uso de tecnologías "Serverless", la plataforma puede escalar de 10 a 10,000 usuarios sin necesidad de reconfigurar servidores, ajustando los costos al consumo real.
+**🏢 COLECCIONES POR INSTITUTO (`/institutes/{instituteId}/...`)**
+Cada instituto posee su propio árbol de datos independiente:
+
+*   ↳ **`buildings`**: Infraestructura física (Pabellones).
+    *   ↳ **`environments`**: Aulas, laboratorios y oficinas.
+        *   ↳ **`assets`**: Inventario de activos fijos (Mobiliario, Equipos).
+*   ↳ **`programs`**: Carreras profesionales y sus módulos.
+*   ↳ **`unidadesDidacticas`**: Cursos individuales.
+    *   ↳ **`weeklyPlanner`**: Planificación por semanas (Contenidos y Tareas).
+    *   ↳ **`achievementIndicators`**: Indicadores de logro para evaluación.
+*   ↳ **`staffProfiles`**: Perfiles del personal docente y administrativo (Indexados por DNI).
+*   ↳ **`studentProfiles`**: Perfiles oficiales de estudiantes (Indexados por DNI).
+*   ↳ **`matriculations`**: Historial de inscripciones de alumnos en cursos.
+*   ↳ **`academicRecords`**: Registro auxiliar de notas y calificaciones.
+*   ↳ **`attendance`**: Registro de asistencia por unidad y sesión.
+*   ↳ **`payments`**: Recaudación de tasas y vouchers de estudiantes.
+*   ↳ **`supplyCatalog`**: Inventario de insumos (almacén).
+*   ↳ **`supplyRequests`**: Pedidos de materiales del personal (PECOSAS).
+*   ↳ **`accessPoints`**: Configuración de puertas y lectores RFID.
+    *   ↳ **`accessLogs`**: Historial de entradas y salidas en tiempo real.
+
+### 4. Lógica de Relaciones
+Aunque Firestore es NoSQL, STEM mantiene la integridad mediante **Referencias Cruzadas**:
+*   **UID**: Vincula el usuario de autenticación con su perfil oficial.
+*   **DNI**: Actúa como llave única para el seguimiento académico y administrativo.
+*   **IDs Jerárquicos**: Los datos siempre fluyen hacia abajo (ej. un Activo "sabe" a qué Ambiente pertenece, y el Ambiente a qué Edificio).
+
+### 5. Escalabilidad
+Gracias al uso de tecnologías "Serverless", la plataforma puede escalar de 10 a 10,000 usuarios sin necesidad de reconfigurar servidores, ajustando los costos al consumo real de cada instituto.
