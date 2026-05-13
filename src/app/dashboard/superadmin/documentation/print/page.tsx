@@ -1,3 +1,4 @@
+
 import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -21,7 +22,7 @@ async function getFullManualContent() {
       })
     );
     
-    // Sort documents for logic flow
+    // Orden lógico de las secciones
     const order = ['arquitectura', 'tecnologias', 'identidad-acceso', 'integracion-iot'];
     return docs.sort((a, b) => {
         const idxA = order.indexOf(a.slug);
@@ -30,6 +31,7 @@ async function getFullManualContent() {
         return a.title.localeCompare(b.title);
     });
   } catch (error) {
+    console.error("Error reading docs for print:", error);
     return [];
   }
 }
@@ -39,25 +41,8 @@ export default async function FullManualPrintPage() {
 
   return (
     <div className="bg-white">
+      {/* El componente DocumentationPrintLayout ahora maneja su propia carga y disparo de window.print() */}
       <DocumentationPrintLayout documents={allDocs} />
-      {/* Script optimizado para disparar la impresión automáticamente incluso dentro de un iframe */}
-      <script dangerouslySetInnerHTML={{
-          __html: `
-            (function() {
-              function triggerPrint() {
-                window.print();
-              }
-              // Verificamos si el documento ya está cargado
-              if (document.readyState === 'complete') {
-                setTimeout(triggerPrint, 1000);
-              } else {
-                window.addEventListener('load', function() {
-                  setTimeout(triggerPrint, 1000);
-                });
-              }
-            })();
-          `
-      }} />
     </div>
   );
 }
