@@ -8,19 +8,22 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  // Simplificamos el renderizador eliminando Mermaid para evitar errores de sintaxis visuales
-  // y mejorar la velocidad de carga de la documentación.
-
   const createMarkup = (text: string) => {
     let processedText = text
-        .replace(/^# (.*$)/gmi, '<h1 class="text-3xl font-black mt-8 mb-4 text-primary uppercase tracking-tight border-b-2 pb-2">$1</h1>')
-        .replace(/^## (.*$)/gmi, '<h2 class="text-2xl font-bold mt-8 mb-3 text-foreground/90 border-l-4 border-primary pl-4">$2</h2>')
-        .replace(/^### (.*$)/gmi, '<h3 class="text-xl font-bold mt-6 mb-2 text-foreground/80">$1</h3>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-primary/90">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em class="italic text-muted-foreground">$1</em>')
-        .replace(/`([^`]+)`/g, '<code class="bg-muted text-primary px-1.5 py-0.5 rounded font-mono text-sm border">$1</code>')
-        .replace(/^\* (.*$)/gmi, '<li class="ml-4 mb-1 list-disc">$1</li>')
-        .replace(/↳ (.*$)/gmi, '<div class="ml-8 mb-2 p-3 bg-muted/30 rounded-lg border-l-4 border-primary/20 font-medium">↳ $1</div>')
+        // Títulos de Sección (I, II, III...) - Estilo Sílabo
+        .replace(/^# (.*$)/gmi, '<h1 class="text-xl font-black mt-4 mb-6 bg-gray-100 p-3 border-y-2 border-black uppercase tracking-widest flex items-center gap-3"><span class="bg-black text-white px-3 py-1 text-sm">DOC</span> $1</h1>')
+        // Subtítulos
+        .replace(/^## (.*$)/gmi, '<h2 class="text-lg font-black mt-8 mb-4 text-black border-l-[6px] border-black pl-4 uppercase tracking-tighter">$1</h2>')
+        .replace(/^### (.*$)/gmi, '<h3 class="text-base font-bold mt-6 mb-3 text-gray-800 underline decoration-2 underline-offset-4">$1</h3>')
+        // Énfasis
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-black text-black">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em class="italic text-gray-600">$1</em>')
+        // Código e Inline
+        .replace(/`([^`]+)`/g, '<code class="bg-gray-50 text-black px-2 py-0.5 rounded font-mono text-xs border border-gray-200">$1</code>')
+        // Listas
+        .replace(/^\* (.*$)/gmi, '<li class="ml-6 mb-1.5 list-disc text-gray-800 font-medium">$1</li>')
+        // Jerarquía de Datos (Cards)
+        .replace(/↳ (.*$)/gmi, '<div class="ml-10 mb-3 p-4 bg-gray-50/50 rounded-r-lg border-l-4 border-gray-300 font-bold text-sm text-gray-700 shadow-sm">↳ $1</div>')
         .replace(/\n/g, '<br />');
         
     return { __html: processedText };
@@ -28,8 +31,9 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
   return (
     <article
-      className="prose dark:prose-invert max-w-none text-base leading-relaxed"
+      className="prose dark:prose-invert max-w-none text-[10pt] leading-relaxed print:text-[9.5pt]"
       dangerouslySetInnerHTML={createMarkup(content)}
     />
   );
 }
+
