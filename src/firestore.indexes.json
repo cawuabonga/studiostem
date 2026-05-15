@@ -144,12 +144,44 @@
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "accessLogs",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "accessPointId",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "accessLogs",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "accessPointId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "timestamp",
+          "order": "ASCENDING"
         }
       ]
     },
