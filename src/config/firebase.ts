@@ -206,7 +206,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
+    const imageDocRef = doc(db, 'config/loginDesign/images', image.id);
     await deleteDoc(imageDocRef);
     const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
     try {
@@ -1178,6 +1178,13 @@ export const updateSupplyRequestStatus = async (
     }
 };
 
+export const getAcademicPeriodSettings = async (instituteId: string, year: string): Promise<AcademicYearSettings | null> => {
+    const docRef = doc(db, 'institutes', instituteId, 'academicYears', year);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) return docSnap.data() as AcademicYearSettings;
+    return null;
+}
+
 export const getAcademicPeriods = async (instituteId: string, year: string): Promise<AcademicYearSettings | null> => {
     const docRef = doc(db, 'institutes', instituteId, 'academicYears', year);
     const docSnap = await getDoc(docRef);
@@ -1560,6 +1567,29 @@ export const listenToAccessLogsForUser = (instituteId: string, userDocumentId: s
     const q = query(collectionGroup(db, 'accessLogs'), where('instituteId', '==', instituteId), where('userDocumentId', '==', userDocumentId), orderBy('timestamp', 'desc'), limit(20));
     return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog))); });
 };
+
+/**
+ * Obtiene todos los registros de acceso para un instituto, mes y año específicos, filtrados opcionalmente por punto de acceso.
+ */
+export const getMonthlyAccessLogs = async (instituteId: string, year: number, month: number, accessPointId?: string): Promise<AccessLog[]> => {
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59);
+    
+    const q_parts: any[] = [
+        where('instituteId', '==', instituteId),
+        where('timestamp', '>=', Timestamp.fromDate(start)),
+        where('timestamp', '<=', Timestamp.fromDate(end)),
+        orderBy('timestamp', 'asc')
+    ];
+
+    if (accessPointId && accessPointId !== 'all') {
+        q_parts.push(where('accessPointId', '==', accessPointId));
+    }
+
+    const q = query(collectionGroup(db, 'accessLogs'), ...q_parts);
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
+}
 
 export const getMatriculationReportData = async (instituteId: string, programId: string, year: string, semester: number): Promise<MatriculationReportData | null> => {
     const [allPrograms, allUnits, allStaff] = await Promise.all([getPrograms(instituteId), getUnits(instituteId), getStaffProfiles(instituteId)]);
