@@ -217,7 +217,7 @@ export default function AdminEFSRTPage() {
                                 .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
                                 .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; font-size: 13pt; }
                                 .signature-area { margin-top: 80px; display: flex; justify-content: center; page-break-inside: avoid; }
-                                .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; }
+                                .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; line-height: 1.4; }
                                 .print-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; text-align: right; font-size: 7pt; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
                                 .page-number:after { counter-increment: page; content: "Página " counter(page); }
                             }
@@ -612,9 +612,13 @@ export default function AdminEFSRTPage() {
 
                 <div className="signature-area" style={{ marginTop: '100px' }}>
                     <div className="signature-box">
-                        <p style={{ fontWeight: 'bold', margin: '0 0 2px 0' }}>_________________________________</p>
-                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '10pt' }}>COORDINACIÓN ACADÉMICA</p>
-                        <p style={{ margin: 0, fontSize: '8pt', color: '#444' }}>{programs.find(p => p.id === userProgramId)?.name.toUpperCase() || 'PROGRAMA DE ESTUDIOS'}</p>
+                        <p style={{ fontWeight: 'bold', margin: '0 0 2px 0', fontSize: '10pt' }}>{user?.displayName?.toUpperCase()}</p>
+                        <p style={{ margin: '0 0 2px 0', fontWeight: 'bold', fontSize: '8pt', textTransform: 'uppercase' }}>
+                            {user?.role === 'Admin' ? 'COORDINACIÓN ACADÉMICA' : (user?.role?.toUpperCase() || 'COORDINADOR')}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '8pt', color: '#444', fontWeight: '600' }}>
+                            {programs.find(p => p.id === userProgramId)?.name.toUpperCase() || 'PROGRAMA DE ESTUDIOS'}
+                        </p>
                     </div>
                 </div>
             </div>
