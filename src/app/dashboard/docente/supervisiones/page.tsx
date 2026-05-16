@@ -9,8 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, GraduationCap, History, Search, Filter } from 'lucide-react';
+import { MapPin, Calendar, CheckCircle, FileText, PlusCircle, Loader2, GraduationCap, History, Search, Filter, Printer } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -34,7 +35,7 @@ const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-J
 };
 
 export default function SupervisorEFSRTPage() {
-    const { user, instituteId } = useAuth();
+    const { user, institute, instituteId } = useAuth();
     const { toast } = useToast();
     const [assignments, setAssignments] = useState<EFSRTAssignment[]>([]);
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -116,6 +117,57 @@ export default function SupervisorEFSRTPage() {
         return Array.from(moduleMap.entries()).map(([code, name]) => ({ code, name }));
     }, [assignments]);
 
+    // Agrupación para el reporte impreso
+    const groupedAssignmentsForPrint = useMemo(() => {
+        const groups: Record<string, { moduleName: string, items: EFSRTAssignment[] }> = {};
+        filteredAssignments.forEach(a => {
+            if (!groups[a.moduleId]) {
+                groups[a.moduleId] = { moduleName: a.moduleName, items: [] };
+            }
+            groups[a.moduleId].items.push(a);
+        });
+        return Object.values(groups).sort((a, b) => a.moduleName.localeCompare(b.moduleName));
+    }, [filteredAssignments]);
+
+    const handlePrintConsolidated = () => {
+        const printContent = document.getElementById('efsrt-consolidated-print-area')?.innerHTML;
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const printWindow = window.open('', '_blank');
+        if (printWindow && printContent) {
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Reporte Consolidado EFSRT - ${user?.displayName}</title>
+                        ${styles}
+                        <style>
+                            @media print {
+                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px; font-family: sans-serif; }
+                                .no-print { display: none !important; }
+                                .page-break { page-break-after: always; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                                th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 9pt; }
+                                th { background-color: #f3f4f6; text-transform: uppercase; font-weight: bold; }
+                                .module-row { background-color: #e5e7eb; font-weight: 900; }
+                                .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; }
+                            }
+                        </style>
+                    </head>
+                    <body>${printContent}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        }
+    };
+
     const handleRegisterVisit = async () => {
         if (!instituteId || !selectedAssignment || !visitData.observations) return;
         setIsSubmitting(true);
@@ -173,9 +225,15 @@ export default function SupervisorEFSRTPage() {
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle>Supervisiones de EFSRT</CardTitle>
-                    <CardDescription>Gestión automática de estados basada en fechas programadas.</CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>Supervisiones de EFSRT</CardTitle>
+                        <CardDescription>Gestión automática de estados basada en fechas programadas.</CardDescription>
+                    </div>
+                    <Button variant="outline" onClick={handlePrintConsolidated} disabled={filteredAssignments.length === 0}>
+                        <Printer className="mr-2 h-4 w-4" />
+                        Imprimir Reporte Consolidado
+                    </Button>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -313,6 +371,71 @@ export default function SupervisorEFSRTPage() {
                     <DialogFooter><Button variant="ghost" onClick={() => setIsEvaluateDialogOpen(false)}>Cancelar</Button><Button onClick={handleEvaluate} disabled={isSubmitting}>Cerrar Evaluación</Button></DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* AREA DE IMPRESIÓN (OCULTA EN PANTALLA) */}
+            <div id="efsrt-consolidated-print-area" className="hidden">
+                <div className="header">
+                    <div className="flex items-center gap-4">
+                        {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" style={{ height: '60px' }} />}
+                        <div>
+                            <p style={{ fontSize: '14pt', fontWeight: 'bold', margin: 0 }}>{institute?.name.toUpperCase()}</p>
+                            <p style={{ fontSize: '8pt', color: '#666', margin: 0 }}>SISTEMA DE GESTIÓN ACADÉMICA - EFSRT</p>
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '9pt' }}>
+                        <p>FECHA: {format(new Date(), 'dd/MM/yyyy')}</p>
+                        <p>DOCENTE: {user?.displayName.toUpperCase()}</p>
+                    </div>
+                </div>
+
+                <div className="title">
+                    REPORTE CONSOLIDADO DE SUPERVISIÓN DE EXPERIENCIAS FORMATIVAS
+                </div>
+
+                {groupedAssignmentsForPrint.map(group => (
+                    <div key={group.moduleName} style={{ marginBottom: '40px' }}>
+                        <div className="module-row" style={{ padding: '8px', border: '1px solid black', marginBottom: '10px' }}>
+                            MÓDULO: {group.moduleName.toUpperCase()}
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr>
+                                    <th style={{ border: '1px solid black', padding: '8px', width: '25%' }}>ESTUDIANTE</th>
+                                    <th style={{ border: '1px solid black', padding: '8px', width: '25%' }}>SEDE / EMPRESA</th>
+                                    <th style={{ border: '1px solid black', padding: '8px', width: '40%' }}>FECHAS DE VISITA</th>
+                                    <th style={{ border: '1px solid black', padding: '8px', width: '10%', textAlign: 'center' }}>NOTA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {group.items.map(a => (
+                                    <tr key={a.id}>
+                                        <td style={{ border: '1px solid black', padding: '8px', fontWeight: 'bold' }}>{a.studentName.toUpperCase()}</td>
+                                        <td style={{ border: '1px solid black', padding: '8px' }}>{a.location}</td>
+                                        <td style={{ border: '1px solid black', padding: '8px', fontSize: '8pt' }}>
+                                            {a.visits.length > 0 
+                                                ? a.visits.map(v => format(v.date.toDate(), 'dd/MM/yyyy')).join(', ')
+                                                : 'SIN VISITAS REGISTRADAS'
+                                            }
+                                        </td>
+                                        <td style={{ border: '1px solid black', padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '11pt' }}>
+                                            {a.grade ?? '--'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
+
+                <div style={{ marginTop: '80px', display: 'flex', justifyContent: 'space-around' }}>
+                    <div style={{ borderTop: '1px solid black', width: '250px', textAlign: 'center', paddingTop: '5px', fontSize: '9pt' }}>
+                        Firma del Docente Supervisor
+                    </div>
+                    <div style={{ borderTop: '1px solid black', width: '250px', textAlign: 'center', paddingTop: '5px', fontSize: '9pt' }}>
+                        V° B° Coordinación Académica
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

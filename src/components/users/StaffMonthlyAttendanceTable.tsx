@@ -134,20 +134,28 @@ export function StaffMonthlyAttendanceTable({ instituteId }: StaffMonthlyAttenda
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Punto de Acceso</Label>
                             <Select value={selectedPointId} onValueChange={setSelectedPointId}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Todos los lectores" />
+                                </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">Todos los puntos</SelectItem>
-                                    {accessPoints.map(p => <SelectItem key={p.id} value={p.accessPointId}>{p.name}</SelectItem>)}
+                                    <SelectItem value="all">Todos los lectores</SelectItem>
+                                    {accessPoints.map(p => (
+                                        <SelectItem key={p.id} value={p.accessPointId}>{p.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Programa de Estudios</Label>
                             <Select value={programFilter} onValueChange={setProgramFilter}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Todo el personal" />
+                                </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todo el personal</SelectItem>
-                                    {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                    {programs.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                         </div>
