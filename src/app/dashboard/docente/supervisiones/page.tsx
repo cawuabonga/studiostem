@@ -424,7 +424,7 @@ export default function SupervisorEFSRTPage() {
                 </div>
 
                 <div className="title">
-                    REPORTE CONSOLIDADO DE SUPERVISIÓN DE EXPERIENCIAS FORMATIVAS
+                    REPORTE CONSOLIDADO DE SUPERVISIÓN DE EXPERIENCIAS FORMATIVAS EN SITUACIONES REALES DE TRABAJO (EFSRT)
                 </div>
 
                 {groupedAssignmentsForPrint.map(group => (
