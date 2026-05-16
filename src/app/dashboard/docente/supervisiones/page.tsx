@@ -464,15 +464,14 @@ export default function SupervisorEFSRTPage() {
 
                 <div className="signature-area">
                     <div className="signature-box">
-                        <p style={{ fontWeight: 'bold', margin: '0 0 4px 0', fontSize: '10pt' }}>{user?.displayName?.toUpperCase()}</p>
-                        <p style={{ margin: 0, fontSize: '8pt', color: '#444' }}>Especialidad: {user?.programName || 'DOCENTE'}</p>
-                        <p style={{ margin: '2px 0 0 0', fontSize: '8pt', fontWeight: '700', textTransform: 'uppercase' }}>
-                            {user?.role === 'Teacher' ? 'DOCENTE RESPONSABLE' : (user?.role || 'DOCENTE')}
+                        <p style={{ fontWeight: 'bold', margin: '0 0 2px 0', fontSize: '10pt' }}>{user?.displayName?.toUpperCase()}</p>
+                        <p style={{ margin: '0 0 2px 0', fontSize: '8pt', fontWeight: '700', textTransform: 'uppercase' }}>
+                            {user?.role === 'Teacher' ? 'DOCENTE RESPONSABLE' : (user?.role?.toUpperCase() || 'DOCENTE')}
                         </p>
+                        <p style={{ margin: 0, fontSize: '8pt', color: '#444', fontWeight: '600' }}>{user?.programName?.toUpperCase() || 'PROGRAMA DE ESTUDIOS'}</p>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
-
