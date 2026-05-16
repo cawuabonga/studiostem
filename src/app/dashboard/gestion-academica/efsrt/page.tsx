@@ -12,12 +12,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,7 +45,7 @@ const calculateCurrentSemester = (admissionYear: string, admissionPeriod: UnitPe
 };
 
 export default function AdminEFSRTPage() {
-    const { instituteId, user, hasPermission } = useAuth();
+    const { instituteId, institute, user, hasPermission } = useAuth();
     const { toast } = useToast();
     const [students, setStudents] = useState<StudentProfile[]>([]);
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -51,6 +53,7 @@ export default function AdminEFSRTPage() {
     const [allAssignments, setAllAssignments] = useState<EFSRTAssignment[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isPrinting, setIsPrinting] = useState(false);
     
     const [filterSeg, setFilterSeg] = useState('');
     const [semesterFilterSeg, setSemesterFilterSeg] = useState<string>('all');
@@ -139,7 +142,6 @@ export default function AdminEFSRTPage() {
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
     const studentsToProgram = useMemo(() => {
-        // Si no hay filtros aplicados, devolver lista vacía para evitar carga innecesaria
         if (!filterProg && semesterFilterProg === 'all') {
             return [];
         }
@@ -164,6 +166,78 @@ export default function AdminEFSRTPage() {
             return true;
         });
     }, [students, allAssignments, isFullAdmin, userProgramId, filterProg, semesterFilterProg, moduleFilterProg]);
+
+    const handlePrintGeneralReport = () => {
+        setIsPrinting(true);
+        const printContent = document.getElementById('efsrt-admin-print-area')?.innerHTML;
+        if (!printContent) return;
+
+        const iframeId = 'efsrt-admin-print-iframe';
+        let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+        
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = iframeId;
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(`
+                <html>
+                    <head>
+                        <title>Reporte Seguimiento EFSRT</title>
+                        ${styles}
+                        <style>
+                            @media print {
+                                @page { margin: 15mm; size: A4 portrait; }
+                                body { 
+                                    -webkit-print-color-adjust: exact; 
+                                    print-color-adjust: exact; 
+                                    padding: 0; 
+                                    font-family: 'Lato', sans-serif;
+                                    counter-reset: page;
+                                }
+                                .no-print { display: none !important; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: auto; }
+                                tr { page-break-inside: avoid; page-break-after: auto; }
+                                th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 8pt; }
+                                th { background-color: #f3f4f6; text-transform: uppercase; font-weight: bold; }
+                                .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; font-size: 13pt; }
+                                .signature-area { margin-top: 80px; display: flex; justify-content: center; page-break-inside: avoid; }
+                                .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; }
+                                .print-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; text-align: right; font-size: 7pt; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
+                                .page-number:after { counter-increment: page; content: "Página " counter(page); }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                        <div class="print-footer"><span class="page-number"></span></div>
+                    </body>
+                </html>
+            `);
+            iframeDoc.close();
+            
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setIsPrinting(false);
+            }, 500);
+        }
+    };
 
     const handleOpenProgram = (student: StudentProfile) => {
         setSelectedStudent(student);
@@ -276,14 +350,20 @@ export default function AdminEFSRTPage() {
         <div className="space-y-6">
             <Card className="bg-primary text-primary-foreground">
                 <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <ListChecks className="h-8 w-8" />
-                        <div>
-                            <CardTitle className="text-2xl">Gestión de Experiencias Formativas (EFSRT)</CardTitle>
-                            <CardDescription className="text-primary-foreground/80">
-                                Tablero de control para el programa: <span className="font-bold underline">{programs.find(p => p.id === userProgramId)?.name || 'Cargando...'}</span>
-                            </CardDescription>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <ListChecks className="h-8 w-8" />
+                            <div>
+                                <CardTitle className="text-2xl">Gestión de Experiencias Formativas (EFSRT)</CardTitle>
+                                <CardDescription className="text-primary-foreground/80">
+                                    Programa: <span className="font-bold underline">{programs.find(p => p.id === userProgramId)?.name || 'Cargando...'}</span>
+                                </CardDescription>
+                            </div>
                         </div>
+                        <Button variant="secondary" onClick={handlePrintGeneralReport} disabled={isPrinting || filteredAssignments.length === 0} className="font-bold shadow-lg">
+                            {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                            Imprimir Reporte General
+                        </Button>
                     </div>
                 </CardHeader>
             </Card>
@@ -298,7 +378,7 @@ export default function AdminEFSRTPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Listado Maestro de Prácticas</CardTitle>
-                            <CardDescription>Visualiza el estado de todos los estudiantes con EFSRT programadas (Estado automático por fechas).</CardDescription>
+                            <CardDescription>Visualiza el estado de todos los estudiantes con EFSRT programadas.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -337,7 +417,7 @@ export default function AdminEFSRTPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Semestre</Label>
-                                    <Select value={semesterFilterSeg} onValueChange={semesterFilterSeg => setSemesterFilterSeg(semesterFilterSeg)}>
+                                    <Select value={semesterFilterSeg} onValueChange={setSemesterFilterSeg}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Semestres</SelectItem>
@@ -470,10 +550,10 @@ export default function AdminEFSRTPage() {
                                                         ? (
                                                             <div className="flex flex-col items-center gap-2">
                                                                 <Info className="h-5 w-5 opacity-50" />
-                                                                <p>Utilice los filtros superiores (DNI, Nombre o Semestre) para buscar estudiantes.</p>
+                                                                <p>Utilice los filtros superiores para buscar estudiantes.</p>
                                                             </div>
                                                         )
-                                                        : "No se encontraron estudiantes que coincidan con la búsqueda."}
+                                                        : "No se encontraron estudiantes."}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -485,6 +565,61 @@ export default function AdminEFSRTPage() {
                 </TabsContent>
             </Tabs>
 
+            {/* AREA DE IMPRESIÓN (OCULTA) */}
+            <div id="efsrt-admin-print-area" className="hidden">
+                <div className="header">
+                    <div className="flex items-center gap-4">
+                        {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" style={{ height: '60px' }} />}
+                        <div>
+                            <p style={{ fontSize: '14pt', fontWeight: 'bold', margin: 0 }}>{institute?.name.toUpperCase()}</p>
+                            <p style={{ fontSize: '8pt', color: '#666', margin: 0 }}>SISTEMA DE GESTIÓN ACADÉMICA - ADMINISTRACIÓN EFSRT</p>
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '9pt' }}>
+                        <p>FECHA: {format(new Date(), 'dd/MM/yyyy')}</p>
+                    </div>
+                </div>
+
+                <div className="title">
+                    REPORTE GENERAL DE SEGUIMIENTO DE EXPERIENCIAS FORMATIVAS EN SITUACIONES REALES DE TRABAJO (EFSRT)
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style={{ width: '30px' }}>N°</th>
+                            <th>ESTUDIANTE / DNI</th>
+                            <th>EMPRESA / SEDE</th>
+                            <th>DOCENTE SUPERVISOR</th>
+                            <th style={{ width: '100px', textAlign: 'center' }}>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredAssignments.map((a, idx) => (
+                            <tr key={a.id}>
+                                <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                                <td>
+                                    <p style={{ margin: 0, fontWeight: 'bold' }}>{a.studentName.toUpperCase()}</p>
+                                    <p style={{ margin: 0, fontSize: '7pt', color: '#555' }}>DNI: {a.studentId}</p>
+                                </td>
+                                <td>{a.location.toUpperCase()}</td>
+                                <td>{a.supervisorName.toUpperCase()}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{getEffectiveStatus(a).toUpperCase()}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <div className="signature-area" style={{ marginTop: '100px' }}>
+                    <div className="signature-box">
+                        <p style={{ fontWeight: 'bold', margin: '0 0 2px 0' }}>_________________________________</p>
+                        <p style={{ margin: 0, fontWeight: 'bold', fontSize: '10pt' }}>COORDINACIÓN ACADÉMICA</p>
+                        <p style={{ margin: 0, fontSize: '8pt', color: '#444' }}>{programs.find(p => p.id === userProgramId)?.name.toUpperCase() || 'PROGRAMA DE ESTUDIOS'}</p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Dialogs */}
             <Dialog open={isProgramDialogOpen} onOpenChange={(open) => !open && setIsProgramDialogOpen(false)}>
                 <DialogContent className="max-w-xl">
                     <DialogHeader>
@@ -534,10 +669,7 @@ export default function AdminEFSRTPage() {
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>¿Está seguro de eliminar este registro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción eliminará permanentemente la programación de prácticas de <strong>{selectedAssignment?.studentName}</strong>. 
-                            Se perderán también todas las visitas registradas en la bitácora.
-                        </AlertDialogDescription>
+                        <AlertDialogDescription>Esta acción eliminará permanentemente la programación de prácticas.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setIsDeleteDialogOpen(false)}>Cancelar</AlertDialogCancel>
