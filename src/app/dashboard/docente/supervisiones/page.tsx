@@ -131,39 +131,75 @@ export default function SupervisorEFSRTPage() {
 
     const handlePrintConsolidated = () => {
         const printContent = document.getElementById('efsrt-consolidated-print-area')?.innerHTML;
+        if (!printContent) return;
+
+        // Utilizamos un iframe oculto para la impresión directa
+        const iframeId = 'efsrt-print-iframe';
+        let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+        
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = iframeId;
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
         const styles = Array.from(document.styleSheets)
             .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
             .join('');
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow && printContent) {
-            printWindow.document.write(`
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(`
                 <html>
                     <head>
-                        <title>Reporte Consolidado EFSRT - ${user?.displayName}</title>
+                        <title>Reporte Consolidado EFSRT</title>
                         ${styles}
                         <style>
                             @media print {
-                                body { -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 20px; font-family: sans-serif; }
+                                @page { margin: 15mm; size: A4 portrait; }
+                                body { 
+                                    -webkit-print-color-adjust: exact; 
+                                    print-color-adjust: exact; 
+                                    padding: 0; 
+                                    font-family: 'Lato', sans-serif;
+                                    counter-reset: page;
+                                }
                                 .no-print { display: none !important; }
-                                .page-break { page-break-after: always; }
-                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                                th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 9pt; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: auto; }
+                                tr { page-break-inside: avoid; page-break-after: auto; }
+                                th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 8pt; }
                                 th { background-color: #f3f4f6; text-transform: uppercase; font-weight: bold; }
-                                .module-row { background-color: #e5e7eb; font-weight: 900; }
+                                .module-row { background-color: #e5e7eb; font-weight: 900; padding: 8px; border: 1px solid black; margin-bottom: 10px; text-transform: uppercase; }
                                 .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
-                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; }
+                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; font-size: 14pt; }
+                                .signature-area { margin-top: 80px; display: flex; justify-content: center; page-break-inside: avoid; }
+                                .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; line-height: 1.4; }
+                                .print-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; text-align: right; font-size: 7pt; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
+                                .page-number:after { counter-increment: page; content: "Página " counter(page); }
                             }
                         </style>
                     </head>
-                    <body>${printContent}</body>
+                    <body>
+                        ${printContent}
+                        <div class="print-footer">
+                             <span class="page-number"></span>
+                        </div>
+                    </body>
                 </html>
             `);
-            printWindow.document.close();
-            printWindow.focus();
+            iframeDoc.close();
+            
+            // Disparar impresión tras breve espera
             setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
             }, 500);
         }
     };
@@ -384,7 +420,6 @@ export default function SupervisorEFSRTPage() {
                     </div>
                     <div style={{ textAlign: 'right', fontSize: '9pt' }}>
                         <p>FECHA: {format(new Date(), 'dd/MM/yyyy')}</p>
-                        <p>DOCENTE: {user?.displayName.toUpperCase()}</p>
                     </div>
                 </div>
 
@@ -394,30 +429,30 @@ export default function SupervisorEFSRTPage() {
 
                 {groupedAssignmentsForPrint.map(group => (
                     <div key={group.moduleName} style={{ marginBottom: '40px' }}>
-                        <div className="module-row" style={{ padding: '8px', border: '1px solid black', marginBottom: '10px' }}>
+                        <div className="module-row">
                             MÓDULO: {group.moduleName.toUpperCase()}
                         </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table>
                             <thead>
                                 <tr>
-                                    <th style={{ border: '1px solid black', padding: '8px', width: '25%' }}>ESTUDIANTE</th>
-                                    <th style={{ border: '1px solid black', padding: '8px', width: '25%' }}>SEDE / EMPRESA</th>
-                                    <th style={{ border: '1px solid black', padding: '8px', width: '40%' }}>FECHAS DE VISITA</th>
-                                    <th style={{ border: '1px solid black', padding: '8px', width: '10%', textAlign: 'center' }}>NOTA</th>
+                                    <th style={{ width: '25%' }}>ESTUDIANTE</th>
+                                    <th style={{ width: '25%' }}>SEDE / EMPRESA</th>
+                                    <th style={{ width: '40%' }}>FECHAS DE VISITA</th>
+                                    <th style={{ width: '10%', textAlign: 'center' }}>NOTA</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {group.items.map(a => (
                                     <tr key={a.id}>
-                                        <td style={{ border: '1px solid black', padding: '8px', fontWeight: 'bold' }}>{a.studentName.toUpperCase()}</td>
-                                        <td style={{ border: '1px solid black', padding: '8px' }}>{a.location}</td>
-                                        <td style={{ border: '1px solid black', padding: '8px', fontSize: '8pt' }}>
+                                        <td style={{ fontWeight: 'bold' }}>{a.studentName.toUpperCase()}</td>
+                                        <td>{a.location}</td>
+                                        <td style={{ fontSize: '8pt' }}>
                                             {a.visits.length > 0 
                                                 ? a.visits.map(v => format(v.date.toDate(), 'dd/MM/yyyy')).join(', ')
                                                 : 'SIN VISITAS REGISTRADAS'
                                             }
                                         </td>
-                                        <td style={{ border: '1px solid black', padding: '8px', textAlign: 'center', fontWeight: '900', fontSize: '11pt' }}>
+                                        <td style={{ textAlign: 'center', fontWeight: '900', fontSize: '11pt' }}>
                                             {a.grade ?? '--'}
                                         </td>
                                     </tr>
@@ -427,15 +462,17 @@ export default function SupervisorEFSRTPage() {
                     </div>
                 ))}
 
-                <div style={{ marginTop: '80px', display: 'flex', justifyContent: 'space-around' }}>
-                    <div style={{ borderTop: '1px solid black', width: '250px', textAlign: 'center', paddingTop: '5px', fontSize: '9pt' }}>
-                        Firma del Docente Supervisor
-                    </div>
-                    <div style={{ borderTop: '1px solid black', width: '250px', textAlign: 'center', paddingTop: '5px', fontSize: '9pt' }}>
-                        V° B° Coordinación Académica
+                <div className="signature-area">
+                    <div className="signature-box">
+                        <p style={{ fontWeight: 'bold', margin: '0 0 4px 0', fontSize: '10pt' }}>{user?.displayName?.toUpperCase()}</p>
+                        <p style={{ margin: 0, fontSize: '8pt', color: '#444' }}>Especialidad: {user?.programName || 'DOCENTE'}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: '8pt', fontWeight: '700', textTransform: 'uppercase' }}>
+                            {user?.role === 'Teacher' ? 'DOCENTE RESPONSABLE' : (user?.role || 'DOCENTE')}
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     );
 }
+
