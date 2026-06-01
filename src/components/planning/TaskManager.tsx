@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -7,7 +8,7 @@ import type { Task, Unit, TaskSubmission, StudentProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { CalendarClock, PlusCircle, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock } from 'lucide-react';
+import { CalendarClock, PlusCircle, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock, XCircle, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AddTaskForm } from './AddTaskForm';
@@ -190,6 +191,9 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
         <CardContent className="space-y-3">
             {loading ? <Skeleton className="h-20 w-full" /> : tasks.length > 0 ? tasks.map(task => {
                 const mySub = existingSubmissions[task.id];
+                const dueDate = (task.dueDate as Timestamp).toDate();
+                const isOverdue = new Date() > dueDate;
+
                 return (
                     <div key={task.id} className="p-3 rounded-lg border bg-background group hover:border-primary/30 transition-all">
                         <div className="flex justify-between items-start">
@@ -199,10 +203,17 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                     {task.description}
                                 </p>
                                 <div className="flex items-center gap-3 mt-2">
-                                    <Badge variant="outline" className="text-[10px] font-normal"><CalendarClock className="h-3 w-3 mr-1" /> Vence: {format((task.dueDate as Timestamp).toDate(), "dd/MM HH:mm")}</Badge>
+                                    <Badge variant="outline" className={cn("text-[10px] font-normal", isOverdue && !mySub && "text-destructive border-destructive")}>
+                                        <CalendarClock className="h-3 w-3 mr-1" /> Vence: {format(dueDate, "dd/MM HH:mm")}
+                                    </Badge>
                                     {isStudentView && mySub && (
-                                        <Badge variant={mySub.grade !== undefined ? "default" : "secondary"} className="text-[10px] animate-in fade-in">
+                                        <Badge variant={mySub.grade !== undefined ? "default" : "secondary"} className="text-[10px]">
                                             {mySub.grade !== undefined ? `Nota: ${mySub.grade}` : "Entregado"}
+                                        </Badge>
+                                    )}
+                                    {isStudentView && isOverdue && !mySub && (
+                                        <Badge variant="destructive" className="text-[10px] animate-pulse">
+                                            PLAZO VENCIDO
                                         </Badge>
                                     )}
                                 </div>
@@ -213,10 +224,27 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                         <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold uppercase" onClick={() => setSelectedTaskForInstructions(task)}>
                                             <Info className="h-3 w-3 mr-1" /> Instrucciones
                                         </Button>
-                                        <Button size="sm" variant={mySub ? "outline" : "default"} onClick={() => handleOpenSubmission(task)}>
-                                            {mySub ? <Edit className="h-3 w-3 mr-1" /> : <Send className="h-3 w-3 mr-1" />}
-                                            {mySub ? "Actualizar" : "Entregar"}
-                                        </Button>
+                                        {!mySub ? (
+                                            <Button 
+                                                size="sm" 
+                                                variant={isOverdue ? "secondary" : "default"} 
+                                                onClick={() => handleOpenSubmission(task)}
+                                                disabled={isOverdue}
+                                            >
+                                                {isOverdue ? <XCircle className="h-3 w-3 mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+                                                {isOverdue ? "Plazo Vencido" : "Entregar"}
+                                            </Button>
+                                        ) : (
+                                            <Button 
+                                                size="sm" 
+                                                variant="outline" 
+                                                onClick={() => handleOpenSubmission(task)}
+                                                disabled={isOverdue}
+                                            >
+                                                {isOverdue ? <Lock className="h-3 w-3 mr-1" /> : <Edit className="h-3 w-3 mr-1" />}
+                                                {isOverdue ? "Entrega Cerrada" : "Actualizar"}
+                                            </Button>
+                                        )}
                                     </div>
                                 ) : (
                                     <div className="flex gap-1">
@@ -297,7 +325,9 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                 </div>
                 <DialogFooter>
                     <Button variant="ghost" onClick={() => setSelectedTaskForInstructions(null)}>Cerrar</Button>
-                    <Button onClick={() => { const task = selectedTaskForInstructions; setSelectedTaskForInstructions(null); handleOpenSubmission(task!); }}>Entregar Trabajo</Button>
+                    {selectedTaskForInstructions && !(new Date() > (selectedTaskForInstructions.dueDate as Timestamp).toDate()) && (
+                        <Button onClick={() => { const task = selectedTaskForInstructions; setSelectedTaskForInstructions(null); handleOpenSubmission(task!); }}>Entregar Trabajo</Button>
+                    )}
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -499,3 +529,4 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
     </Card>
   );
 }
+
