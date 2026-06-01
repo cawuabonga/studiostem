@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { addDays, startOfWeek, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CalendarX, CheckCircle2, AlertTriangle, UserX } from 'lucide-react';
+import { CalendarX, CheckCircle2, AlertTriangle, UserX, Calculator } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
@@ -22,6 +22,7 @@ interface AttendanceSheetProps {
     onBulkMark: (weekNumber: number, dayIndex: number, status: string) => void;
     periodStartDate?: Date;
     totalWeeks: number;
+    limitWeek: number;
 }
 
 const statusOptions: { value: AttendanceStatus, label: string, short: string }[] = [
@@ -46,7 +47,17 @@ const dayNameToIndex: { [key: string]: number } = {
     'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
 };
 
-export function AttendanceSheet({ students, attendanceRecord, selectedIndicator, scheduledDays, onAttendanceChange, onBulkMark, periodStartDate, totalWeeks }: AttendanceSheetProps) {
+export function AttendanceSheet({ 
+    students, 
+    attendanceRecord, 
+    selectedIndicator, 
+    scheduledDays, 
+    onAttendanceChange, 
+    onBulkMark, 
+    periodStartDate, 
+    totalWeeks,
+    limitWeek 
+}: AttendanceSheetProps) {
     
     const weeksInRange = Array.from(
         { length: selectedIndicator.endWeek - selectedIndicator.startWeek + 1 },
@@ -87,7 +98,9 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                         SEMANA {week}
                                     </TableHead>
                                 ))}
-                                <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">RESUMEN (1-{totalWeeks})</TableHead>
+                                <TableHead className="text-center min-w-[150px] sticky right-0 top-0 bg-slate-200 z-[60] font-black text-[10px] uppercase border-l border-b shadow-[-2px_0_5px_rgba(0,0,0,0.1)]">
+                                    RESUMEN (1-{limitWeek})
+                                </TableHead>
                             </TableRow>
                             <TableRow className="bg-slate-50 hover:bg-slate-50">
                                 <TableHead className="sticky left-0 top-[40px] bg-slate-50 z-[60] border-r border-b"></TableHead>
@@ -118,14 +131,20 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                 const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
                                 
                                 if (attendanceRecord?.records[student.documentId]) {
-                                    Object.values(attendanceRecord.records[student.documentId]).forEach(weekData => {
-                                        weekData.forEach(status => {
-                                            globalSummary[status as AttendanceStatus]++;
-                                        });
-                                    });
+                                    // Calculamos inasistencias solo hasta la semana límite definida por el docente
+                                    for (let w = 1; w <= limitWeek; w++) {
+                                        const weekData = attendanceRecord.records[student.documentId][`week_${w}`];
+                                        if (weekData) {
+                                            weekData.forEach(status => {
+                                                if (status in globalSummary) {
+                                                    globalSummary[status as AttendanceStatus]++;
+                                                }
+                                            });
+                                        }
+                                    }
                                 }
 
-                                const totalScheduledSessions = totalWeeks * scheduledDays.length;
+                                const totalScheduledSessions = limitWeek * scheduledDays.length;
                                 const totalAbsences = globalSummary.F + globalSummary.J;
                                 const absencePercentage = totalScheduledSessions > 0 ? (totalAbsences / totalScheduledSessions) * 100 : 0;
                                 const isAtRisk = absencePercentage >= 30;
@@ -178,7 +197,7 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                                                     <TooltipProvider>
                                                         <Tooltip>
                                                             <TooltipTrigger asChild><Badge variant="outline" className="text-[9px] px-1 h-4 border-red-200 text-red-700">F:{globalSummary.F}</Badge></TooltipTrigger>
-                                                            <TooltipContent><p>Faltas Totales</p></TooltipContent>
+                                                            <TooltipContent><p>Faltas Totales (Sem. 1-{limitWeek})</p></TooltipContent>
                                                         </Tooltip>
                                                     </TooltipProvider>
                                                     <Badge variant="outline" className={cn(
@@ -209,10 +228,11 @@ export function AttendanceSheet({ students, attendanceRecord, selectedIndicator,
                     <div className="flex items-center gap-1"><span className="w-3 h-3 bg-gray-50 border border-gray-200 rounded-sm"></span> <span>S.M: Sin Marcar</span></div>
                 </div>
                 <div className="flex gap-3 items-center">
-                    <p className="italic">Usa la barra de scroll inferior para navegar entre semanas.</p>
+                    <div className="flex items-center gap-1 font-bold text-primary"><Calculator className="h-3.5 w-3.5" /> Cálculo al corte: Sem. {limitWeek}</div>
                     <div className="flex items-center gap-1 text-red-600 font-bold"><AlertTriangle className="h-3 w-3" /> Límite 30% Inasistencias</div>
                 </div>
             </div>
         </div>
     );
 }
+

@@ -13,6 +13,7 @@ interface AttendancePrintTableProps {
     scheduledDays: string[];
     periodStartDate?: Date;
     totalWeeks: number;
+    limitWeek: number;
 }
 
 const dayNameToIndex: { [key: string]: number } = {
@@ -25,7 +26,8 @@ export function AttendancePrintTable({
     selectedIndicator, 
     scheduledDays, 
     periodStartDate, 
-    totalWeeks 
+    totalWeeks,
+    limitWeek 
 }: AttendancePrintTableProps) {
     
     const weeksInRange = Array.from(
@@ -56,7 +58,9 @@ export function AttendancePrintTable({
                                 SEMANA {week}
                             </th>
                         ))}
-                        <th className="border border-black text-center w-[60px]" rowSpan={2}>RESUMEN</th>
+                        <th className="border border-black text-center w-[60px]" rowSpan={2}>
+                            RESUMEN (1-{limitWeek})
+                        </th>
                     </tr>
                     <tr className="bg-gray-100">
                         {weeksInRange.map(week => (
@@ -76,16 +80,20 @@ export function AttendancePrintTable({
                         const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
                         
                         if (attendanceRecord?.records[student.documentId]) {
-                            Object.values(attendanceRecord.records[student.documentId]).forEach(weekData => {
-                                weekData.forEach(status => {
-                                    if (status in globalSummary) {
-                                        globalSummary[status as AttendanceStatus]++;
-                                    }
-                                });
-                            });
+                            // Cálculo proporcional hasta la semana de corte seleccionada
+                            for (let w = 1; w <= limitWeek; w++) {
+                                const weekData = attendanceRecord.records[student.documentId][`week_${w}`];
+                                if (weekData) {
+                                    weekData.forEach(status => {
+                                        if (status in globalSummary) {
+                                            globalSummary[status as AttendanceStatus]++;
+                                        }
+                                    });
+                                }
+                            }
                         }
 
-                        const totalScheduledSessions = totalWeeks * scheduledDays.length;
+                        const totalScheduledSessions = limitWeek * scheduledDays.length;
                         const totalAbsences = globalSummary.F + globalSummary.J;
                         const absencePercentage = totalScheduledSessions > 0 ? (totalAbsences / totalScheduledSessions) * 100 : 0;
                         const isAtRisk = absencePercentage >= 30;
@@ -135,7 +143,7 @@ export function AttendancePrintTable({
                     </div>
                 </div>
                 <div className="text-right italic">
-                    * El porcentaje de inasistencia se calcula sobre el total de sesiones programadas en la unidad didáctica ({totalWeeks} semanas).
+                    * El porcentaje de inasistencia se ha calculado proporcionalmente hasta la **Semana {limitWeek}**, sobre un total de {limitWeek * scheduledDays.length} sesiones programadas.
                 </div>
             </div>
 
@@ -150,3 +158,4 @@ export function AttendancePrintTable({
         </div>
     );
 }
+
