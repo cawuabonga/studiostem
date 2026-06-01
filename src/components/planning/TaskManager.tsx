@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeekData, deleteTaskFromWeek, getTaskSubmissions, submitTask, gradeTaskSubmission, getStudentProfile } from '@/config/firebase';
-import type { Task, Unit, TaskSubmission } from '@/types';
+import { getWeekData, deleteTaskFromWeek, getTaskSubmissions, submitTask, gradeTaskSubmission, getStudentProfile, getEnrolledStudentProfiles } from '@/config/firebase';
+import type { Task, Unit, TaskSubmission, StudentProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { FileText, CalendarClock, PlusCircle, MoreVertical, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip } from 'lucide-react';
+import { FileText, CalendarClock, PlusCircle, MoreVertical, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { AddTaskForm } from './AddTaskForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
@@ -21,12 +21,18 @@ import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '../ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface TaskManagerProps {
   unit: Unit;
   weekNumber: number;
   isStudentView: boolean;
   onDataChanged: () => void;
+}
+
+interface StudentWithSubmission extends StudentProfile {
+    submission: TaskSubmission | null;
 }
 
 export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: TaskManagerProps) {
@@ -47,8 +53,9 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
 
   // States for teacher grading
   const [selectedTaskForGrading, setSelectedTaskForGrading] = useState<Task | null>(null);
-  const [submissionsList, setSubmissionsList] = useState<TaskSubmission[]>([]);
-  const [gradingData, setGradingData] = useState({ studentId: '', grade: '', feedback: '' });
+  const [studentsWithSubmissions, setStudentsWithSubmissions] = useState<StudentWithSubmission[]>([]);
+  const [gradingLoading, setGradingLoading] = useState(false);
+  const [gradingData, setGradingData] = useState({ studentId: '', studentName: '', grade: '', feedback: '' });
 
   const fetchTasks = useCallback(async () => {
     if (!instituteId) return;
@@ -119,8 +126,28 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
   const handleOpenGrading = async (task: Task) => {
       if (!instituteId) return;
       setSelectedTaskForGrading(task);
-      const subs = await getTaskSubmissions(instituteId, unit.id, weekNumber, task.id);
-      setSubmissionsList(subs.sort((a,b) => b.submittedAt.toMillis() - a.submittedAt.toMillis()));
+      setGradingLoading(true);
+      try {
+          const currentYear = new Date().getFullYear().toString();
+          const [allEnrolled, taskSubs] = await Promise.all([
+              getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
+              getTaskSubmissions(instituteId, unit.id, weekNumber, task.id)
+          ]);
+
+          // Merge and sort
+          const merged: StudentWithSubmission[] = allEnrolled
+            .sort((a, b) => a.lastName.localeCompare(b.lastName, 'es') || a.firstName.localeCompare(b.firstName, 'es'))
+            .map(student => ({
+                ...student,
+                submission: taskSubs.find(s => s.id === student.documentId) || null
+            }));
+
+          setStudentsWithSubmissions(merged);
+      } catch (error) {
+          toast({ title: "Error", description: "No se pudo cargar la lista de estudiantes.", variant: "destructive" });
+      } finally {
+          setGradingLoading(false);
+      }
   };
 
   const handleSaveGrade = async () => {
@@ -135,17 +162,38 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
               selectedTaskForGrading.id, 
               selectedTaskForGrading.title,
               gradingData.studentId, 
+              gradingData.studentName,
               Number(gradingData.grade), 
               gradingData.feedback
           );
-          toast({ title: "Nota Guardada", description: "La calificación ha sido registrada." });
-          const updatedSubs = await getTaskSubmissions(instituteId, unit.id, weekNumber, selectedTaskForGrading.id);
-          setSubmissionsList(updatedSubs);
-          setGradingData({ studentId: '', grade: '', feedback: '' });
+          toast({ title: "Nota Guardada" });
+          
+          // Local update to avoid full refetch
+          setStudentsWithSubmissions(prev => prev.map(s => {
+              if (s.documentId === gradingData.studentId) {
+                  return {
+                      ...s,
+                      submission: {
+                          ...(s.submission || { id: s.documentId, studentName: s.fullName, submittedAt: Timestamp.now() }),
+                          grade: Number(gradingData.grade),
+                          feedback: gradingData.feedback
+                      }
+                  }
+              }
+              return s;
+          }));
+          
+          setGradingData({ studentId: '', studentName: '', grade: '', feedback: '' });
       } catch (error) {
           toast({ title: "Error", variant: "destructive" });
       } finally { setIsSubmitting(false); }
   };
+
+  const gradingStats = useMemo(() => {
+    const total = studentsWithSubmissions.length;
+    const submitted = studentsWithSubmissions.filter(s => !!s.submission?.submittedAt).length;
+    return { total, submitted, pending: total - submitted };
+  }, [studentsWithSubmissions]);
 
   return (
     <Card className="bg-muted/30">
@@ -230,7 +278,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
             </DialogContent>
         </Dialog>
 
-        {/* Submission Dialog with Tabs */}
+        {/* Submission Dialog */}
         <Dialog open={!!selectedTaskForSubmission} onOpenChange={() => setSelectedTaskForSubmission(null)}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
@@ -252,7 +300,6 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                         <div className="space-y-2">
                             <Label htmlFor="task-file">Seleccionar Archivo (PDF, Word, etc.)</Label>
                             <Input id="task-file" type="file" onChange={e => setSubmissionFile(e.target.files?.[0] || null)} />
-                            <p className="text-[10px] text-muted-foreground">Tamaño máximo recomendado: 10MB.</p>
                         </div>
                         <Button className="w-full" onClick={() => handleSubmitWork('file')} disabled={!submissionFile || isSubmitting}>
                             {isSubmitting && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
@@ -262,14 +309,8 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                     
                     <TabsContent value="link" className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="task-link">Enlace del Trabajo (Google Docs, Canva, etc.)</Label>
-                            <Input 
-                                id="task-link" 
-                                placeholder="https://docs.google.com/..." 
-                                value={submissionLink}
-                                onChange={e => setSubmissionLink(e.target.value)}
-                            />
-                            <p className="text-[10px] text-muted-foreground">Asegúrate de que el enlace tenga permisos de lectura para tu profesor.</p>
+                            <Label htmlFor="task-link">Enlace del Trabajo</Label>
+                            <Input id="task-link" placeholder="https://docs.google.com/..." value={submissionLink} onChange={e => setSubmissionLink(e.target.value)} />
                         </div>
                         <Button className="w-full" onClick={() => handleSubmitWork('link')} disabled={!submissionLink || isSubmitting}>
                             {isSubmitting && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
@@ -277,66 +318,154 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                         </Button>
                     </TabsContent>
                 </Tabs>
-
-                {existingSubmissions[selectedTaskForSubmission?.id || ''] && (
-                    <div className="p-3 bg-amber-50 border border-amber-100 rounded-md flex gap-2 items-start mt-2">
-                        <Info className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                        <p className="text-[10px] text-amber-800">
-                            Ya has realizado una entrega anteriormente. Al enviar una nueva, esta reemplazará la anterior.
-                        </p>
-                    </div>
-                )}
             </DialogContent>
         </Dialog>
 
         {/* Grading Dialog */}
         <Dialog open={!!selectedTaskForGrading} onOpenChange={() => setSelectedTaskForGrading(null)}>
-            <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-                <DialogHeader><DialogTitle>Revisiones de: {selectedTaskForGrading?.title}</DialogTitle></DialogHeader>
-                <div className="flex-1 overflow-y-auto pr-2 space-y-4">
-                    {submissionsList.length > 0 ? submissionsList.map(sub => (
-                        <div key={sub.id} className="p-4 border rounded-lg flex flex-col md:flex-row justify-between gap-4 bg-background">
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><User className="h-5 w-5 text-primary" /></div>
-                                <div>
-                                    <p className="font-bold">{sub.studentName}</p>
-                                    <p className="text-[10px] text-muted-foreground">{format(sub.submittedAt.toDate(), "dd/MM HH:mm")}</p>
-                                    <div className="flex gap-2 mt-1">
-                                        {sub.fileUrl && (
-                                            <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold" asChild>
-                                                <a href={sub.fileUrl} target="_blank"><Download className="h-3 w-3 mr-1" /> Descargar Archivo</a>
-                                            </Button>
-                                        )}
-                                        {sub.link && (
-                                            <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold" asChild>
-                                                <a href={sub.link} target="_blank"><ExternalLink className="h-3 w-3 mr-1" /> Abrir Enlace</a>
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                {gradingData.studentId === sub.id ? (
-                                    <div className="space-y-2 animate-in slide-in-from-right-4">
-                                        <div className="flex gap-2">
-                                            <Input type="number" placeholder="Nota" className="w-20" value={gradingData.grade} onChange={e => setGradingData(p => ({...p, grade: e.target.value}))} />
-                                            <Textarea placeholder="Comentarios..." className="h-10 text-xs" value={gradingData.feedback} onChange={e => setGradingData(p => ({...p, feedback: e.target.value}))} />
+            <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2">
+                    <DialogTitle className="text-xl uppercase font-black tracking-tight">Panel de Calificación: {selectedTaskForGrading?.title}</DialogTitle>
+                    <DialogDescription>Gestione las entregas y asigne notas a toda la clase.</DialogDescription>
+                    
+                    {/* Counters Section */}
+                    <div className="grid grid-cols-3 gap-4 mt-6">
+                        <Card className="bg-slate-50 border-slate-200">
+                            <CardContent className="p-3 text-center">
+                                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Matriculados</p>
+                                <p className="text-2xl font-black">{gradingStats.total}</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-green-50 border-green-200">
+                            <CardContent className="p-3 text-center">
+                                <p className="text-[10px] font-black uppercase text-green-600 mb-1">Entregados</p>
+                                <p className="text-2xl font-black text-green-700">{gradingStats.submitted}</p>
+                            </CardContent>
+                        </Card>
+                        <Card className="bg-red-50 border-red-200">
+                            <CardContent className="p-3 text-center">
+                                <p className="text-[10px] font-black uppercase text-red-600 mb-1">Pendientes</p>
+                                <p className="text-2xl font-black text-red-700">{gradingStats.pending}</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </DialogHeader>
+
+                <div className="flex-1 overflow-hidden px-6 pb-6">
+                    {gradingLoading ? (
+                        <div className="space-y-4 py-8"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+                    ) : (
+                        <ScrollArea className="h-full pr-4 border rounded-xl bg-muted/20">
+                            <div className="space-y-3 p-4">
+                                {studentsWithSubmissions.map((item, index) => {
+                                    const sub = item.submission;
+                                    const isDelivered = !!sub?.submittedAt;
+                                    const isEditing = gradingData.studentId === item.documentId;
+
+                                    return (
+                                        <div key={item.documentId} className={cn(
+                                            "p-4 rounded-lg border bg-background transition-all flex flex-col md:flex-row justify-between gap-4",
+                                            !isDelivered && "opacity-75 bg-slate-50/50 grayscale-[0.3]"
+                                        )}>
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                <span className="text-sm font-black text-muted-foreground w-6">{index + 1}.</span>
+                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                                    <User className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="truncate">
+                                                    <p className="font-bold text-sm uppercase truncate">{item.lastName}, {item.firstName}</p>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant={isDelivered ? "default" : "destructive"} className="text-[9px] font-black uppercase tracking-tighter px-1.5 h-4">
+                                                            {isDelivered ? <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> : <Clock className="h-2.5 w-2.5 mr-1" />}
+                                                            {isDelivered ? "Entregado" : "No Entregó"}
+                                                        </Badge>
+                                                        {isDelivered && (
+                                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                                {format(sub!.submittedAt.toDate(), "dd/MM HH:mm")}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {isDelivered && (
+                                                        <div className="flex gap-2 mt-3">
+                                                            {sub!.fileUrl && (
+                                                                <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-tight" asChild>
+                                                                    <a href={sub!.fileUrl} target="_blank"><Download className="h-3 w-3 mr-1" /> Archivo</a>
+                                                                </Button>
+                                                            )}
+                                                            {sub!.link && (
+                                                                <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-tight" asChild>
+                                                                    <a href={sub!.link} target="_blank"><ExternalLink className="h-3 w-3 mr-1" /> Enlace</a>
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-2 shrink-0 md:items-end justify-center">
+                                                {isEditing ? (
+                                                    <div className="space-y-2 p-2 bg-primary/5 rounded-lg border border-primary/10 animate-in slide-in-from-right-2">
+                                                        <div className="flex gap-2">
+                                                            <Input 
+                                                                type="number" 
+                                                                placeholder="Nota" 
+                                                                className="w-20 font-bold text-center h-9" 
+                                                                value={gradingData.grade} 
+                                                                onChange={e => setGradingData(p => ({...p, grade: e.target.value}))} 
+                                                            />
+                                                            <Textarea 
+                                                                placeholder="Comentarios (opcional)..." 
+                                                                className="h-9 text-xs min-h-0 py-1" 
+                                                                value={gradingData.feedback} 
+                                                                onChange={e => setGradingData(p => ({...p, feedback: e.target.value}))} 
+                                                            />
+                                                        </div>
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button size="sm" variant="ghost" className="h-8 text-[10px] font-bold uppercase" onClick={() => setGradingData({ studentId: '', studentName: '', grade: '', feedback: '' })}>Cancelar</Button>
+                                                            <Button size="sm" className="h-8 text-[10px] font-bold uppercase" onClick={handleSaveGrade} disabled={isSubmitting}>
+                                                                {isSubmitting ? <Loader2 className="animate-spin h-3 w-3" /> : "Guardar"}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-3">
+                                                        {sub?.grade !== undefined ? (
+                                                            <Badge variant="outline" className={cn(
+                                                                "text-xl font-black px-3 h-10 border-2",
+                                                                sub.grade < 13 ? "border-red-200 text-red-600 bg-red-50" : "border-primary/20 text-primary bg-primary/5"
+                                                            )}>
+                                                                {sub.grade.toString().padStart(2, '0')}
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="text-[10px] font-bold text-muted-foreground uppercase mr-2">Sin Nota</span>
+                                                        )}
+                                                        <Button 
+                                                            variant="secondary" 
+                                                            size="sm" 
+                                                            className="h-10 font-bold uppercase text-[10px]"
+                                                            onClick={() => setGradingData({ 
+                                                                studentId: item.documentId, 
+                                                                studentName: item.fullName,
+                                                                grade: sub?.grade?.toString() || '', 
+                                                                feedback: sub?.feedback || '' 
+                                                            })}
+                                                        >
+                                                            <ClipboardCheck className="h-4 w-4 mr-1.5" />
+                                                            Calificar
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 justify-end">
-                                            <Button size="sm" variant="ghost" onClick={() => setGradingData({ studentId: '', grade: '', feedback: '' })}>Cancelar</Button>
-                                            <Button size="sm" onClick={handleSaveGrade} disabled={isSubmitting}>Guardar</Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-right">
-                                        {sub.grade !== undefined ? <Badge className="text-lg">Nota: {sub.grade}</Badge> : <Badge variant="secondary">Sin calificar</Badge>}
-                                        <Button variant="ghost" size="sm" className="ml-2" onClick={() => setGradingData({ studentId: sub.id, grade: sub.grade?.toString() || '', feedback: sub.feedback || '' })}><Edit className="h-3 w-3" /></Button>
-                                    </div>
-                                )}
+                                    );
+                                })}
                             </div>
-                        </div>
-                    )) : <p className="text-center py-12 text-muted-foreground">Aún no hay trabajos entregados para esta tarea.</p>}
+                        </ScrollArea>
+                    )}
                 </div>
+                <DialogFooter className="p-4 border-t bg-muted/20">
+                    <Button variant="ghost" onClick={() => setSelectedTaskForGrading(null)}>Cerrar Panel</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     </Card>

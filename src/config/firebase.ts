@@ -1990,8 +1990,12 @@ export const submitTask = async (instituteId: string, unitId: string, weekNumber
     await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', s.documentId), data, { merge: true });
 };
 
-export const gradeTaskSubmission = async (instituteId: string, unitId: string, period: UnitPeriod, week: number, tId: string, tTitle: string, sId: string, grade: number, feedback: string) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', tId, 'submissions', sId), { grade, feedback });
+export const gradeTaskSubmission = async (instituteId: string, unitId: string, period: UnitPeriod, week: number, tId: string, tTitle: string, sId: string, studentName: string, grade: number, feedback: string) => {
+    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', tId, 'submissions', sId), { 
+        grade, 
+        feedback,
+        studentName,
+    }, { merge: true });
     const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${sId}_${new Date().getFullYear()}_${period}`);
     const ind = (await getAchievementIndicators(instituteId, unitId)).find(i => week >= i.startWeek && week <= i.endWeek);
     if (ind) {
