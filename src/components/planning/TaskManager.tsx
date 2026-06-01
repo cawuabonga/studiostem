@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -10,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { FileText, CalendarClock, PlusCircle, MoreVertical, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { AddTaskForm } from './AddTaskForm';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -75,7 +75,9 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
       }
     } catch (error) {
       toast({ title: "Error", description: "No se pudieron cargar las tareas.", variant: "destructive" });
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }, [instituteId, unit.id, weekNumber, isStudentView, user?.documentId, toast]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
@@ -366,8 +368,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                 <p className="text-[10px] font-black uppercase text-red-600 mb-1">Pendientes</p>
                                 <p className="text-2xl font-black text-red-700">{gradingStats.pending}</p>
                             </CardContent>
-                        </Card>
-                    </div>
+                        </div>
                 </DialogHeader>
 
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-6 pt-4 pb-4">
