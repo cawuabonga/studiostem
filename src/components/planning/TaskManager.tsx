@@ -23,6 +23,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface TaskManagerProps {
   unit: Unit;
@@ -183,133 +184,197 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
   }, [studentsWithSubmissions]);
 
   return (
-    <Card className="bg-muted/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg">Tareas</CardTitle>
-            {!isStudentView && <Button variant="outline" size="sm" onClick={() => { setEditingTask(null); setIsFormOpen(true); }}><PlusCircle className="mr-2 h-4 w-4" /> Nueva Tarea</Button>}
+    <Card className="bg-muted/30 border-none shadow-none">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 px-0">
+            <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                    <ClipboardCheck className="h-5 w-5 text-primary" />
+                </div>
+                <CardTitle className="text-lg font-black uppercase tracking-tight">Tareas y Actividades</CardTitle>
+            </div>
+            {!isStudentView && (
+                <Button variant="outline" size="sm" onClick={() => { setEditingTask(null); setIsFormOpen(true); }} className="font-bold border-primary/20">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Nueva Tarea
+                </Button>
+            )}
         </CardHeader>
-        <CardContent className="space-y-3">
-            {loading ? <Skeleton className="h-20 w-full" /> : tasks.length > 0 ? tasks.map(task => {
-                const mySub = existingSubmissions[task.id];
-                const dueDate = (task.dueDate as Timestamp).toDate();
-                const isOverdue = new Date() > dueDate;
+        <CardContent className="space-y-4 px-0">
+            {loading ? (
+                <div className="space-y-3">
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                </div>
+            ) : tasks.length > 0 ? (
+                tasks.map(task => {
+                    const mySub = existingSubmissions[task.id];
+                    const dueDate = (task.dueDate as Timestamp).toDate();
+                    const isOverdue = new Date() > dueDate;
 
-                return (
-                    <div key={task.id} className="p-3 rounded-lg border bg-background group hover:border-primary/30 transition-all">
-                        <div className="flex justify-between items-start">
-                            <div className="flex-1 overflow-hidden">
-                                <h4 className="font-bold text-sm leading-tight truncate">{task.title}</h4>
-                                <p className="text-xs text-muted-foreground line-clamp-2 mt-1 italic">
+                    return (
+                        <div key={task.id} className={cn(
+                            "p-4 rounded-xl border bg-card transition-all flex flex-col sm:flex-row justify-between gap-4 shadow-sm group hover:border-primary/40",
+                            isOverdue && !mySub && "bg-slate-50/50"
+                        )}>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h4 className={cn("font-black text-sm uppercase tracking-tight truncate", isOverdue && !mySub && "text-muted-foreground")}>
+                                        {task.title}
+                                    </h4>
+                                </div>
+                                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed mb-3">
                                     {task.description}
                                 </p>
-                                <div className="flex items-center gap-3 mt-2">
-                                    <Badge variant="outline" className={cn("text-[10px] font-normal", isOverdue && !mySub && "text-destructive border-destructive")}>
-                                        <CalendarClock className="h-3 w-3 mr-1" /> Vence: {format(dueDate, "dd/MM HH:mm")}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline" className={cn(
+                                        "text-[10px] font-bold h-6 px-2", 
+                                        isOverdue && !mySub ? "text-destructive border-destructive bg-destructive/5" : "text-muted-foreground"
+                                    )}>
+                                        <CalendarClock className="h-3 w-3 mr-1.5" /> 
+                                        LÍMITE: {format(dueDate, "dd/MM HH:mm")}
                                     </Badge>
+                                    
                                     {isStudentView && mySub && (
-                                        <Badge variant={mySub.grade !== undefined ? "default" : "secondary"} className="text-[10px]">
-                                            {mySub.grade !== undefined ? `Nota: ${mySub.grade}` : "Entregado"}
+                                        <Badge variant={mySub.grade !== undefined ? "default" : "secondary"} className="text-[10px] font-black h-6 px-2">
+                                            {mySub.grade !== undefined ? `CALIFICACIÓN: ${mySub.grade.toString().padStart(2, '0')}` : "TRABAJO ENTREGADO"}
                                         </Badge>
                                     )}
+                                    
                                     {isStudentView && isOverdue && !mySub && (
-                                        <Badge variant="destructive" className="text-[10px] animate-pulse">
-                                            PLAZO VENCIDO
+                                        <Badge variant="destructive" className="text-[10px] font-black animate-pulse h-6 px-2 uppercase tracking-tighter">
+                                            <XCircle className="h-3 w-3 mr-1" /> Plazo Vencido
                                         </Badge>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-2 ml-2">
+
+                            <div className="flex sm:flex-col gap-2 shrink-0 justify-end sm:justify-center border-t sm:border-t-0 sm:border-l pt-3 sm:pt-0 sm:pl-4">
                                 {isStudentView ? (
-                                    <div className="flex flex-col gap-1">
-                                        <Button size="sm" variant="ghost" className="h-7 text-[10px] font-bold uppercase" onClick={() => setSelectedTaskForInstructions(task)}>
-                                            <Info className="h-3 w-3 mr-1" /> Instrucciones
+                                    <>
+                                        <Button size="sm" variant="ghost" className="h-8 text-[10px] font-bold uppercase tracking-tight flex-1 sm:flex-none" onClick={() => setSelectedTaskForInstructions(task)}>
+                                            <Info className="h-3.5 w-3.5 mr-1.5" /> Instrucciones
                                         </Button>
                                         {!mySub ? (
                                             <Button 
                                                 size="sm" 
+                                                className="h-8 text-[10px] font-black uppercase tracking-widest flex-1 sm:flex-none shadow-sm"
                                                 variant={isOverdue ? "secondary" : "default"} 
                                                 onClick={() => handleOpenSubmission(task)}
                                                 disabled={isOverdue}
                                             >
-                                                {isOverdue ? <XCircle className="h-3 w-3 mr-1" /> : <Send className="h-3 w-3 mr-1" />}
-                                                {isOverdue ? "Plazo Vencido" : "Entregar"}
+                                                {isOverdue ? "CERRADO" : "ENTREGAR"}
                                             </Button>
                                         ) : (
                                             <Button 
                                                 size="sm" 
                                                 variant="outline" 
+                                                className="h-8 text-[10px] font-black uppercase tracking-widest flex-1 sm:flex-none border-2"
                                                 onClick={() => handleOpenSubmission(task)}
                                                 disabled={isOverdue}
                                             >
-                                                {isOverdue ? <Lock className="h-3 w-3 mr-1" /> : <Edit className="h-3 w-3 mr-1" />}
-                                                {isOverdue ? "Entrega Cerrada" : "Actualizar"}
+                                                {isOverdue ? "ENVIADO" : "ACTUALIZAR"}
                                             </Button>
                                         )}
-                                    </div>
+                                    </>
                                 ) : (
-                                    <div className="flex gap-1">
-                                        <Button size="sm" variant="secondary" onClick={() => handleOpenGrading(task)}><Star className="h-3 w-3 mr-1" /> Calificar</Button>
+                                    <div className="flex items-center gap-1">
+                                        <Button size="sm" variant="secondary" className="h-8 text-[10px] font-bold uppercase" onClick={() => handleOpenGrading(task)}>
+                                            <Star className="h-3.5 w-3.5 mr-1.5 text-primary" /> Calificar
+                                        </Button>
                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => { setEditingTask(task); setIsFormOpen(true); }}><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => deleteTaskFromWeek(instituteId!, unit.id, weekNumber, task.id).then(() => fetchTasks())}><Trash2 className="h-4 w-4 mr-2" /> Eliminar</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => { setEditingTask(task); setIsFormOpen(true); }} className="font-medium">
+                                                    <Edit className="h-4 w-4 mr-2" /> Editar Tarea
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive font-medium" onClick={() => deleteTaskFromWeek(instituteId!, unit.id, weekNumber, task.id).then(() => fetchTasks())}>
+                                                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                )
-            }) : <p className="text-center text-xs text-muted-foreground py-6">No hay tareas programadas.</p>}
+                    )
+                })
+            ) : (
+                <div className="py-12 flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-background/50">
+                    <Clock className="h-10 w-10 text-muted-foreground/30 mb-3" />
+                    <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin tareas programadas</p>
+                </div>
+            )}
         </CardContent>
 
-        {/* Dialogs */}
+        {/* Modal: Crear/Editar Tarea */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogContent className="max-w-xl">
-                <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarea' : 'Añadir Tarea'}</DialogTitle></DialogHeader>
-                <AddTaskForm unit={unit} weekNumber={weekNumber} initialData={editingTask} onDataChanged={() => { setIsFormOpen(false); fetchTasks(); onDataChanged(); }} onCancel={() => setIsFormOpen(false)} />
+                <DialogHeader>
+                    <DialogTitle className="text-xl font-black uppercase text-primary">{editingTask ? 'Editar Tarea Oficial' : 'Programar Nueva Tarea'}</DialogTitle>
+                    <DialogDescription>Defina los plazos y requisitos para la actividad de los alumnos.</DialogDescription>
+                </DialogHeader>
+                <AddTaskForm 
+                    unit={unit} 
+                    weekNumber={weekNumber} 
+                    initialData={editingTask} 
+                    onDataChanged={() => { setIsFormOpen(false); fetchTasks(); onDataChanged(); }} 
+                    onCancel={() => setIsFormOpen(false)} 
+                />
             </DialogContent>
         </Dialog>
 
-        {/* Student Task Instructions Dialog */}
+        {/* Modal: Instrucciones del Estudiante */}
         <Dialog open={!!selectedTaskForInstructions} onOpenChange={(open) => !open && setSelectedTaskForInstructions(null)}>
-            <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                    <DialogTitle className="uppercase font-black text-primary tracking-tight">{selectedTaskForInstructions?.title}</DialogTitle>
-                    <DialogDescription>Instrucciones y materiales de apoyo para la actividad.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-6 py-4">
-                    <div className="p-4 bg-muted/30 rounded-xl border-2 border-dashed">
-                        <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Instrucciones del Docente</h4>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedTaskForInstructions?.description}</p>
+            <DialogContent className="max-w-2xl p-0 overflow-hidden rounded-2xl">
+                <div className="bg-primary p-6 text-primary-foreground">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black uppercase tracking-tight leading-none mb-2">
+                            {selectedTaskForInstructions?.title}
+                        </DialogTitle>
+                        <div className="flex items-center gap-2 opacity-80 text-xs font-bold uppercase tracking-widest">
+                            <Clock className="h-3.5 w-3.5" />
+                            VENCE: {selectedTaskForInstructions?.dueDate ? format((selectedTaskForInstructions.dueDate as Timestamp).toDate(), "PPPP 'a las' HH:mm", { locale: es }) : '---'}
+                        </div>
+                    </DialogHeader>
+                </div>
+                
+                <div className="p-8 space-y-8">
+                    <div className="space-y-3">
+                        <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
+                            <Info className="h-4 w-4 text-primary" /> Instrucciones del Docente
+                        </h4>
+                        <div className="p-5 bg-muted/30 rounded-xl border-2 border-dashed text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                            {selectedTaskForInstructions?.description}
+                        </div>
                     </div>
 
                     {(selectedTaskForInstructions?.fileUrl || selectedTaskForInstructions?.referenceLink) && (
-                        <div className="space-y-3">
-                            <h4 className="text-xs font-black uppercase text-primary tracking-tighter flex items-center gap-2">
-                                <Paperclip className="h-4 w-4" /> Material de Referencia
+                        <div className="space-y-4">
+                            <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em] flex items-center gap-2">
+                                <Paperclip className="h-4 w-4 text-primary" /> Recursos de Apoyo
                             </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {selectedTaskForInstructions?.fileUrl && (
-                                    <Button variant="outline" className="justify-start h-auto py-3 bg-blue-50/30 border-blue-100 hover:bg-blue-50" asChild>
+                                    <Button variant="outline" className="justify-start h-auto p-4 bg-blue-50/50 border-blue-100 hover:bg-blue-50 border-2 rounded-xl group transition-all" asChild>
                                         <a href={selectedTaskForInstructions.fileUrl} target="_blank" rel="noopener noreferrer">
-                                            <Download className="mr-2 h-4 w-4 text-blue-600" />
+                                            <Download className="mr-3 h-5 w-5 text-blue-600 group-hover:scale-110 transition-transform" />
                                             <div className="text-left overflow-hidden">
-                                                <p className="text-[10px] font-bold text-blue-700 leading-none">Guía Adjunta</p>
-                                                <p className="text-[9px] text-blue-500 truncate mt-1">Descargar archivo oficial</p>
+                                                <p className="text-xs font-black text-blue-800 uppercase leading-none">Guía de Actividad</p>
+                                                <p className="text-[10px] text-blue-500 truncate mt-1">Descargar archivo PDF/Word</p>
                                             </div>
                                         </a>
                                     </Button>
                                 )}
                                 {selectedTaskForInstructions?.referenceLink && (
-                                    <Button variant="outline" className="justify-start h-auto py-3 bg-green-50/30 border-green-100 hover:bg-green-50" asChild>
+                                    <Button variant="outline" className="justify-start h-auto p-4 bg-green-50/50 border-green-100 hover:bg-green-50 border-2 rounded-xl group transition-all" asChild>
                                         <a href={selectedTaskForInstructions.referenceLink} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="mr-2 h-4 w-4 text-green-600" />
+                                            <ExternalLink className="mr-3 h-5 w-5 text-green-600 group-hover:scale-110 transition-transform" />
                                             <div className="text-left overflow-hidden">
-                                                <p className="text-[10px] font-bold text-green-700 leading-none">Enlace Externo</p>
-                                                <p className="text-[9px] text-green-500 truncate mt-1">Visitar recurso sugerido</p>
+                                                <p className="text-xs font-black text-green-800 uppercase leading-none">Material Externo</p>
+                                                <p className="text-[10px] text-green-500 truncate mt-1">Visitar enlace de referencia</p>
                                             </div>
                                         </a>
                                     </Button>
@@ -317,96 +382,97 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                             </div>
                         </div>
                     )}
-
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase bg-slate-50 p-2 rounded-lg justify-center">
-                        <Clock className="h-3 w-3" />
-                        Fecha límite de entrega: {selectedTaskForInstructions?.dueDate ? format((selectedTaskForInstructions.dueDate as Timestamp).toDate(), "PPPP 'a las' HH:mm", { locale: es }) : 'N/A'}
-                    </div>
                 </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={() => setSelectedTaskForInstructions(null)}>Cerrar</Button>
+
+                <div className="p-6 border-t bg-muted/20 flex justify-end gap-3">
+                    <Button variant="ghost" onClick={() => setSelectedTaskForInstructions(null)} className="font-bold">CERRAR</Button>
                     {selectedTaskForInstructions && !(new Date() > (selectedTaskForInstructions.dueDate as Timestamp).toDate()) && (
-                        <Button onClick={() => { const task = selectedTaskForInstructions; setSelectedTaskForInstructions(null); handleOpenSubmission(task!); }}>Entregar Trabajo</Button>
+                        <Button className="font-black px-8" onClick={() => { 
+                            const task = selectedTaskForInstructions; 
+                            setSelectedTaskForInstructions(null); 
+                            handleOpenSubmission(task!); 
+                        }}>
+                            IR A ENTREGAR
+                        </Button>
                     )}
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
 
-        {/* Submission Dialog (Student) */}
+        {/* Modal: Entrega de Estudiante */}
         <Dialog open={!!selectedTaskForSubmission} onOpenChange={(open) => !open && setSelectedTaskForSubmission(null)}>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogTitle>Entregar Tarea: {selectedTaskForSubmission?.title}</DialogTitle>
-                    <DialogDescription>Sube tu archivo o pega el enlace de tu trabajo para calificación.</DialogDescription>
+                    <DialogTitle className="text-xl font-black uppercase text-primary">Entregar Mi Trabajo</DialogTitle>
+                    <DialogDescription>Actividad: <span className="font-bold text-foreground">{selectedTaskForSubmission?.title}</span></DialogDescription>
                 </DialogHeader>
                 
                 <Tabs defaultValue="file" className="w-full py-4">
-                    <TabsList className="grid w-full grid-cols-2 h-11 bg-muted p-1">
-                        <TabsTrigger value="file" className="flex items-center gap-2 font-bold text-xs"><Paperclip className="h-3.5 w-3.5" /> Subir Archivo</TabsTrigger>
-                        <TabsTrigger value="link" className="flex items-center gap-2 font-bold text-xs"><LinkIcon className="h-3.5 w-3.5" /> Pegar Enlace</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-2 h-12 bg-muted p-1">
+                        <TabsTrigger value="file" className="flex items-center gap-2 font-black text-xs uppercase"><Paperclip className="h-4 w-4" /> Subir Archivo</TabsTrigger>
+                        <TabsTrigger value="link" className="flex items-center gap-2 font-black text-xs uppercase"><LinkIcon className="h-4 w-4" /> Pegar Enlace</TabsTrigger>
                     </TabsList>
                     <TabsContent value="file" className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="task-file">Archivo del Trabajo (PDF, ZIP, etc.)</Label>
-                            <Input id="task-file" type="file" onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)} disabled={isSubmitting} />
-                            <p className="text-[10px] text-muted-foreground">Tamaño máximo recomendado: 10MB.</p>
+                            <Label htmlFor="task-file" className="text-xs font-bold uppercase text-muted-foreground">Archivo del Trabajo (PDF, ZIP, etc.)</Label>
+                            <Input id="task-file" type="file" onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)} disabled={isSubmitting} className="h-12" />
+                            <p className="text-[10px] text-muted-foreground italic">Se recomienda subir archivos PDF para facilitar la revisión del docente.</p>
                         </div>
-                        <Button className="w-full h-11 font-black uppercase tracking-widest shadow-lg" onClick={() => handleSubmitWork('file')} disabled={!submissionFile || isSubmitting}>
+                        <Button className="w-full h-12 font-black uppercase tracking-widest shadow-xl" onClick={() => handleSubmitWork('file')} disabled={!submissionFile || isSubmitting}>
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                            Enviar Archivo
+                            ENVIAR TRABAJO OFICIAL
                         </Button>
                     </TabsContent>
                     <TabsContent value="link" className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label htmlFor="task-link">Enlace de Entrega (Google Drive, GitHub, etc.)</Label>
-                            <Input id="task-link" placeholder="https://..." value={submissionLink} onChange={(e) => setSubmissionLink(e.target.value)} disabled={isSubmitting} />
-                            <p className="text-[10px] text-muted-foreground">Asegúrate de que el enlace tenga permisos de lectura.</p>
+                            <Label htmlFor="task-link" className="text-xs font-bold uppercase text-muted-foreground">Enlace de Entrega (Drive, GitHub, etc.)</Label>
+                            <Input id="task-link" placeholder="https://..." value={submissionLink} onChange={(e) => setSubmissionLink(e.target.value)} disabled={isSubmitting} className="h-12 font-mono" />
+                            <p className="text-[10px] text-muted-foreground italic">Asegúrese de que el enlace tenga los permisos de lectura configurados correctamente.</p>
                         </div>
-                        <Button className="w-full h-11 font-black uppercase tracking-widest shadow-lg" onClick={() => handleSubmitWork('link')} disabled={!submissionLink || isSubmitting}>
+                        <Button className="w-full h-12 font-black uppercase tracking-widest shadow-xl" onClick={() => handleSubmitWork('link')} disabled={!submissionLink || isSubmitting}>
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                            Enviar Enlace
+                            ENVIAR ENLACE OFICIAL
                         </Button>
                     </TabsContent>
                 </Tabs>
-                <DialogFooter><Button variant="ghost" onClick={() => setSelectedTaskForSubmission(null)}>Cancelar</Button></DialogFooter>
+                <DialogFooter className="border-t pt-4"><Button variant="ghost" onClick={() => setSelectedTaskForSubmission(null)} className="font-bold">CANCELAR</Button></DialogFooter>
             </DialogContent>
         </Dialog>
 
-        {/* Grading Panel Dialog */}
+        {/* Modal: Panel de Calificación (Docente) */}
         <Dialog open={!!selectedTaskForGrading} onOpenChange={(open) => !open && setSelectedTaskForGrading(null)}>
-            <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl">
-                <DialogHeader className="p-6 pb-2 shrink-0 border-b bg-background">
-                    <DialogTitle className="text-xl uppercase font-black tracking-tight">Panel de Calificación: {selectedTaskForGrading?.title}</DialogTitle>
-                    <DialogDescription>Gestione las entregas y asigne notas a toda la clase.</DialogDescription>
+            <DialogContent className="max-w-5xl h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
+                <DialogHeader className="p-8 pb-4 shrink-0 border-b bg-background">
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                            <Star className="h-6 w-6 text-primary" />
+                        </div>
+                        <DialogTitle className="text-2xl uppercase font-black tracking-tight">Centro de Evaluación: {selectedTaskForGrading?.title}</DialogTitle>
+                    </div>
+                    <DialogDescription className="text-base">Gestione las entregas recibidas y asigne notas a los alumnos matriculados.</DialogDescription>
                     
-                    <div className="grid grid-cols-3 gap-4 mt-6">
-                        <Card className="bg-slate-50 border-slate-200">
-                            <CardContent className="p-3 text-center">
-                                <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Matriculados</p>
-                                <p className="text-2xl font-black">{gradingStats.total}</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-green-50 border-green-200">
-                            <CardContent className="p-3 text-center">
-                                <p className="text-[10px] font-black uppercase text-green-600 mb-1">Entregados</p>
-                                <p className="text-2xl font-black text-green-700">{gradingStats.submitted}</p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-red-50 border-red-200">
-                            <CardContent className="p-3 text-center">
-                                <p className="text-[10px] font-black uppercase text-red-600 mb-1">Pendientes</p>
-                                <p className="text-2xl font-black text-red-700">{gradingStats.pending}</p>
-                            </CardContent>
-                        </Card>
+                    <div className="grid grid-cols-3 gap-6 mt-6">
+                        <div className="bg-slate-50 border rounded-2xl p-4 flex flex-col items-center">
+                            <p className="text-[10px] font-black uppercase text-slate-500 mb-1 tracking-widest">Matriculados</p>
+                            <p className="text-3xl font-black">{gradingStats.total}</p>
+                        </div>
+                        <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex flex-col items-center">
+                            <p className="text-[10px] font-black uppercase text-green-600 mb-1 tracking-widest">Entregados</p>
+                            <p className="text-3xl font-black text-green-700">{gradingStats.submitted}</p>
+                        </div>
+                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex flex-col items-center">
+                            <p className="text-[10px] font-black uppercase text-amber-600 mb-1 tracking-widest">Pendientes</p>
+                            <p className="text-3xl font-black text-amber-700">{gradingStats.pending}</p>
+                        </div>
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-6 pt-4 pb-4">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-8 py-6">
                     {gradingLoading ? (
-                        <div className="space-y-4 py-8"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
+                        <div className="space-y-4 py-8"><Skeleton className="h-20 w-full rounded-2xl" /><Skeleton className="h-20 w-full rounded-2xl" /><Skeleton className="h-20 w-full rounded-2xl" /></div>
                     ) : (
-                        <ScrollArea className="flex-1 h-full rounded-xl border bg-muted/20 shadow-inner">
-                            <div className="space-y-3 p-4">
+                        <ScrollArea className="flex-1 h-full rounded-2xl border bg-muted/10 shadow-inner">
+                            <div className="space-y-4 p-6">
                                 {studentsWithSubmissions.map((item, index) => {
                                     const sub = item.submission;
                                     const isDelivered = !!sub?.submittedAt;
@@ -414,37 +480,37 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
 
                                     return (
                                         <div key={item.documentId} className={cn(
-                                            "p-4 rounded-lg border bg-background transition-all flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:shadow-md",
+                                            "p-5 rounded-2xl border bg-background transition-all flex flex-col lg:flex-row justify-between gap-6 shadow-sm hover:shadow-md",
                                             !isDelivered && "bg-slate-50/50 opacity-80"
                                         )}>
-                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                            <div className="flex items-center gap-5 flex-1 min-w-0">
                                                 <span className="text-sm font-black text-muted-foreground w-6 text-center">{index + 1}.</span>
-                                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                                                    <User className="h-5 w-5 text-primary" />
+                                                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0 border-2 border-primary/5">
+                                                    <User className="h-6 w-6 text-primary" />
                                                 </div>
                                                 <div className="truncate">
-                                                    <p className="font-bold text-sm uppercase truncate">{item.lastName}, {item.firstName}</p>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Badge variant={isDelivered ? "default" : "destructive"} className="text-[9px] font-black uppercase tracking-tighter px-1.5 h-4">
-                                                            {isDelivered ? <CheckCircle2 className="h-2.5 w-2.5 mr-1" /> : <Clock className="h-2.5 w-2.5 mr-1" />}
-                                                            {isDelivered ? "Entregado" : "No Entregó"}
+                                                    <p className="font-black text-sm uppercase truncate text-slate-800">{item.lastName}, {item.firstName}</p>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <Badge variant={isDelivered ? "default" : "destructive"} className="text-[9px] font-black uppercase tracking-tighter px-2 h-5">
+                                                            {isDelivered ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />}
+                                                            {isDelivered ? "Entregado" : "Pendiente"}
                                                         </Badge>
                                                         {isDelivered && (
-                                                            <span className="text-[10px] text-muted-foreground font-mono">
+                                                            <span className="text-[10px] text-muted-foreground font-mono font-bold">
                                                                 {format(sub!.submittedAt.toDate(), "dd/MM HH:mm")}
                                                             </span>
                                                         )}
                                                     </div>
                                                     {isDelivered && (
-                                                        <div className="flex gap-2 mt-3">
+                                                        <div className="flex gap-2 mt-4">
                                                             {sub!.fileUrl && (
-                                                                <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-tight" asChild>
-                                                                    <a href={sub!.fileUrl} target="_blank" rel="noopener noreferrer"><Download className="h-3 w-3 mr-1" /> Archivo</a>
+                                                                <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight rounded-lg border-primary/10 hover:bg-primary/5" asChild>
+                                                                    <a href={sub!.fileUrl} target="_blank" rel="noopener noreferrer"><Download className="h-3.5 w-3.5 mr-2 text-primary" /> Abrir Archivo</a>
                                                                 </Button>
                                                             )}
                                                             {sub!.link && (
-                                                                <Button variant="outline" size="sm" className="h-7 text-[10px] font-bold uppercase tracking-tight" asChild>
-                                                                    <a href={sub!.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3 w-3 mr-1" /> Enlace</a>
+                                                                <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-tight rounded-lg border-primary/10 hover:bg-primary/5" asChild>
+                                                                    <a href={sub!.link} target="_blank" rel="noopener noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-2 text-primary" /> Ver Enlace</a>
                                                                 </Button>
                                                             )}
                                                         </div>
@@ -452,55 +518,54 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col gap-2 shrink-0 md:items-end justify-center">
+                                            <div className="flex flex-col gap-2 shrink-0 lg:items-end justify-center">
                                                 {isEditing ? (
-                                                    <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/10 animate-in slide-in-from-right-2 w-full md:w-auto">
-                                                        <div className="flex gap-2">
-                                                            <div className="space-y-1">
-                                                                <Label className="text-[9px] uppercase font-bold">Nota</Label>
+                                                    <div className="space-y-3 p-4 bg-primary/5 rounded-2xl border-2 border-primary/10 animate-in zoom-in-95 duration-200 w-full lg:w-[350px]">
+                                                        <div className="flex gap-3">
+                                                            <div className="w-[80px] space-y-1.5">
+                                                                <Label className="text-[9px] uppercase font-black tracking-widest text-primary">Nota (0-20)</Label>
                                                                 <Input 
                                                                     type="number" 
-                                                                    className="w-16 font-black text-center h-9 text-base" 
+                                                                    className="font-black text-center h-10 text-lg border-primary/20 focus-visible:ring-primary" 
                                                                     value={gradingData.grade} 
                                                                     onChange={e => setGradingData(p => ({...p, grade: e.target.value}))} 
                                                                 />
                                                             </div>
-                                                            <div className="flex-1 space-y-1">
-                                                                <Label className="text-[9px] uppercase font-bold">Feedback</Label>
+                                                            <div className="flex-1 space-y-1.5">
+                                                                <Label className="text-[9px] uppercase font-black tracking-widest text-primary">Feedback</Label>
                                                                 <Input 
-                                                                    placeholder="Comentarios..." 
-                                                                    className="h-9 text-xs" 
+                                                                    placeholder="Comentarios del docente..." 
+                                                                    className="h-10 text-xs border-primary/10" 
                                                                     value={gradingData.feedback} 
                                                                     onChange={e => setGradingData(p => ({...p, feedback: e.target.value}))} 
                                                                 />
                                                             </div>
                                                         </div>
-                                                        <div className="flex gap-2 justify-end">
+                                                        <div className="flex gap-2 justify-end pt-1">
                                                             <Button size="sm" variant="ghost" className="h-8 text-[10px] font-bold uppercase" onClick={() => setGradingData({ studentId: '', studentName: '', grade: '', feedback: '' })}>Cancelar</Button>
-                                                            <Button size="sm" className="h-8 text-[10px] font-bold uppercase" onClick={handleSaveGrade} disabled={isSubmitting}>
-                                                                {isSubmitting ? <Loader2 className="animate-spin h-3 w-3" /> : "Guardar"}
+                                                            <Button size="sm" className="h-8 text-[10px] font-black uppercase px-6" onClick={handleSaveGrade} disabled={isSubmitting}>
+                                                                {isSubmitting ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : "Guardar Nota"}
                                                             </Button>
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-4">
                                                         {sub?.grade !== undefined ? (
-                                                            <div className="text-right mr-2">
-                                                                <p className="text-[8px] uppercase font-black text-muted-foreground leading-none mb-0.5">Nota</p>
+                                                            <div className="text-right mr-3">
+                                                                <p className="text-[8px] font-black uppercase text-muted-foreground leading-none mb-1 tracking-widest">Puntaje</p>
                                                                 <Badge variant="outline" className={cn(
-                                                                    "text-xl font-black px-3 h-10 border-2",
+                                                                    "text-2xl font-black px-4 h-12 border-2 rounded-xl",
                                                                     sub.grade < 13 ? "border-red-200 text-red-600 bg-red-50" : "border-primary/20 text-primary bg-primary/5"
                                                                 )}>
                                                                     {sub.grade.toString().padStart(2, '0')}
                                                                 </Badge>
                                                             </div>
                                                         ) : (
-                                                            <span className="text-[9px] font-black text-muted-foreground uppercase mr-2 tracking-tighter">Sin Calificar</span>
+                                                            <span className="text-[10px] font-black text-muted-foreground uppercase mr-4 tracking-tighter opacity-40">Sin Evaluar</span>
                                                         )}
                                                         <Button 
                                                             variant="secondary" 
-                                                            size="sm" 
-                                                            className="h-10 font-bold uppercase text-[10px] px-4"
+                                                            className="h-12 font-black uppercase text-[10px] px-6 rounded-xl border border-primary/5 hover:bg-primary/5 hover:text-primary transition-all"
                                                             onClick={() => setGradingData({ 
                                                                 studentId: item.documentId, 
                                                                 studentName: item.fullName,
@@ -508,8 +573,8 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                                                 feedback: sub?.feedback || '' 
                                                             })}
                                                         >
-                                                            <ClipboardCheck className="h-4 w-4 mr-1.5" />
-                                                            {sub?.grade !== undefined ? "Corregir" : "Calificar"}
+                                                            <ClipboardCheck className="h-4 w-4 mr-2" />
+                                                            {sub?.grade !== undefined ? "Recalificar" : "Calificar Ahora"}
                                                         </Button>
                                                     </div>
                                                 )}
@@ -521,12 +586,11 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                         </ScrollArea>
                     )}
                 </div>
-                <DialogFooter className="p-4 border-t bg-muted/30 shrink-0">
-                    <Button variant="ghost" onClick={() => setSelectedTaskForGrading(null)} className="font-bold">Cerrar Panel</Button>
+                <DialogFooter className="p-6 border-t bg-muted/20 shrink-0">
+                    <Button variant="ghost" onClick={() => setSelectedTaskForGrading(null)} className="font-black uppercase tracking-widest">Finalizar Sesión de Calificación</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
     </Card>
   );
 }
-
