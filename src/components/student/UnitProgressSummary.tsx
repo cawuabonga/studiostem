@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAcademicRecordForStudent, getAttendanceForUnit, getWeeksData } from '@/config/firebase';
+import { getAcademicRecordForStudent, getAttendanceForUnit, getWeeksData, getScheduledDaysForUnit } from '@/config/firebase';
 import type { Unit, AcademicRecord, AttendanceRecord, AttendanceStatus, WeekData, Task } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,6 +21,7 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
     const [record, setRecord] = useState<AcademicRecord | null>(null);
     const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
     const [weeksData, setWeeksData] = useState<WeekData[]>([]);
+    const [scheduledDays, setScheduledDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
 
     const currentYear = new Date().getFullYear().toString();
@@ -29,20 +30,22 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         if (!instituteId || !user?.documentId) return;
         setLoading(true);
         try {
-            const [recordData, attendanceData, allWeeks] = await Promise.all([
+            const [recordData, attendanceData, allWeeks, days] = await Promise.all([
                 getAcademicRecordForStudent(instituteId, unit.id, user.documentId, currentYear, unit.period),
                 getAttendanceForUnit(instituteId, unit.id, currentYear, unit.period),
-                getWeeksData(instituteId, unit.id)
+                getWeeksData(instituteId, unit.id),
+                getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester)
             ]);
             setRecord(recordData);
             setAttendance(attendanceData);
             setWeeksData(allWeeks);
+            setScheduledDays(days);
         } catch (error) {
             console.error("Error fetching unit progress:", error);
         } finally {
             setLoading(false);
         }
-    }, [instituteId, user?.documentId, unit.id, unit.period, currentYear]);
+    }, [instituteId, user?.documentId, unit.id, unit.period, unit.semester, currentYear]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -59,26 +62,35 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         return Math.round(indicatorAverages.reduce((a, b) => a + b, 0) / indicatorAverages.length);
     }, [record]);
 
-    // Calcular porcentaje de inasistencia
+    // Calcular porcentaje de inasistencia sincronizado con el docente
     const attendanceStats = useMemo(() => {
         if (!attendance?.records[user?.documentId || '']) return { percentage: 0, count: 0, isAtRisk: false };
         
         let absences = 0;
-        let totalSessions = unit.totalWeeks * 2; // Estimación si no hay datos precisos de horario
+        const currentLimit = unit.attendanceLimitWeek || unit.totalWeeks || 16;
+        
+        // El total de sesiones programadas hasta el límite fijado por el docente
+        const sessionsPerWeek = scheduledDays.length || 2; 
+        const totalSessionsUntilLimit = currentLimit * sessionsPerWeek;
 
-        Object.values(attendance.records[user?.documentId || '']).forEach(weekDays => {
-            weekDays.forEach(status => {
-                if (status === 'F' || status === 'J') absences++;
-            });
+        Object.entries(attendance.records[user?.documentId || '']).forEach(([weekKey, statuses]) => {
+            const weekNum = parseInt(weekKey.replace('week_', ''));
+            // Solo contamos faltas hasta la semana de corte
+            if (weekNum <= currentLimit) {
+                statuses.forEach(status => {
+                    if (status === 'F' || status === 'J') absences++;
+                });
+            }
         });
 
-        const percentage = totalSessions > 0 ? (absences / totalSessions) * 100 : 0;
+        const percentage = totalSessionsUntilLimit > 0 ? (absences / totalSessionsUntilLimit) * 100 : 0;
         return {
             percentage: Math.round(percentage),
             count: absences,
-            isAtRisk: percentage >= 30
+            isAtRisk: percentage >= 30,
+            limitWeek: currentLimit
         };
-    }, [attendance, user?.documentId, unit.totalWeeks]);
+    }, [attendance, user?.documentId, unit.attendanceLimitWeek, unit.totalWeeks, scheduledDays]);
 
     // Resumen de tareas
     const taskStats = useMemo(() => {
@@ -123,7 +135,10 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
                 <Card className={cn("border-l-4 shadow-lg", attendanceStats.isAtRisk ? "border-l-destructive" : "border-l-green-500")}>
                     <CardHeader className="pb-2">
                         <div className="flex justify-between items-center">
-                            <CardTitle className="text-sm font-black uppercase text-muted-foreground tracking-widest">Inasistencias</CardTitle>
+                            <div className="space-y-1">
+                                <CardTitle className="text-sm font-black uppercase text-muted-foreground tracking-widest">Inasistencias</CardTitle>
+                                <p className="text-[9px] font-bold text-primary uppercase">Corte: Sem. {attendanceStats.limitWeek}</p>
+                            </div>
                             <CalendarCheck className="h-4 w-4 text-muted-foreground" />
                         </div>
                     </CardHeader>
@@ -138,7 +153,7 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
                         <p className="text-[10px] text-muted-foreground leading-tight">
                             {attendanceStats.isAtRisk 
                                 ? "Has superado el 30% de faltas. Riesgo de inhabilitación." 
-                                : `Has faltado a ${attendanceStats.count} sesiones en total.`}
+                                : `Llevas ${attendanceStats.count} inasistencias en ${attendanceStats.limitWeek} semanas.`}
                         </p>
                     </CardContent>
                 </Card>

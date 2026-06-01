@@ -15,14 +15,15 @@ import {
     getAchievementIndicators,
     getPrograms,
     getTeachers,
-    getAssignments
+    getAssignments,
+    saveAttendanceLimitWeek
 } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { AttendanceSheet } from './AttendanceSheet';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
-import { BookCheck, Printer, Calculator } from 'lucide-react';
+import { BookCheck, Printer, Calculator, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { PrintLayout } from '../printing/PrintLayout';
 import { AttendancePrintTable } from './AttendancePrintTable';
@@ -42,8 +43,9 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
     const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
     const [scheduledDays, setScheduledDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isSavingLimit, setIsSavingLimit] = useState(false);
     const [periodStartDate, setPeriodStartDate] = useState<Date | undefined>(undefined);
-    const [limitWeek, setLimitWeek] = useState<number>(unit.totalWeeks || 18);
+    const [limitWeek, setLimitWeek] = useState<number>(unit.attendanceLimitWeek || unit.totalWeeks || 18);
 
     // Header data for printing
     const [program, setProgram] = useState<Program | null>(null);
@@ -124,11 +126,23 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
         fetchData();
     }, [fetchData]);
 
-    useEffect(() => {
-        if (unit.totalWeeks) {
-            setLimitWeek(unit.totalWeeks);
+    const handleSaveLimitWeek = async (weekStr: string) => {
+        if (!instituteId) return;
+        const week = parseInt(weekStr);
+        setIsSavingLimit(true);
+        try {
+            await saveAttendanceLimitWeek(instituteId, unit.id, week);
+            setLimitWeek(week);
+            toast({ 
+                title: "Límite Guardado", 
+                description: `Los estudiantes ahora verán su progreso calculado hasta la Semana ${week}.` 
+            });
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo sincronizar el límite de semana.", variant: "destructive" });
+        } finally {
+            setIsSavingLimit(false);
         }
-    }, [unit.totalWeeks]);
+    };
 
     const handleAttendanceChange = async (studentId: string, weekNumber: number, dayIndex: number, status: string) => {
         if (!attendance || !instituteId) return;
@@ -205,16 +219,23 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
                                     <Label htmlFor="limit-week-select" className="text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap pl-2">
                                         Calcular al:
                                     </Label>
-                                    <Select value={String(limitWeek)} onValueChange={(v) => setLimitWeek(parseInt(v))}>
-                                        <SelectTrigger id="limit-week-select" className="w-[100px] h-8 text-xs font-bold">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {Array.from({ length: unit.totalWeeks }, (_, i) => i + 1).map(w => (
-                                                <SelectItem key={w} value={String(w)}>Semana {w}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="flex items-center gap-2">
+                                        <Select 
+                                            value={String(limitWeek)} 
+                                            onValueChange={handleSaveLimitWeek}
+                                            disabled={isSavingLimit}
+                                        >
+                                            <SelectTrigger id="limit-week-select" className="w-[100px] h-8 text-xs font-bold">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Array.from({ length: unit.totalWeeks }, (_, i) => i + 1).map(w => (
+                                                    <SelectItem key={w} value={String(w)}>Semana {w}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {isSavingLimit && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                                    </div>
                                 </div>
 
                                 <div className="flex items-center gap-2">

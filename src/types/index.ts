@@ -210,6 +210,7 @@ export interface Unit {
   semester: number;
   imageUrl?: string;
   isVirtualClassroomActive?: boolean;
+  attendanceLimitWeek?: number;
 }
 
 export interface Teacher {

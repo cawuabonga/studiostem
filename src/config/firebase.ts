@@ -2045,3 +2045,8 @@ export const setVirtualClassroomStatus = async (instituteId: string, unitId: str
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await updateDoc(unitRef, { isVirtualClassroomActive: status });
 };
+
+export const saveAttendanceLimitWeek = async (instituteId: string, unitId: string, limitWeek: number) => {
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    await updateDoc(unitRef, { attendanceLimitWeek: limitWeek });
+};
