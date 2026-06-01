@@ -42,6 +42,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { IndicatorGradebookPrint } from './IndicatorGradebookPrint';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface GradebookManagerProps {
     unit: Unit;
@@ -173,7 +175,12 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             });
             toast({ title: "Evaluación Añadida", description: `Se ha creado la columna "${label}".` });
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `institutes/${instituteId}/academicRecords`,
+                operation: 'write',
+                requestResourceData: { label, indicatorId, weekNumber }
+            }));
             toast({ title: "Error", description: "No se pudo añadir la evaluación.", variant: "destructive" });
         }
     };
@@ -185,7 +192,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
             toast({ title: "Evaluación Eliminada" });
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `institutes/${instituteId}/academicRecords`,
+                operation: 'delete',
+            }));
             toast({ title: "Error", description: "No se pudo eliminar la evaluación.", variant: "destructive" });
         }
     };
@@ -208,7 +219,12 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             await batchUpdateAcademicRecords(instituteId, updatedRecords);
             toast({ title: "¡Éxito!", description: "Calificaciones guardadas correctamente." });
             setInitialRecords(JSON.parse(JSON.stringify(records)));
-        } catch(error) {
+        } catch(error: any) {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `institutes/${instituteId}/academicRecords`,
+                operation: 'write',
+                requestResourceData: records
+            }));
             toast({ title: "Error", description: "No se pudo guardar las notas.", variant: "destructive" });
         } finally {
             setIsSaving(false);
@@ -234,7 +250,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             await closeUnitGrades(instituteId, unit.id, currentYear, unit.period, results);
             toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada oficialmente." });
             fetchData();
-        } catch (error) {
+        } catch (error: any) {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: `institutes/${instituteId}/academicRecords`,
+                operation: 'write'
+            }));
             toast({ title: "Error al cerrar", variant: "destructive" });
         } finally {
             setIsClosing(false);
