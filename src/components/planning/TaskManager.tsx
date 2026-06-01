@@ -324,7 +324,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
         {/* Grading Dialog */}
         <Dialog open={!!selectedTaskForGrading} onOpenChange={() => setSelectedTaskForGrading(null)}>
             <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-2">
+                <DialogHeader className="p-6 pb-2 shrink-0">
                     <DialogTitle className="text-xl uppercase font-black tracking-tight">Panel de Calificación: {selectedTaskForGrading?.title}</DialogTitle>
                     <DialogDescription>Gestione las entregas y asigne notas a toda la clase.</DialogDescription>
                     
@@ -351,7 +351,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-hidden px-6 pb-6">
+                <div className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
                     {gradingLoading ? (
                         <div className="space-y-4 py-8"><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /><Skeleton className="h-20 w-full" /></div>
                     ) : (
@@ -364,7 +364,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
 
                                     return (
                                         <div key={item.documentId} className={cn(
-                                            "p-4 rounded-lg border bg-background transition-all flex flex-col md:flex-row justify-between gap-4",
+                                            "p-4 rounded-lg border bg-background transition-all flex flex-col md:flex-row justify-between gap-4 shadow-sm",
                                             !isDelivered && "opacity-75 bg-slate-50/50 grayscale-[0.3]"
                                         )}>
                                             <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -463,7 +463,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                         </ScrollArea>
                     )}
                 </div>
-                <DialogFooter className="p-4 border-t bg-muted/20">
+                <DialogFooter className="p-4 border-t bg-muted/20 shrink-0">
                     <Button variant="ghost" onClick={() => setSelectedTaskForGrading(null)}>Cerrar Panel</Button>
                 </DialogFooter>
             </DialogContent>
