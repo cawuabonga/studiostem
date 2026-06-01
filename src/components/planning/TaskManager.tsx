@@ -7,7 +7,7 @@ import type { Task, Unit, TaskSubmission, StudentProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
-import { FileText, CalendarClock, PlusCircle, MoreVertical, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock } from 'lucide-react';
+import { CalendarClock, PlusCircle, MoreHorizontal, Edit, Trash2, Send, CheckCircle2, User, Loader2, Download, Star, Info, Link as LinkIcon, ExternalLink, Paperclip, ClipboardCheck, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { AddTaskForm } from './AddTaskForm';
@@ -18,7 +18,6 @@ import { Button } from '../ui/button';
 import { Timestamp } from 'firebase/firestore';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '../ui/scroll-area';
@@ -368,7 +367,8 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                 <p className="text-[10px] font-black uppercase text-red-600 mb-1">Pendientes</p>
                                 <p className="text-2xl font-black text-red-700">{gradingStats.pending}</p>
                             </CardContent>
-                        </div>
+                        </Card>
+                    </div>
                 </DialogHeader>
 
                 <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-6 pt-4 pb-4">
