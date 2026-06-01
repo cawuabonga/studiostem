@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -1281,13 +1280,20 @@ export const getAcademicRecordForStudent = async (instituteId: string, unitId: s
 }
 
 export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
-    const batch = writeBatch(db);
-    const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
-    records.forEach(record => {
-        const docRef = doc(recordsCol, record.id);
-        batch.set(recordRef, record, { merge: true });
-    });
-    await batch.commit();
+    // Firestore rules limit get() and exists() calls to 10 per request.
+    // To avoid "Missing or Insufficient Permissions" due to rule complexity,
+    // we process updates in chunks.
+    const CHUNK_SIZE = 8;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+        const chunk = records.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
+        chunk.forEach(record => {
+            const docRef = doc(recordsCol, record.id);
+            batch.set(docRef, record, { merge: true });
+        });
+        await batch.commit();
+    }
 }
 
 export const updateAcademicRecord = async (instituteId: string, recordId: string, data: Partial<AcademicRecord>) => {
@@ -2023,12 +2029,39 @@ export const gradeTaskSubmission = async (instituteId: string, unitId: string, p
 };
 
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
-    const batch = writeBatch(db);
-    for (const r of results) {
-        batch.update(doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${r.studentId}_${year}_${period}`), { finalGrade: r.finalGrade, status: r.status });
-        (await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("studentId", "==", r.studentId), where("unitId", "==", unitId), where("year", "==", year)))).forEach(m => batch.update(m.ref, { status: r.status }));
+    // Optimization: Fetch all relevant matriculations first
+    const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
+    const q = query(matriculationsCol, where("unitId", "==", unitId), where("year", "==", year));
+    const mSnap = await getDocs(q);
+    
+    // Map matriculations to students for quick lookup
+    const mIdsByStudent = new Map<string, string[]>();
+    mSnap.forEach(d => {
+        const sId = d.data().studentId;
+        if (!mIdsByStudent.has(sId)) mIdsByStudent.set(sId, []);
+        mIdsByStudent.get(sId)!.push(d.id);
+    });
+
+    // Process closing in chunks of 5 students (each student updates 1 record + matriculations)
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < results.length; i += CHUNK_SIZE) {
+        const chunk = results.slice(i, i + CHUNK_SIZE);
+        const batch = writeBatch(db);
+        
+        chunk.forEach(r => {
+            // Update Academic Record
+            const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${r.studentId}_${year}_${period}`);
+            batch.update(recordRef, { finalGrade: r.finalGrade, status: r.status });
+            
+            // Update associated Matriculations
+            const mIds = mIdsByStudent.get(r.studentId) || [];
+            mIds.forEach(mId => {
+                batch.update(doc(matriculationsCol, mId), { status: r.status });
+            });
+        });
+        
+        await batch.commit();
     }
-    await batch.commit();
 };
 
 export const deleteMatriculation = async (instituteId: string, studentId: string, mId: string) => {
