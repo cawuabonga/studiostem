@@ -129,7 +129,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-7xl mx-auto">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                 {/* Cabecera del Editor */}
@@ -150,126 +150,146 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                     </div>
                 </div>
 
-                {/* Sección 1: Fundamentación Académica */}
-                <Card className="border-t-4 border-t-primary shadow-md">
-                    <CardHeader className="bg-muted/30 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                                <FileText className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg font-black uppercase">Fundamentación Académica</CardTitle>
-                                <CardDescription>Defina la naturaleza y el objetivo central del curso.</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-8 pt-6">
-                        <FormField
-                            control={form.control}
-                            name="summary"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <FormLabel className="text-sm font-black uppercase text-muted-foreground tracking-widest">II. Sumilla</FormLabel>
-                                        <Button type="button" variant="secondary" size="sm" onClick={handleGenerateSummary} disabled={isGenerating} className="h-8 text-[10px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20">
-                                            {isGenerating ? <Loader2 className="mr-2 h-3 w-3 animate-spin"/> : <Sparkles className="mr-2 h-3 w-3" />}
-                                            Generar Sumilla con IA
-                                        </Button>
+                {/* Grid de Secciones Reorganizado */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                    
+                    {/* Sumilla - Columna Principal (Span 2 filas) */}
+                    <div className="lg:col-span-5 lg:row-span-2 h-full">
+                        <Card className="h-full border-t-4 border-t-primary shadow-md flex flex-col">
+                            <CardHeader className="bg-muted/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <FileText className="h-5 w-5 text-primary" />
                                     </div>
-                                    <FormControl>
-                                        <Textarea rows={6} placeholder="Escriba la sumilla..." className="resize-none leading-relaxed border-primary/10 focus-visible:ring-primary/30" {...field} />
-                                    </FormControl>
-                                    <FormDescription className="text-[10px]">Describe la naturaleza, propósito y contenidos de la unidad.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        
-                        <Separator />
+                                    <div>
+                                        <CardTitle className="text-lg font-black uppercase">II. Sumilla</CardTitle>
+                                        <CardDescription>Naturaleza y propósito del curso.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6 flex-grow flex flex-col">
+                                <FormField
+                                    control={form.control}
+                                    name="summary"
+                                    render={({ field }) => (
+                                        <FormItem className="h-full flex flex-col">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <FormLabel className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Contenido Sugerido por IA</FormLabel>
+                                                <Button type="button" variant="secondary" size="sm" onClick={handleGenerateSummary} disabled={isGenerating} className="h-7 text-[9px] font-black uppercase bg-primary/5 text-primary hover:bg-primary/10 border border-primary/20">
+                                                    {isGenerating ? <Loader2 className="mr-2 h-3 w-3 animate-spin"/> : <Sparkles className="mr-2 h-3 w-3" />}
+                                                    Generar con IA
+                                                </Button>
+                                            </div>
+                                            <FormControl className="flex-grow">
+                                                <Textarea placeholder="Escriba la sumilla..." className="h-full min-h-[350px] resize-none leading-relaxed border-primary/10 focus-visible:ring-primary/30" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                        <FormField
-                            control={form.control}
-                            name="competence"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-sm font-black uppercase text-muted-foreground tracking-widest block mb-2">III. Competencia de la Unidad</FormLabel>
-                                    <FormControl>
-                                        <Textarea rows={4} placeholder="Escriba la competencia..." className="resize-none leading-relaxed border-primary/10" {...field} />
-                                    </FormControl>
-                                    <FormDescription className="text-[10px]">Desempeño que el estudiante debe lograr al finalizar la unidad.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
+                    {/* Competencia - Fila 1 Columna Derecha */}
+                    <div className="lg:col-span-7">
+                        <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <Target className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg font-black uppercase">III. Competencia</CardTitle>
+                                        <CardDescription>Logro final esperado al término de la unidad.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="competence"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea rows={5} placeholder="Escriba la competencia de la unidad..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                {/* Sección 2: Secuencia Metodológica */}
-                <Card className="border-t-4 border-t-primary shadow-md">
-                    <CardHeader className="bg-muted/30 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                                <GraduationCap className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg font-black uppercase">Metodología de Enseñanza</CardTitle>
-                                <CardDescription>Describa las estrategias y técnicas didácticas a emplear.</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <FormField
-                            control={form.control}
-                            name="methodology"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-sm font-black uppercase text-muted-foreground tracking-widest block mb-2">VI. Secuencia Metodológica</FormLabel>
-                                    <FormControl>
-                                        <Textarea rows={6} placeholder="Detalle la metodología..." className="resize-none leading-relaxed border-primary/10" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
+                    {/* Metodología - Fila 2 Columna Derecha */}
+                    <div className="lg:col-span-7">
+                        <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <GraduationCap className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg font-black uppercase">VI. Metodología</CardTitle>
+                                        <CardDescription>Estrategias y técnicas didácticas aplicadas.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="methodology"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea rows={5} placeholder="Detalle la secuencia metodológica..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                {/* Sección 3: Referencias Bibliográficas */}
-                <Card className="border-t-4 border-t-primary shadow-md">
-                    <CardHeader className="bg-muted/30 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-lg">
-                                <Library className="h-5 w-5 text-primary" />
-                            </div>
-                            <div>
-                                <CardTitle className="text-lg font-black uppercase">Recursos y Bibliografía</CardTitle>
-                                <CardDescription>Fuentes de información sugeridas para el estudiante.</CardDescription>
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="pt-6">
-                        <FormField
-                            control={form.control}
-                            name="bibliography"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="text-sm font-black uppercase text-muted-foreground tracking-widest block mb-2">VII. Fuentes de Información</FormLabel>
-                                    <FormControl>
-                                        <Textarea rows={6} placeholder="Lista de libros, sitios web, etc..." className="resize-none leading-relaxed border-primary/10 font-mono text-xs" {...field} />
-                                    </FormControl>
-                                    <FormDescription className="text-[10px]">Utilice normas APA o Vancouver para las referencias.</FormDescription>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
-                </Card>
-                
-                {/* Botón de guardado final en la base para mayor comodidad */}
+                    {/* Bibliografía - Ancho Completo en la base */}
+                    <div className="lg:col-span-12">
+                        <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <Library className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg font-black uppercase">VII. Bibliografía y Fuentes</CardTitle>
+                                        <CardDescription>Recursos de información sugeridos para el estudiante.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="bibliography"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea rows={6} placeholder="Lista de libros, sitios web, etc. (Formato APA recomendado)" className="resize-none leading-relaxed border-primary/10 font-mono text-xs" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                {/* Footer de Acción */}
                 <div className="flex justify-end pb-12">
                      <Button type="submit" size="lg" disabled={isSaving} className="w-full md:w-auto font-black px-12 h-14 shadow-xl">
                         {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                        GUARDAR SÍLABO COMPLETO
+                        GUARDAR TODO EL CONTENIDO
                     </Button>
                 </div>
             </form>
