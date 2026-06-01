@@ -198,7 +198,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                     {task.description}
                                 </p>
                                 <div className="flex items-center gap-3 mt-2">
-                                    <Badge variant="outline" className="text-[10px] font-normal"><CalendarClock className="h-3 w-3 mr-1" /> Vence: {format((task.dueDate as Timestamp).toDate(), "dd/MM")}</Badge>
+                                    <Badge variant="outline" className="text-[10px] font-normal"><CalendarClock className="h-3 w-3 mr-1" /> Vence: {format((task.dueDate as Timestamp).toDate(), "dd/MM HH:mm")}</Badge>
                                     {isStudentView && mySub && (
                                         <Badge variant={mySub.grade !== undefined ? "default" : "secondary"} className="text-[10px] animate-in fade-in">
                                             {mySub.grade !== undefined ? `Nota: ${mySub.grade}` : "Entregado"}
@@ -241,6 +241,103 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
             <DialogContent className="max-w-xl">
                 <DialogHeader><DialogTitle>{editingTask ? 'Editar Tarea' : 'Añadir Tarea'}</DialogTitle></DialogHeader>
                 <AddTaskForm unit={unit} weekNumber={weekNumber} initialData={editingTask} onDataChanged={() => { setIsFormOpen(false); fetchTasks(); onDataChanged(); }} onCancel={() => setIsFormOpen(false)} />
+            </DialogContent>
+        </Dialog>
+
+        {/* Student Task Instructions Dialog */}
+        <Dialog open={!!selectedTaskForInstructions} onOpenChange={(open) => !open && setSelectedTaskForInstructions(null)}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle className="uppercase font-black text-primary tracking-tight">{selectedTaskForInstructions?.title}</DialogTitle>
+                    <DialogDescription>Instrucciones y materiales de apoyo para la actividad.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                    <div className="p-4 bg-muted/30 rounded-xl border-2 border-dashed">
+                        <h4 className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-2">Instrucciones del Docente</h4>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{selectedTaskForInstructions?.description}</p>
+                    </div>
+
+                    {(selectedTaskForInstructions?.fileUrl || selectedTaskForInstructions?.referenceLink) && (
+                        <div className="space-y-3">
+                            <h4 className="text-xs font-black uppercase text-primary tracking-tighter flex items-center gap-2">
+                                <Paperclip className="h-4 w-4" /> Material de Referencia
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {selectedTaskForInstructions?.fileUrl && (
+                                    <Button variant="outline" className="justify-start h-auto py-3 bg-blue-50/30 border-blue-100 hover:bg-blue-50" asChild>
+                                        <a href={selectedTaskForInstructions.fileUrl} target="_blank" rel="noopener noreferrer">
+                                            <Download className="mr-2 h-4 w-4 text-blue-600" />
+                                            <div className="text-left overflow-hidden">
+                                                <p className="text-[10px] font-bold text-blue-700 leading-none">Guía Adjunta</p>
+                                                <p className="text-[9px] text-blue-500 truncate mt-1">Descargar archivo oficial</p>
+                                            </div>
+                                        </a>
+                                    </Button>
+                                )}
+                                {selectedTaskForInstructions?.referenceLink && (
+                                    <Button variant="outline" className="justify-start h-auto py-3 bg-green-50/30 border-green-100 hover:bg-green-50" asChild>
+                                        <a href={selectedTaskForInstructions.referenceLink} target="_blank" rel="noopener noreferrer">
+                                            <ExternalLink className="mr-2 h-4 w-4 text-green-600" />
+                                            <div className="text-left overflow-hidden">
+                                                <p className="text-[10px] font-bold text-green-700 leading-none">Enlace Externo</p>
+                                                <p className="text-[9px] text-green-500 truncate mt-1">Visitar recurso sugerido</p>
+                                            </div>
+                                        </a>
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase bg-slate-50 p-2 rounded-lg justify-center">
+                        <Clock className="h-3 w-3" />
+                        Fecha límite de entrega: {selectedTaskForInstructions?.dueDate ? format((selectedTaskForInstructions.dueDate as Timestamp).toDate(), "PPPP 'a las' HH:mm", { locale: es }) : 'N/A'}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={() => setSelectedTaskForInstructions(null)}>Cerrar</Button>
+                    <Button onClick={() => { const task = selectedTaskForInstructions; setSelectedTaskForInstructions(null); handleOpenSubmission(task!); }}>Entregar Trabajo</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        {/* Submission Dialog (Student) */}
+        <Dialog open={!!selectedTaskForSubmission} onOpenChange={(open) => !open && setSelectedTaskForSubmission(null)}>
+            <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                    <DialogTitle>Entregar Tarea: {selectedTaskForSubmission?.title}</DialogTitle>
+                    <DialogDescription>Sube tu archivo o pega el enlace de tu trabajo para calificación.</DialogDescription>
+                </DialogHeader>
+                
+                <Tabs defaultValue="file" className="w-full py-4">
+                    <TabsList className="grid w-full grid-cols-2 h-11 bg-muted p-1">
+                        <TabsTrigger value="file" className="flex items-center gap-2 font-bold text-xs"><Paperclip className="h-3.5 w-3.5" /> Subir Archivo</TabsTrigger>
+                        <TabsTrigger value="link" className="flex items-center gap-2 font-bold text-xs"><LinkIcon className="h-3.5 w-3.5" /> Pegar Enlace</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="file" className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="task-file">Archivo del Trabajo (PDF, ZIP, etc.)</Label>
+                            <Input id="task-file" type="file" onChange={(e) => setSubmissionFile(e.target.files?.[0] || null)} disabled={isSubmitting} />
+                            <p className="text-[10px] text-muted-foreground">Tamaño máximo recomendado: 10MB.</p>
+                        </div>
+                        <Button className="w-full h-11 font-black uppercase tracking-widest shadow-lg" onClick={() => handleSubmitWork('file')} disabled={!submissionFile || isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                            Enviar Archivo
+                        </Button>
+                    </TabsContent>
+                    <TabsContent value="link" className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="task-link">Enlace de Entrega (Google Drive, GitHub, etc.)</Label>
+                            <Input id="task-link" placeholder="https://..." value={submissionLink} onChange={(e) => setSubmissionLink(e.target.value)} disabled={isSubmitting} />
+                            <p className="text-[10px] text-muted-foreground">Asegúrate de que el enlace tenga permisos de lectura.</p>
+                        </div>
+                        <Button className="w-full h-11 font-black uppercase tracking-widest shadow-lg" onClick={() => handleSubmitWork('link')} disabled={!submissionLink || isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                            Enviar Enlace
+                        </Button>
+                    </TabsContent>
+                </Tabs>
+                <DialogFooter><Button variant="ghost" onClick={() => setSelectedTaskForSubmission(null)}>Cancelar</Button></DialogFooter>
             </DialogContent>
         </Dialog>
 

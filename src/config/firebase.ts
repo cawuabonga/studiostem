@@ -1285,7 +1285,7 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
     const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
     records.forEach(record => {
         const docRef = doc(recordsCol, record.id);
-        batch.set(docRef, record, { merge: true });
+        batch.set(recordRef, record, { merge: true });
     });
     await batch.commit();
 }
@@ -1400,19 +1400,33 @@ export const deleteContentFromWeek = async (instituteId: string, unitId: string,
     if (item) await updateDoc(weekDocRef, { contents: arrayRemove(item) });
 };
 
-export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt'>) => {
+export const addTaskToWeek = async (instituteId: string, unitId: string, weekNumber: number, data: Omit<Task, 'id' | 'createdAt' | 'fileUrl'>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
-    const newTask: Task = { ...data, id: doc(collection(db, 'idGenerator')).id, createdAt: Timestamp.now() };
+    const taskId = doc(collection(db, 'idGenerator')).id;
+    let fileUrl = '';
+    if (file) {
+        fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
+    }
+    const newTask: Task = { 
+        ...data, 
+        id: taskId, 
+        fileUrl: fileUrl || undefined,
+        createdAt: Timestamp.now() 
+    };
     await setDoc(weekDocRef, { tasks: arrayUnion(newTask) }, { merge: true });
 };
 
-export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>) => {
+export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>, file?: File) => {
     const weekDocRef = getWeekDocRef(instituteId, unitId, weekNumber);
     const weekData = await getWeekData(instituteId, unitId, weekNumber);
     if (!weekData || !weekData.tasks) return;
     const index = weekData.tasks.findIndex(t => t.id === taskId);
     if (index !== -1) {
-        weekData.tasks[index] = { ...weekData.tasks[index], ...data };
+        let fileUrl = data.fileUrl || weekData.tasks[index].fileUrl;
+        if (file) {
+            fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
+        }
+        weekData.tasks[index] = { ...weekData.tasks[index], ...data, fileUrl };
         await updateDoc(weekDocRef, { tasks: weekData.tasks });
     }
 }

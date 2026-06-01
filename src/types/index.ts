@@ -414,7 +414,8 @@ export interface Task {
   title: string;
   description: string;
   dueDate: Timestamp | Date;
-  fileUrl?: string;
+  fileUrl?: string; // Material de referencia (archivo)
+  referenceLink?: string; // Material de referencia (link)
   createdAt: Timestamp;
   indicatorId?: string;
 }
