@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -225,7 +224,7 @@ export function SyllabusPrintLayout({
                                 <th className="border-2 border-black p-1.5 w-[12%]">SEM. / FECHA</th>
                                 <th className="border-2 border-black p-1.5 w-[33%]">ELEMENTOS DE CAPACIDAD</th>
                                 <th className="border-2 border-black p-1.5 w-[25%]">ACTIVIDADES DE APRENDIZAJE</th>
-                                <th className="border-2 border-black p-1.5 w-[22%]">CONTENIDOS BÁSICOS</th>
+                                <th className="border-2 border-black p-1.5 w-[22%]">ACTIVIDAD FORMATIVA</th>
                                 <th className="border-2 border-black p-1.5 w-[8%]">HORAS</th>
                             </tr>
                         </thead>

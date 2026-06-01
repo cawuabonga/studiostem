@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -224,6 +223,20 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
                                         placeholder="Describe las actividades de aprendizaje de esta semana"
                                         value={weekData?.learningActivities || ''}
                                         onChange={e => setWeekData(prev => prev ? ({ ...prev, learningActivities: e.target.value }) : null)}
+                                        disabled={isUpdating}
+                                    />
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="basicContents" className="text-xs font-bold text-muted-foreground">ACTIVIDAD FORMATIVA</Label>
+                                {isStudentView ? (
+                                    <p className="p-3 bg-muted/30 rounded-md text-sm italic">"{weekData?.basicContents || 'No definido.'}"</p>
+                                ) : (
+                                    <Textarea
+                                        id="basicContents"
+                                        placeholder="Describe la actividad formativa de esta semana"
+                                        value={weekData?.basicContents || ''}
+                                        onChange={e => setWeekData(prev => prev ? ({ ...prev, basicContents: e.target.value }) : null)}
                                         disabled={isUpdating}
                                     />
                                 )}
