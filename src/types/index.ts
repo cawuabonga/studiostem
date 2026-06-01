@@ -26,6 +26,7 @@ export interface AppUser {
   currentSemester?: number;
   turno?: UnitTurno;
   bio?: string;
+  skills?: string[];
   socialLinks?: SocialLinks;
 }
 
@@ -57,6 +58,7 @@ export interface StudentProfile {
   graduationYear?: string;
   currentSemester?: number;
   bio?: string;
+  skills?: string[];
   socialLinks?: SocialLinks;
 }
 
@@ -72,6 +74,7 @@ export interface StaffProfile {
   rfidCardId?: string;
   linkedUserUid?: string | null;
   bio?: string;
+  skills?: string[];
   socialLinks?: SocialLinks;
 }
 
