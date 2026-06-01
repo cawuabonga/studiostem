@@ -17,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface ProfileData {
     type: 'staff' | 'student';
@@ -157,6 +158,7 @@ export default function PublicProfilePage() {
   const { profile, type, instituteName, program, assignedUnits, efsrt, history } = profileData;
   const displayName = 'displayName' in profile ? profile.displayName : profile.fullName;
   const photoURL = profile.photoURL || `https://placehold.co/400x400.png?text=${displayName[0]}`;
+  const bannerURL = profile.coverImageUrl || 'https://picsum.photos/seed/tech/1200/400';
 
   return (
     <div className="min-h-screen bg-slate-50/50 print:bg-white pb-20 selection:bg-primary/10">
@@ -193,24 +195,43 @@ export default function PublicProfilePage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 pt-8 space-y-8 dashboard-container">
             
             {/* --- TOP HERO SECTION --- */}
-            <Card className="overflow-hidden border-none shadow-2xl rounded-3xl relative card-widget">
+            <Card className="overflow-hidden border-none shadow-2xl rounded-3xl relative card-widget group">
+                {/* Banner superior editable */}
                 <div className="h-48 md:h-64 w-full bg-slate-900 relative">
-                    <div className="absolute inset-0 opacity-40 bg-[url('https://picsum.photos/seed/tech/1200/400')] bg-cover bg-center" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                    <Image 
+                        src={bannerURL} 
+                        alt="Background" 
+                        fill 
+                        className="object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
+                        priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
-                <div className="px-8 pb-8 flex flex-col md:flex-row items-end gap-6 -mt-16 md:-mt-20 relative z-10">
-                    <Avatar className="w-32 h-32 md:w-48 md:h-48 border-8 border-white shadow-2xl rounded-full">
+
+                {/* Sección de Identidad - Toma el color primario del instituto */}
+                <div className="px-8 pb-8 flex flex-col md:flex-row items-end gap-6 -mt-16 md:-mt-20 relative z-10 bg-primary text-primary-foreground pt-4">
+                    <Avatar className="w-32 h-32 md:w-48 md:h-48 border-8 border-primary shadow-2xl rounded-full">
                         <AvatarImage src={photoURL} className="object-cover" />
-                        <AvatarFallback className="text-6xl font-black bg-primary text-white">{displayName[0]}</AvatarFallback>
+                        <AvatarFallback className="text-6xl font-black bg-primary-foreground text-primary">{displayName[0]}</AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 pb-2 space-y-2 text-center md:text-left">
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase drop-shadow-md">{displayName}</h1>
-                            <div className="flex justify-center"><VerifiedBadge /></div>
+                    <div className="flex-1 pb-4 space-y-2 text-center md:text-left">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase drop-shadow-md">{displayName}</h1>
+                                <h2 className="text-lg md:text-xl font-bold text-primary-foreground/80 flex items-center justify-center md:justify-start gap-2 mt-1">
+                                    {type === 'student' ? 'Estudiante en formación' : profile.role} — <span className="opacity-70">{program?.name || 'Cargando...'}</span>
+                                </h2>
+                            </div>
+
+                            <div className="flex flex-col items-center md:items-end gap-3 shrink-0">
+                                {institute?.logoUrl && (
+                                    <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-xl border border-white/20">
+                                        <Image src={institute.logoUrl} alt="Logo" width={48} height={48} className="object-contain" />
+                                    </div>
+                                )}
+                                <VerifiedBadge />
+                            </div>
                         </div>
-                        <h2 className="text-lg md:text-xl font-bold text-slate-300 flex items-center justify-center md:justify-start gap-2">
-                            {type === 'student' ? 'Estudiante en formación' : profile.role} — <span className="text-primary-foreground/90">{program?.name || 'Cargando...'}</span>
-                        </h2>
                     </div>
                 </div>
             </Card>

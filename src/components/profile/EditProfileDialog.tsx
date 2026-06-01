@@ -19,16 +19,21 @@ import {
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { AppUser } from '@/types';
-import { updateUserProfile } from '@/config/firebase'; 
+import { updateUserProfile, uploadFileAndGetURL } from '@/config/firebase'; 
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
-import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X } from 'lucide-react';
+import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X, Image as ImageIcon, UserCircle } from 'lucide-react';
 import { Badge } from '../ui/badge';
+import Image from 'next/image';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 const editProfileSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).optional(),
-  photoURL: z.string().url({ message: 'Por favor, ingrese una URL válida.' }).or(z.literal('')).optional(),
+  photoURL: z.instanceof(FileList).optional(),
+  coverImage: z.instanceof(FileList).optional(),
   bio: z.string().max(500, "Máximo 500 caracteres.").optional(),
   skills: z.array(z.string()).optional(),
   socialLinks: z.object({
@@ -59,7 +64,8 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
     resolver: zodResolver(editProfileSchema),
     defaultValues: {
       displayName: user.displayName || '',
-      photoURL: user.photoURL || '',
+      photoURL: undefined,
+      coverImage: undefined,
       bio: user.bio || '',
       skills: user.skills || [],
       socialLinks: {
@@ -77,7 +83,8 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       setSkills(user.skills || []);
       form.reset({
         displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
+        photoURL: undefined,
+        coverImage: undefined,
         bio: user.bio || '',
         skills: user.skills || [],
         socialLinks: {
@@ -109,7 +116,26 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
   const onSubmit = async (data: EditProfileFormValues) => {
     setIsSubmitting(true);
     try {
-      await updateUserProfile({ ...data, skills });
+      let finalPhotoURL = user.photoURL || '';
+      let finalCoverURL = user.coverImageUrl || '';
+
+      if (data.photoURL && data.photoURL.length > 0) {
+          finalPhotoURL = await uploadFileAndGetURL(data.photoURL[0], `users/${user.uid}/profile_photo`);
+      }
+
+      if (data.coverImage && data.coverImage.length > 0) {
+          finalCoverURL = await uploadFileAndGetURL(data.coverImage[0], `users/${user.uid}/cover_image`);
+      }
+
+      await updateUserProfile({ 
+          displayName: data.displayName,
+          photoURL: finalPhotoURL,
+          coverImageUrl: finalCoverURL,
+          bio: data.bio,
+          socialLinks: data.socialLinks,
+          skills 
+      });
+
       toast({ title: '¡Éxito!', description: 'Tu perfil ha sido actualizado.' });
       await reloadUser();
       onClose();
@@ -130,16 +156,46 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-y-auto px-6 py-4 space-y-8">
-            <div className="space-y-4">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Información Básica</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="displayName" render={({ field }) => (
-                        <FormItem><FormLabel>Nombre Público</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            <div className="space-y-6">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Apariencia y Visualización</h3>
+                
+                <div className="space-y-4">
+                    <FormField control={form.control} name="coverImage" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center gap-2">
+                                <ImageIcon className="h-4 w-4 text-primary" /> Imagen de Portada (Banner)
+                            </FormLabel>
+                            {user.coverImageUrl && (
+                                <div className="relative h-24 w-full rounded-xl overflow-hidden border mb-2">
+                                    <Image src={user.coverImageUrl} alt="Banner actual" fill className="object-cover opacity-60" />
+                                </div>
+                            )}
+                            <FormControl><Input type="file" accept="image/*" {...form.register('coverImage')} /></FormControl>
+                            <FormDescription className="text-[10px]">Aparecerá en el fondo de tu cabecera de perfil público.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
                     )} />
-                    <FormField control={form.control} name="photoURL" render={({ field }) => (
-                        <FormItem><FormLabel>Foto de Perfil (URL)</FormLabel><FormControl><Input placeholder="https://..." {...field} /></FormControl><FormMessage /></FormItem>
-                    )} />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="photoURL" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="flex items-center gap-2">
+                                    <UserCircle className="h-4 w-4 text-primary" /> Foto de Perfil
+                                </FormLabel>
+                                <FormControl><Input type="file" accept="image/*" {...form.register('photoURL')} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                        <FormField control={form.control} name="displayName" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nombre Público</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
                 </div>
+
                 <FormField control={form.control} name="bio" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Resumen Ejecutivo / Perfil Profesional</FormLabel>

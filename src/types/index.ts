@@ -28,6 +28,7 @@ export interface AppUser {
   bio?: string;
   skills?: string[];
   socialLinks?: SocialLinks;
+  coverImageUrl?: string;
 }
 
 export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
@@ -45,6 +46,7 @@ export interface StudentProfile {
   phone?: string;
   address?: string;
   photoURL?: string;
+  coverImageUrl?: string;
   programId: string;
   admissionYear: string;
   admissionPeriod: UnitPeriod;
@@ -67,6 +69,8 @@ export interface StaffProfile {
   displayName: string;
   email: string;
   phone?: string;
+  photoURL?: string;
+  coverImageUrl?: string;
   role: UserRole;
   roleId: string;
   condition: 'NOMBRADO' | 'CONTRATADO';

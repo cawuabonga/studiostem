@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -73,7 +74,7 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
   }
 };
 
-export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, documentId?: string | null, bio?: string, socialLinks?: SocialLinks }) => {
+export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, documentId?: string | null, bio?: string, socialLinks?: SocialLinks, coverImageUrl?: string }) => {
     const user = auth.currentUser;
     if (!user) throw new Error("No user is currently signed in.");
     try {
@@ -91,10 +92,20 @@ export const updateUserProfile = async (data: { displayName?: string | null; pho
         if (data.documentId !== undefined) firestoreUpdates.documentId = data.documentId;
         if (data.bio !== undefined) firestoreUpdates.bio = data.bio;
         if (data.socialLinks !== undefined) firestoreUpdates.socialLinks = data.socialLinks;
+        if (data.coverImageUrl !== undefined) firestoreUpdates.coverImageUrl = data.coverImageUrl;
         
         if (Object.keys(firestoreUpdates).length > 0) {
             const userDocRef = doc(db, 'users', user.uid);
+            const userSnap = await getDoc(userDocRef);
+            const userData = userSnap.data() as AppUser;
+
             await updateDoc(userDocRef, firestoreUpdates);
+
+            if (userData.instituteId && userData.documentId) {
+                const profileCollection = userData.role === 'Student' ? 'studentProfiles' : 'staffProfiles';
+                const profileRef = doc(db, 'institutes', userData.instituteId, profileCollection, userData.documentId);
+                await updateDoc(profileRef, firestoreUpdates);
+            }
         }
     } catch (error) {
         console.error(`Error updating user profile for ${user.uid}:`, error);
