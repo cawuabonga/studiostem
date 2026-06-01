@@ -497,6 +497,8 @@ export interface AttendanceRecord {
 export interface Syllabus {
     summary: string;
     competence: string;
+    capacity?: string;
+    transversalCompetencies?: string;
     methodology: string;
     bibliography?: string;
 }

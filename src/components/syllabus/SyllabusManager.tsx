@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyllabus, saveSyllabus } from '@/config/firebase';
 import type { Unit, Syllabus } from '@/types';
-import { Loader2, Save, Printer, Sparkles, FileText, Target, GraduationCap, Library } from 'lucide-react';
+import { Loader2, Save, Printer, Sparkles, FileText, Target, GraduationCap, Library, BookOpen, UserCheck } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { generateSyllabusSummary } from '@/ai/flows/generate-syllabus-summary-flow';
 import { Separator } from '../ui/separator';
@@ -21,6 +21,8 @@ import { Separator } from '../ui/separator';
 const syllabusSchema = z.object({
   summary: z.string().min(10, "La sumilla debe tener al menos 10 caracteres."),
   competence: z.string().min(10, "La competencia debe tener al menos 10 caracteres."),
+  capacity: z.string().optional(),
+  transversalCompetencies: z.string().optional(),
   methodology: z.string().min(10, "La metodología debe tener al menos 10 caracteres."),
   bibliography: z.string().optional(),
 });
@@ -44,6 +46,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     defaultValues: {
       summary: '',
       competence: '',
+      capacity: '',
+      transversalCompetencies: '',
       methodology: 'Se utilizarán los métodos: inductivo, deductivo, analítico y sintético.',
       bibliography: '',
     },
@@ -55,7 +59,11 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     try {
         const syllabusData = await getSyllabus(instituteId, unit.id);
         if (syllabusData) {
-            form.reset(syllabusData);
+            form.reset({
+                ...syllabusData,
+                capacity: syllabusData.capacity || '',
+                transversalCompetencies: syllabusData.transversalCompetencies || '',
+            });
         }
     } catch (error) {
       console.error("Error fetching syllabus data:", error);
@@ -153,8 +161,8 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                 {/* Grid de Secciones Reorganizado */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                     
-                    {/* Sumilla - Columna Principal (Span 2 filas) */}
-                    <div className="lg:col-span-5 lg:row-span-2 h-full">
+                    {/* Sumilla - Columna Principal (Span 4 filas para equilibrar) */}
+                    <div className="lg:col-span-5 lg:row-span-4 h-full">
                         <Card className="h-full border-t-4 border-t-primary shadow-md flex flex-col">
                             <CardHeader className="bg-muted/30 pb-4">
                                 <div className="flex items-center gap-3">
@@ -181,7 +189,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                                                 </Button>
                                             </div>
                                             <FormControl className="flex-grow">
-                                                <Textarea placeholder="Escriba la sumilla..." className="h-full min-h-[350px] resize-none leading-relaxed border-primary/10 focus-visible:ring-primary/30" {...field} />
+                                                <Textarea placeholder="Escriba la sumilla..." className="h-full min-h-[450px] resize-none leading-relaxed border-primary/10 focus-visible:ring-primary/30" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -191,28 +199,23 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Competencia - Fila 1 Columna Derecha */}
+                    {/* Fila 1 Derecha: Competencia */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
-                            <CardHeader className="bg-muted/30 pb-4">
+                            <CardHeader className="bg-muted/30 pb-2">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-primary/10 rounded-lg">
-                                        <Target className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg font-black uppercase">III. Competencia</CardTitle>
-                                        <CardDescription>Logro final esperado al término de la unidad.</CardDescription>
-                                    </div>
+                                    <Target className="h-5 w-5 text-primary" />
+                                    <CardTitle className="text-sm font-black uppercase">III. Competencia de la Unidad</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pt-6">
+                            <CardContent className="pt-4">
                                 <FormField
                                     control={form.control}
                                     name="competence"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={5} placeholder="Escriba la competencia de la unidad..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <Textarea rows={3} placeholder="Desempeño final esperado..." className="resize-none leading-relaxed border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -222,28 +225,75 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Metodología - Fila 2 Columna Derecha */}
+                    {/* Fila 2 Derecha: Capacidad de la Unidad */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
-                            <CardHeader className="bg-muted/30 pb-4">
+                            <CardHeader className="bg-muted/30 pb-2">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-primary/10 rounded-lg">
-                                        <GraduationCap className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-lg font-black uppercase">VI. Metodología</CardTitle>
-                                        <CardDescription>Estrategias y técnicas didácticas aplicadas.</CardDescription>
-                                    </div>
+                                    <BookOpen className="h-5 w-5 text-primary" />
+                                    <CardTitle className="text-sm font-black uppercase">IV. Capacidad de la Unidad</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardContent className="pt-6">
+                            <CardContent className="pt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="capacity"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea rows={3} placeholder="Logros específicos a desarrollar..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Fila 3 Derecha: Competencias Transversales */}
+                    <div className="lg:col-span-7">
+                        <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-2">
+                                <div className="flex items-center gap-3">
+                                    <UserCheck className="h-5 w-5 text-primary" />
+                                    <CardTitle className="text-sm font-black uppercase">V. Competencias Transversales</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="transversalCompetencies"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea rows={3} placeholder="Habilidades para la empleabilidad..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Fila 4 Derecha: Metodología */}
+                    <div className="lg:col-span-7">
+                        <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-2">
+                                <div className="flex items-center gap-3">
+                                    <GraduationCap className="h-5 w-5 text-primary" />
+                                    <CardTitle className="text-sm font-black uppercase">VI. Metodología</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
                                 <FormField
                                     control={form.control}
                                     name="methodology"
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={5} placeholder="Detalle la secuencia metodológica..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <Textarea rows={3} placeholder="Secuencia metodológica..." className="resize-none leading-relaxed border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -253,7 +303,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Bibliografía - Ancho Completo en la base */}
+                    {/* Bibliografía - Ancho Completo */}
                     <div className="lg:col-span-12">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-4">
@@ -263,7 +313,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                                     </div>
                                     <div>
                                         <CardTitle className="text-lg font-black uppercase">VII. Bibliografía y Fuentes</CardTitle>
-                                        <CardDescription>Recursos de información sugeridos para el estudiante.</CardDescription>
+                                        <CardDescription>Recursos de información sugeridos.</CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
@@ -274,7 +324,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={6} placeholder="Lista de libros, sitios web, etc. (Formato APA recomendado)" className="resize-none leading-relaxed border-primary/10 font-mono text-xs" {...field} />
+                                                <Textarea rows={6} placeholder="Fuentes de información (APA)..." className="resize-none leading-relaxed border-primary/10 font-mono text-xs" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -285,11 +335,10 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                     </div>
                 </div>
 
-                {/* Footer de Acción */}
                 <div className="flex justify-end pb-12">
                      <Button type="submit" size="lg" disabled={isSaving} className="w-full md:w-auto font-black px-12 h-14 shadow-xl">
-                        {isSaving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Save className="mr-2 h-5 w-5" />}
-                        GUARDAR TODO EL CONTENIDO
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        GUARDAR SÍLABO COMPLETO
                     </Button>
                 </div>
             </form>
