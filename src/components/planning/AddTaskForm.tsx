@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { addTaskToWeek, updateTaskInWeek, getAchievementIndicators } from '@/config/firebase';
 import type { Task, Unit, AchievementIndicator } from '@/types';
 import { Separator } from '../ui/separator';
+import { DialogFooter } from '@/components/ui/dialog';
 
 const addTaskSchema = z.object({
   title: z.string().min(3, 'El título debe tener al menos 3 caracteres.'),
