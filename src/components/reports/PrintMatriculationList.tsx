@@ -4,7 +4,6 @@
 import React from 'react';
 import type { MatriculationReportData, StudentProfile } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import Image from 'next/image';
 import { format } from 'date-fns';
 import { Check } from 'lucide-react';
 
@@ -40,12 +39,17 @@ export function PrintMatriculationList({ data, semester, year }: PrintMatriculat
     }, [data]);
 
     return (
-        <div className="printable-area p-8 font-sans text-black">
+        <div className="printable-area p-8 font-sans text-black bg-white">
             <div className="page-break">
-                <header className="print-header flex items-center justify-between mb-4">
+                {/* Cambiado de <header> a <div> para evitar ser ocultado por el CSS de impresión global */}
+                <div className="print-header flex items-center justify-between mb-4 border-b-2 border-black pb-4">
                     <div className="flex items-center gap-4">
                         {institute?.logoUrl && (
-                            <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={80} height={80} className="object-contain" />
+                            <img 
+                                src={institute.logoUrl} 
+                                alt="Logo" 
+                                className="w-[80px] h-[80px] object-contain" 
+                            />
                         )}
                         <div>
                             <h1 className="text-lg font-bold">{institute?.name || 'Nombre del Instituto'}</h1>
@@ -56,35 +60,33 @@ export function PrintMatriculationList({ data, semester, year }: PrintMatriculat
                         <p>Fecha de Emisión: {format(new Date(), 'dd/MM/yyyy')}</p>
                         <p>Hora de Emisión: {format(new Date(), 'HH:mm')}</p>
                     </div>
-                </header>
-
-                <div className="text-center my-6">
-                    <h2 className="text-xl font-bold uppercase">NÓMINA DE MATRÍCULA - {year}</h2>
                 </div>
 
-                <table className="print-info-table w-full mb-6">
-                    <tbody>
+                <div className="text-center my-6">
+                    <h2 className="text-xl font-bold uppercase border-y-2 border-black py-2">NÓMINA DE MATRÍCULA - {year}</h2>
+                </div>
+
+                <table className="print-info-table w-full mb-6 border-collapse">
+                    <tbody className="text-sm">
                         <tr>
-                            <td className="label w-[25%]">Programa de Estudios:</td>
-                            <td>{data.program.name}</td>
+                            <td className="font-bold w-[25%] p-1">Programa de Estudios:</td>
+                            <td className="p-1 uppercase">{data.program.name}</td>
                         </tr>
                         <tr>
-                            <td className="label">Semestre del Plan de Estudios:</td>
-                            <td>{semester}</td>
+                            <td className="font-bold p-1">Semestre del Plan de Estudios:</td>
+                            <td className="p-1">{semester}° CICLO</td>
                         </tr>
                     </tbody>
                 </table>
 
-                <table className="w-full text-xs">
+                <table className="w-full text-[8pt] border-collapse border border-black">
                     <thead className="bg-gray-100">
                         <tr>
-                            <th className="w-[5%] border p-1 text-left">N°</th>
-                            <th className="w-[25%] border p-1 text-left">Apellidos y Nombres</th>
+                            <th className="border border-black p-1 text-center w-[30px]">N°</th>
+                            <th className="border border-black p-1 text-left w-auto">Apellidos y Nombres</th>
                             {data.units.map(unitData => (
-                                <th key={unitData.unit.id} className="border p-1 transform -rotate-45" style={{ height: '100px', whiteSpace: 'nowrap', width: 'auto' }}>
-                                    <div style={{ transform: 'translate(10px, -25px)', width: '20px' }}>
-                                        {unitData.unit.code}
-                                    </div>
+                                <th key={unitData.unit.id} className="border border-black p-1 text-center font-bold text-[7pt] w-[40px]">
+                                    {unitData.unit.code}
                                 </th>
                             ))}
                         </tr>
@@ -92,10 +94,10 @@ export function PrintMatriculationList({ data, semester, year }: PrintMatriculat
                     <tbody>
                         {uniqueStudents.map((student, studentIndex) => (
                             <tr key={student.documentId}>
-                                <td className="border p-1 text-center">{studentIndex + 1}</td>
-                                <td className="border p-1">{student.fullName}</td>
+                                <td className="border border-black p-1 text-center">{studentIndex + 1}</td>
+                                <td className="border border-black p-1 uppercase font-medium">{student.fullName}</td>
                                 {data.units.map(unitData => (
-                                    <td key={unitData.unit.id} className="border p-1 text-center">
+                                    <td key={unitData.unit.id} className="border border-black p-1 text-center">
                                         {unitStudentMap.get(unitData.unit.id)?.has(student.documentId) ? 'X' : ''}
                                     </td>
                                 ))}
@@ -103,7 +105,7 @@ export function PrintMatriculationList({ data, semester, year }: PrintMatriculat
                         ))}
                         {uniqueStudents.length === 0 && (
                             <tr>
-                                <td colSpan={2 + data.units.length} className="border p-2 text-center text-gray-500">No hay estudiantes matriculados.</td>
+                                <td colSpan={2 + data.units.length} className="border border-black p-8 text-center text-gray-500 italic">No hay estudiantes matriculados.</td>
                             </tr>
                         )}
                     </tbody>
@@ -111,7 +113,7 @@ export function PrintMatriculationList({ data, semester, year }: PrintMatriculat
 
                 <footer className="text-center mt-32">
                     <div className="inline-block border-t border-black px-16 py-2">
-                        <p>Firma del Responsable</p>
+                        <p className="font-bold uppercase text-[9pt]">Firma del Responsable</p>
                     </div>
                 </footer>
             </div>

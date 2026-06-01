@@ -19,8 +19,8 @@ export function PrintLayout({ institute, program, unit, teacher, title, children
 
     return (
         <div className="printable-area bg-white text-black p-4 font-sans">
-            {/* Header Institucional: Logo a la izquierda, Nombre al centro, Fecha a la derecha */}
-            <header className="grid grid-cols-12 items-center border-b-2 border-black pb-4 mb-6">
+            {/* Header Institucional: Cambiado de <header> a <div> para evitar ser ocultado por CSS global */}
+            <div className="grid grid-cols-12 items-center border-b-2 border-black pb-4 mb-6">
                 <div className="col-span-3 flex justify-start">
                     {institute?.logoUrl && (
                         /* Se usa etiqueta img estándar para máxima compatibilidad con motores de impresión */
@@ -45,7 +45,7 @@ export function PrintLayout({ institute, program, unit, teacher, title, children
                         HORA: {format(today, 'HH:mm')}
                     </p>
                 </div>
-            </header>
+            </div>
 
             {/* Título del Reporte: Centrado con líneas superior e inferior de estilo formal */}
             <div className="text-center my-6">
