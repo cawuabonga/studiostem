@@ -9,23 +9,26 @@ import { Label } from '@/components/ui/label';
 import { ContentManager } from './ContentManager';
 import { TaskManager } from './TaskManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { setWeekVisibility, getWeekData, saveWeekSyllabusData, getWeeksData } from '@/config/firebase';
+import { setWeekVisibility, getWeekData, saveWeekSyllabusData, getWeeksData, getAcademicPeriods } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
 import { Button } from '../ui/button';
-import { Loader2, ArrowLeft, Eye, EyeOff, CheckCircle2, Inbox } from 'lucide-react';
+import { Loader2, ArrowLeft, Eye, EyeOff, CheckCircle2, Inbox, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format, addDays, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface WeekCardProps {
     weekNumber: number;
-    unit: { id: string; totalWeeks: number };
+    unit: Unit;
     weekData?: WeekData;
     isStudentView: boolean;
+    periodStartDate?: Date;
     onClick: () => void;
 }
 
-function WeekCard({ weekNumber, unit, weekData, isStudentView, onClick }: WeekCardProps) {
+function WeekCard({ weekNumber, unit, weekData, isStudentView, periodStartDate, onClick }: WeekCardProps) {
     const isVisible = weekData?.isVisible ?? false;
     
     // In student view, if the week is not visible, we don't render the card at all.
@@ -33,6 +36,18 @@ function WeekCard({ weekNumber, unit, weekData, isStudentView, onClick }: WeekCa
 
     const contentCount = weekData?.contents?.length || 0;
     const taskCount = weekData?.tasks?.length || 0;
+
+    const weekRange = useMemo(() => {
+        if (!periodStartDate) return null;
+        try {
+            const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
+            const monday = addDays(startOfFirstWeek, (weekNumber - 1) * 7);
+            const sunday = addDays(monday, 6);
+            return `${format(monday, "dd 'de' MMM", { locale: es })} - ${format(sunday, "dd 'de' MMM", { locale: es })}`;
+        } catch (e) {
+            return null;
+        }
+    }, [periodStartDate, weekNumber]);
 
     return (
         <Card 
@@ -44,12 +59,20 @@ function WeekCard({ weekNumber, unit, weekData, isStudentView, onClick }: WeekCa
         >
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                    <CardTitle className="text-xl font-bold">Semana {weekNumber}</CardTitle>
+                    <div className="space-y-1">
+                        <CardTitle className="text-xl font-bold">Semana {weekNumber}</CardTitle>
+                        {weekRange && (
+                            <p className="text-[10px] font-bold text-primary flex items-center gap-1 uppercase tracking-tight">
+                                <CalendarClock className="h-3 w-3" />
+                                {weekRange}
+                            </p>
+                        )}
+                    </div>
                     {!isStudentView && (
                         isVisible ? <Eye className="h-4 w-4 text-green-500" /> : <EyeOff className="h-4 w-4 text-muted-foreground" />
                     )}
                 </div>
-                <CardDescription className="line-clamp-2 h-10 text-xs">
+                <CardDescription className="line-clamp-2 h-10 text-xs mt-2">
                     {weekData?.capacityElement || 'Contenido académico pendiente de programar.'}
                 </CardDescription>
             </CardHeader>
@@ -74,7 +97,7 @@ function WeekCard({ weekNumber, unit, weekData, isStudentView, onClick }: WeekCa
 
 interface WeekDetailProps {
     weekNumber: number; 
-    unit: { id: string; totalWeeks: number }; 
+    unit: Unit; 
     isStudentView: boolean;
     onBack: () => void;
     onDataChanged: () => void;
@@ -262,7 +285,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
 }
 
 interface WeeklyPlannerProps {
-    unit: { id: string; totalWeeks: number };
+    unit: Unit;
     isStudentView: boolean;
 }
 
@@ -271,25 +294,32 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
     const [weeksData, setWeeksData] = useState<WeekData[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+    const [periodStartDate, setPeriodStartDate] = useState<Date | undefined>(undefined);
     const totalWeeks = unit.totalWeeks || 16;
     const { toast } = useToast();
 
     const fetchAllWeeks = useCallback(async () => {
-        if (!instituteId) {
-            // Keep loading true while instituteId is being loaded
-            return;
-        }
+        if (!instituteId) return;
         setLoading(true);
         try {
-            const data = await getWeeksData(instituteId, unit.id);
+            const currentYear = new Date().getFullYear().toString();
+            const [data, academicPeriods] = await Promise.all([
+                getWeeksData(instituteId, unit.id),
+                getAcademicPeriods(instituteId, currentYear)
+            ]);
+            
             setWeeksData(data);
+            
+            const startDate = academicPeriods?.[unit.period]?.startDate?.toDate();
+            setPeriodStartDate(startDate);
+
         } catch (error) {
             console.error("Error fetching weeks data:", error);
             toast({ title: "Error", description: "No se pudieron cargar las semanas de planificación.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit.id, toast]);
+    }, [instituteId, unit.id, unit.period, toast]);
 
     useEffect(() => {
         fetchAllWeeks();
@@ -310,7 +340,6 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
             );
         }
 
-        // For students, we only want to show the weeks that are actually visible
         const visibleWeeksData = isStudentView ? weeksData.filter(w => w.isVisible) : weeksData;
 
         if (isStudentView && visibleWeeksData.length === 0) {
@@ -335,11 +364,8 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Array.from({ length: totalWeeks }, (_, i) => {
                     const weekNumber = i + 1;
-                    // Improved find logic: try explicit weekNumber field first, fallback to checking id if possible
-                    // but we ensure weekNumber is saved correctly in setWeekVisibility and saveWeekSyllabusData
                     const weekData = weeksData.find(week => week.weekNumber === weekNumber);
                     
-                    // If student view and week is not visible, don't show the card
                     if (isStudentView && (!weekData || !weekData.isVisible)) return null;
 
                     return (
@@ -349,13 +375,14 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
                             unit={unit}
                             weekData={weekData}
                             isStudentView={isStudentView}
+                            periodStartDate={periodStartDate}
                             onClick={() => setSelectedWeek(weekNumber)}
                         />
                     );
                 })}
             </div>
         );
-    }, [loading, weeksData, isStudentView, unit, totalWeeks]);
+    }, [loading, weeksData, isStudentView, unit, totalWeeks, periodStartDate]);
 
     if (selectedWeek) {
         return (
