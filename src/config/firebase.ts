@@ -595,9 +595,8 @@ export const getStudentsPaginated = async (options: {
 }): Promise<{ students: StudentProfile[], lastVisible: DocumentSnapshot | null }> => {
     const studentsCol = getSubCollectionRef(options.instituteId, 'studentProfiles');
     const q_parts: any[] = [];
-    if (options.excludeEgresados) {
-        q_parts.push(where("academicStatus", "!=", "Egresado"));
-    }
+    
+    // 1. Equality filters first
     if (options.programId && options.programId !== 'all') {
         q_parts.push(where("programId", "==", options.programId));
     }
@@ -607,14 +606,28 @@ export const getStudentsPaginated = async (options: {
     if (options.turno && options.turno !== 'all') {
         q_parts.push(where("turno", "==", options.turno));
     }
+
+    // 2. Inequality filter
+    if (options.excludeEgresados) {
+        q_parts.push(where("academicStatus", "!=", "Egresado"));
+        // Firestore constraint: First order by the field used in inequality
+        q_parts.push(orderBy("academicStatus")); 
+    }
+
+    // 3. Final ordering
     q_parts.push(orderBy("lastName"));
+
+    // 4. Pagination
     if (options.startAfterDoc) {
         q_parts.push(startAfter(options.startAfterDoc));
     }
     q_parts.push(limit(options.limitCount));
+
     const q = query(studentsCol, ...q_parts);
     const snapshot = await getDocs(q);
     let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+    
+    // Client-side filtering for calculated fields or those not in the index
     if (options.semester) {
         students = students.filter(p => {
              const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
