@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -85,21 +86,22 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
         const [hours, minutes] = time.split(':').map(Number);
         combinedDate.setHours(hours, minutes, 0, 0);
 
-        const taskData: any = {
+        // Sanitize logic: ensure no undefined keys reach the SDK
+        const taskPayload: any = {
             title: data.title,
             description: data.description,
             dueDate: Timestamp.fromDate(combinedDate),
-            indicatorId: data.indicatorId || suggestedIndicator?.id || undefined,
+            indicatorId: data.indicatorId || suggestedIndicator?.id || null,
             referenceLink: data.referenceLink || '',
         };
         
         const fileToUpload = data.file?.[0];
 
         if (isEditMode && initialData) {
-            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskData, fileToUpload);
+            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskPayload, fileToUpload);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido actualizada.' });
         } else {
-            await addTaskToWeek(instituteId, unit.id, weekNumber, taskData, fileToUpload);
+            await addTaskToWeek(instituteId, unit.id, weekNumber, taskPayload, fileToUpload);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido añadida a la semana.' });
         }
         

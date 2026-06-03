@@ -594,9 +594,10 @@ export const getStudentsPaginated = async (options: {
     excludeEgresados?: boolean;
 }): Promise<{ students: StudentProfile[], lastVisible: DocumentSnapshot | null }> => {
     const studentsCol = getSubCollectionRef(options.instituteId, 'studentProfiles');
-    const q_parts: any[] = [];
+    const q_parts: any[] = [
+        where('instituteId', '==', options.instituteId),
+    ];
     
-    // 1. Equality filters first
     if (options.programId && options.programId !== 'all') {
         q_parts.push(where("programId", "==", options.programId));
     }
@@ -607,17 +608,13 @@ export const getStudentsPaginated = async (options: {
         q_parts.push(where("turno", "==", options.turno));
     }
 
-    // 2. Inequality filter
     if (options.excludeEgresados) {
         q_parts.push(where("academicStatus", "!=", "Egresado"));
-        // Firestore constraint: First order by the field used in inequality
         q_parts.push(orderBy("academicStatus")); 
     }
 
-    // 3. Final ordering
     q_parts.push(orderBy("lastName"));
 
-    // 4. Pagination
     if (options.startAfterDoc) {
         q_parts.push(startAfter(options.startAfterDoc));
     }
@@ -627,7 +624,6 @@ export const getStudentsPaginated = async (options: {
     const snapshot = await getDocs(q);
     let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
     
-    // Client-side filtering for calculated fields or those not in the index
     if (options.semester) {
         students = students.filter(p => {
              const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
@@ -636,6 +632,17 @@ export const getStudentsPaginated = async (options: {
     }
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
     return { students, lastVisible };
+};
+
+const calculateCurrentSemester = (admissionYear: string, admissionPeriod: UnitPeriod): number => {
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); 
+    const yearsDiff = currentYear - parseInt(admissionYear);
+    let semesterCount = yearsDiff * 2;
+    if (admissionPeriod === 'MAR-JUL') semesterCount += 1;
+    if (currentMonth >= 7) semesterCount += 1;
+    else if (admissionPeriod === 'AGO-DIC') semesterCount -= 1;
+    return Math.max(1, semesterCount);
 };
 
 export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
@@ -1437,13 +1444,21 @@ export const addTaskToWeek = async (instituteId: string, unitId: string, weekNum
     if (file) {
         fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
     }
-    const newTask: Task = { 
-        ...data, 
-        id: taskId, 
-        fileUrl: fileUrl || undefined,
-        createdAt: Timestamp.now() 
+    
+    // Create a clean object without undefined properties to prevent arrayUnion errors
+    const newTaskObj: any = {
+        id: taskId,
+        title: data.title || '',
+        description: data.description || '',
+        dueDate: data.dueDate,
+        createdAt: Timestamp.now()
     };
-    await setDoc(weekDocRef, { tasks: arrayUnion(newTask) }, { merge: true });
+    
+    if (fileUrl) newTaskObj.fileUrl = fileUrl;
+    if (data.indicatorId) newTaskObj.indicatorId = data.indicatorId;
+    if (data.referenceLink) newTaskObj.referenceLink = data.referenceLink;
+
+    await setDoc(weekDocRef, { tasks: arrayUnion(newTaskObj) }, { merge: true });
 };
 
 export const updateTaskInWeek = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, data: Partial<Task>, file?: File) => {
@@ -1456,7 +1471,14 @@ export const updateTaskInWeek = async (instituteId: string, unitId: string, week
         if (file) {
             fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
         }
-        weekData.tasks[index] = { ...weekData.tasks[index], ...data, fileUrl };
+        
+        // Merge and clean object
+        const updatedTask = { ...weekData.tasks[index], ...data, fileUrl };
+        const cleanedTask = Object.fromEntries(
+            Object.entries(updatedTask).filter(([_, v]) => v !== undefined)
+        );
+
+        weekData.tasks[index] = cleanedTask as Task;
         await updateDoc(weekDocRef, { tasks: weekData.tasks });
     }
 }
@@ -1569,7 +1591,7 @@ export const getAccessLogsPaginated = async (options: {
         where('instituteId', '==', options.instituteId),
     ];
 
-    if (options.accessPointId && options.accessPointId !== 'all') {
+    if (options.accessPointId && options.pointId !== 'all') {
         q_parts.push(where('accessPointId', '==', options.accessPointId));
     }
 
@@ -1584,7 +1606,6 @@ export const getAccessLogsPaginated = async (options: {
         q_parts.push(where('timestamp', '<=', Timestamp.fromDate(options.endDate)));
     }
 
-    // El orderBy debe seguir a los filtros de igualdad para que Firestore los tome
     q_parts.push(orderBy('timestamp', 'desc'));
 
     if (options.startAfterDoc) {
@@ -1612,9 +1633,6 @@ export const listenToAccessLogsForUser = (instituteId: string, userDocumentId: s
     return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog))); });
 };
 
-/**
- * Obtiene todos los registros de acceso para un instituto, mes y año específicos, filtrados opcionalmente por punto de acceso.
- */
 export const getMonthlyAccessLogs = async (instituteId: string, year: number, month: number, accessPointId?: string): Promise<AccessLog[]> => {
     const start = new Date(year, month, 1);
     const end = new Date(year, month + 1, 0, 23, 59, 59);
@@ -1772,7 +1790,7 @@ export const addAsset = async (instituteId: string, buildingId: string, environm
 
 export const updateAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string, data: Partial<Asset>): Promise<void> => {
     const user = auth.currentUser;
-    const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId);
+    const assetRef = doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', assetId);
     if(user) {
         const oldSnap = await getDoc(assetRef);
         if (oldSnap.exists()) {
@@ -1783,7 +1801,7 @@ export const updateAsset = async (instituteId: string, buildingId: string, envir
 };
 
 export const deleteAsset = async (instituteId: string, buildingId: string, environmentId: string, assetId: string): Promise<void> => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', environmentId, 'assets', assetId));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId, 'environments', assetId));
 };
 
 export const bulkUpdateAssetsStatus = async (instituteId: string, assets: Asset[], newStatus: string): Promise<void> => {
