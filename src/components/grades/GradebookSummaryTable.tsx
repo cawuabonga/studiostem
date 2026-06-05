@@ -6,6 +6,7 @@ import type { StudentProfile, AchievementIndicator, AcademicRecord } from '@/typ
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from '@/lib/utils';
 import { Calculator } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface GradebookSummaryTableProps {
     students: StudentProfile[];
@@ -21,6 +22,8 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 };
 
 export function GradebookSummaryTable({ students, indicators, records }: GradebookSummaryTableProps) {
+    const { user } = useAuth();
+
     return (
         <div className="space-y-4">
             <div className="relative w-full overflow-hidden rounded-xl border shadow-md bg-background print:shadow-none print:border-none">
@@ -84,6 +87,20 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                     </Table>
                 </div>
             </div>
+
+            {/* Signature Area and Legend for Print */}
+            <div className="print-only mt-12">
+                <div className="flex justify-around no-print-break">
+                    <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                        <p className="font-black uppercase text-[9pt] leading-tight mb-1">{user?.displayName}</p>
+                        <p className="font-bold uppercase text-[7pt] text-gray-600">{user?.programName || 'DOCENTE RESPONSABLE'}</p>
+                    </div>
+                    <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                        <p className="font-black uppercase text-[8pt]">COORDINADOR DE {user?.programName?.toUpperCase() || 'PROGRAMA'}</p>
+                    </div>
+                </div>
+            </div>
+
             <div className="screen-only flex justify-between items-center px-4 text-[11px] text-muted-foreground font-medium bg-slate-50 p-3 rounded-lg border border-dashed">
                 <div className="flex gap-4">
                     <p>Nota aprobatoria: <span className="font-bold text-foreground">13</span></p>

@@ -4,6 +4,7 @@
 import React, { useMemo } from 'react';
 import type { StudentProfile, AchievementIndicator, AcademicRecord, Task } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface IndicatorGradebookPrintProps {
     students: StudentProfile[];
@@ -20,6 +21,8 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 };
 
 export function IndicatorGradebookPrint({ students, indicator, records, tasks }: IndicatorGradebookPrintProps) {
+    const { user } = useAuth();
+    
     const flattenedEvaluations = useMemo(() => {
         const firstRecord = Object.values(records)[0];
         const list: { id: string, label: string, type: 'task' | 'manual', weekNumber: number }[] = [];
@@ -110,11 +113,12 @@ export function IndicatorGradebookPrint({ students, indicator, records, tasks }:
             </div>
 
             <div className="mt-16 flex justify-around no-print-break">
-                <div className="border-t border-black px-12 pt-1 text-center">
-                    <p className="font-bold uppercase text-[8pt]">Firma del Docente</p>
+                <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                    <p className="font-black uppercase text-[9pt] leading-tight mb-1">{user?.displayName}</p>
+                    <p className="font-bold uppercase text-[7pt] text-gray-600">{user?.programName || 'DOCENTE RESPONSABLE'}</p>
                 </div>
-                <div className="border-t border-black px-12 pt-1 text-center">
-                    <p className="font-bold uppercase text-[8pt]">Secretaría Académica</p>
+                <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                    <p className="font-black uppercase text-[8pt]">COORDINADOR DE {user?.programName?.toUpperCase() || 'PROGRAMA'}</p>
                 </div>
             </div>
         </div>

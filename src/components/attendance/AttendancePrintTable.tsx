@@ -5,6 +5,7 @@ import React from 'react';
 import type { StudentProfile, AttendanceRecord, AttendanceStatus, AchievementIndicator } from '@/types';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AttendancePrintTableProps {
     students: StudentProfile[];
@@ -29,6 +30,7 @@ export function AttendancePrintTable({
     totalWeeks,
     limitWeek 
 }: AttendancePrintTableProps) {
+    const { user } = useAuth();
     
     const weeksInRange = Array.from(
         { length: selectedIndicator.endWeek - selectedIndicator.startWeek + 1 },
@@ -148,14 +150,14 @@ export function AttendancePrintTable({
             </div>
 
             <div className="mt-16 flex justify-around no-print-break">
-                <div className="border-t border-black px-12 pt-1 text-center">
-                    <p className="font-bold uppercase text-[8pt]">Firma del Docente</p>
+                <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                    <p className="font-black uppercase text-[9pt] leading-tight mb-1">{user?.displayName}</p>
+                    <p className="font-bold uppercase text-[7pt] text-gray-600">{user?.programName || 'DOCENTE RESPONSABLE'}</p>
                 </div>
-                <div className="border-t border-black px-12 pt-1 text-center">
-                    <p className="font-bold uppercase text-[8pt]">Secretaría Académica</p>
+                <div className="border-t border-black px-12 pt-1 text-center min-w-[250px]">
+                    <p className="font-black uppercase text-[8pt]">COORDINADOR DE {user?.programName?.toUpperCase() || 'PROGRAMA'}</p>
                 </div>
             </div>
         </div>
     );
 }
-
