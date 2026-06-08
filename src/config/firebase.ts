@@ -2193,11 +2193,22 @@ export const addJobOffer = async (instituteId: string, data: Omit<JobOffer, 'id'
     await addDoc(col, { ...data, status: 'Abierta', createdAt: Timestamp.now() });
 };
 
+export const updateJobOffer = async (instituteId: string, offerId: string, data: Partial<JobOffer>) => {
+    const offerRef = doc(db, 'institutes', instituteId, 'jobOffers', offerId);
+    await updateDoc(offerRef, data);
+};
+
+export const deleteJobOffer = async (instituteId: string, offerId: string) => {
+    const offerRef = doc(db, 'institutes', instituteId, 'jobOffers', offerId);
+    await deleteDoc(offerRef);
+};
+
 export const getJobOffers = async (instituteId: string, options: { programId?: string, companyId?: string } = {}): Promise<JobOffer[]> => {
     const col = getSubCollectionRef(instituteId, 'jobOffers');
-    const q_parts = [where('status', '==', 'Abierta'), orderBy('createdAt', 'desc')];
+    const q_parts = [orderBy('createdAt', 'desc')];
     
     if (options.companyId) q_parts.unshift(where('companyId', '==', options.companyId));
+    else q_parts.unshift(where('status', '==', 'Abierta')); // Students only see open offers
     
     const snap = await getDocs(query(col, ...q_parts));
     let offers = snap.docs.map(d => ({ id: d.id, ...d.data() } as JobOffer));

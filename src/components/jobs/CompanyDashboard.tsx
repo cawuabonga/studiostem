@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getJobOffers, addJobOffer, getJobApplications, getPrograms, getCompanyProfiles } from '@/config/firebase';
+import { getJobOffers, addJobOffer, updateJobOffer, deleteJobOffer, getJobApplications, getPrograms, getCompanyProfiles } from '@/config/firebase';
 import type { JobOffer, JobApplication, Program, CompanyProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +22,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -33,8 +44,9 @@ export function CompanyDashboard() {
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [loading, setLoading] = useState(true);
     
-    // Offer Creation
+    // Offer Creation / Editing
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         title: '',
@@ -65,7 +77,7 @@ export function CompanyDashboard() {
             setOffers(fetchedOffers);
             setPrograms(fetchedPrograms);
             setCompanyProfile(profile);
-            if (profile) {
+            if (profile && !editingOfferId) {
                 setFormData(prev => ({ ...prev, location: profile.address || '' }));
             }
         } catch (error) {
@@ -73,11 +85,43 @@ export function CompanyDashboard() {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, user]);
+    }, [instituteId, user, editingOfferId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handleCreateOffer = async () => {
+    const handleOpenCreate = () => {
+        setEditingOfferId(null);
+        setFormData({ 
+            title: '', 
+            description: '', 
+            location: companyProfile?.address || '', 
+            modality: 'Presencial', 
+            jobType: 'Trabajo (Laboral)', 
+            contractType: 'Tiempo Completo',
+            salaryRange: '', 
+            programIds: [],
+            minSemester: 1
+        });
+        setIsDialogOpen(true);
+    };
+
+    const handleOpenEdit = (offer: JobOffer) => {
+        setEditingOfferId(offer.id);
+        setFormData({
+            title: offer.title,
+            description: offer.description,
+            location: offer.location,
+            modality: offer.modality,
+            jobType: offer.jobType,
+            contractType: offer.contractType,
+            salaryRange: offer.salaryRange || '',
+            programIds: offer.programIds,
+            minSemester: offer.minSemester
+        });
+        setIsDialogOpen(true);
+    };
+
+    const handleSaveOffer = async () => {
         if (!instituteId || !user?.documentId || !companyProfile) return;
         if (formData.programIds.length === 0) {
             toast({ title: "Atención", description: "Seleccione al menos una carrera técnica objetivo.", variant: "destructive" });
@@ -85,7 +129,7 @@ export function CompanyDashboard() {
         }
         setIsSubmitting(true);
         try {
-            await addJobOffer(instituteId, {
+            const payload = {
                 ...formData,
                 companyId: user.documentId,
                 companyName: companyProfile.name,
@@ -93,24 +137,44 @@ export function CompanyDashboard() {
                 companyAddress: companyProfile.address,
                 isVerified: true,
                 requirements: [], 
-            });
-            toast({ title: "Oferta Publicada", description: "Los estudiantes que cumplan los requisitos podrán verla y postular." });
+            };
+
+            if (editingOfferId) {
+                await updateJobOffer(instituteId, editingOfferId, payload);
+                toast({ title: "Oferta Actualizada", description: "Los cambios se han guardado correctamente." });
+            } else {
+                await addJobOffer(instituteId, payload);
+                toast({ title: "Oferta Publicada", description: "Los estudiantes que cumplan los requisitos podrán verla y postular." });
+            }
+            
             setIsDialogOpen(false);
-            setFormData({ 
-                title: '', 
-                description: '', 
-                location: companyProfile.address || '', 
-                modality: 'Presencial', 
-                jobType: 'Trabajo (Laboral)', 
-                contractType: 'Tiempo Completo',
-                salaryRange: '', 
-                programIds: [],
-                minSemester: 1
-            });
             fetchData();
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
         } finally { setIsSubmitting(false); }
+    };
+
+    const handleDelete = async (offerId: string) => {
+        if (!instituteId) return;
+        try {
+            await deleteJobOffer(instituteId, offerId);
+            toast({ title: "Oferta Eliminada" });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error al eliminar", variant: "destructive" });
+        }
+    };
+
+    const handleToggleStatus = async (offer: JobOffer) => {
+        if (!instituteId) return;
+        const newStatus = offer.status === 'Abierta' ? 'Cerrada' : 'Abierta';
+        try {
+            await updateJobOffer(instituteId, offer.id, { status: newStatus });
+            toast({ title: newStatus === 'Abierta' ? "Vacante Publicada" : "Vacante Oculta" });
+            fetchData();
+        } catch (error) {
+            toast({ title: "Error", variant: "destructive" });
+        }
     };
 
     const handleViewApplicants = async (offer: JobOffer) => {
@@ -142,18 +206,53 @@ export function CompanyDashboard() {
                 <h3 className="text-2xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
                     <Briefcase className="h-6 w-6" /> Mis Vacantes Publicadas
                 </h3>
-                <Button onClick={() => setIsDialogOpen(true)} className="font-bold shadow-lg h-12 px-6">
+                <Button onClick={handleOpenCreate} className="font-bold shadow-lg h-12 px-6">
                     <PlusCircle className="mr-2 h-5 w-5" /> PUBLICAR NUEVA OFERTA
                 </Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {offers.length > 0 ? offers.map(offer => (
-                    <Card key={offer.id} className="hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group">
-                        <CardHeader className="pb-4">
+                    <Card key={offer.id} className={cn(
+                        "hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group flex flex-col",
+                        offer.status === 'Cerrada' && "opacity-75 grayscale-[0.5]"
+                    )}>
+                        <CardHeader className="pb-4 relative">
                             <div className="flex justify-between items-start mb-4">
                                 <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
-                                <Badge variant="secondary" className="bg-green-100 text-green-700 font-bold uppercase text-[9px]">{offer.status}</Badge>
+                                <div className="flex gap-1">
+                                    <Badge variant="secondary" className={cn(
+                                        "font-bold uppercase text-[9px]",
+                                        offer.status === 'Abierta' ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"
+                                    )}>
+                                        {offer.status}
+                                    </Badge>
+                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
+                                            <Edit className="h-3 w-3" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive" onClick={() => handleToggleStatus(offer)}>
+                                            {offer.status === 'Abierta' ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                        </Button>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive">
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Eliminar vacante?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Esta acción es permanente y eliminará la oferta "{offer.title}".</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(offer.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
                             </div>
                             <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
                             <CardDescription className="text-xs font-bold flex items-center gap-1.5 mt-2 text-primary">
@@ -163,7 +262,7 @@ export function CompanyDashboard() {
                                 <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
                             </CardDescription>
                         </CardHeader>
-                        <CardFooter className="border-t pt-4 bg-muted/20">
+                        <CardFooter className="border-t pt-4 bg-muted/20 mt-auto">
                             <Button variant="ghost" className="w-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
                                 <Users className="mr-2 h-4 w-4" /> Ver {applications.filter(a => a.jobId === offer.id).length || ''} Candidatos
                             </Button>
@@ -178,7 +277,7 @@ export function CompanyDashboard() {
                 )}
             </div>
 
-            {/* Dialog: Nueva Oferta Rediseñado */}
+            {/* Dialog: Nueva/Editar Oferta */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground">
@@ -187,7 +286,9 @@ export function CompanyDashboard() {
                                 <Briefcase className="h-6 w-6 text-accent" />
                             </div>
                             <div>
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tight">Publicar Vacante Laboral</DialogTitle>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                                    {editingOfferId ? "Editar Vacante Laboral" : "Publicar Vacante Laboral"}
+                                </DialogTitle>
                                 <DialogDescription className="text-primary-foreground/80 font-medium">Configure los requisitos académicos y profesionales del puesto.</DialogDescription>
                             </div>
                         </div>
@@ -310,9 +411,9 @@ export function CompanyDashboard() {
 
                     <DialogFooter className="p-6 bg-muted/50 border-t flex gap-3">
                         <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold">CANCELAR</Button>
-                        <Button onClick={handleCreateOffer} disabled={isSubmitting} className="font-black px-12 shadow-xl shadow-primary/20">
+                        <Button onClick={handleSaveOffer} disabled={isSubmitting} className="font-black px-12 shadow-xl shadow-primary/20">
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
-                            PUBLICAR VACANTE OFICIAL
+                            {editingOfferId ? "GUARDAR CAMBIOS" : "PUBLICAR VACANTE OFICIAL"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
