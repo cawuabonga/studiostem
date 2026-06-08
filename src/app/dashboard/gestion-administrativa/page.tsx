@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive, Library } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive, Library, BriefcaseBusiness } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -73,6 +73,13 @@ const adminModules: AdminModule[] = [
     href: "/dashboard/gestion-administrativa/abastecimiento",
     icon: Archive,
     permission: 'admin:supplies:manage',
+  },
+  {
+    title: "Empresas Aliadas",
+    description: "Gestione los perfiles de las empresas que publican ofertas en la bolsa laboral.",
+    href: "/dashboard/gestion-administrativa/bolsa-laboral/empresas",
+    icon: BriefcaseBusiness,
+    permission: "admin:companies:manage",
   },
   {
     title: "Control de Acceso (RFID)",

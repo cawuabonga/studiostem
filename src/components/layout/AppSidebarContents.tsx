@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin, Cpu, BriefcaseBusiness, Building } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, CreditCard, ShieldCheck, ImageIcon, BookCopy, Percent, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Pencil, Package, MapPin, Cpu, BriefcaseBusiness } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -24,8 +24,8 @@ interface NavItem {
     href: string;
     label: string;
     icon: React.ElementType;
-    permission?: Permission | Permission[]; // Allow single or multiple permissions
-    isDefault?: boolean; // For items always visible like Dashboard
+    permission?: Permission | Permission[]; 
+    isDefault?: boolean;
 }
 
 const allNavItems: NavItem[] = [
@@ -46,7 +46,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
     
-    // Portal de Empleo (Unified for Students and Companies)
+    // Bolsa Laboral (Visible para Alumnos y Empresas)
     { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusiness, permission: ['student:jobs:view', 'company:jobs:manage'] },
 
     // Teacher
@@ -69,24 +69,17 @@ export function AppSidebarContents() {
   const accessibleNavItems = allNavItems.filter(item => {
       if (item.isDefault) return true;
       if (!item.permission) return true;
-
-      // Handle both single and multiple permissions
       if (Array.isArray(item.permission)) {
-          // If it's an array, check if user has at least one of the permissions
           return item.permission.some(p => hasPermission(p));
       } else {
-          // If it's a single permission string
           return hasPermission(item.permission);
       }
   });
   
   const getSidebarTitle = () => {
-    if (user?.role === 'SuperAdmin' && !institute) {
-        return "STEM";
-    }
+    if (user?.role === 'SuperAdmin' && !institute) return "STEM";
     return institute?.name || "STEM";
   }
-
 
   return (
     <>
@@ -95,7 +88,7 @@ export function AppSidebarContents() {
            {institute?.logoUrl ? (
              <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={28} height={28} className="rounded-sm object-contain"/>
            ) : (
-             <Building2 className="w-7 h-7 text-sidebar-foreground"/>
+             <GraduationCap className="w-7 h-7 text-sidebar-foreground"/>
            )}
            <span className="font-headline text-sm font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
              {getSidebarTitle()}
@@ -107,17 +100,14 @@ export function AppSidebarContents() {
         {user && (
           <div className="mb-4 p-2 flex flex-col items-center group-data-[collapsible=icon]:items-center">
             <Avatar className="w-16 h-16 mb-2 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:mb-0">
-              <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.[0] || 'U'}`} alt={user.displayName || 'Usuario'} data-ai-hint="profile avatar" />
+              <AvatarImage src={user.photoURL || `https://placehold.co/100x100.png?text=${user.displayName?.[0] || 'U'}`} alt={user.displayName || 'Usuario'} />
               <AvatarFallback className="text-xl group-data-[collapsible=icon]:text-sm">
                 {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
             </Avatar>
             <div className="text-center group-data-[collapsible=icon]:hidden">
-              <p className="font-semibold text-sidebar-foreground">{user.displayName}</p>
-              <p className="text-xs text-sidebar-foreground/80">{user.role}</p>
-               {user.programName && (
-                <p className="text-xs text-sidebar-foreground/70 italic mt-1">{user.programName}</p>
-              )}
+              <p className="font-semibold text-sidebar-foreground text-sm truncate max-w-[140px]">{user.displayName}</p>
+              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60">{user.role}</p>
             </div>
           </div>
         )}
@@ -128,7 +118,7 @@ export function AppSidebarContents() {
                 <SidebarMenuButton 
                   asChild 
                   isActive={pathname === '/dashboard/academic' || pathname === '/dashboard'}
-                  tooltip={{children: "Dashboard", side: 'right', align: 'center'}}
+                  tooltip="Dashboard"
                 >
                   <a>
                     <Home />
@@ -137,29 +127,14 @@ export function AppSidebarContents() {
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
-            {user?.documentId && (
-                 <SidebarMenuItem>
-                    <Link href="/dashboard/mis-accesos" legacyBehavior passHref>
-                        <SidebarMenuButton 
-                        asChild 
-                        isActive={pathname.startsWith('/dashboard/mis-accesos')}
-                        tooltip={{children: 'Mis Accesos', side: 'right', align: 'center'}}
-                        >
-                        <a>
-                            <Fingerprint />
-                            <span>Mis Accesos</span>
-                        </a>
-                        </SidebarMenuButton>
-                    </Link>
-                </SidebarMenuItem>
-            )}
+            
           {accessibleNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href} legacyBehavior passHref>
                 <SidebarMenuButton 
                   asChild 
                   isActive={pathname.startsWith(item.href)}
-                  tooltip={{children: item.label, side: 'right', align: 'center'}}
+                  tooltip={item.label}
                 >
                   <a>
                     <item.icon />
@@ -178,7 +153,6 @@ export function AppSidebarContents() {
             buttonText={''}
             showIcon={true}
             aria-label="Cerrar Sesión"
-            tooltip={{children: 'Cerrar Sesión', side: 'right', align: 'center'}}
           >
             <span className="group-data-[collapsible=icon]:hidden">Cerrar Sesión</span>
         </SignOutButton>
