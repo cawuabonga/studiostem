@@ -1718,7 +1718,8 @@ export const updateBuilding = async (instituteId: string, buildingId: string, da
 };
 
 export const deleteBuilding = async (instituteId: string, buildingId: string): Promise<void> => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'buildings', buildingId));
+    const deleteBuildingRef = doc(db, 'institutes', instituteId, 'buildings', buildingId);
+    await deleteDoc(deleteBuildingRef);
 };
     
 export const addEnvironment = async (instituteId: string, buildingId: string, data: Omit<Environment, 'id'>): Promise<void> => {
@@ -2262,4 +2263,9 @@ export const getApplicationsForStudent = async (instituteId: string, studentId: 
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const snap = await getDocs(query(col, where('studentId', '==', studentId), orderBy('appliedAt', 'desc')));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
+};
+
+export const updateJobApplication = async (instituteId: string, applicationId: string, data: Partial<JobApplication>) => {
+    const appRef = doc(db, 'institutes', instituteId, 'jobApplications', applicationId);
+    await updateDoc(appRef, data);
 };

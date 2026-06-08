@@ -138,6 +138,7 @@ export interface JobApplication {
     status: 'Pendiente' | 'Visto' | 'En Proceso' | 'Aceptado' | 'Rechazado';
     appliedAt: Timestamp;
     notes?: string;
+    interviewDate?: Timestamp; // Nueva: Para agendar entrevistas
 }
 
 export interface AccessPoint {

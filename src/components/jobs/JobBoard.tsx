@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -70,7 +70,6 @@ export function JobBoard() {
     const handleApply = async (offer: JobOffer) => {
         if (!instituteId || !user?.documentId) return;
         
-        // Final sanity check before applying (client-side)
         const isProfileComplete = (user.skills?.length || 0) >= 3 && !!user.bio && !!user.cvUrl;
         const currentSem = (user as any).currentSemester || 1;
         const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
@@ -109,7 +108,6 @@ export function JobBoard() {
             </TabsList>
 
             <TabsContent value="ofertas" className="space-y-8">
-                {/* Alerta de Perfil Incompleto */}
                 {!isProfileComplete && (
                     <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-2xl flex gap-4 items-center animate-in fade-in slide-in-from-top-4">
                         <div className="p-3 bg-white rounded-xl shadow-sm">
@@ -125,7 +123,6 @@ export function JobBoard() {
                     </div>
                 )}
 
-                {/* Filtros */}
                 <Card className="border-primary/10 shadow-lg rounded-3xl overflow-hidden">
                     <CardContent className="p-8">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
@@ -163,7 +160,6 @@ export function JobBoard() {
                     </CardContent>
                 </Card>
 
-                {/* Grid de Ofertas */}
                 <div className="grid gap-8 md:grid-cols-2">
                     {filteredOffers.length > 0 ? filteredOffers.map(offer => {
                         const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
@@ -285,36 +281,68 @@ export function JobBoard() {
                 <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden">
                     <CardContent className="p-8">
                         {myApplications.length > 0 ? (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 {myApplications.map(app => (
-                                    <div key={app.id} className="p-6 rounded-[1.5rem] border bg-card flex flex-col sm:flex-row items-center justify-between gap-6 group hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
-                                        <div className="flex items-center gap-6 flex-1 w-full sm:w-auto">
-                                            <div className="p-4 bg-primary/10 rounded-2xl text-primary transition-transform group-hover:rotate-12">
-                                                <Briefcase className="h-6 w-6" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="font-black text-lg uppercase tracking-tight text-slate-800 truncate">{app.jobTitle}</h4>
-                                                <div className="flex items-center gap-3 mt-1.5">
-                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-tighter">{app.companyName}</p>
-                                                    <span className="h-1 w-1 rounded-full bg-slate-300" />
-                                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Enviado el {format(app.appliedAt.toDate(), "dd 'de' MMMM", { locale: es })}</p>
+                                    <div key={app.id} className="p-6 rounded-[2rem] border bg-card flex flex-col gap-6 group hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
+                                        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+                                            <div className="flex items-center gap-6 flex-1 w-full sm:w-auto">
+                                                <div className="p-4 bg-primary/10 rounded-2xl text-primary transition-transform group-hover:rotate-12">
+                                                    <Briefcase className="h-6 w-6" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="font-black text-lg uppercase tracking-tight text-slate-800 truncate">{app.jobTitle}</h4>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-tighter">{app.companyName}</p>
+                                                        <span className="h-1 w-1 rounded-full bg-slate-300" />
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase">Enviado el {format(app.appliedAt.toDate(), "dd 'de' MMMM", { locale: es })}</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
+                                                <Badge className={cn(
+                                                    "font-black text-[11px] uppercase px-5 h-9 rounded-full border-none shadow-sm",
+                                                    app.status === 'Pendiente' ? "bg-amber-100 text-amber-700" :
+                                                    app.status === 'Aceptado' ? "bg-green-100 text-green-700" :
+                                                    app.status === 'Rechazado' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                )}>
+                                                    {app.status}
+                                                </Badge>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                                            <Badge className={cn(
-                                                "font-black text-[10px] uppercase px-4 h-8 rounded-full border-none",
-                                                app.status === 'Pendiente' ? "bg-amber-100 text-amber-700" :
-                                                app.status === 'Aceptado' ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
-                                            )}>
-                                                {app.status}
-                                            </Badge>
-                                            <Button variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10" asChild>
-                                                <Link href={app.cvUrl || '#'} target="_blank">
-                                                    <FileText className="h-5 w-5" />
-                                                </Link>
-                                            </Button>
-                                        </div>
+
+                                        {/* Detalle de Respuesta de la Empresa */}
+                                        {(app.interviewDate || app.notes) && (
+                                            <div className="bg-white rounded-2xl p-6 border-2 border-primary/10 shadow-sm animate-in zoom-in-95 duration-500">
+                                                <h5 className="text-[10px] font-black uppercase text-primary tracking-widest mb-4 flex items-center gap-2">
+                                                    <Info className="h-4 w-4" /> Respuesta de la Empresa
+                                                </h5>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {app.interviewDate && (
+                                                        <div className="flex items-start gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                                                            <div className="p-2 bg-white rounded-lg text-blue-600 shadow-sm"><CalendarCheck className="h-5 w-5" /></div>
+                                                            <div>
+                                                                <p className="text-[9px] font-black text-blue-800 uppercase leading-none mb-1">Cita para Entrevista</p>
+                                                                <p className="text-sm font-black text-blue-700 capitalize">
+                                                                    {format(app.interviewDate.toDate(), "EEEE dd 'de' MMMM", { locale: es })}
+                                                                </p>
+                                                                <p className="text-xs font-bold text-blue-500 mt-0.5">Hora: {format(app.interviewDate.toDate(), 'HH:mm')}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {app.notes && (
+                                                        <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                                            <div className="p-2 bg-white rounded-lg text-slate-600 shadow-sm"><MessageSquareText className="h-5 w-5" /></div>
+                                                            <div>
+                                                                <p className="text-[9px] font-black text-slate-500 uppercase leading-none mb-1">Mensaje del Reclutador</p>
+                                                                <p className="text-xs font-medium text-slate-700 italic leading-relaxed">"{app.notes}"</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>

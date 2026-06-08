@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getJobOffers, addJobOffer, updateJobOffer, deleteJobOffer, getJobApplications, getPrograms, getCompanyProfiles } from '@/config/firebase';
+import { getJobOffers, addJobOffer, updateJobOffer, deleteJobOffer, getJobApplications, getPrograms, getCompanyProfiles, updateJobApplication } from '@/config/firebase';
 import type { JobOffer, JobApplication, Program, CompanyProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,15 +14,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
+import { Timestamp } from 'firebase/firestore';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -65,6 +67,10 @@ export function CompanyDashboard() {
     const [selectedOffer, setSelectedOffer] = useState<JobOffer | null>(null);
     const [applications, setApplications] = useState<JobApplication[]>([]);
     const [loadingApps, setLoadingApps] = useState(false);
+
+    // Manage Applicant states
+    const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
+    const [manageData, setManageData] = useState({ status: '' as any, interviewDate: '', interviewTime: '09:00', notes: '' });
 
     const fetchData = useCallback(async () => {
         if (!instituteId || !user?.documentId) return;
@@ -190,6 +196,42 @@ export function CompanyDashboard() {
         } finally { setLoadingApps(false); }
     };
 
+    const handleOpenManageApp = (app: JobApplication) => {
+        setSelectedApp(app);
+        setManageData({
+            status: app.status,
+            interviewDate: app.interviewDate ? format(app.interviewDate.toDate(), 'yyyy-MM-dd') : '',
+            interviewTime: app.interviewDate ? format(app.interviewDate.toDate(), 'HH:mm') : '09:00',
+            notes: app.notes || ''
+        });
+    };
+
+    const handleUpdateApplication = async () => {
+        if (!instituteId || !selectedApp) return;
+        setIsSubmitting(true);
+        try {
+            let interviewTimestamp = null;
+            if (manageData.interviewDate) {
+                const [h, m] = manageData.interviewTime.split(':').map(Number);
+                const date = new Date(manageData.interviewDate);
+                date.setHours(h, m, 0, 0);
+                interviewTimestamp = Timestamp.fromDate(date);
+            }
+
+            await updateJobApplication(instituteId, selectedApp.id, {
+                status: manageData.status,
+                notes: manageData.notes,
+                interviewDate: interviewTimestamp as any
+            });
+
+            toast({ title: "Estado Actualizado", description: "El estudiante verá los cambios en su panel." });
+            setSelectedApp(null);
+            if (selectedOffer) handleViewApplicants(selectedOffer);
+        } catch (error) {
+            toast({ title: "Error", variant: "destructive" });
+        } finally { setIsSubmitting(false); }
+    };
+
     const toggleProgram = (pId: string) => {
         setFormData(prev => {
             const ids = new Set(prev.programIds);
@@ -296,7 +338,6 @@ export function CompanyDashboard() {
                     </DialogHeader>
                     
                     <div className="flex flex-col lg:flex-row min-h-[600px]">
-                        {/* Columna Principal: Descripción */}
                         <div className="flex-1 p-8 space-y-6">
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Título del Puesto</Label>
@@ -335,7 +376,6 @@ export function CompanyDashboard() {
                             </div>
                         </div>
 
-                        {/* Columna Lateral: Configuraciones */}
                         <div className="w-full lg:w-[350px] bg-muted/30 border-l p-8 space-y-6">
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Requisitos Académicos</h4>
@@ -348,7 +388,6 @@ export function CompanyDashboard() {
                                             {semesters.map(s => <SelectItem key={s} value={String(s)}>Desde {s}° Semestre</SelectItem>)}
                                         </SelectContent>
                                     </Select>
-                                    <p className="text-[9px] text-muted-foreground">Filtro de madurez: impide que alumnos de ciclos inferiores postulen.</p>
                                 </div>
 
                                 <Separator />
@@ -449,11 +488,13 @@ export function CompanyDashboard() {
                                                         <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 bg-muted/50 border-none">DNI: {app.studentId}</Badge>
                                                         <Badge className={cn(
                                                             "font-black text-[9px] h-5 border-none",
-                                                            app.studentType === 'Egresado' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                                            app.status === 'Aceptado' ? "bg-green-100 text-green-700" :
+                                                            app.status === 'Rechazado' ? "bg-red-100 text-red-700" :
+                                                            app.status === 'En Proceso' ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600"
                                                         )}>
-                                                            {app.studentType || 'Estudiante'}
+                                                            {app.status}
                                                         </Badge>
-                                                        <Badge className="bg-green-100 text-green-700 font-black text-[9px] h-5 border-none">PERFIL VERIFICADO</Badge>
+                                                        <Badge className="bg-green-100 text-green-700 font-black text-[9px] h-5 border-none">VERIFICADO</Badge>
                                                     </div>
                                                 </div>
                                             </div>
@@ -461,13 +502,16 @@ export function CompanyDashboard() {
                                             <div className="flex gap-2 w-full sm:w-auto">
                                                 <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild>
                                                     <Link href={app.cvUrl || '#'} target="_blank" disabled={!app.cvUrl}>
-                                                        <Download className="mr-2 h-4 w-4" /> VER CV (PDF)
+                                                        <Download className="mr-2 h-4 w-4" /> CV
                                                     </Link>
                                                 </Button>
-                                                <Button size="sm" variant="default" className="h-10 px-4 rounded-xl font-black shadow-lg" asChild>
+                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-black" asChild>
                                                     <Link href={`/profile/${app.studentId}`} target="_blank">
-                                                        <Eye className="mr-2 h-4 w-4" /> VER PORTAFOLIO
+                                                        <Eye className="mr-2 h-4 w-4" /> PERFIL
                                                     </Link>
+                                                </Button>
+                                                <Button size="sm" className="h-10 px-4 rounded-xl font-black bg-accent text-accent-foreground" onClick={() => handleOpenManageApp(app)}>
+                                                    <Settings2 className="mr-2 h-4 w-4" /> GESTIONAR
                                                 </Button>
                                             </div>
                                         </div>
@@ -483,6 +527,61 @@ export function CompanyDashboard() {
                     </div>
                     <DialogFooter className="p-6 border-t bg-muted/20">
                          <Button variant="ghost" onClick={() => setSelectedOffer(null)} className="font-black">CERRAR PANEL</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Gestionar Postulación */}
+            <Dialog open={!!selectedApp} onOpenChange={open => !open && setSelectedApp(null)}>
+                <DialogContent className="max-w-md rounded-2xl shadow-2xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-black uppercase text-primary">Gestionar Candidato</DialogTitle>
+                        <DialogDescription>Actualice el estado y agende actividades para <strong>{selectedApp?.studentName}</strong>.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 py-4">
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estado del Proceso</Label>
+                            <Select value={manageData.status} onValueChange={v => setManageData({...manageData, status: v})}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                    <SelectItem value="En Proceso">En Selección / Entrevista</SelectItem>
+                                    <SelectItem value="Aceptado">Aceptado (Contratado)</SelectItem>
+                                    <SelectItem value="Rechazado">Rechazado</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-3 p-4 bg-muted/30 rounded-xl border border-dashed">
+                             <div className="flex items-center gap-2 mb-1">
+                                <CalendarCheck className="h-4 w-4 text-primary" />
+                                <Label className="text-[10px] font-black uppercase tracking-widest">Citar a Entrevista</Label>
+                             </div>
+                             <div className="grid grid-cols-2 gap-2">
+                                <Input type="date" value={manageData.interviewDate} onChange={e => setManageData({...manageData, interviewDate: e.target.value})} className="h-10" />
+                                <Input type="time" value={manageData.interviewTime} onChange={e => setManageData({...manageData, interviewTime: e.target.value})} className="h-10" />
+                             </div>
+                             <p className="text-[9px] text-muted-foreground italic">Opcional. Se notificará al alumno en su panel.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                <MessageSquareText className="h-4 w-4" /> Nota de Respuesta / Feedback
+                            </Label>
+                            <Textarea 
+                                placeholder="Escriba un mensaje para el alumno (ej: Link de Zoom, oficina de entrevista, motivo de rechazo...)" 
+                                value={manageData.notes} 
+                                onChange={e => setManageData({...manageData, notes: e.target.value})}
+                                className="resize-none h-24"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setSelectedApp(null)} className="font-bold">CANCELAR</Button>
+                        <Button onClick={handleUpdateApplication} disabled={isSubmitting} className="font-black px-8">
+                            {isSubmitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                            GUARDAR CAMBIOS
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
