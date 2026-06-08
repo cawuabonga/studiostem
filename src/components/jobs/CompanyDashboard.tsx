@@ -165,7 +165,7 @@ export function CompanyDashboard() {
         if (!instituteId) return;
         try {
             await deleteJobOffer(instituteId, offerId);
-            toast({ title: "Oferta Eliminada" });
+            toast({ title: "Oferta Elimada" });
             fetchData();
         } catch (error) {
             toast({ title: "Error al eliminar", variant: "destructive" });
@@ -305,10 +305,13 @@ export function CompanyDashboard() {
                                 <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
                             </CardDescription>
                         </CardHeader>
-                        <CardFooter className="border-t pt-4 bg-muted/20 mt-auto">
-                            <Button variant="ghost" className="w-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
+                        <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
+                            <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
                                 <Users className="mr-2 h-4 w-4" /> Ver Candidatos
                             </Button>
+                            <Badge variant="secondary" className="h-10 px-4 rounded-xl font-black text-sm bg-primary/10 text-primary border-none" title="Total de candidatos">
+                                {offer.applicantCount || 0}
+                            </Badge>
                         </CardFooter>
                     </Card>
                 )) : (

@@ -4,7 +4,7 @@
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -2200,9 +2200,9 @@ export const deleteCompanyProfile = async (instituteId: string, ruc: string) => 
     await deleteDoc(profileRef);
 };
 
-export const addJobOffer = async (instituteId: string, data: Omit<JobOffer, 'id' | 'createdAt' | 'status'>) => {
+export const addJobOffer = async (instituteId: string, data: Omit<JobOffer, 'id' | 'createdAt' | 'status' | 'applicantCount'>) => {
     const col = getSubCollectionRef(instituteId, 'jobOffers');
-    await addDoc(col, { ...data, status: 'Abierta', createdAt: Timestamp.now() });
+    await addDoc(col, { ...data, status: 'Abierta', createdAt: Timestamp.now(), applicantCount: 0 });
 };
 
 export const updateJobOffer = async (instituteId: string, offerId: string, data: Partial<JobOffer>) => {
@@ -2251,6 +2251,10 @@ export const applyToJob = async (instituteId: string, application: Omit<JobAppli
     };
     
     await addDoc(col, finalApplication);
+
+    // Incrementar el contador de postulantes en la oferta laboral
+    const jobOfferRef = doc(db, 'institutes', instituteId, 'jobOffers', application.jobId);
+    await updateDoc(jobOfferRef, { applicantCount: increment(1) });
 };
 
 export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {
