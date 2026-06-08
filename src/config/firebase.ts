@@ -2165,18 +2165,27 @@ export const getCompanyProfiles = async (instituteId: string): Promise<CompanyPr
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as CompanyProfile));
 };
 
-export const addCompanyProfile = async (instituteId: string, data: Omit<CompanyProfile, 'linkedUserUid'>) => {
+export const addCompanyProfile = async (instituteId: string, data: Omit<CompanyProfile, 'linkedUserUid' | 'logoUrl'>, logoFile?: File) => {
     const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', data.documentId);
-    await setDoc(profileRef, { ...data, instituteId, linkedUserUid: null });
+    let logoUrl = '';
+    if (logoFile) {
+        logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${instituteId}/companies/${data.documentId}/logo`);
+    }
+    await setDoc(profileRef, { ...data, logoUrl, instituteId, linkedUserUid: null });
 };
 
-export const updateCompanyProfile = async (instituteId: string, ruc: string, data: Partial<CompanyProfile>) => {
+export const updateCompanyProfile = async (instituteId: string, ruc: string, data: Partial<CompanyProfile>, logoFile?: File) => {
     const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', ruc);
-    await updateDoc(profileRef, data);
+    const updateData: any = { ...data };
+    if (logoFile) {
+        updateData.logoUrl = await uploadFileAndGetURL(logoFile, `institutes/${instituteId}/companies/${ruc}/logo`);
+    }
+    await updateDoc(profileRef, updateData);
 };
 
 export const deleteCompanyProfile = async (instituteId: string, ruc: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'companyProfiles', ruc));
+    const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', ruc);
+    await deleteDoc(profileRef);
 };
 
 export const addJobOffer = async (instituteId: string, data: Omit<JobOffer, 'id' | 'createdAt' | 'status'>) => {

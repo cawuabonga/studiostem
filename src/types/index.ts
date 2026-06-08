@@ -91,9 +91,14 @@ export interface CompanyProfile {
     description?: string;
     logoUrl?: string;
     website?: string;
+    address?: string;
+    representativeName?: string;
+    agreementStartDate?: Timestamp;
+    agreementEndDate?: Timestamp;
     linkedUserUid?: string | null;
     role: 'Company';
     roleId: string;
+    instituteId: string;
 }
 
 export interface JobOffer {
