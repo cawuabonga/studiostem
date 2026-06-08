@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin';
+export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin' | 'Company';
 
 export interface SocialLinks {
     linkedin?: string;
@@ -80,6 +80,51 @@ export interface StaffProfile {
   bio?: string;
   skills?: string[];
   socialLinks?: SocialLinks;
+}
+
+export interface CompanyProfile {
+    documentId: string; // RUC
+    name: string;
+    industry: string;
+    contactEmail: string;
+    contactPhone?: string;
+    description?: string;
+    logoUrl?: string;
+    website?: string;
+    linkedUserUid?: string | null;
+    role: 'Company';
+    roleId: string;
+}
+
+export interface JobOffer {
+    id: string;
+    companyId: string;
+    companyName: string;
+    companyLogo?: string;
+    title: string;
+    description: string;
+    requirements: string[];
+    location: string;
+    salaryRange?: string;
+    modality: 'Presencial' | 'Remoto' | 'Híbrido';
+    jobType: 'Tiempo Completo' | 'Medio Tiempo' | 'Prácticas' | 'Por Proyecto';
+    programIds: string[]; // Carreras a las que apunta
+    status: 'Abierta' | 'Cerrada';
+    createdAt: Timestamp;
+    deadline?: Timestamp;
+}
+
+export interface JobApplication {
+    id: string;
+    jobId: string;
+    jobTitle: string;
+    companyId: string;
+    companyName: string;
+    studentId: string;
+    studentName: string;
+    status: 'Pendiente' | 'Visto' | 'En Proceso' | 'Aceptado' | 'Rechazado';
+    appliedAt: Timestamp;
+    notes?: string;
 }
 
 export interface AccessPoint {
@@ -640,6 +685,7 @@ export type Permission =
   | 'admin:infra:manage'
   | 'admin:supplies:manage'
   | 'admin:deliveries:view'
+  | 'admin:companies:manage'
   | 'users:staff:manage'
   | 'users:student:manage'
   | 'planning:schedule:manage'
@@ -655,7 +701,11 @@ export type Permission =
   | 'student:unit:view'
   | 'student:grades:view'
   | 'student:payments:manage'
-  | 'student:efsrt:view';
+  | 'student:efsrt:view'
+  | 'student:jobs:view'
+  | 'student:jobs:apply'
+  | 'company:jobs:manage'
+  | 'company:applicants:view';
 
 export interface Role {
   id: string;
@@ -683,6 +733,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:infra:manage', label: 'Gestionar Infraestructura (Edificios, Ambientes, Activos)' },
             { id: 'admin:supplies:manage', label: 'Gestionar Abastecimiento e Insumos' },
             { id: 'admin:deliveries:view', label: 'Ver Entregas (PECOSAS)' },
+            { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
         ],
     },
     {
@@ -728,6 +779,16 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
             { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
+        ],
+    },
+     {
+        category: 'Bolsa Laboral',
+        description: 'Permisos para la gestión de empleo y reclutamiento.',
+        permissions: [
+            { id: 'student:jobs:view', label: 'Ver Ofertas Laborales' },
+            { id: 'student:jobs:apply', label: 'Postular a Empleos' },
+            { id: 'company:jobs:manage', label: 'Publicar y Gestionar Ofertas (Empresa)' },
+            { id: 'company:applicants:view', label: 'Ver Perfiles de Postulantes' },
         ],
     },
      {

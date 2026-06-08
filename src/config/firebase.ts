@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -634,17 +634,6 @@ export const getStudentsPaginated = async (options: {
     return { students, lastVisible };
 };
 
-const calculateCurrentSemester = (admissionYear: string, admissionPeriod: UnitPeriod): number => {
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth(); 
-    const yearsDiff = currentYear - parseInt(admissionYear);
-    let semesterCount = yearsDiff * 2;
-    if (admissionPeriod === 'MAR-JUL') semesterCount += 1;
-    if (currentMonth >= 7) semesterCount += 1;
-    else if (admissionPeriod === 'AGO-DIC') semesterCount -= 1;
-    return Math.max(1, semesterCount);
-};
-
 export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
     const studentRef = doc(getSubCollectionRef(instituteId, 'studentProfiles'), studentId);
     const docSnap = await getDoc(studentRef);
@@ -705,7 +694,7 @@ export const getGraduates = async (instituteId: string, options: { year?: string
     
 export const linkUserToProfile = async (uid: string, documentId: string, email: string) => {
     const institutes = await getInstitutes();
-    let foundProfile: (StaffProfile | StudentProfile) & { type: 'staff' | 'student' } | null = null;
+    let foundProfile: (StaffProfile | StudentProfile | CompanyProfile) & { type: 'staff' | 'student' | 'company' } | null = null;
     let foundInstituteId: string | null = null;
     for (const institute of institutes) {
         const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', documentId);
@@ -722,6 +711,13 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
             foundInstituteId = institute.id;
             break;
         }
+        const companyProfileRef = doc(db, 'institutes', institute.id, 'companyProfiles', documentId);
+        const companyDoc = await getDoc(companyProfileRef);
+        if (companyDoc.exists() && companyDoc.data().contactEmail === email) {
+            foundProfile = { ...companyDoc.data() as CompanyProfile, type: 'company' };
+            foundInstituteId = institute.id;
+            break;
+        }
     }
     if (!foundProfile || !foundInstituteId) {
         throw new Error("No matching profile found with the provided Document ID and email.");
@@ -733,7 +729,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     const userUpdateData: Partial<AppUser> = {
         documentId: foundProfile.documentId,
         instituteId: foundInstituteId,
-        displayName: (foundProfile as StaffProfile).displayName || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
+        displayName: (foundProfile as StaffProfile).displayName || (foundProfile as CompanyProfile).name || `${(foundProfile as StudentProfile).firstName} ${(foundProfile as StudentProfile).lastName}`,
     };
     if (foundProfile.role) {
         userUpdateData.role = foundProfile.role;
@@ -746,9 +742,12 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     }
      if (foundProfile.photoURL) {
         userUpdateData.photoURL = foundProfile.photoURL;
+    } else if ((foundProfile as CompanyProfile).logoUrl) {
+        userUpdateData.photoURL = (foundProfile as CompanyProfile).logoUrl;
     }
+
     await updateDoc(userDocRef, userUpdateData);
-    const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : 'studentProfiles';
+    const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : (foundProfile.type === 'company' ? 'companyProfiles' : 'studentProfiles');
     const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, documentId);
     await updateDoc(profileDocRef, { linkedUserUid: uid });
     const instituteName = institutes.find(i => i.id === foundInstituteId)?.name || 'Unknown Institute';
@@ -1536,8 +1535,9 @@ export const deleteRole = async (instituteId: string, roleId: string): Promise<v
 };
 
 export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Record<Permission, boolean> | null> => {
-    if (roleId === 'student') return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true } as any;
-    if (roleId === 'teacher') return { 'teacher:unit:view': true } as any;
+    if (roleId === 'student') return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true, 'student:jobs:view': true, 'student:jobs:apply': true } as any;
+    if (roleId === 'teacher') return { 'teacher:unit:view': true, 'teacher:efsrt:supervise': true } as any;
+    if (roleId === 'company') return { 'company:jobs:manage': true, 'company:applicants:view': true } as any;
     const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'roles', roleId));
     if (docSnap.exists()) {
         const permissions = docSnap.data().permissions;
@@ -2138,4 +2138,67 @@ export const setVirtualClassroomStatus = async (instituteId: string, unitId: str
 export const saveAttendanceLimitWeek = async (instituteId: string, unitId: string, limitWeek: number) => {
     const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
     await updateDoc(unitRef, { attendanceLimitWeek: limitWeek });
+};
+
+// --- Bolsa Laboral Functions ---
+
+export const getCompanyProfiles = async (instituteId: string): Promise<CompanyProfile[]> => {
+    const snap = await getDocs(getSubCollectionRef(instituteId, 'companyProfiles'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as CompanyProfile));
+};
+
+export const addCompanyProfile = async (instituteId: string, data: Omit<CompanyProfile, 'linkedUserUid'>) => {
+    const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', data.documentId);
+    await setDoc(profileRef, { ...data, linkedUserUid: null });
+};
+
+export const updateCompanyProfile = async (instituteId: string, ruc: string, data: Partial<CompanyProfile>) => {
+    const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', ruc);
+    await updateDoc(profileRef, data);
+};
+
+export const deleteCompanyProfile = async (instituteId: string, ruc: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'companyProfiles', ruc));
+};
+
+export const addJobOffer = async (instituteId: string, data: Omit<JobOffer, 'id' | 'createdAt' | 'status'>) => {
+    const col = getSubCollectionRef(instituteId, 'jobOffers');
+    await addDoc(col, { ...data, status: 'Abierta', createdAt: Timestamp.now() });
+};
+
+export const getJobOffers = async (instituteId: string, options: { programId?: string, companyId?: string } = {}): Promise<JobOffer[]> => {
+    const col = getSubCollectionRef(instituteId, 'jobOffers');
+    const q_parts = [where('status', '==', 'Abierta'), orderBy('createdAt', 'desc')];
+    
+    if (options.companyId) q_parts.unshift(where('companyId', '==', options.companyId));
+    
+    const snap = await getDocs(query(col, ...q_parts));
+    let offers = snap.docs.map(d => ({ id: d.id, ...d.data() } as JobOffer));
+    
+    if (options.programId) {
+        offers = offers.filter(o => o.programIds.includes(options.programId!) || o.programIds.length === 0);
+    }
+    
+    return offers;
+};
+
+export const applyToJob = async (instituteId: string, application: Omit<JobApplication, 'id' | 'appliedAt' | 'status'>) => {
+    const col = getSubCollectionRef(instituteId, 'jobApplications');
+    const q = query(col, where('jobId', '==', application.jobId), where('studentId', '==', application.studentId));
+    const existing = await getDocs(q);
+    if (!existing.empty) throw new Error("Ya has postulado a esta oferta.");
+    
+    await addDoc(col, { ...application, status: 'Pendiente', appliedAt: Timestamp.now() });
+};
+
+export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {
+    const col = getSubCollectionRef(instituteId, 'jobApplications');
+    const snap = await getDocs(query(col, where('jobId', '==', jobId), orderBy('appliedAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
+};
+
+export const getApplicationsForStudent = async (instituteId: string, studentId: string): Promise<JobApplication[]> => {
+    const col = getSubCollectionRef(instituteId, 'jobApplications');
+    const snap = await getDocs(query(col, where('studentId', '==', studentId), orderBy('appliedAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
 };

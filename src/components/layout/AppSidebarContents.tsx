@@ -15,7 +15,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin, Cpu } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, Briefcase, Palette, Image as ImageIcon, BookCopy, Percent, CreditCard, ShieldCheck, History, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Newspaper, Pencil, Package, Award, MapPin, Cpu, BriefcaseBusiness, Building } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
@@ -42,10 +42,13 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view', 'academic:efsrt:manage'] },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
     
+    // Portal de Empleo (Unified for Students and Companies)
+    { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusiness, permission: ['student:jobs:view', 'company:jobs:manage'] },
+
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
     { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPin, permission: 'teacher:efsrt:supervise' },
