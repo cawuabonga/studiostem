@@ -29,6 +29,7 @@ export interface AppUser {
   skills?: string[];
   socialLinks?: SocialLinks;
   coverImageUrl?: string;
+  cvUrl?: string; // Enlace al PDF de hoja de vida
 }
 
 export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
@@ -47,6 +48,7 @@ export interface StudentProfile {
   address?: string;
   photoURL?: string;
   coverImageUrl?: string;
+  cvUrl?: string; // PDF
   programId: string;
   admissionYear: string;
   admissionPeriod: UnitPeriod;
@@ -131,6 +133,8 @@ export interface JobApplication {
     companyName: string;
     studentId: string;
     studentName: string;
+    studentType: string; // Estudiante o Egresado
+    cvUrl: string; // Copia del CV al momento de postular
     status: 'Pendiente' | 'Visto' | 'En Proceso' | 'Aceptado' | 'Rechazado';
     appliedAt: Timestamp;
     notes?: string;

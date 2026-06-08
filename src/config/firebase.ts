@@ -81,7 +81,8 @@ export const updateUserProfile = async (data: {
   bio?: string, 
   socialLinks?: SocialLinks, 
   coverImageUrl?: string,
-  skills?: string[]
+  skills?: string[],
+  cvUrl?: string
 }) => {
     const user = auth.currentUser;
     if (!user) throw new Error("No user is currently signed in.");
@@ -102,6 +103,7 @@ export const updateUserProfile = async (data: {
         if (data.socialLinks !== undefined) firestoreUpdates.socialLinks = data.socialLinks;
         if (data.coverImageUrl !== undefined) firestoreUpdates.coverImageUrl = data.coverImageUrl;
         if (data.skills !== undefined) firestoreUpdates.skills = data.skills;
+        if (data.cvUrl !== undefined) firestoreUpdates.cvUrl = data.cvUrl;
         
         if (Object.keys(firestoreUpdates).length > 0) {
             const userDocRef = doc(db, 'users', user.uid);
@@ -655,9 +657,9 @@ export const getStudentProfile = async (instituteId: string, studentId: string):
 
 export const updateStudentProfile = async (instituteId: string, documentId: string, data: Partial<Omit<StudentProfile, 'id' | 'documentId' | 'photoURL'>>) => {
     const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', documentId);
-    const updateData = {
-        ...data,
-        fullName: `${data.firstName} ${data.lastName}`,
+    const updateData: any = { ...data };
+    if (data.firstName && data.lastName) {
+        updateData.fullName = `${data.firstName} ${data.lastName}`;
     }
     await updateDoc(studentRef, updateData);
 }
@@ -2229,13 +2231,25 @@ export const getJobOffers = async (instituteId: string, options: { programId?: s
     return offers;
 };
 
-export const applyToJob = async (instituteId: string, application: Omit<JobApplication, 'id' | 'appliedAt' | 'status'>) => {
+export const applyToJob = async (instituteId: string, application: Omit<JobApplication, 'id' | 'appliedAt' | 'status' | 'studentType' | 'cvUrl'>) => {
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const q = query(col, where('jobId', '==', application.jobId), where('studentId', '==', application.studentId));
     const existing = await getDocs(q);
     if (!existing.empty) throw new Error("Ya has postulado a esta oferta.");
     
-    await addDoc(col, { ...application, status: 'Pendiente', appliedAt: Timestamp.now() });
+    // Fetch latest student info for the application record
+    const student = await getStudentProfile(instituteId, application.studentId);
+    if (!student) throw new Error("Error: Perfil de estudiante no encontrado.");
+
+    const finalApplication: Omit<JobApplication, 'id'> = {
+        ...application,
+        studentType: student.academicStatus === 'Egresado' ? 'Egresado' : 'Estudiante (Cursando)',
+        cvUrl: student.cvUrl || '',
+        status: 'Pendiente',
+        appliedAt: Timestamp.now()
+    };
+    
+    await addDoc(col, finalApplication);
 };
 
 export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {

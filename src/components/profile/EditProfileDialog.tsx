@@ -23,17 +23,21 @@ import { updateUserProfile, uploadFileAndGetURL } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
-import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X, Image as ImageIcon, UserCircle } from 'lucide-react';
+import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X, Image as ImageIcon, UserCircle, FileText } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import Image from 'next/image';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+const ACCEPTED_PDF_TYPE = ["application/pdf"];
 
 const editProfileSchema = z.object({
   displayName: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }).optional(),
   photoURL: z.instanceof(FileList).optional(),
   coverImage: z.instanceof(FileList).optional(),
+  cvFile: z.instanceof(FileList).optional()
+    .refine(files => !files || files.length === 0 || files[0]?.size <= 10 * 1024 * 1024, "Máximo 10MB para el CV.")
+    .refine(files => !files || files.length === 0 || ACCEPTED_PDF_TYPE.includes(files[0]?.type), "El CV debe estar en formato PDF."),
   bio: z.string().max(500, "Máximo 500 caracteres.").optional(),
   skills: z.array(z.string()).optional(),
   socialLinks: z.object({
@@ -66,6 +70,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
       displayName: user.displayName || '',
       photoURL: undefined,
       coverImage: undefined,
+      cvFile: undefined,
       bio: user.bio || '',
       skills: user.skills || [],
       socialLinks: {
@@ -85,6 +90,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
         displayName: user.displayName || '',
         photoURL: undefined,
         coverImage: undefined,
+        cvFile: undefined,
         bio: user.bio || '',
         skills: user.skills || [],
         socialLinks: {
@@ -118,6 +124,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
     try {
       let finalPhotoURL = user.photoURL || '';
       let finalCoverURL = user.coverImageUrl || '';
+      let finalCVUrl = user.cvUrl || '';
 
       if (data.photoURL && data.photoURL.length > 0) {
           finalPhotoURL = await uploadFileAndGetURL(data.photoURL[0], `users/${user.uid}/profile_photo`);
@@ -127,10 +134,15 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
           finalCoverURL = await uploadFileAndGetURL(data.coverImage[0], `users/${user.uid}/cover_image`);
       }
 
+      if (data.cvFile && data.cvFile.length > 0) {
+          finalCVUrl = await uploadFileAndGetURL(data.cvFile[0], `users/${user.uid}/cv_personal`);
+      }
+
       await updateUserProfile({ 
           displayName: data.displayName,
           photoURL: finalPhotoURL,
           coverImageUrl: finalCoverURL,
+          cvUrl: finalCVUrl,
           bio: data.bio,
           socialLinks: data.socialLinks,
           skills 
@@ -162,7 +174,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                 <div className="space-y-4">
                     <FormField control={form.control} name="coverImage" render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center gap-2">
+                            <FormLabel className="flex items-center gap-2 font-bold">
                                 <ImageIcon className="h-4 w-4 text-primary" /> Imagen de Portada (Banner)
                             </FormLabel>
                             {user.coverImageUrl && (
@@ -179,7 +191,7 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField control={form.control} name="photoURL" render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="flex items-center gap-2">
+                                <FormLabel className="flex items-center gap-2 font-bold">
                                     <UserCircle className="h-4 w-4 text-primary" /> Foto de Perfil
                                 </FormLabel>
                                 <FormControl><Input type="file" accept="image/*" {...form.register('photoURL')} /></FormControl>
@@ -188,17 +200,38 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                         )} />
                         <FormField control={form.control} name="displayName" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Nombre Público</FormLabel>
+                                <FormLabel className="font-bold">Nombre Público</FormLabel>
                                 <FormControl><Input {...field} /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )} />
                     </div>
+
+                    {/* Nueva Carga de CV */}
+                    {user.role === 'Student' && (
+                        <div className="bg-primary/5 p-4 rounded-2xl border-2 border-dashed border-primary/20 space-y-3">
+                             <FormField control={form.control} name="cvFile" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2 font-black text-primary uppercase text-xs">
+                                        <FileText className="h-4 w-4" /> Mi Hoja de Vida (PDF)
+                                    </FormLabel>
+                                    {user.cvUrl && (
+                                        <div className="flex items-center gap-2 text-xs font-bold text-green-700 bg-green-50 p-2 rounded-lg mb-2">
+                                            <CheckCircle2 className="h-4 w-4" /> Ya tienes un CV registrado. Puedes actualizarlo.
+                                        </div>
+                                    )}
+                                    <FormControl><Input type="file" accept=".pdf" {...form.register('cvFile')} className="bg-background" /></FormControl>
+                                    <FormDescription className="text-[10px]">Obligatorio para postular a vacantes. Sube tu CV actualizado en PDF.</FormDescription>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                        </div>
+                    )}
                 </div>
 
                 <FormField control={form.control} name="bio" render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Resumen Ejecutivo / Perfil Profesional</FormLabel>
+                        <FormLabel className="font-bold">Resumen Ejecutivo / Perfil Profesional</FormLabel>
                         <FormControl><Textarea rows={4} placeholder="Describe tu trayectoria, tus fortalezas y qué valor aportas a una empresa..." {...field} /></FormControl>
                         <FormDescription className="text-[10px]">Cuéntale a los reclutadores quién eres profesionalmente. Máximo 500 caracteres.</FormDescription>
                         <FormMessage />

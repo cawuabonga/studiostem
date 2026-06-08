@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -264,7 +265,7 @@ export function CompanyDashboard() {
                         </CardHeader>
                         <CardFooter className="border-t pt-4 bg-muted/20 mt-auto">
                             <Button variant="ghost" className="w-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
-                                <Users className="mr-2 h-4 w-4" /> Ver {applications.filter(a => a.jobId === offer.id).length || ''} Candidatos
+                                <Users className="mr-2 h-4 w-4" /> Ver Candidatos
                             </Button>
                         </CardFooter>
                     </Card>
@@ -421,7 +422,7 @@ export function CompanyDashboard() {
 
             {/* Dialog: Candidatos */}
             <Dialog open={!!selectedOffer} onOpenChange={open => !open && setSelectedOffer(null)}>
-                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl">
+                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
                     <DialogHeader className="p-8 border-b bg-muted/20 shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-primary/10 rounded-2xl">
@@ -437,23 +438,38 @@ export function CompanyDashboard() {
                         <ScrollArea className="h-full p-8">
                             {loadingApps ? <div className="space-y-4"><Skeleton className="h-20 w-full rounded-2xl" /><Skeleton className="h-20 w-full rounded-2xl" /></div> : applications.length > 0 ? (
                                 <div className="space-y-4">
-                                    {applications.map(app => (
-                                        <div key={app.id} className="p-5 rounded-2xl border bg-card flex items-center justify-between gap-4 group hover:border-primary/30 hover:shadow-md transition-all">
-                                            <div className="flex items-center gap-5">
+                                    {applications.map((app, idx) => (
+                                        <div key={app.id} className="p-5 rounded-2xl border bg-card flex flex-col sm:flex-row items-center justify-between gap-6 group hover:border-primary/30 hover:shadow-md transition-all">
+                                            <div className="flex items-center gap-5 flex-1 min-w-0">
+                                                <span className="text-xl font-black text-slate-300 w-8">{idx + 1}.</span>
                                                 <div className="h-12 w-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-black text-xl shadow-lg uppercase">{app.studentName[0]}</div>
-                                                <div>
-                                                    <h4 className="font-black text-base uppercase tracking-tight text-slate-800">{app.studentName}</h4>
-                                                    <div className="flex items-center gap-2 mt-1">
+                                                <div className="truncate">
+                                                    <h4 className="font-black text-base uppercase tracking-tight text-slate-800 truncate">{app.studentName}</h4>
+                                                    <div className="flex flex-wrap items-center gap-2 mt-1">
                                                         <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 bg-muted/50 border-none">DNI: {app.studentId}</Badge>
+                                                        <Badge className={cn(
+                                                            "font-black text-[9px] h-5 border-none",
+                                                            app.studentType === 'Egresado' ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+                                                        )}>
+                                                            {app.studentType || 'Estudiante'}
+                                                        </Badge>
                                                         <Badge className="bg-green-100 text-green-700 font-black text-[9px] h-5 border-none">PERFIL VERIFICADO</Badge>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Button size="sm" variant="default" className="font-black text-[10px] h-10 px-6 rounded-xl shadow-lg" asChild>
-                                                <Link href={`/profile/${app.studentId}`} target="_blank">
-                                                    <Eye className="mr-2 h-4 w-4" /> VER PORTAFOLIO ACADÉMICO
-                                                </Link>
-                                            </Button>
+                                            
+                                            <div className="flex gap-2 w-full sm:w-auto">
+                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild>
+                                                    <Link href={app.cvUrl || '#'} target="_blank" disabled={!app.cvUrl}>
+                                                        <Download className="mr-2 h-4 w-4" /> VER CV (PDF)
+                                                    </Link>
+                                                </Button>
+                                                <Button size="sm" variant="default" className="h-10 px-4 rounded-xl font-black shadow-lg" asChild>
+                                                    <Link href={`/profile/${app.studentId}`} target="_blank">
+                                                        <Eye className="mr-2 h-4 w-4" /> VER PORTAFOLIO
+                                                    </Link>
+                                                </Button>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

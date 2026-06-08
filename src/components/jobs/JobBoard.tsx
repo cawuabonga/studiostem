@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -70,7 +71,7 @@ export function JobBoard() {
         if (!instituteId || !user?.documentId) return;
         
         // Final sanity check before applying (client-side)
-        const isProfileComplete = (user.skills?.length || 0) >= 3 && !!user.bio;
+        const isProfileComplete = (user.skills?.length || 0) >= 3 && !!user.bio && !!user.cvUrl;
         const currentSem = (user as any).currentSemester || 1;
         const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
 
@@ -97,7 +98,7 @@ export function JobBoard() {
 
     if (loading) return <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
-    const isProfileComplete = (user?.skills?.length || 0) >= 3 && !!user?.bio;
+    const isProfileComplete = (user?.skills?.length || 0) >= 3 && !!user?.bio && !!user?.cvUrl;
     const currentSem = (user as any)?.currentSemester || 1;
 
     return (
@@ -116,7 +117,7 @@ export function JobBoard() {
                         </div>
                         <div className="flex-1">
                             <h4 className="font-black text-amber-800 uppercase text-sm">Tu Perfil está Incompleto</h4>
-                            <p className="text-xs text-amber-700 font-medium">Para postular a vacantes oficiales, debes registrar al menos 3 habilidades y una biografía profesional en tu perfil.</p>
+                            <p className="text-xs text-amber-700 font-medium">Para postular a vacantes oficiales, debes registrar al menos 3 habilidades, una biografía y <strong>subir tu CV en PDF</strong> en tu perfil.</p>
                         </div>
                         <Button variant="outline" size="sm" className="font-bold border-amber-200 text-amber-700 bg-white" asChild>
                             <Link href="/dashboard/academic">Ir a Mi Perfil</Link>
@@ -250,7 +251,7 @@ export function JobBoard() {
                                     {!isProfileComplete && (
                                         <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 w-full">
                                             <Info className="h-4 w-4 shrink-0" />
-                                            <p className="text-[10px] font-bold">Debes completar tus habilidades y biografía en tu perfil.</p>
+                                            <p className="text-[10px] font-bold">Debes completar tu CV (PDF), habilidades y biografía en tu perfil.</p>
                                         </div>
                                     )}
 
@@ -308,8 +309,10 @@ export function JobBoard() {
                                             )}>
                                                 {app.status}
                                             </Badge>
-                                            <Button variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10">
-                                                <ExternalLink className="h-5 w-5" />
+                                            <Button variant="ghost" size="icon" className="rounded-full text-primary hover:bg-primary/10" asChild>
+                                                <Link href={app.cvUrl || '#'} target="_blank">
+                                                    <FileText className="h-5 w-5" />
+                                                </Link>
                                             </Button>
                                         </div>
                                     </div>
