@@ -15,50 +15,74 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, CreditCard, ShieldCheck, ImageIcon, BookCopy, Percent, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Pencil, Package, MapPin, Cpu, BriefcaseBusiness } from 'lucide-react';
+import { Home, Users, Building2, Inbox, GraduationCap, CreditCard, ShieldCheck, ImageIcon, BookCopy, Percent, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Pencil, Package, MapPin, Cpu, BriefcaseBusiness } from 'lucide-center';
+import { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
 
+// Using icons directly from lucide-react (correct library)
+import { 
+  Home as HomeIcon, 
+  Users as UsersIcon, 
+  Building2 as Building2Icon, 
+  Inbox as InboxIcon, 
+  GraduationCap as GraduationCapIcon, 
+  CreditCard as CreditCardIcon, 
+  ShieldCheck as ShieldCheckIcon, 
+  ImageIcon as GalleryIcon, 
+  BookCopy as BookCopyIcon, 
+  Percent as PercentIcon, 
+  Fingerprint as FingerprintIcon, 
+  FolderKanban as FolderKanbanIcon, 
+  CalendarClock as CalendarClockIcon, 
+  LayoutDashboard as LayoutDashboardIcon, 
+  Pencil as PencilIcon, 
+  Package as PackageIcon, 
+  MapPin as MapPinIcon, 
+  Cpu as CpuIcon, 
+  BriefcaseBusiness as BriefcaseBusinessIcon 
+} from 'lucide-react';
+
 interface NavItem {
     href: string;
     label: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     permission?: Permission | Permission[]; 
     isDefault?: boolean;
 }
 
 const allNavItems: NavItem[] = [
     // SuperAdmin
-    { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2, permission: 'superadmin:institute:manage' },
-    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: Users, permission: 'superadmin:users:manage' },
-    { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheck, permission: 'superadmin:roles:manage' },
-    { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: Cpu, permission: 'superadmin:design:manage' },
-    { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: ImageIcon, permission: 'superadmin:design:manage' },
-    { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanban, permission: 'superadmin:institute:manage' },
+    { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2Icon, permission: 'superadmin:institute:manage' },
+    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: UsersIcon, permission: 'superadmin:users:manage' },
+    { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: CpuIcon, permission: 'superadmin:design:manage' },
+    { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: GalleryIcon, permission: 'superadmin:design:manage' },
+    { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanbanIcon, permission: 'superadmin:institute:manage' },
 
     // Institute Admin/Coordinator
-    { href: '/dashboard/gestion-instituto', label: 'Gestión del Instituto', icon: LayoutDashboard, permission: 'admin:institute:manage' },
-    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: Inbox, permission: 'academic:program:manage' },
-    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCap, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view', 'academic:efsrt:manage'] },
-    { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClock, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
-    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCard, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
-    { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: Fingerprint, permission: 'admin:access-control:manage' },
-    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: Users, permission: ['users:staff:manage', 'users:student:manage'] },
+    { href: '/dashboard/gestion-instituto', label: 'Gestión del Instituto', icon: LayoutDashboardIcon, permission: 'admin:institute:manage' },
+    { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: InboxIcon, permission: 'academic:program:manage' },
+    { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCapIcon, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view', 'academic:efsrt:manage'] },
+    { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClockIcon, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
+    { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCardIcon, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
+    { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: FingerprintIcon, permission: 'admin:access-control:manage' },
+    { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: UsersIcon, permission: ['users:staff:manage', 'users:student:manage'] },
     
     // Bolsa Laboral (Visible para Alumnos y Empresas)
-    { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusiness, permission: ['student:jobs:view', 'company:jobs:manage'] },
+    { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusinessIcon, permission: ['student:jobs:view', 'company:jobs:manage'] },
 
     // Teacher
-    { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopy, permission: 'teacher:unit:view' },
-    { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPin, permission: 'teacher:efsrt:supervise' },
+    { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopyIcon, permission: 'teacher:unit:view' },
+    { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPinIcon, permission: 'teacher:efsrt:supervise' },
 
     // Student & General Staff
-    { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopy, permission: 'student:unit:view' },
-    { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPin, permission: 'student:efsrt:view' },
-    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: Percent, permission: 'student:grades:view' },
-    { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: Pencil, permission: 'user:supplies:request' },
-    { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: Package, permission: 'user:supplies:request' },
+    { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopyIcon, permission: 'student:unit:view' },
+    { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPinIcon, permission: 'student:efsrt:view' },
+    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: PercentIcon, permission: 'student:grades:view' },
+    { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: PencilIcon, permission: 'user:supplies:request' },
+    { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: PackageIcon, permission: 'user:supplies:request' },
 ];
 
 
@@ -88,7 +112,7 @@ export function AppSidebarContents() {
            {institute?.logoUrl ? (
              <Image src={institute.logoUrl} alt={`${institute.name} Logo`} width={28} height={28} className="rounded-sm object-contain"/>
            ) : (
-             <GraduationCap className="w-7 h-7 text-sidebar-foreground"/>
+             <GraduationCapIcon className="w-7 h-7 text-sidebar-foreground"/>
            )}
            <span className="font-headline text-sm font-bold text-sidebar-foreground group-data-[collapsible=icon]:hidden">
              {getSidebarTitle()}
@@ -105,9 +129,11 @@ export function AppSidebarContents() {
                 {user.displayName ? user.displayName.charAt(0).toUpperCase() : 'U'}
               </AvatarFallback>
             </Avatar>
-            <div className="text-center group-data-[collapsible=icon]:hidden">
+            <div className="text-center group-data-[collapsible=icon]:hidden px-2">
               <p className="font-semibold text-sidebar-foreground text-sm truncate max-w-[140px]">{user.displayName}</p>
-              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60">{user.role}</p>
+              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60 leading-tight">
+                  {user.roleName || (user.role === 'Student' ? 'Estudiante' : user.role)}
+              </p>
             </div>
           </div>
         )}
@@ -121,7 +147,7 @@ export function AppSidebarContents() {
                   tooltip="Dashboard"
                 >
                   <a>
-                    <Home />
+                    <HomeIcon />
                     <span>Dashboard</span>
                   </a>
                 </SidebarMenuButton>

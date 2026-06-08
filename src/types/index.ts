@@ -20,6 +20,7 @@ export interface AppUser {
   documentId?: string;
   instituteId: string | null;
   roleId?: string; 
+  roleName?: string; // Nombre amigable del rol desde la DB
   permissions?: Permission[];
   programId?: string;
   programName?: string;

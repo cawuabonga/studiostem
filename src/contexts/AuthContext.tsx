@@ -1,6 +1,7 @@
+
 "use client";
 
-import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program } from '@/types';
+import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program, Role } from '@/types';
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { 
   auth, 
@@ -123,9 +124,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (baseUserData.instituteId && baseUserData.roleId) {
             finalUser.instituteId = baseUserData.instituteId;
-            const permissionsMap = await getRolePermissions(baseUserData.instituteId, baseUserData.roleId);
-            if (permissionsMap) {
-                finalUser.permissions = Object.keys(permissionsMap).filter(p => permissionsMap[p as Permission]) as Permission[];
+            
+            // Fetch Dynamic Role Name and Permissions
+            const roles = await getRoles(baseUserData.instituteId);
+            const userRole = roles.find(r => r.id === baseUserData.roleId);
+            if (userRole) {
+                finalUser.roleName = userRole.name;
+                finalUser.permissions = Object.keys(userRole.permissions).filter(p => userRole.permissions[p as Permission]) as Permission[];
             }
 
             if (baseUserData.documentId) {
@@ -147,6 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         } else if (baseUserData.role === 'SuperAdmin') {
              finalUser.permissions = ['superadmin:institute:manage', 'superadmin:users:manage', 'superadmin:design:manage', 'superadmin:roles:manage'];
+             finalUser.roleName = 'Super Administrador';
         }
 
         finalUser.displayName = finalUser.displayName || firebaseUser.displayName;
