@@ -74,7 +74,15 @@ export const saveUserAdditionalData = async (user: { uid: string; email: string 
   }
 };
 
-export const updateUserProfile = async (data: { displayName?: string | null; photoURL?: string | null, documentId?: string | null, bio?: string, socialLinks?: SocialLinks, coverImageUrl?: string }) => {
+export const updateUserProfile = async (data: { 
+  displayName?: string | null; 
+  photoURL?: string | null, 
+  documentId?: string | null, 
+  bio?: string, 
+  socialLinks?: SocialLinks, 
+  coverImageUrl?: string,
+  skills?: string[]
+}) => {
     const user = auth.currentUser;
     if (!user) throw new Error("No user is currently signed in.");
     try {
@@ -93,6 +101,7 @@ export const updateUserProfile = async (data: { displayName?: string | null; pho
         if (data.bio !== undefined) firestoreUpdates.bio = data.bio;
         if (data.socialLinks !== undefined) firestoreUpdates.socialLinks = data.socialLinks;
         if (data.coverImageUrl !== undefined) firestoreUpdates.coverImageUrl = data.coverImageUrl;
+        if (data.skills !== undefined) firestoreUpdates.skills = data.skills;
         
         if (Object.keys(firestoreUpdates).length > 0) {
             const userDocRef = doc(db, 'users', user.uid);
