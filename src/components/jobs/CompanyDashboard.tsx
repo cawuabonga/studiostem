@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getJobOffers, addJobOffer, getJobApplications, getPrograms } from '@/config/firebase';
-import type { JobOffer, JobApplication, Program } from '@/types';
+import { getJobOffers, addJobOffer, getJobApplications, getPrograms, getCompanyProfiles } from '@/config/firebase';
+import type { JobOffer, JobApplication, Program, CompanyProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,17 +14,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
+import Image from 'next/image';
+import { Separator } from '../ui/separator';
 
 export function CompanyDashboard() {
     const { instituteId, user } = useAuth();
     const { toast } = useToast();
     const [offers, setOffers] = useState<JobOffer[]>([]);
     const [programs, setPrograms] = useState<Program[]>([]);
+    const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [loading, setLoading] = useState(true);
     
     // Offer Creation
@@ -35,7 +38,8 @@ export function CompanyDashboard() {
         description: '',
         location: '',
         modality: 'Presencial' as any,
-        jobType: 'Tiempo Completo' as any,
+        jobType: 'Trabajo (Laboral)' as any,
+        contractType: 'Tiempo Completo' as any,
         salaryRange: '',
         programIds: [] as string[]
     });
@@ -49,12 +53,17 @@ export function CompanyDashboard() {
         if (!instituteId || !user?.documentId) return;
         setLoading(true);
         try {
-            const [fetchedOffers, fetchedPrograms] = await Promise.all([
+            const [fetchedOffers, fetchedPrograms, profile] = await Promise.all([
                 getJobOffers(instituteId, { companyId: user.documentId }),
-                getPrograms(instituteId)
+                getPrograms(instituteId),
+                getCompanyProfiles(instituteId).then(list => list.find(c => c.documentId === user.documentId) || null)
             ]);
             setOffers(fetchedOffers);
             setPrograms(fetchedPrograms);
+            setCompanyProfile(profile);
+            if (profile) {
+                setFormData(prev => ({ ...prev, location: profile.address || '' }));
+            }
         } catch (error) {
             console.error("Error fetching company dashboard:", error);
         } finally {
@@ -65,18 +74,30 @@ export function CompanyDashboard() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const handleCreateOffer = async () => {
-        if (!instituteId || !user?.documentId) return;
+        if (!instituteId || !user?.documentId || !companyProfile) return;
         setIsSubmitting(true);
         try {
             await addJobOffer(instituteId, {
                 ...formData,
                 companyId: user.documentId,
-                companyName: user.displayName || 'Empresa Aliada',
-                requirements: [], // Extensible later
+                companyName: companyProfile.name,
+                companyLogo: companyProfile.logoUrl,
+                companyAddress: companyProfile.address,
+                isVerified: true,
+                requirements: [], 
             });
             toast({ title: "Oferta Publicada", description: "Los estudiantes podrán verla y postular ahora mismo." });
             setIsDialogOpen(false);
-            setFormData({ title: '', description: '', location: '', modality: 'Presencial', jobType: 'Tiempo Completo', salaryRange: '', programIds: [] });
+            setFormData({ 
+                title: '', 
+                description: '', 
+                location: companyProfile.address || '', 
+                modality: 'Presencial', 
+                jobType: 'Trabajo (Laboral)', 
+                contractType: 'Tiempo Completo',
+                salaryRange: '', 
+                programIds: [] 
+            });
             fetchData();
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
@@ -103,123 +124,218 @@ export function CompanyDashboard() {
                 <h3 className="text-2xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
                     <Briefcase className="h-6 w-6" /> Mis Vacantes Publicadas
                 </h3>
-                <Button onClick={() => setIsDialogOpen(true)} className="font-bold shadow-lg">
-                    <PlusCircle className="mr-2 h-4 w-4" /> PUBLICAR NUEVA OFERTA
+                <Button onClick={() => setIsDialogOpen(true)} className="font-bold shadow-lg h-12 px-6">
+                    <PlusCircle className="mr-2 h-5 w-5" /> PUBLICAR NUEVA OFERTA
                 </Button>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {offers.length > 0 ? offers.map(offer => (
-                    <Card key={offer.id} className="hover:border-primary transition-all">
-                        <CardHeader>
-                            <div className="flex justify-between items-start mb-2">
-                                <Badge variant="outline" className="text-[10px] font-black uppercase">{offer.jobType}</Badge>
-                                <Badge variant="secondary" className="bg-green-100 text-green-700">{offer.status}</Badge>
+                    <Card key={offer.id} className="hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group">
+                        <CardHeader className="pb-4">
+                            <div className="flex justify-between items-start mb-4">
+                                <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 font-bold uppercase text-[9px]">{offer.status}</Badge>
                             </div>
-                            <CardTitle className="text-lg font-black uppercase">{offer.title}</CardTitle>
-                            <CardDescription className="text-xs font-bold flex items-center gap-1"><MapPin className="h-3 w-3" /> {offer.modality} • {offer.location}</CardDescription>
+                            <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
+                            <CardDescription className="text-xs font-bold flex items-center gap-1.5 mt-2">
+                                <MapPin className="h-3.5 w-3.5 text-primary" /> {offer.modality} • {offer.location}
+                            </CardDescription>
                         </CardHeader>
-                        <CardFooter className="border-t pt-4">
-                            <Button variant="outline" className="w-full font-bold" onClick={() => handleViewApplicants(offer)}>
+                        <CardContent className="pb-6">
+                             <div className="flex items-center gap-2 text-[11px] font-black text-muted-foreground uppercase tracking-tighter">
+                                <DollarSign className="h-3.5 w-3.5" /> Remuneración: <span className="text-foreground">{offer.salaryRange || 'A convenir'}</span>
+                             </div>
+                        </CardContent>
+                        <CardFooter className="border-t pt-4 bg-muted/20">
+                            <Button variant="ghost" className="w-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
                                 <Users className="mr-2 h-4 w-4" /> Gestionar Candidatos
                             </Button>
                         </CardFooter>
                     </Card>
                 )) : (
-                    <div className="col-span-full py-12 text-center text-muted-foreground border-2 border-dashed rounded-xl">
-                        <p className="font-bold">No tienes ofertas activas.</p>
-                        <p className="text-sm">Crea una oferta para empezar a recibir perfiles.</p>
+                    <div className="col-span-full py-24 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/10">
+                        <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p className="font-bold text-lg uppercase">No tienes vacantes activas</p>
+                        <p className="text-sm mt-1">Crea tu primera oferta para empezar a recibir perfiles verificados.</p>
                     </div>
                 )}
             </div>
 
-            {/* Dialog: Nueva Oferta */}
+            {/* Dialog: Nueva Oferta Rediseñado */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl font-black uppercase text-primary">Publicar Vacante Laboral</DialogTitle>
-                        <DialogDescription>Describa los requisitos y condiciones del puesto.</DialogDescription>
+                <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+                    <DialogHeader className="p-8 bg-primary text-primary-foreground">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+                                <Briefcase className="h-6 w-6 text-accent" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tight">Publicar Vacante Laboral</DialogTitle>
+                                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los detalles técnicos y económicos del puesto.</DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Título del Puesto</Label>
-                            <Input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} placeholder="Ej: Técnico en Mantenimiento Junior" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                    
+                    <div className="flex flex-col lg:flex-row min-h-[500px]">
+                        {/* Columna Principal: Descripción */}
+                        <div className="flex-1 p-8 space-y-6">
                             <div className="space-y-2">
-                                <Label>Modalidad</Label>
-                                <Select value={formData.modality} onValueChange={v => setFormData({...formData, modality: v})}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Presencial">Presencial</SelectItem>
-                                        <SelectItem value="Remoto">Remoto</SelectItem>
-                                        <SelectItem value="Híbrido">Híbrido</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Título del Puesto</Label>
+                                <Input 
+                                    value={formData.title} 
+                                    onChange={e => setFormData({...formData, title: e.target.value})} 
+                                    placeholder="Ej: Técnico en Mantenimiento Junior" 
+                                    className="h-12 text-lg font-bold border-primary/10"
+                                />
                             </div>
+
                             <div className="space-y-2">
-                                <Label>Tipo de Trabajo</Label>
-                                <Select value={formData.jobType} onValueChange={v => setFormData({...formData, jobType: v})}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Tiempo Completo">Tiempo Completo</SelectItem>
-                                        <SelectItem value="Medio Tiempo">Medio Tiempo</SelectItem>
-                                        <SelectItem value="Prácticas">Prácticas</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Detallada y Requisitos</Label>
+                                <Textarea 
+                                    rows={12} 
+                                    value={formData.description} 
+                                    onChange={e => setFormData({...formData, description: e.target.value})} 
+                                    placeholder="Describa las funciones, competencias técnicas requeridas y beneficios..."
+                                    className="resize-none border-primary/10 leading-relaxed font-medium"
+                                />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Ubicación</Label>
-                            <Input value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} placeholder="Ciudad o Distrito" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Descripción y Requisitos</Label>
-                            <Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+
+                        {/* Columna Lateral: Configuraciones */}
+                        <div className="w-full lg:w-[320px] bg-muted/30 border-l p-8 space-y-6">
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Condiciones</h4>
+                                
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Categoría de Vacante</Label>
+                                    <Select value={formData.jobType} onValueChange={v => setFormData({...formData, jobType: v})}>
+                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Trabajo (Laboral)">Oportunidad Laboral</SelectItem>
+                                            <SelectItem value="Prácticas (EFSRT)">Prácticas (EFSRT)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Tipo de Contrato</Label>
+                                    <Select value={formData.contractType} onValueChange={v => setFormData({...formData, contractType: v})}>
+                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Tiempo Completo">Tiempo Completo</SelectItem>
+                                            <SelectItem value="Medio Tiempo">Medio Tiempo</SelectItem>
+                                            <SelectItem value="Por Proyecto">Por Proyecto</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Modalidad</Label>
+                                    <Select value={formData.modality} onValueChange={v => setFormData({...formData, modality: v})}>
+                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Presencial">Presencial</SelectItem>
+                                            <SelectItem value="Remoto">Remoto</SelectItem>
+                                            <SelectItem value="Híbrido">Híbrido</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Economía y Sede</h4>
+                                
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Remuneración (S/)</Label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            placeholder="Ej: 1,500.00" 
+                                            value={formData.salaryRange} 
+                                            onChange={e => setFormData({...formData, salaryRange: e.target.value})} 
+                                            className="pl-9 bg-background font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Dirección de Sede</Label>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            value={formData.location} 
+                                            onChange={e => setFormData({...formData, location: e.target.value})} 
+                                            className="pl-9 bg-background text-xs"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] text-muted-foreground italic">Se ha cargado automáticamente la dirección fiscal de la empresa.</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleCreateOffer} disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} PUBLICAR AHORA</Button>
+
+                    <DialogFooter className="p-6 bg-muted/50 border-t flex gap-3">
+                        <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold">CANCELAR</Button>
+                        <Button onClick={handleCreateOffer} disabled={isSubmitting} className="font-black px-12 shadow-xl shadow-primary/20">
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
+                            PUBLICAR VACANTE OFICIAL
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Candidatos */}
+            {/* Dialog: Candidatos (Sin cambios significativos en estructura, solo pulir visual) */}
             <Dialog open={!!selectedOffer} onOpenChange={open => !open && setSelectedOffer(null)}>
-                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0">
-                    <DialogHeader className="p-6 border-b shrink-0">
-                        <DialogTitle className="text-xl uppercase font-black">Postulantes: {selectedOffer?.title}</DialogTitle>
-                        <DialogDescription>Revise los perfiles y contacte a los mejores candidatos.</DialogDescription>
+                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl">
+                    <DialogHeader className="p-8 border-b bg-muted/20 shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-2xl">
+                                <Users className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-xl uppercase font-black tracking-tight">Postulantes: {selectedOffer?.title}</DialogTitle>
+                                <DialogDescription className="font-medium">Revise el talento verificado por el instituto.</DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
                     <div className="flex-1 overflow-hidden">
-                        <ScrollArea className="h-full p-6">
-                            {loadingApps ? <Skeleton className="h-20 w-full" /> : applications.length > 0 ? (
+                        <ScrollArea className="h-full p-8">
+                            {loadingApps ? <div className="space-y-4"><Skeleton className="h-20 w-full rounded-2xl" /><Skeleton className="h-20 w-full rounded-2xl" /></div> : applications.length > 0 ? (
                                 <div className="space-y-4">
                                     {applications.map(app => (
-                                        <div key={app.id} className="p-4 rounded-xl border bg-card flex items-center justify-between gap-4 group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center font-black text-primary uppercase">{app.studentName[0]}</div>
+                                        <div key={app.id} className="p-5 rounded-2xl border bg-card flex items-center justify-between gap-4 group hover:border-primary/30 hover:shadow-md transition-all">
+                                            <div className="flex items-center gap-5">
+                                                <div className="h-12 w-12 bg-primary text-primary-foreground rounded-full flex items-center justify-center font-black text-xl shadow-lg uppercase">{app.studentName[0]}</div>
                                                 <div>
-                                                    <h4 className="font-bold text-sm uppercase">{app.studentName}</h4>
-                                                    <p className="text-[10px] font-mono opacity-60">ID: {app.studentId}</p>
+                                                    <h4 className="font-black text-base uppercase tracking-tight text-slate-800">{app.studentName}</h4>
+                                                    <div className="flex items-center gap-2 mt-1">
+                                                        <Badge variant="outline" className="text-[9px] font-bold h-5 px-2 bg-muted/50 border-none">DNI: {app.studentId}</Badge>
+                                                        <Badge className="bg-green-100 text-green-700 font-black text-[9px] h-5 border-none">PERFIL VERIFICADO</Badge>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button size="sm" variant="outline" className="font-black text-[10px] h-8" asChild>
-                                                    <Link href={`/profile/${app.studentId}`} target="_blank">
-                                                        <Eye className="mr-2 h-3.5 w-3.5" /> VER PERFIL VERIFICADO
-                                                    </Link>
-                                                </Button>
-                                            </div>
+                                            <Button size="sm" variant="default" className="font-black text-[10px] h-10 px-6 rounded-xl shadow-lg" asChild>
+                                                <Link href={`/profile/${app.studentId}`} target="_blank">
+                                                    <Eye className="mr-2 h-4 w-4" /> VER PORTAFOLIO ACADÉMICO
+                                                </Link>
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-center py-12 text-muted-foreground">Aún no hay postulaciones para esta vacante.</p>
+                                <div className="py-20 text-center opacity-30 flex flex-col items-center">
+                                    <Users className="h-12 w-12 mb-4" />
+                                    <p className="font-black uppercase tracking-widest text-sm">Sin postulaciones todavía</p>
+                                </div>
                             )}
                         </ScrollArea>
                     </div>
+                    <DialogFooter className="p-6 border-t bg-muted/20">
+                         <Button variant="ghost" onClick={() => setSelectedOffer(null)} className="font-black">CERRAR PANEL</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>

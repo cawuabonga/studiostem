@@ -106,13 +106,16 @@ export interface JobOffer {
     companyId: string;
     companyName: string;
     companyLogo?: string;
+    companyAddress?: string;
+    isVerified?: boolean;
     title: string;
     description: string;
     requirements: string[];
     location: string;
     salaryRange?: string;
     modality: 'Presencial' | 'Remoto' | 'Híbrido';
-    jobType: 'Tiempo Completo' | 'Medio Tiempo' | 'Prácticas' | 'Por Proyecto';
+    jobType: 'Trabajo (Laboral)' | 'Prácticas (EFSRT)';
+    contractType: 'Tiempo Completo' | 'Medio Tiempo' | 'Por Proyecto';
     programIds: string[]; // Carreras a las que apunta
     status: 'Abierta' | 'Cerrada';
     createdAt: Timestamp;
