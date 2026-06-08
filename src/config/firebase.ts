@@ -696,29 +696,45 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     const institutes = await getInstitutes();
     let foundProfile: (StaffProfile | StudentProfile | CompanyProfile) & { type: 'staff' | 'student' | 'company' } | null = null;
     let foundInstituteId: string | null = null;
+
+    const searchDocId = documentId.trim();
+    const searchEmail = email.toLowerCase().trim();
+
     for (const institute of institutes) {
-        const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', documentId);
+        const staffProfileRef = doc(db, 'institutes', institute.id, 'staffProfiles', searchDocId);
         const staffDoc = await getDoc(staffProfileRef);
-        if (staffDoc.exists() && staffDoc.data().email === email) {
-            foundProfile = { ...staffDoc.data() as StaffProfile, type: 'staff' };
-            foundInstituteId = institute.id;
-            break;
+        if (staffDoc.exists()) {
+            const data = staffDoc.data();
+            if (data.email?.toLowerCase().trim() === searchEmail) {
+                foundProfile = { ...data as StaffProfile, type: 'staff' };
+                foundInstituteId = institute.id;
+                break;
+            }
         }
-        const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', documentId);
+
+        const studentProfileRef = doc(db, 'institutes', institute.id, 'studentProfiles', searchDocId);
         const studentDoc = await getDoc(studentProfileRef);
-        if (studentDoc.exists() && studentDoc.data().email === email) {
-            foundProfile = { ...studentDoc.data() as StudentProfile, type: 'student' };
-            foundInstituteId = institute.id;
-            break;
+        if (studentDoc.exists()) {
+            const data = studentDoc.data();
+            if (data.email?.toLowerCase().trim() === searchEmail) {
+                foundProfile = { ...data as StudentProfile, type: 'student' };
+                foundInstituteId = institute.id;
+                break;
+            }
         }
-        const companyProfileRef = doc(db, 'institutes', institute.id, 'companyProfiles', documentId);
+
+        const companyProfileRef = doc(db, 'institutes', institute.id, 'companyProfiles', searchDocId);
         const companyDoc = await getDoc(companyProfileRef);
-        if (companyDoc.exists() && companyDoc.data().contactEmail === email) {
-            foundProfile = { ...companyDoc.data() as CompanyProfile, type: 'company' };
-            foundInstituteId = institute.id;
-            break;
+        if (companyDoc.exists()) {
+            const data = companyDoc.data();
+            if (data.contactEmail?.toLowerCase().trim() === searchEmail) {
+                foundProfile = { ...data as CompanyProfile, type: 'company' };
+                foundInstituteId = institute.id;
+                break;
+            }
         }
     }
+
     if (!foundProfile || !foundInstituteId) {
         throw new Error("No matching profile found with the provided Document ID and email.");
     }
@@ -748,7 +764,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
 
     await updateDoc(userDocRef, userUpdateData);
     const profileCollectionName = foundProfile.type === 'staff' ? 'staffProfiles' : (foundProfile.type === 'company' ? 'companyProfiles' : 'studentProfiles');
-    const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, documentId);
+    const profileDocRef = doc(db, 'institutes', foundInstituteId, profileCollectionName, searchDocId);
     await updateDoc(profileDocRef, { linkedUserUid: uid });
     const instituteName = institutes.find(i => i.id === foundInstituteId)?.name || 'Unknown Institute';
     return { role: foundProfile.role || 'Student', instituteName };
