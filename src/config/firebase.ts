@@ -137,7 +137,86 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
         logoUrl = await uploadFileAndGetURL(logoFile, storagePath);
     }
 
+    // Guardar el instituto base
     await setDoc(instituteRef, { ...data, logoUrl });
+
+    // SEEDING: Crear roles por defecto para el nuevo instituto
+    const rolesCol = collection(db, 'institutes', instituteId, 'roles');
+    const defaultRoles = [
+        { 
+            id: 'student', 
+            name: 'Estudiante', 
+            description: 'Acceso estándar para alumnos matriculados.', 
+            permissions: { 
+                'student:unit:view': true, 
+                'student:grades:view': true, 
+                'student:payments:manage': true, 
+                'student:efsrt:view': true, 
+                'student:jobs:view': true, 
+                'student:jobs:apply': true, 
+                'user:supplies:request': true,
+                'planning:schedule:view:own': true
+            } 
+        },
+        { 
+            id: 'teacher', 
+            name: 'Docente', 
+            description: 'Acceso para el personal de enseñanza y supervisión.', 
+            permissions: { 
+                'teacher:unit:view': true, 
+                'teacher:efsrt:supervise': true, 
+                'user:supplies:request': true, 
+                'planning:schedule:view:own': true 
+            } 
+        },
+        { 
+            id: 'company', 
+            name: 'Empresa', 
+            description: 'Acceso para socios estratégicos de la bolsa laboral.', 
+            permissions: { 
+                'company:jobs:manage': true, 
+                'company:applicants:view': true 
+            } 
+        },
+        { 
+            id: 'admin', 
+            name: 'Administrador', 
+            description: 'Control total de la gestión del instituto.', 
+            permissions: { 
+                'admin:institute:manage': true, 
+                'admin:fees:manage': true, 
+                'admin:payments:validate': true, 
+                'admin:access-control:manage': true, 
+                'admin:attendance:report': true, 
+                'admin:infra:manage': true, 
+                'admin:supplies:manage': true, 
+                'admin:deliveries:view': true, 
+                'admin:companies:manage': true, 
+                'academic:program:manage': true, 
+                'academic:unit:manage': true, 
+                'academic:unit:manage:own': true,
+                'academic:assignment:manage': true, 
+                'academic:teacher:view': true, 
+                'academic:workload:view': true, 
+                'academic:enrollment:manage': true, 
+                'academic:periods:manage': true, 
+                'academic:load:view': true, 
+                'academic:efsrt:manage': true, 
+                'planning:schedule:manage': true, 
+                'planning:environment:manage': true, 
+                'users:staff:manage': true, 
+                'users:student:manage': true 
+            } 
+        }
+    ];
+
+    const batch = writeBatch(db);
+    defaultRoles.forEach(role => {
+        const { id, ...roleData } = role;
+        const roleRef = doc(rolesCol, id);
+        batch.set(roleRef, roleData);
+    });
+    await batch.commit();
 };
 
 export const getInstitutes = async (): Promise<Institute[]> => {
@@ -227,7 +306,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const imageDocRef = doc(db, 'config/loginDesign/images', image.id);
+    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
     await deleteDoc(imageDocRef);
     const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
     try {
@@ -1564,9 +1643,6 @@ export const deleteRole = async (instituteId: string, roleId: string): Promise<v
 };
 
 export const getRolePermissions = async (instituteId: string, roleId: string): Promise<Record<Permission, boolean> | null> => {
-    if (roleId === 'student') return { 'student:unit:view': true, 'student:grades:view': true, 'student:payments:manage': true, 'student:efsrt:view': true, 'student:jobs:view': true, 'student:jobs:apply': true } as any;
-    if (roleId === 'teacher') return { 'teacher:unit:view': true, 'teacher:efsrt:supervise': true } as any;
-    if (roleId === 'company') return { 'company:jobs:manage': true, 'company:applicants:view': true } as any;
     const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'roles', roleId));
     if (docSnap.exists()) {
         const permissions = docSnap.data().permissions;
@@ -1575,7 +1651,7 @@ export const getRolePermissions = async (instituteId: string, roleId: string): P
             permissions.forEach((p: any) => { map[p] = true; });
             return map;
         }
-        return permissions;
+        return permissions as Record<Permission, boolean>;
     }
     return null;
 }
