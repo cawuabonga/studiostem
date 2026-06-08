@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -19,6 +18,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Separator } from '../ui/separator';
 
 export function JobBoard() {
