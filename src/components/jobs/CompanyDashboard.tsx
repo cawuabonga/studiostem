@@ -14,13 +14,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
+import { Checkbox } from '../ui/checkbox';
+
+const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
 export function CompanyDashboard() {
     const { instituteId, user } = useAuth();
@@ -41,7 +44,8 @@ export function CompanyDashboard() {
         jobType: 'Trabajo (Laboral)' as any,
         contractType: 'Tiempo Completo' as any,
         salaryRange: '',
-        programIds: [] as string[]
+        programIds: [] as string[],
+        minSemester: 1
     });
 
     // Applications View
@@ -75,6 +79,10 @@ export function CompanyDashboard() {
 
     const handleCreateOffer = async () => {
         if (!instituteId || !user?.documentId || !companyProfile) return;
+        if (formData.programIds.length === 0) {
+            toast({ title: "Atención", description: "Seleccione al menos una carrera técnica objetivo.", variant: "destructive" });
+            return;
+        }
         setIsSubmitting(true);
         try {
             await addJobOffer(instituteId, {
@@ -86,7 +94,7 @@ export function CompanyDashboard() {
                 isVerified: true,
                 requirements: [], 
             });
-            toast({ title: "Oferta Publicada", description: "Los estudiantes podrán verla y postular ahora mismo." });
+            toast({ title: "Oferta Publicada", description: "Los estudiantes que cumplan los requisitos podrán verla y postular." });
             setIsDialogOpen(false);
             setFormData({ 
                 title: '', 
@@ -96,7 +104,8 @@ export function CompanyDashboard() {
                 jobType: 'Trabajo (Laboral)', 
                 contractType: 'Tiempo Completo',
                 salaryRange: '', 
-                programIds: [] 
+                programIds: [],
+                minSemester: 1
             });
             fetchData();
         } catch (error) {
@@ -115,6 +124,15 @@ export function CompanyDashboard() {
             toast({ title: "Error al cargar postulantes", variant: "destructive" });
         } finally { setLoadingApps(false); }
     };
+
+    const toggleProgram = (pId: string) => {
+        setFormData(prev => {
+            const ids = new Set(prev.programIds);
+            if (ids.has(pId)) ids.delete(pId);
+            else ids.add(pId);
+            return { ...prev, programIds: Array.from(ids) };
+        });
+    }
 
     if (loading) return <div className="space-y-6"><Skeleton className="h-12 w-1/4" /><Skeleton className="h-64 w-full" /></div>;
 
@@ -138,18 +156,16 @@ export function CompanyDashboard() {
                                 <Badge variant="secondary" className="bg-green-100 text-green-700 font-bold uppercase text-[9px]">{offer.status}</Badge>
                             </div>
                             <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
-                            <CardDescription className="text-xs font-bold flex items-center gap-1.5 mt-2">
-                                <MapPin className="h-3.5 w-3.5 text-primary" /> {offer.modality} • {offer.location}
+                            <CardDescription className="text-xs font-bold flex items-center gap-1.5 mt-2 text-primary">
+                                <GraduationCap className="h-3.5 w-3.5" /> Requisito: Semestre {offer.minSemester}+
+                            </CardDescription>
+                            <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                                <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="pb-6">
-                             <div className="flex items-center gap-2 text-[11px] font-black text-muted-foreground uppercase tracking-tighter">
-                                <DollarSign className="h-3.5 w-3.5" /> Remuneración: <span className="text-foreground">{offer.salaryRange || 'A convenir'}</span>
-                             </div>
-                        </CardContent>
                         <CardFooter className="border-t pt-4 bg-muted/20">
                             <Button variant="ghost" className="w-full font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
-                                <Users className="mr-2 h-4 w-4" /> Gestionar Candidatos
+                                <Users className="mr-2 h-4 w-4" /> Ver {applications.filter(a => a.jobId === offer.id).length || ''} Candidatos
                             </Button>
                         </CardFooter>
                     </Card>
@@ -164,7 +180,7 @@ export function CompanyDashboard() {
 
             {/* Dialog: Nueva Oferta Rediseñado */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-4xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+                <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
@@ -172,12 +188,12 @@ export function CompanyDashboard() {
                             </div>
                             <div>
                                 <DialogTitle className="text-2xl font-black uppercase tracking-tight">Publicar Vacante Laboral</DialogTitle>
-                                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los detalles técnicos y económicos del puesto.</DialogDescription>
+                                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los requisitos académicos y profesionales del puesto.</DialogDescription>
                             </div>
                         </div>
                     </DialogHeader>
                     
-                    <div className="flex flex-col lg:flex-row min-h-[500px]">
+                    <div className="flex flex-col lg:flex-row min-h-[600px]">
                         {/* Columna Principal: Descripción */}
                         <div className="flex-1 p-8 space-y-6">
                             <div className="space-y-2">
@@ -193,22 +209,50 @@ export function CompanyDashboard() {
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Detallada y Requisitos</Label>
                                 <Textarea 
-                                    rows={12} 
+                                    rows={10} 
                                     value={formData.description} 
                                     onChange={e => setFormData({...formData, description: e.target.value})} 
                                     placeholder="Describa las funciones, competencias técnicas requeridas y beneficios..."
                                     className="resize-none border-primary/10 leading-relaxed font-medium"
                                 />
                             </div>
+
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Programas de Estudio Objetivo (Filtro Match)</Label>
+                                <ScrollArea className="h-40 border rounded-xl p-4 bg-muted/20">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {programs.map(p => (
+                                            <div key={p.id} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-primary/10">
+                                                <Checkbox id={p.id} checked={formData.programIds.includes(p.id)} onCheckedChange={() => toggleProgram(p.id)} />
+                                                <Label htmlFor={p.id} className="text-xs font-bold leading-none cursor-pointer uppercase truncate">{p.name}</Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                                <p className="text-[10px] text-muted-foreground italic">La oferta solo será visible para estudiantes de las carreras seleccionadas.</p>
+                            </div>
                         </div>
 
                         {/* Columna Lateral: Configuraciones */}
-                        <div className="w-full lg:w-[320px] bg-muted/30 border-l p-8 space-y-6">
+                        <div className="w-full lg:w-[350px] bg-muted/30 border-l p-8 space-y-6">
                             <div className="space-y-4">
-                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Condiciones</h4>
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Requisitos Académicos</h4>
                                 
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold">Categoría de Vacante</Label>
+                                    <Label className="text-xs font-bold">Semestre Mínimo</Label>
+                                    <Select value={String(formData.minSemester)} onValueChange={v => setFormData({...formData, minSemester: parseInt(v)})}>
+                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {semesters.map(s => <SelectItem key={s} value={String(s)}>Desde {s}° Semestre</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[9px] text-muted-foreground">Filtro de madurez: impide que alumnos de ciclos inferiores postulen.</p>
+                                </div>
+
+                                <Separator />
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Categoría</Label>
                                     <Select value={formData.jobType} onValueChange={v => setFormData({...formData, jobType: v})}>
                                         <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -226,18 +270,6 @@ export function CompanyDashboard() {
                                             <SelectItem value="Tiempo Completo">Tiempo Completo</SelectItem>
                                             <SelectItem value="Medio Tiempo">Medio Tiempo</SelectItem>
                                             <SelectItem value="Por Proyecto">Por Proyecto</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-xs font-bold">Modalidad</Label>
-                                    <Select value={formData.modality} onValueChange={v => setFormData({...formData, modality: v})}>
-                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Presencial">Presencial</SelectItem>
-                                            <SelectItem value="Remoto">Remoto</SelectItem>
-                                            <SelectItem value="Híbrido">Híbrido</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -262,7 +294,7 @@ export function CompanyDashboard() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label className="text-xs font-bold">Dirección de Sede</Label>
+                                    <Label className="text-xs font-bold">Ubicación de Trabajo</Label>
                                     <div className="relative">
                                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input 
@@ -271,7 +303,6 @@ export function CompanyDashboard() {
                                             className="pl-9 bg-background text-xs"
                                         />
                                     </div>
-                                    <p className="text-[9px] text-muted-foreground italic">Se ha cargado automáticamente la dirección fiscal de la empresa.</p>
                                 </div>
                             </div>
                         </div>
@@ -287,7 +318,7 @@ export function CompanyDashboard() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Candidatos (Sin cambios significativos en estructura, solo pulir visual) */}
+            {/* Dialog: Candidatos */}
             <Dialog open={!!selectedOffer} onOpenChange={open => !open && setSelectedOffer(null)}>
                 <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 rounded-3xl overflow-hidden shadow-2xl">
                     <DialogHeader className="p-8 border-b bg-muted/20 shrink-0">

@@ -117,6 +117,7 @@ export interface JobOffer {
     jobType: 'Trabajo (Laboral)' | 'Prácticas (EFSRT)';
     contractType: 'Tiempo Completo' | 'Medio Tiempo' | 'Por Proyecto';
     programIds: string[]; // Carreras a las que apunta
+    minSemester: number; // Mínimo semestre requerido para postular
     status: 'Abierta' | 'Cerrada';
     createdAt: Timestamp;
     deadline?: Timestamp;

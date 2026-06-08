@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -38,8 +38,9 @@ export function JobBoard() {
         if (!instituteId || !user?.documentId) return;
         setLoading(true);
         try {
+            const studentProgramId = (user as any).programId;
             const [fetchedOffers, fetchedApps, fetchedPrograms] = await Promise.all([
-                getJobOffers(instituteId, { programId: (user as any).programId }),
+                getJobOffers(instituteId, { programId: studentProgramId }),
                 getApplicationsForStudent(instituteId, user.documentId),
                 getPrograms(instituteId)
             ]);
@@ -67,6 +68,17 @@ export function JobBoard() {
 
     const handleApply = async (offer: JobOffer) => {
         if (!instituteId || !user?.documentId) return;
+        
+        // Final sanity check before applying (client-side)
+        const isProfileComplete = (user.skills?.length || 0) >= 3 && !!user.bio;
+        const currentSem = (user as any).currentSemester || 1;
+        const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
+
+        if (!isProfileComplete || !meetsSemRequirement) {
+            toast({ title: "No puedes postular", description: "Verifica que cumplas con los requisitos del puesto y tengas tu perfil completo.", variant: "destructive" });
+            return;
+        }
+
         try {
             await applyToJob(instituteId, {
                 jobId: offer.id,
@@ -85,14 +97,33 @@ export function JobBoard() {
 
     if (loading) return <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
+    const isProfileComplete = (user?.skills?.length || 0) >= 3 && !!user?.bio;
+    const currentSem = (user as any)?.currentSemester || 1;
+
     return (
         <Tabs defaultValue="ofertas" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-muted/50 p-1 rounded-2xl">
-                <TabsTrigger value="ofertas" className="text-base font-black uppercase tracking-tight"><Search className="mr-2 h-5 w-5" /> Vacantes Disponibles</TabsTrigger>
+                <TabsTrigger value="ofertas" className="text-base font-black uppercase tracking-tight"><Search className="mr-2 h-5 w-5" /> Vacantes para Mi Perfil</TabsTrigger>
                 <TabsTrigger value="mis-postulaciones" className="text-base font-black uppercase tracking-tight"><Briefcase className="mr-2 h-5 w-5" /> Mis Postulaciones</TabsTrigger>
             </TabsList>
 
             <TabsContent value="ofertas" className="space-y-8">
+                {/* Alerta de Perfil Incompleto */}
+                {!isProfileComplete && (
+                    <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-2xl flex gap-4 items-center animate-in fade-in slide-in-from-top-4">
+                        <div className="p-3 bg-white rounded-xl shadow-sm">
+                            <UserCircle className="h-8 w-8 text-amber-500" />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-black text-amber-800 uppercase text-sm">Tu Perfil está Incompleto</h4>
+                            <p className="text-xs text-amber-700 font-medium">Para postular a vacantes oficiales, debes registrar al menos 3 habilidades y una biografía profesional en tu perfil.</p>
+                        </div>
+                        <Button variant="outline" size="sm" className="font-bold border-amber-200 text-amber-700 bg-white" asChild>
+                            <Link href="/dashboard/academic">Ir a Mi Perfil</Link>
+                        </Button>
+                    </div>
+                )}
+
                 {/* Filtros */}
                 <Card className="border-primary/10 shadow-lg rounded-3xl overflow-hidden">
                     <CardContent className="p-8">
@@ -135,6 +166,9 @@ export function JobBoard() {
                 <div className="grid gap-8 md:grid-cols-2">
                     {filteredOffers.length > 0 ? filteredOffers.map(offer => {
                         const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
+                        const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
+                        const canApply = isProfileComplete && meetsSemRequirement && !alreadyApplied;
+
                         return (
                             <Card key={offer.id} className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col border-none shadow-xl bg-white">
                                 <CardHeader className="relative pb-0 p-8">
@@ -182,6 +216,21 @@ export function JobBoard() {
                                         </div>
                                     </div>
                                     
+                                    <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <GraduationCap className="h-5 w-5 text-primary" />
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Requisito de Avance</p>
+                                                <p className="text-xs font-bold uppercase">{offer.minSemester}° Semestre o superior</p>
+                                            </div>
+                                        </div>
+                                        {meetsSemRequirement ? (
+                                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                                        ) : (
+                                            <Badge variant="destructive" className="text-[8px] font-black uppercase">Faltan {offer.minSemester - currentSem} ciclos</Badge>
+                                        )}
+                                    </div>
+
                                     <Separator className="opacity-40" />
                                     
                                     <div className="flex items-center justify-between text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -190,14 +239,32 @@ export function JobBoard() {
                                     </div>
                                 </CardContent>
                                 
-                                <CardFooter className="p-8 pt-0 mt-auto">
+                                <CardFooter className="p-8 pt-0 mt-auto flex flex-col gap-3">
+                                    {!meetsSemRequirement && (
+                                        <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-700 w-full">
+                                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                                            <p className="text-[10px] font-bold">No cumples con el semestre mínimo requerido para este puesto.</p>
+                                        </div>
+                                    )}
+                                    
+                                    {!isProfileComplete && (
+                                        <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 w-full">
+                                            <Info className="h-4 w-4 shrink-0" />
+                                            <p className="text-[10px] font-bold">Debes completar tus habilidades y biografía en tu perfil.</p>
+                                        </div>
+                                    )}
+
                                     {alreadyApplied ? (
                                         <Button className="w-full h-14 bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-2xl font-black uppercase tracking-widest" variant="outline" disabled>
                                             <CheckCircle2 className="mr-2 h-5 w-5" /> POSTULACIÓN ENVIADA
                                         </Button>
                                     ) : (
-                                        <Button className="w-full h-14 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all" onClick={() => handleApply(offer)}>
-                                            <Send className="mr-2 h-5 w-5" /> Postular con Perfil STEM
+                                        <Button 
+                                            className="w-full h-14 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all" 
+                                            onClick={() => handleApply(offer)}
+                                            disabled={!canApply}
+                                        >
+                                            <Send className="mr-2 h-5 w-5" /> {canApply ? 'Postular con Perfil STEM' : 'Postulación Bloqueada'}
                                         </Button>
                                     )}
                                 </CardFooter>
