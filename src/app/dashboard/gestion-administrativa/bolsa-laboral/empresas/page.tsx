@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Building, Trash2, Globe, Mail, Phone, Loader2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 export default function ManageCompaniesPage() {
     const { instituteId } = useAuth();
