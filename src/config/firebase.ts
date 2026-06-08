@@ -494,7 +494,7 @@ export const addStaffProfile = async (instituteId: string, data: Omit<StaffProfi
     if (docSnap.exists()) {
         throw new Error(`Un perfil con el documento ${data.documentId} ya existe.`);
     }
-    await setDoc(profileRef, { ...data, linkedUserUid: null });
+    await setDoc(profileRef, { ...data, instituteId, linkedUserUid: null });
 };
 
 export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {
@@ -527,7 +527,7 @@ export const bulkAddStaff = async (instituteId: string, staffList: Omit<StaffPro
     const staffCol = getSubCollectionRef(instituteId, 'staffProfiles');
     staffList.forEach(staffData => {
         const docRef = doc(staffCol, staffData.documentId);
-        batch.set(docRef, staffData);
+        batch.set(docRef, { ...staffData, instituteId });
     });
     await batch.commit();
 };
@@ -570,6 +570,7 @@ export const addStudentProfile = async (instituteId: string, data: Omit<StudentP
     }
     const profileData: Omit<StudentProfile, 'id'> = {
         ...data,
+        instituteId,
         fullName: `${data.firstName} ${data.lastName}`,
         linkedUserUid: null,
     };
@@ -674,6 +675,7 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
         const docRef = doc(studentsCol, studentData.documentId);
         const profileData: Omit<StudentProfile, 'id'> = {
             ...studentData,
+            instituteId,
             fullName: `${studentData.firstName} ${studentData.lastName}`,
             linkedUserUid: null,
         };
@@ -2165,7 +2167,7 @@ export const getCompanyProfiles = async (instituteId: string): Promise<CompanyPr
 
 export const addCompanyProfile = async (instituteId: string, data: Omit<CompanyProfile, 'linkedUserUid'>) => {
     const profileRef = doc(db, 'institutes', instituteId, 'companyProfiles', data.documentId);
-    await setDoc(profileRef, { ...data, linkedUserUid: null });
+    await setDoc(profileRef, { ...data, instituteId, linkedUserUid: null });
 };
 
 export const updateCompanyProfile = async (instituteId: string, ruc: string, data: Partial<CompanyProfile>) => {

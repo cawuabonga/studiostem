@@ -58,6 +58,7 @@ export default function ManageCompaniesPage() {
         try {
             await addCompanyProfile(instituteId, {
                 ...formData,
+                instituteId, // Inyectamos explícitamente el instituteId
                 role: 'Company',
                 roleId: 'company'
             });
