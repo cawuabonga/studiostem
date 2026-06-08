@@ -204,6 +204,7 @@ export interface Institute {
   logoUrl?: string;
   primaryColor?: string;
   publicProfile?: InstitutePublicProfile;
+  planId?: string; // ID del plan asignado
 }
 
 export interface InstitutePublicProfile {
@@ -213,6 +214,17 @@ export interface InstitutePublicProfile {
     contactAddress?: string;
     contactPhone?: string;
     contactEmail?: string;
+}
+
+export interface Plan {
+    id: string;
+    name: string;
+    description: string;
+    price: number;
+    billingCycle: 'mensual' | 'anual';
+    features: string[];
+    isActive: boolean;
+    createdAt: Timestamp;
 }
 
 export interface News {
@@ -376,6 +388,7 @@ export type Permission =
   | 'superadmin:users:manage'
   | 'superadmin:design:manage'
   | 'superadmin:roles:manage'
+  | 'superadmin:plans:manage'
   | 'teacher:unit:view'
   | 'teacher:efsrt:supervise'
   | 'student:unit:view'
@@ -479,6 +492,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'superadmin:users:manage', label: 'Gestionar Todos los Usuarios' },
             { id: 'superadmin:design:manage', label: 'Gestionar Diseño del Login' },
             { id: 'superadmin:roles:manage', label: 'Gestionar Roles y Permisos' },
+            { id: 'superadmin:plans:manage', label: 'Gestionar Planes de Servicio' },
         ],
     },
 ];

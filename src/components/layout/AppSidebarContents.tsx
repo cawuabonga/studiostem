@@ -15,13 +15,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { SignOutButton } from '@/components/auth/SignOutButton';
-import { Home, Users, Building2, Inbox, GraduationCap, CreditCard, ShieldCheck, ImageIcon, BookCopy, Percent, Fingerprint, FolderKanban, CalendarClock, LayoutDashboard, Pencil, Package, MapPin, Cpu, BriefcaseBusiness } from 'lucide-center';
 import { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
 
-// Using icons directly from lucide-react (correct library)
+// Using icons directly from lucide-react
 import { 
   Home as HomeIcon, 
   Users as UsersIcon, 
@@ -41,7 +40,8 @@ import {
   Package as PackageIcon, 
   MapPin as MapPinIcon, 
   Cpu as CpuIcon, 
-  BriefcaseBusiness as BriefcaseBusinessIcon 
+  BriefcaseBusiness as BriefcaseBusinessIcon,
+  CreditCard as PlansIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -57,6 +57,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2Icon, permission: 'superadmin:institute:manage' },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: UsersIcon, permission: 'superadmin:users:manage' },
     { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/manage-plans', label: 'Gestionar Planes', icon: PlansIcon, permission: 'superadmin:plans:manage' },
     { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: CpuIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: GalleryIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanbanIcon, permission: 'superadmin:institute:manage' },

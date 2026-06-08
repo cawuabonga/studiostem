@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -43,6 +43,34 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
+};
+
+// --- Plans Functions ---
+
+export const getPlans = async (): Promise<Plan[]> => {
+    const plansCol = collection(db, 'config', 'platform', 'plans');
+    const q = query(plansCol, orderBy("price", "asc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Plan));
+};
+
+export const addPlan = async (data: Omit<Plan, 'id' | 'createdAt'>): Promise<string> => {
+    const plansCol = collection(db, 'config', 'platform', 'plans');
+    const docRef = await addDoc(plansCol, {
+        ...data,
+        createdAt: Timestamp.now()
+    });
+    return docRef.id;
+};
+
+export const updatePlan = async (planId: string, data: Partial<Plan>): Promise<void> => {
+    const planRef = doc(db, 'config', 'platform', 'plans', planId);
+    await updateDoc(planRef, data);
+};
+
+export const deletePlan = async (planId: string): Promise<void> => {
+    const planRef = doc(db, 'config', 'platform', 'plans', planId);
+    await deleteDoc(planRef);
 };
 
 export const getAIConfig = async (): Promise<AIConfig | null> => {
@@ -306,7 +334,7 @@ export const setActiveLoginImage = async (imageUrl: string): Promise<void> => {
 };
 
 export const deleteLoginImage = async (image: LoginImage): Promise<void> => {
-    const imageDocRef = doc(db, 'config', 'loginDesign', 'images', image.id);
+    const imageDocRef = doc(db, 'config/loginDesign/images', image.id);
     await deleteDoc(imageDocRef);
     const storageRef = ref(firebaseStorage, `loginImages/${image.id}`);
     try {
