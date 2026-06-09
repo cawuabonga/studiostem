@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -184,7 +185,7 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
         <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
           <div className="flex items-center gap-4">
              <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
@@ -201,99 +202,101 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1 p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* COLUMNA IZQUIERDA: Datos Básicos */}
-                    <div className="lg:col-span-4 space-y-6">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Información Comercial</h3>
-                        
-                        <FormField control={form.control} name="name" render={({ field }) => (
-                            <FormItem><FormLabel className="font-bold">Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Plan Institucional Pro" {...field} className="h-11" /></FormControl><FormMessage /></FormItem>
-                        )} />
+            <ScrollArea className="flex-1">
+                <div className="p-8 space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                        {/* COLUMNA IZQUIERDA: Datos Básicos */}
+                        <div className="lg:col-span-4 space-y-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Información Comercial</h3>
+                            
+                            <FormField control={form.control} name="name" render={({ field }) => (
+                                <FormItem><FormLabel className="font-bold">Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Plan Institucional Pro" {...field} className="h-11" /></FormControl><FormMessage /></FormItem>
+                            )} />
 
-                        <FormField control={form.control} name="price" render={({ field }) => (
-                            <FormItem><FormLabel className="font-bold">Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-11 font-mono" /></FormControl><FormMessage /></FormItem>
-                        )} />
+                            <FormField control={form.control} name="price" render={({ field }) => (
+                                <FormItem><FormLabel className="font-bold">Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-11 font-mono" /></FormControl><FormMessage /></FormItem>
+                            )} />
 
-                        <FormField control={form.control} name="billingCycle" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel className="font-bold">Frecuencia de Cobro</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <FormControl><SelectTrigger className="h-11"><SelectValue /></SelectTrigger></FormControl>
-                                    <SelectContent><SelectItem value="mensual">Facturación Mensual</SelectItem><SelectItem value="anual">Suscripción Anual</SelectItem></SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
+                            <FormField control={form.control} name="billingCycle" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="font-bold">Frecuencia de Cobro</FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl><SelectTrigger className="h-11"><SelectValue /></SelectTrigger></FormControl>
+                                        <SelectContent><SelectItem value="mensual">Facturación Mensual</SelectItem><SelectItem value="anual">Suscripción Anual</SelectItem></SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
 
-                        <FormField control={form.control} name="description" render={({ field }) => (
-                            <FormItem><FormLabel className="font-bold">Resumen de Ventas</FormLabel><FormControl><Textarea placeholder="Describe el público objetivo de este plan..." {...field} className="resize-none h-24 text-xs" /></FormControl><FormMessage /></FormItem>
-                        )} />
+                            <FormField control={form.control} name="description" render={({ field }) => (
+                                <FormItem><FormLabel className="font-bold">Resumen de Ventas</FormLabel><FormControl><Textarea placeholder="Describe el público objetivo de este plan..." {...field} className="resize-none h-24 text-xs" /></FormControl><FormMessage /></FormItem>
+                            )} />
 
-                        <FormField control={form.control} name="isActive" render={({ field }) => (
-                            <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-muted/20">
-                                <div className="space-y-0.5">
-                                    <FormLabel className="font-bold text-xs uppercase">Visibilidad</FormLabel>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-black">Plan Publicado</p>
-                                </div>
-                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                            </FormItem>
-                        )} />
-                    </div>
-
-                    {/* COLUMNA DERECHA: Configuración de Módulos (Features) */}
-                    <div className="lg:col-span-8 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Configuración de Módulos Incluidos</h3>
-                            <Badge variant="outline" className="font-black text-[10px] uppercase">
-                                {Object.values(selectedModules).filter(m => m.included).length} Seleccionados
-                            </Badge>
+                            <FormField control={form.control} name="isActive" render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-muted/20">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="font-bold text-xs uppercase">Visibilidad</FormLabel>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-black">Plan Publicado</p>
+                                    </div>
+                                    <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                </FormItem>
+                            )} />
                         </div>
-                        
-                        <div className="grid grid-cols-1 gap-3">
-                            {PLATFORM_MODULES.map(mod => {
-                                const isSelected = selectedModules[mod.id]?.included;
-                                return (
-                                    <div key={mod.id} className={cn(
-                                        "p-4 rounded-2xl border transition-all flex flex-col gap-3 group",
-                                        isSelected ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 opacity-70 grayscale-[0.5]"
-                                    )}>
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <Checkbox 
-                                                    id={mod.id} 
-                                                    checked={isSelected} 
-                                                    onCheckedChange={() => toggleModule(mod.id)}
-                                                    className="h-5 w-5 rounded-md"
-                                                />
-                                                <Label htmlFor={mod.id} className="text-sm font-black uppercase tracking-tight cursor-pointer">
-                                                    {mod.name}
-                                                </Label>
+
+                        {/* COLUMNA DERECHA: Configuración de Módulos (Features) */}
+                        <div className="lg:col-span-8 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Configuración de Módulos Incluidos</h3>
+                                <Badge variant="outline" className="font-black text-[10px] uppercase">
+                                    {Object.values(selectedModules).filter(m => m.included).length} Seleccionados
+                                </Badge>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-3">
+                                {PLATFORM_MODULES.map(mod => {
+                                    const isSelected = selectedModules[mod.id]?.included;
+                                    return (
+                                        <div key={mod.id} className={cn(
+                                            "p-4 rounded-2xl border transition-all flex flex-col gap-3 group",
+                                            isSelected ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 opacity-70 grayscale-[0.5]"
+                                        )}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <Checkbox 
+                                                        id={mod.id} 
+                                                        checked={isSelected} 
+                                                        onCheckedChange={() => toggleModule(mod.id)}
+                                                        className="h-5 w-5 rounded-md"
+                                                    />
+                                                    <Label htmlFor={mod.id} className="text-sm font-black uppercase tracking-tight cursor-pointer">
+                                                        {mod.name}
+                                                    </Label>
+                                                </div>
+                                                {isSelected ? (
+                                                    <Badge className="bg-green-100 text-green-700 border-none font-black text-[9px] uppercase tracking-tighter">Incluido en Plan</Badge>
+                                                ) : (
+                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-40">Desactivado</span>
+                                                )}
                                             </div>
-                                            {isSelected ? (
-                                                <Badge className="bg-green-100 text-green-700 border-none font-black text-[9px] uppercase tracking-tighter">Incluido en Plan</Badge>
-                                            ) : (
-                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-40">Desactivado</span>
+
+                                            {isSelected && (
+                                                <div className="animate-in slide-in-from-top-2 duration-300">
+                                                    <div className="relative">
+                                                        <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                        <Input 
+                                                            value={selectedModules[mod.id].description} 
+                                                            onChange={e => updateModuleDesc(mod.id, e.target.value)}
+                                                            placeholder="Detalle comercial o límite (ej: Hasta 500 alumnos)"
+                                                            className="h-10 pl-9 text-xs border-primary/10 bg-white"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[9px] text-muted-foreground mt-2 ml-1 italic">Este texto aparecerá en las tarjetas de precios para los clientes.</p>
+                                                </div>
                                             )}
                                         </div>
-
-                                        {isSelected && (
-                                            <div className="animate-in slide-in-from-top-2 duration-300">
-                                                <div className="relative">
-                                                    <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                                                    <Input 
-                                                        value={selectedModules[mod.id].description} 
-                                                        onChange={e => updateModuleDesc(mod.id, e.target.value)}
-                                                        placeholder="Detalle comercial o límite (ej: Hasta 500 alumnos)"
-                                                        className="h-10 pl-9 text-xs border-primary/10 bg-white"
-                                                    />
-                                                </div>
-                                                <p className="text-[9px] text-muted-foreground mt-2 ml-1 italic">Este texto aparecerá en las tarjetas de precios para los clientes.</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
