@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,26 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { addPlan, updatePlan } from '@/config/firebase';
 import type { Plan } from '@/types';
-import { Loader2, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Loader2, CheckCircle2, ListChecks, Info } from 'lucide-react';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { ScrollArea } from '../ui/scroll-area';
+
+// Listado maestro de módulos de la plataforma para gestión automática
+const PLATFORM_MODULES = [
+    { id: 'lms_core', name: 'LMS Core', defaultDesc: 'Planificación, Materiales y Tareas.' },
+    { id: 'aula_virtual', name: 'Aula Virtual STEM', defaultDesc: 'Videoclases en vivo (Jitsi/8x8).' },
+    { id: 'gestion_academica', name: 'Gestión Académica', defaultDesc: 'Matrículas, Unidades y Programas.' },
+    { id: 'notas_asistencia', name: 'Evaluación y Asistencia', defaultDesc: 'Registro de notas y control de asistencia manual.' },
+    { id: 'iot_rfid', name: 'Integración IoT (RFID)', defaultDesc: 'Control de acceso automatizado con hardware.' },
+    { id: 'pagos_tesoreria', name: 'Tesorería y Pagos', defaultDesc: 'Gestión de tasas y validación de vouchers.' },
+    { id: 'bolsa_laboral', name: 'Bolsa de Trabajo', defaultDesc: 'Conexión con empresas y postulaciones.' },
+    { id: 'infraestructura', name: 'Infraestructura e Inventario', defaultDesc: 'Gestión de ambientes y activos fijos.' },
+    { id: 'abastecimiento', name: 'Abastecimiento y Almacén', defaultDesc: 'Catálogo de insumos y PECOSAs.' },
+    { id: 'ia_genkit', name: 'Inteligencia Artificial', defaultDesc: 'Generación de contenidos con Google/Ollama.' },
+    { id: 'reportes_analytics', name: 'Reportes y Analítica', defaultDesc: 'Gráficos avanzados y reportes exportables.' },
+];
 
 const planSchema = z.object({
   name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres.'),
@@ -31,7 +50,6 @@ const planSchema = z.object({
   price: z.coerce.number().min(0, 'El precio no puede ser negativo.'),
   billingCycle: z.enum(['mensual', 'anual']),
   isActive: z.boolean().default(true),
-  features: z.array(z.object({ value: z.string().min(1, 'La característica no puede estar vacía.') })),
 });
 
 type FormValues = z.infer<typeof planSchema>;
@@ -45,6 +63,10 @@ interface AddPlanDialogProps {
 export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogProps) {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Estado local para los módulos seleccionados y sus descripciones personalizadas
+  const [selectedModules, setSelectedModules] = useState<Record<string, { included: boolean, description: string }>>({});
+
   const isEditMode = !!existingPlan;
 
   const form = useForm<FormValues>({
@@ -55,13 +77,7 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
       price: 0,
       billingCycle: 'mensual',
       isActive: true,
-      features: [{ value: '' }],
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "features"
   });
 
   useEffect(() => {
@@ -73,8 +89,23 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
           price: existingPlan.price,
           billingCycle: existingPlan.billingCycle,
           isActive: existingPlan.isActive,
-          features: existingPlan.features.map(f => ({ value: f })),
         });
+
+        // Reconstruir la selección de módulos a partir del array de strings 'features'
+        const initialModules: Record<string, { included: boolean, description: string }> = {};
+        PLATFORM_MODULES.forEach(mod => {
+            const foundFeature = existingPlan.features.find(f => f.startsWith(`${mod.name}:`));
+            if (foundFeature) {
+                initialModules[mod.id] = {
+                    included: true,
+                    description: foundFeature.split(':')[1]?.trim() || mod.defaultDesc
+                };
+            } else {
+                initialModules[mod.id] = { included: false, description: mod.defaultDesc };
+            }
+        });
+        setSelectedModules(initialModules);
+
       } else {
         form.reset({
           name: '',
@@ -82,17 +113,56 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
           price: 0,
           billingCycle: 'mensual',
           isActive: true,
-          features: [{ value: '' }],
         });
+        
+        // Inicializar con todos los módulos desactivados
+        const initialModules: Record<string, { included: boolean, description: string }> = {};
+        PLATFORM_MODULES.forEach(mod => {
+            initialModules[mod.id] = { included: false, description: mod.defaultDesc };
+        });
+        setSelectedModules(initialModules);
       }
     }
   }, [isOpen, existingPlan, isEditMode, form]);
 
+  const toggleModule = (moduleId: string) => {
+    setSelectedModules(prev => ({
+        ...prev,
+        [moduleId]: { 
+            ...prev[moduleId], 
+            included: !prev[moduleId].included 
+        }
+    }));
+  };
+
+  const updateModuleDesc = (moduleId: string, desc: string) => {
+    setSelectedModules(prev => ({
+        ...prev,
+        [moduleId]: { 
+            ...prev[moduleId], 
+            description: desc 
+        }
+    }));
+  };
+
   const onSubmit = async (data: FormValues) => {
+    // Validar que haya al menos un módulo seleccionado
+    const selectedCount = Object.values(selectedModules).filter(m => m.included).length;
+    if (selectedCount === 0) {
+        toast({ title: "Plan Incompleto", description: "Selecciona al menos un módulo para incluir en este plan.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
+    
+    // Transformar los módulos seleccionados en el formato "Nombre: Descripción"
+    const featuresArray = PLATFORM_MODULES
+        .filter(mod => selectedModules[mod.id]?.included)
+        .map(mod => `${mod.name}: ${selectedModules[mod.id].description}`);
+
     const planData = {
         ...data,
-        features: data.features.map(f => f.value)
+        features: featuresArray
     };
 
     try {
@@ -113,82 +183,126 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Editar Plan de Servicio' : 'Nuevo Plan LMS'}</DialogTitle>
-          <DialogDescription>Define el precio, ciclo y características incluidas en este paquete.</DialogDescription>
+      <DialogContent className="max-w-4xl max-h-[95vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+        <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
+          <div className="flex items-center gap-4">
+             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
+                <ListChecks className="h-6 w-6 text-accent" />
+             </div>
+             <div>
+                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                    {isEditMode ? 'Editar Plan de Servicio' : 'Diseñar Nuevo Plan SaaS'}
+                </DialogTitle>
+                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los módulos incluidos y los límites comerciales.</DialogDescription>
+             </div>
+          </div>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 overflow-y-auto flex-1 pr-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Premium Institucional" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="billingCycle" render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Ciclo de Facturación</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                            <SelectContent><SelectItem value="mensual">Mensual</SelectItem><SelectItem value="anual">Anual</SelectItem></SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )} />
-            </div>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col">
+            <ScrollArea className="flex-1 p-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* COLUMNA IZQUIERDA: Datos Básicos */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Información Comercial</h3>
+                        
+                        <FormField control={form.control} name="name" render={({ field }) => (
+                            <FormItem><FormLabel className="font-bold">Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Plan Institucional Pro" {...field} className="h-11" /></FormControl><FormMessage /></FormItem>
+                        )} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField control={form.control} name="price" render={({ field }) => (
-                    <FormItem><FormLabel>Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                 <FormField control={form.control} name="isActive" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm bg-muted/20">
-                        <div className="space-y-0.5">
-                            <FormLabel>Estado del Plan</FormLabel>
-                            <p className="text-[10px] text-muted-foreground uppercase font-bold">Visible para Institutos</p>
+                        <FormField control={form.control} name="price" render={({ field }) => (
+                            <FormItem><FormLabel className="font-bold">Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-11 font-mono" /></FormControl><FormMessage /></FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="billingCycle" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="font-bold">Frecuencia de Cobro</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger className="h-11"><SelectValue /></SelectTrigger></FormControl>
+                                    <SelectContent><SelectItem value="mensual">Facturación Mensual</SelectItem><SelectItem value="anual">Suscripción Anual</SelectItem></SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="description" render={({ field }) => (
+                            <FormItem><FormLabel className="font-bold">Resumen de Ventas</FormLabel><FormControl><Textarea placeholder="Describe el público objetivo de este plan..." {...field} className="resize-none h-24 text-xs" /></FormControl><FormMessage /></FormItem>
+                        )} />
+
+                        <FormField control={form.control} name="isActive" render={({ field }) => (
+                            <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-muted/20">
+                                <div className="space-y-0.5">
+                                    <FormLabel className="font-bold text-xs uppercase">Visibilidad</FormLabel>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-black">Plan Publicado</p>
+                                </div>
+                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                            </FormItem>
+                        )} />
+                    </div>
+
+                    {/* COLUMNA DERECHA: Configuración de Módulos (Features) */}
+                    <div className="lg:col-span-8 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Configuración de Módulos Incluidos</h3>
+                            <Badge variant="outline" className="font-black text-[10px] uppercase">
+                                {Object.values(selectedModules).filter(m => m.included).length} Seleccionados
+                            </Badge>
                         </div>
-                        <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    </FormItem>
-                )} />
-            </div>
+                        
+                        <div className="grid grid-cols-1 gap-3">
+                            {PLATFORM_MODULES.map(mod => {
+                                const isSelected = selectedModules[mod.id]?.included;
+                                return (
+                                    <div key={mod.id} className={cn(
+                                        "p-4 rounded-2xl border transition-all flex flex-col gap-3 group",
+                                        isSelected ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 opacity-70 grayscale-[0.5]"
+                                    )}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Checkbox 
+                                                    id={mod.id} 
+                                                    checked={isSelected} 
+                                                    onCheckedChange={() => toggleModule(mod.id)}
+                                                    className="h-5 w-5 rounded-md"
+                                                />
+                                                <Label htmlFor={mod.id} className="text-sm font-black uppercase tracking-tight cursor-pointer">
+                                                    {mod.name}
+                                                </Label>
+                                            </div>
+                                            {isSelected ? (
+                                                <Badge className="bg-green-100 text-green-700 border-none font-black text-[9px] uppercase tracking-tighter">Incluido en Plan</Badge>
+                                            ) : (
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-40">Desactivado</span>
+                                            )}
+                                        </div>
 
-            <FormField control={form.control} name="description" render={({ field }) => (
-                <FormItem><FormLabel>Descripción Breve</FormLabel><FormControl><Textarea placeholder="Resume el valor de este plan..." {...field} /></FormControl><FormMessage /></FormItem>
-            )} />
-
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <h3 className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4" /> Características Incluidas
-                    </h3>
-                    <Button type="button" size="sm" variant="outline" onClick={() => append({ value: '' })}>
-                        <Plus className="mr-1 h-3 w-3" /> Añadir
-                    </Button>
-                </div>
-                <div className="space-y-2">
-                    {fields.map((field, index) => (
-                        <div key={field.id} className="flex gap-2">
-                            <FormField
-                                control={form.control}
-                                name={`features.${index}.value`}
-                                render={({ field }) => (
-                                    <FormItem className="flex-1">
-                                        <FormControl><Input placeholder="Ej: Hasta 500 alumnos matriculados" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="button" variant="ghost" size="icon" className="text-destructive" onClick={() => remove(index)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+                                        {isSelected && (
+                                            <div className="animate-in slide-in-from-top-2 duration-300">
+                                                <div className="relative">
+                                                    <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                                                    <Input 
+                                                        value={selectedModules[mod.id].description} 
+                                                        onChange={e => updateModuleDesc(mod.id, e.target.value)}
+                                                        placeholder="Detalle comercial o límite (ej: Hasta 500 alumnos)"
+                                                        className="h-10 pl-9 text-xs border-primary/10 bg-white"
+                                                    />
+                                                </div>
+                                                <p className="text-[9px] text-muted-foreground mt-2 ml-1 italic">Este texto aparecerá en las tarjetas de precios para los clientes.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ))}
+                    </div>
                 </div>
-            </div>
+            </ScrollArea>
 
-             <DialogFooter className="sticky bottom-0 bg-background pt-4 border-t">
-              <DialogClose asChild><Button type="button" variant="ghost">Cancelar</Button></DialogClose>
-              <Button type="submit" disabled={isSubmitting} className="font-black px-8">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'GUARDAR PLAN'}
+            <DialogFooter className="p-8 bg-muted/20 border-t shrink-0">
+              <DialogClose asChild><Button type="button" variant="ghost" className="font-bold h-12 px-8">CANCELAR</Button></DialogClose>
+              <Button type="submit" disabled={isSubmitting} className="font-black h-12 px-12 shadow-xl shadow-primary/20">
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                {isEditMode ? 'ACTUALIZAR PLAN OFICIAL' : 'REGISTRAR PLAN DE SERVICIO'}
               </Button>
             </DialogFooter>
           </form>
