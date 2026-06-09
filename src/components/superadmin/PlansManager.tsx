@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -11,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Edit, Trash2, CheckCircle2, Rocket, Zap, Crown } from 'lucide-react';
 import { AddPlanDialog } from './AddPlanDialog';
+import { Separator } from '../ui/separator';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -26,7 +26,7 @@ import {
 
 export function PlansManager() {
     const { toast } = useToast();
-    const [plans, setPlans] = useState<Plan[]>([]);
+    const [plans, setPosts] = useState<Plan[]>([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -35,7 +35,7 @@ export function PlansManager() {
         setLoading(true);
         try {
             const fetched = await getPlans();
-            setPlans(fetched);
+            setPosts(fetched);
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar los planes.", variant: "destructive" });
         } finally {
