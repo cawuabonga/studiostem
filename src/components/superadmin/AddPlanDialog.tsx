@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -28,6 +27,8 @@ import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
 import { ScrollArea } from '../ui/scroll-area';
+import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
 // Listado maestro de módulos de la plataforma para gestión automática
 const PLATFORM_MODULES = [
