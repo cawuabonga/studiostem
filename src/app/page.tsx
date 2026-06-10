@@ -1,3 +1,4 @@
+
 "use client";
 
 import AuthPageLayout from "@/components/layout/AuthPageLayout";
@@ -11,8 +12,19 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (loading) return;
+
+    if (user) {
       router.push('/dashboard');
+    } else {
+        // Redirección inteligente si el navegador recuerda un instituto
+        // Esto asegura que si el usuario entra a la raíz, vea el branding de su instituto inmediatamente
+        if (typeof window !== 'undefined') {
+            const stickyId = localStorage.getItem('last_institute_id');
+            if (stickyId) {
+                router.replace(`/login/${stickyId}`);
+            }
+        }
     }
   }, [user, loading, router]);
   

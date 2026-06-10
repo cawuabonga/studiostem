@@ -40,6 +40,7 @@ export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
           }
       }
       
+      // Priorizamos la redirección institucional si no se pasó una ruta específica
       const target = redirectTo || finalRedirect;
       if (pathname !== target) {
           router.push(target);

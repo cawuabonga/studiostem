@@ -242,16 +242,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOutUser = async () => {
     try {
-      // Determinamos a dónde enviar al usuario ANTES de cerrar la sesión
-      let redirectPath = '/';
+      // Importante: Capturar los datos necesarios ANTES de cerrar sesión
+      // porque el objeto 'user' se volverá inaccesible inmediatamente
       const currentInstId = user?.instituteId || instituteId;
+      const isSuperAdmin = user?.role === 'SuperAdmin';
+
+      await firebaseSignOut(auth);
       
-      // Si el usuario es de un instituto, lo devolvemos a su login personalizado
-      if (currentInstId && user?.role !== 'SuperAdmin') {
+      let redirectPath = '/';
+      // Si el usuario pertenece a un instituto, lo devolvemos a su login personalizado
+      if (currentInstId && !isSuperAdmin) {
           redirectPath = `/login/${currentInstId}`;
       }
 
-      await firebaseSignOut(auth);
       router.push(redirectPath);
     } catch (error: any) {
       toast({ title: 'Fallo al Cerrar Sesión', description: 'No se pudo cerrar la sesión correctamente.', variant: 'destructive' });

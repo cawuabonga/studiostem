@@ -15,12 +15,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    if (!user) {
-        router.push('/');
-        return;
-    }
-
-    // Redirect to institute selection only for Admins who don't have an institute set yet.
+    // La protección de ruta ahora la maneja DashboardMainLayout a través del hook useAuthRedirect
+    // solo manejamos la redirección a selección de instituto para Admins sin sede.
     if (user && !instituteId && user.role === 'Admin') {
        router.push('/dashboard/institute');
     }

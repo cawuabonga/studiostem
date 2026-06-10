@@ -16,7 +16,8 @@ export default function DashboardMainLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuthRedirect({ protect: true, redirectTo: '/' });
+  // El hook useAuthRedirect protege la ruta y usa el 'sticky branding' para redirigir si no hay sesión
+  const { user, loading } = useAuthRedirect({ protect: true });
   const { institute } = useAuth();
 
   if (loading || !user) {
