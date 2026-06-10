@@ -10,11 +10,11 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.5cm;
+    margin: 1.2cm;
   }
 
   /* Reset radical para evitar que contenedores de React/Next corten el flujo */
-  html, body, #root, #__next, main, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
+  html, body, #root, #__next, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
     background: white !important;
     color: black !important;
     font-family: 'Lato', serif !important;
@@ -38,7 +38,8 @@
   .sidebar-container, 
   .page-header,
   .screen-only,
-  button {
+  button,
+  [role="dialog"] > button {
     display: none !important;
   }
 
@@ -50,9 +51,11 @@
   .printable-area {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
+    overflow: visible !important;
   }
 
   /* Tipografía formal */
@@ -69,6 +72,12 @@
     border-collapse: collapse !important;
     margin-bottom: 1rem;
     table-layout: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 
   th {
@@ -89,13 +98,12 @@
     color: black !important;
   }
 
-  /* Saltos de página */
+  /* Saltos de página controlados */
   .page-break {
     break-after: page !important;
     page-break-after: always !important;
     display: block !important;
     clear: both !important;
-    position: relative !important;
   }
 
   .no-print-break {

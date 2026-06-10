@@ -94,7 +94,7 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType, ins
               data-ai-hint="university campus"
             />
             {/* Capa de gradiente para legibilidad */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
             
             {/* Branding Central (Se muestra si es institucional o como branding de plataforma) */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white z-10">
