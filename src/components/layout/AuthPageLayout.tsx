@@ -7,7 +7,7 @@ import { cn, hslToHex } from '@/lib/utils';
 import { Skeleton } from '../ui/skeleton';
 import Image from 'next/image';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, GraduationCap } from 'lucide-react';
 
 const DEFAULT_LOGIN_IMAGE = "https://picsum.photos/seed/education/800/1200";
 
@@ -89,31 +89,45 @@ const AuthPageLayout: React.FC<AuthPageLayoutProps> = ({ children, formType, ins
               src={backgroundImageUrl}
               alt="Fondo Institucional"
               fill
-              className="object-cover opacity-40 mix-blend-overlay"
+              className="object-cover opacity-50"
               priority
               data-ai-hint="university campus"
             />
             {/* Capa de gradiente para legibilidad */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/20" />
             
-            {/* Información del Instituto (Solo si es login institucional) */}
-            {isInstitutional && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white z-10">
-                    <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/20 shadow-2xl animate-in zoom-in-95 duration-700">
-                        {targetInstitute.logoUrl && (
-                            <div className="relative h-32 w-32 mx-auto mb-6">
-                                <Image src={targetInstitute.logoUrl} alt="Logo Inst" fill className="object-contain" />
+            {/* Branding Central (Se muestra si es institucional o como branding de plataforma) */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-white z-10">
+                <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2.5rem] border border-white/20 shadow-2xl animate-in zoom-in-95 duration-700">
+                    {isInstitutional ? (
+                        <>
+                            {targetInstitute.logoUrl && (
+                                <div className="relative h-32 w-32 mx-auto mb-6">
+                                    <Image src={targetInstitute.logoUrl} alt="Logo Inst" fill className="object-contain" />
+                                </div>
+                            )}
+                            <h2 className="text-2xl font-black uppercase tracking-tight leading-tight">
+                                Portal de Acceso
+                            </h2>
+                            <p className="mt-2 text-white/80 font-bold uppercase tracking-widest text-sm">
+                                {targetInstitute.name}
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="bg-white/20 p-6 rounded-full mb-6 mx-auto w-fit">
+                                <GraduationCap className="h-16 w-16 text-white" />
                             </div>
-                        )}
-                        <h2 className="text-2xl font-black uppercase tracking-tight leading-tight">
-                            Portal de Acceso
-                        </h2>
-                        <p className="mt-2 text-white/80 font-bold uppercase tracking-widest text-sm">
-                            {targetInstitute.name}
-                        </p>
-                    </div>
+                            <h2 className="text-3xl font-black uppercase tracking-tighter leading-tight">
+                                {design?.title || "STEM V2"}
+                            </h2>
+                            <p className="mt-2 text-white/80 font-bold uppercase tracking-widest text-xs">
+                                PLATAFORMA DE GESTIÓN EDUCATIVA
+                            </p>
+                        </>
+                    )}
                 </div>
-            )}
+            </div>
 
             {/* Overlay de información global (Solo año si existe) */}
             {design?.creationYear && (
