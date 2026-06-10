@@ -8,9 +8,16 @@ import React from 'react';
 interface SignOutButtonProps extends ButtonProps {
   showIcon?: boolean;
   buttonText?: string;
+  children?: React.ReactNode;
 }
 
-export const SignOutButton: React.FC<SignOutButtonProps> = ({ className, showIcon = true, buttonText = "Cerrar Sesión", ...props }) => {
+export const SignOutButton: React.FC<SignOutButtonProps> = ({ 
+  className, 
+  showIcon = true, 
+  buttonText, 
+  children,
+  ...props 
+}) => {
   const { signOutUser, loading } = useAuth();
 
   return (
@@ -22,7 +29,7 @@ export const SignOutButton: React.FC<SignOutButtonProps> = ({ className, showIco
       {...props}
     >
       {showIcon && <LogOut className="mr-2 h-4 w-4" />}
-      {buttonText}
+      {children || buttonText || "Cerrar Sesión"}
     </Button>
   );
 };
