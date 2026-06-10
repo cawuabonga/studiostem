@@ -7,8 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface UseAuthRedirectOptions {
   redirectTo?: string;
-  protect?: boolean; // If true, protects the route, requires authentication
-  redirectIfAuthenticated?: boolean; // If true, redirects if user is already authenticated (e.g., from login page)
+  protect?: boolean; // Requiere autenticación
+  redirectIfAuthenticated?: boolean; // Redirige si ya está logueado (ej: en el login)
 }
 
 export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
@@ -24,15 +24,17 @@ export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
 
   useEffect(() => {
     if (loading) {
-      return; // Don't do anything while loading
+      return;
     }
 
+    // Lógica para proteger rutas (si no hay sesión)
     if (protect && !user) {
-      // Logic for branded redirect fallback
       let finalRedirect = '/';
+      
+      // Buscamos si hay una marca de instituto guardada en el navegador
       if (typeof window !== 'undefined') {
-          const stickyInstituteId = localStorage.getItem('instituteId');
-          // Don't redirect SuperAdmin to institutional login if they were just viewing it
+          const stickyInstituteId = localStorage.getItem('last_institute_id');
+          // Si el navegador recuerda un instituto, lo mandamos a ese login específico
           if (stickyInstituteId) {
               finalRedirect = `/login/${stickyInstituteId}`;
           }
@@ -45,6 +47,7 @@ export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
       return;
     }
     
+    // Si ya está autenticado y trata de entrar al login, lo mandamos al dashboard
     if (redirectIfAuthenticated && user) {
       router.push(redirectTo || '/dashboard');
     }

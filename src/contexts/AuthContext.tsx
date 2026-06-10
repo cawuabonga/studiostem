@@ -44,13 +44,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Función para recuperar el último instituto visitado del navegador
 const getInitialInstituteId = (): string | null => {
     if (typeof window !== 'undefined') {
-        return localStorage.getItem('instituteId');
+        return localStorage.getItem('last_institute_id');
     }
     return null;
 };
-
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -63,8 +63,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setInstitute = useCallback(async (id: string | null) => {
     setInstituteIdState(id);
     if (id) {
+        // Guardamos en la memoria del navegador para persistencia de marca
         if (typeof window !== 'undefined') {
-            localStorage.setItem('instituteId', id);
+            localStorage.setItem('last_institute_id', id);
         }
         try {
             const instituteData = await getInstitute(id);
@@ -74,7 +75,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setInstituteObject(null);
         }
     } else {
-        // We no longer remove instituteId from localStorage here to keep the "sticky" branding for login
         setInstituteObject(null);
     }
   }, []);
@@ -88,7 +88,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     }
   }, [instituteId, institute]);
-
 
   const fetchAndSetUser = async (firebaseUser: FirebaseUser) => {
     try {
@@ -155,10 +154,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         finalUser.photoURL = finalUser.photoURL || firebaseUser.photoURL;
 
         setUser(finalUser);
-        if (finalUser.instituteId && finalUser.instituteId !== instituteId) {
+        
+        // Si el usuario tiene un instituto asignado, actualizamos la memoria de marca
+        if (finalUser.instituteId) {
           await setInstitute(finalUser.instituteId);
-        } else if (!finalUser.instituteId && instituteId) {
-          await setInstitute(null);
         }
     } catch (error) {
         console.error("Error in fetchAndSetUser:", error);
@@ -183,8 +182,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
-        setInstituteIdState(null);
-        setInstituteObject(null);
+        // NO reseteamos instituteId aquí para que el login mantenga la marca al cerrar sesión
       }
       setLoading(false);
     });
@@ -202,10 +200,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if(refreshedFirebaseUser) {
                 await fetchAndSetUser(refreshedFirebaseUser);
             }
-            if (instituteId) {
-              const instituteData = await getInstitute(instituteId);
-              setInstituteObject(instituteData);
-            }
         } catch (e) {
             console.error("Error reloading user:", e);
         }
@@ -222,7 +216,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error: any) {
-      console.error("Sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión', description: 'Por favor, verifica tus credenciales.', variant: 'destructive' });
     }
   };
@@ -233,9 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       await fetchAndSetUser(firebaseUser);
-      
     } catch (error: any) {
-      console.error("Sign up error:", error);
       toast({ title: 'Fallo de Registro', description: error.message || 'No se pudo crear la cuenta.', variant: 'destructive' });
     }
   };
@@ -245,27 +236,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error("Google sign in error:", error);
       toast({ title: 'Fallo de Inicio de Sesión con Google', description: 'No se pudo iniciar sesión con Google.', variant: 'destructive' });
     }
   };
 
   const signOutUser = async () => {
     try {
-      // Determine redirect path BEFORE sign out while we have user data
+      // Determinamos a dónde enviar al usuario ANTES de cerrar la sesión
       let redirectPath = '/';
-      const lastId = user?.instituteId || instituteId;
+      const currentInstId = user?.instituteId || instituteId;
       
-      // If it's a regular user belonging to an institute, redirect to branded login
-      if (lastId && user?.role !== 'SuperAdmin') {
-          redirectPath = `/login/${lastId}`;
+      // Si el usuario es de un instituto, lo devolvemos a su login personalizado
+      if (currentInstId && user?.role !== 'SuperAdmin') {
+          redirectPath = `/login/${currentInstId}`;
       }
 
       await firebaseSignOut(auth);
       router.push(redirectPath);
     } catch (error: any) {
-      console.error("Sign out error:", error);
-      toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
+      toast({ title: 'Fallo al Cerrar Sesión', description: 'No se pudo cerrar la sesión correctamente.', variant: 'destructive' });
     }
   };
 
