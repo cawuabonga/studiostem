@@ -17,7 +17,7 @@ export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
   const pathname = usePathname();
 
   const { 
-    redirectTo = '/', 
+    redirectTo = '', 
     protect = false, 
     redirectIfAuthenticated = false 
   } = options;
@@ -27,13 +27,25 @@ export function useAuthRedirect(options: UseAuthRedirectOptions = {}) {
       return; // Don't do anything while loading
     }
 
-    if (protect && !user && pathname !== redirectTo) {
-      // If route is protected and user is not logged in, redirect
-      router.push(redirectTo || '/');
+    if (protect && !user) {
+      // Logic for branded redirect fallback
+      let finalRedirect = '/';
+      if (typeof window !== 'undefined') {
+          const stickyInstituteId = localStorage.getItem('instituteId');
+          // Don't redirect SuperAdmin to institutional login if they were just viewing it
+          if (stickyInstituteId) {
+              finalRedirect = `/login/${stickyInstituteId}`;
+          }
+      }
+      
+      const target = redirectTo || finalRedirect;
+      if (pathname !== target) {
+          router.push(target);
+      }
+      return;
     }
     
     if (redirectIfAuthenticated && user) {
-      // If route should redirect if authenticated (e.g. login/register page) and user is logged in
       router.push(redirectTo || '/dashboard');
     }
 

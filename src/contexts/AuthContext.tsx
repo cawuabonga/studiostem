@@ -74,9 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setInstituteObject(null);
         }
     } else {
-        if (typeof window !== 'undefined') {
-            localStorage.removeItem('instituteId');
-        }
+        // We no longer remove instituteId from localStorage here to keep the "sticky" branding for login
         setInstituteObject(null);
     }
   }, []);
@@ -87,7 +85,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setInstituteObject(data);
         }).catch(err => {
             console.error("Failed to load initial institute data:", err);
-            // Don't clear instituteId if offline, might be in cache
         });
     }
   }, [instituteId, institute]);
@@ -125,7 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (baseUserData.instituteId && baseUserData.roleId) {
             finalUser.instituteId = baseUserData.instituteId;
             
-            // Fetch Dynamic Role Name and Permissions
             const roles = await getRoles(baseUserData.instituteId);
             const userRole = roles.find(r => r.id === baseUserData.roleId);
             if (userRole) {
@@ -166,7 +162,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     } catch (error) {
         console.error("Error in fetchAndSetUser:", error);
-        // If offline, we still want to set the user object from whatever base data we have
         setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -188,7 +183,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
-        setInstitute(null);
+        setInstituteIdState(null);
+        setInstituteObject(null);
       }
       setLoading(false);
     });
@@ -256,8 +252,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOutUser = async () => {
     try {
+      // Determine redirect path BEFORE sign out while we have user data
+      let redirectPath = '/';
+      const lastId = user?.instituteId || instituteId;
+      
+      // If it's a regular user belonging to an institute, redirect to branded login
+      if (lastId && user?.role !== 'SuperAdmin') {
+          redirectPath = `/login/${lastId}`;
+      }
+
       await firebaseSignOut(auth);
-      router.push('/');
+      router.push(redirectPath);
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({ title: 'Fallo al Cerrar Sesión', description: error.message || 'No se pudo cerrar sesión.', variant: 'destructive' });
