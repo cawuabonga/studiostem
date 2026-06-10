@@ -176,7 +176,8 @@ export function AppSidebarContents() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
          <SignOutButton 
-            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
+            variant="destructive"
+            className="w-full justify-start font-black uppercase tracking-widest text-[10px] shadow-lg group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0"
             buttonText={''}
             showIcon={true}
             aria-label="Cerrar Sesión"
