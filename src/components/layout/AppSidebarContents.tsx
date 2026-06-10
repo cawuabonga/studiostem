@@ -131,8 +131,8 @@ export function AppSidebarContents() {
               </AvatarFallback>
             </Avatar>
             <div className="text-center group-data-[collapsible=icon]:hidden px-2">
-              <p className="font-semibold text-sidebar-foreground text-sm truncate max-w-[140px]">{user.displayName}</p>
-              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60 leading-tight">
+              <p className="font-semibold text-sidebar-foreground text-sm leading-tight">{user.displayName}</p>
+              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60 leading-tight mt-1">
                   {user.roleName || (user.role === 'Student' ? 'Estudiante' : user.role)}
               </p>
             </div>
