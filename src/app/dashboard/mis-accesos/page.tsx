@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,11 +7,19 @@ import type { AccessLog } from "@/types";
 import { listenToAccessLogsForUser } from "@/config/firebase";
 import { ProfileAccessLogs } from "@/components/profile/ProfileAccessLogs";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 export default function MyAccessHistoryPage() {
-  const { user, instituteId } = useAuth();
+  const { user, instituteId, hasPermission, loading: authLoading } = useAuth();
   const [logs, setLogs] = useState<AccessLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!authLoading && !hasPermission('user:access:view:own')) {
+      router.push('/dashboard');
+    }
+  }, [authLoading, hasPermission, router]);
 
   useEffect(() => {
     if (!user?.documentId || !instituteId) {
@@ -31,6 +40,8 @@ export default function MyAccessHistoryPage() {
 
     return () => unsubscribe();
   }, [user?.documentId, instituteId]);
+
+  if (authLoading) return <p className="p-8">Cargando...</p>;
 
   return (
     <div className="space-y-6">

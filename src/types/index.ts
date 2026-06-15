@@ -384,6 +384,7 @@ export type Permission =
   | 'planning:environment:manage'
   | 'planning:schedule:view:own'
   | 'user:supplies:request'
+  | 'user:access:view:own'
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
   | 'superadmin:design:manage'
@@ -472,6 +473,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
             { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
+            { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
         ],
     },
      {

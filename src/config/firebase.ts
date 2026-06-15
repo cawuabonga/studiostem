@@ -183,6 +183,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
                 'student:jobs:view': true, 
                 'student:jobs:apply': true, 
                 'user:supplies:request': true,
+                'user:access:view:own': true,
                 'planning:schedule:view:own': true
             } 
         },
@@ -194,6 +195,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
                 'teacher:unit:view': true, 
                 'teacher:efsrt:supervise': true, 
                 'user:supplies:request': true, 
+                'user:access:view:own': true,
                 'planning:schedule:view:own': true 
             } 
         },

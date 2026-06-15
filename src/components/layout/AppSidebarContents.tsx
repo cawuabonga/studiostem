@@ -41,7 +41,8 @@ import {
   MapPin as MapPinIcon, 
   Cpu as CpuIcon, 
   BriefcaseBusiness as BriefcaseBusinessIcon,
-  CreditCard as PlansIcon
+  CreditCard as PlansIcon,
+  History as HistoryIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -82,6 +83,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopyIcon, permission: 'student:unit:view' },
     { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPinIcon, permission: 'student:efsrt:view' },
     { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: PercentIcon, permission: 'student:grades:view' },
+    { href: '/dashboard/mis-accesos', label: 'Mis Accesos', icon: HistoryIcon, permission: 'user:access:view:own' },
     { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: PencilIcon, permission: 'user:supplies:request' },
     { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: PackageIcon, permission: 'user:supplies:request' },
 ];
