@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -546,7 +545,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
             active: !!data.linkedUserUid,
             condition: data.condition,
             programId: data.programId,
-            programName: programName ? programMap.get(data.programId) : 'N/A'
+            programName: programMap.get(data.programId) || 'N/A'
         } as Teacher;
     });
 };
@@ -1770,7 +1769,7 @@ export const getAccessLogsPaginated = async (options: {
         where('instituteId', '==', options.instituteId),
     ];
 
-    if (options.accessPointId && options.pointId !== 'all') {
+    if (options.accessPointId && options.accessPointId !== 'all') {
         q_parts.push(where('accessPointId', '==', options.accessPointId));
     }
 
@@ -2418,13 +2417,13 @@ export const applyToJob = async (instituteId: string, application: Omit<JobAppli
 export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const snap = await getDocs(query(col, where('jobId', '==', jobId), orderBy('appliedAt', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
+    return snap.docs.map(d => ({ id: doc.id, ...doc.data() } as JobApplication));
 };
 
 export const getApplicationsForStudent = async (instituteId: string, studentId: string): Promise<JobApplication[]> => {
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const snap = await getDocs(query(col, where('studentId', '==', studentId), orderBy('appliedAt', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
+    return snap.docs.map(d => ({ id: doc.id, ...doc.data() } as JobApplication));
 };
 
 export const updateJobApplication = async (instituteId: string, applicationId: string, data: Partial<JobApplication>) => {
