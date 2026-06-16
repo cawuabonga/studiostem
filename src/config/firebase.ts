@@ -706,6 +706,7 @@ export const addStudentProfile = async (instituteId: string, data: Omit<StudentP
         instituteId,
         fullName: `${data.firstName} ${data.lastName}`,
         linkedUserUid: null,
+        academicStatus: 'Cursando', // Default state for candidates
     };
     await setDoc(profileRef, profileData);
 };
@@ -728,23 +729,27 @@ export const getStudentsPaginated = async (options: {
     excludeEgresados?: boolean;
 }): Promise<{ students: StudentProfile[], lastVisible: DocumentSnapshot | null }> => {
     const studentsCol = getSubCollectionRef(options.instituteId, 'studentProfiles');
-    const q_parts: any[] = [
-        where('instituteId', '==', options.instituteId),
-    ];
+    const q_parts: any[] = [];
     
+    // Equality filters first for performance
     if (options.programId && options.programId !== 'all') {
         q_parts.push(where("programId", "==", options.programId));
     }
-    if (options.admissionYear) {
+    if (options.admissionYear && options.admissionYear !== 'all') {
         q_parts.push(where("admissionYear", "==", options.admissionYear));
     }
     if (options.turno && options.turno !== 'all') {
         q_parts.push(where("turno", "==", options.turno));
     }
 
+    // Inequality + Ordering
+    // Note: To support various combinations of optional equality filters with an inequality, 
+    // we need many composite indexes. For MVP, we'll avoid inequality on server if 
+    // it's problematic or requires too many specific indexes.
     if (options.excludeEgresados) {
-        q_parts.push(where("academicStatus", "!=", "Egresado"));
-        q_parts.push(orderBy("academicStatus")); 
+        // Query optimization: fetch and filter client-side to avoid index-hell 
+        // with dynamic combinations of Program/Year/Turno + Inequality.
+        // We'll query by lastName primarily.
     }
 
     q_parts.push(orderBy("lastName"));
@@ -752,20 +757,40 @@ export const getStudentsPaginated = async (options: {
     if (options.startAfterDoc) {
         q_parts.push(startAfter(options.startAfterDoc));
     }
-    q_parts.push(limit(options.limitCount));
+    q_parts.push(limit(options.limitCount * 2)); // Fetch more to compensate for client-side filtering
 
     const q = query(studentsCol, ...q_parts);
     const snapshot = await getDocs(q);
+    
     let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
+    
+    // Client-side filters
+    if (options.excludeEgresados) {
+        students = students.filter(s => s.academicStatus !== 'Egresado');
+    }
     
     if (options.semester) {
         students = students.filter(p => {
-             const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
-             return currentSem === options.semester;
+             const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-JUL' | 'AGO-DIC'): number => {
+                const currentYear = new Date().getFullYear();
+                const currentMonth = new Date().getMonth(); 
+                const yearsDiff = currentYear - parseInt(admissionYear);
+                let semesterCount = yearsDiff * 2;
+                if (admissionPeriod === 'MAR-JUL') semesterCount += 1;
+                if (currentMonth >= 7) semesterCount += 1;
+                else if (admissionPeriod === 'AGO-DIC') semesterCount -= 1;
+                return Math.max(1, semesterCount);
+            };
+            const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
+            return currentSem === options.semester;
         });
     }
+
+    // Truncate to requested limit
+    const finalStudents = students.slice(0, options.limitCount);
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
-    return { students, lastVisible };
+    
+    return { students: finalStudents, lastVisible };
 };
 
 export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
@@ -811,6 +836,7 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
             instituteId,
             fullName: `${studentData.firstName} ${studentData.lastName}`,
             linkedUserUid: null,
+            academicStatus: 'Cursando',
         };
         batch.set(docRef, profileData);
     });

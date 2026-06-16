@@ -354,10 +354,6 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "academicStatus",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "lastName",
           "order": "ASCENDING"
         }
@@ -369,10 +365,6 @@
       "fields": [
         {
           "fieldPath": "programId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "academicStatus",
           "order": "ASCENDING"
         },
         {

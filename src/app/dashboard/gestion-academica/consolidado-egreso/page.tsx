@@ -51,6 +51,7 @@ export default function ConsolidadoEgresoPage() {
     const [registryYear, setRegistryYear] = useState('all');
     const [registryProgram, setRegistryProgram] = useState(''); // Empty string as default
     const [hasSearchedRegistry, setHasSearchedRegistry] = useState(false);
+    const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
     
     // Common States
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -85,6 +86,7 @@ export default function ConsolidadoEgresoPage() {
     const handleSearchById = async () => {
         if (!searchTerm || !instituteId) return;
         setLoading(true);
+        setHasSearchedCandidates(true);
         try {
             const student = await getStudentProfile(instituteId, searchTerm);
             if (student) {
@@ -111,6 +113,7 @@ export default function ConsolidadoEgresoPage() {
         }
         
         setLoading(true);
+        setHasSearchedCandidates(true);
         try {
             const result = await getStudentsPaginated({
                 instituteId,
@@ -132,12 +135,16 @@ export default function ConsolidadoEgresoPage() {
             // Audit results
             const audits: Record<string, StudentEgresoAudit> = { ...eligibilityMap };
             for (const s of result.students) {
-                audits[s.documentId] = await checkEgresoEligibility(instituteId, s.documentId);
+                // Ensure we don't repeat audits already fetched
+                if (!audits[s.documentId]) {
+                    audits[s.documentId] = await checkEgresoEligibility(instituteId, s.documentId);
+                }
             }
             setEligibilityMap(audits);
 
-        } catch (error) {
-            toast({ title: "Error al cargar candidatos", variant: "destructive" });
+        } catch (error: any) {
+            console.error("[DEBUG] Error fetching candidates:", error);
+            toast({ title: "Error al cargar candidatos", description: "Ocurrió un error técnico al consultar la base de datos.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
@@ -158,7 +165,7 @@ export default function ConsolidadoEgresoPage() {
             });
             setGraduates(data);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo cargar el padrón. Verifique que haya seleccionado un programa válido.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo cargar el padrón.", variant: "destructive" });
         } finally {
             setLoadingRegistry(false);
         }
@@ -355,7 +362,7 @@ export default function ConsolidadoEgresoPage() {
                                                 <TableCell colSpan={6} className="h-60 text-center text-muted-foreground">
                                                     <div className="flex flex-col items-center justify-center gap-2">
                                                         <UserSquare2 className="h-12 w-12 opacity-20" />
-                                                        <p>Utilice los filtros superiores para consultar alumnos.</p>
+                                                        <p>{hasSearchedCandidates ? "No se encontraron candidatos con estos filtros." : "Utilice los filtros superiores para consultar alumnos."}</p>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
