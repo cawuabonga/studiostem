@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -22,6 +21,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
+import Link from 'next/link';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -51,12 +51,12 @@ export function JobMonitorDashboard() {
     const [formData, setFormData] = useState({
         title: '',
         companyName: '',
-        description: '',
-        location: '',
+        description: '', 
+        location: '', 
         modality: 'Presencial' as any,
         jobType: 'Trabajo (Laboral)' as any,
         contractType: 'Tiempo Completo' as any,
-        salaryRange: '',
+        salaryRange: '', 
         programIds: [] as string[],
         minSemester: 1,
         source: 'LinkedIn' as JobOfferSource,
@@ -257,8 +257,10 @@ export function JobMonitorDashboard() {
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
-                                            <AlertDialogTitle>¿Eliminar vacante?</AlertDialogTitle>
-                                            <AlertDialogDescription>Esta acción es irreversible.</AlertDialogDescription>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Eliminar vacante?</AlertDialogTitle>
+                                                <AlertDialogDescription>Esta acción es irreversible.</AlertDialogDescription>
+                                            </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                 <AlertDialogAction onClick={() => handleDelete(offer.id)} className="bg-destructive">Eliminar</AlertDialogAction>
@@ -369,4 +371,3 @@ export function JobMonitorDashboard() {
         </div>
     );
 }
-
