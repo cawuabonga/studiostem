@@ -246,7 +246,7 @@ export default function ConsolidadoEgresoPage() {
                             grid-template-columns: 100px 1fr 100px;
                             align-items: center;
                             margin-bottom: 30px;
-                            padding-bottom: 20px;
+                            padding-bottom: 10px;
                             border-bottom: 1px solid #f0f0f0;
                         }
                         .logo-container {
@@ -263,7 +263,7 @@ export default function ConsolidadoEgresoPage() {
                         }
                         .inst-name {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 16pt;
+                            font-size: 20pt;
                             margin: 0;
                             color: #1e3a8a;
                             text-transform: uppercase;
@@ -362,7 +362,7 @@ export default function ConsolidadoEgresoPage() {
 
                             <div class="signature-section">
                                 <div class="sig-box">
-                                    Firma del Director General
+                                    Director General
                                 </div>
                                 <div class="sig-box">
                                     Área de Secretaría Académica
