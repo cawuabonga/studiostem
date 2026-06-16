@@ -49,7 +49,7 @@ export default function ConsolidadoEgresoPage() {
     // Graduates Registry Tab States
     const [graduates, setGraduates] = useState<StudentProfile[]>([]);
     const [registryYear, setRegistryYear] = useState('all');
-    const [registryProgram, setRegistryProgram] = useState('all');
+    const [registryProgram, setRegistryProgram] = useState(''); // Empty string as default
     const [hasSearchedRegistry, setHasSearchedRegistry] = useState(false);
     
     // Common States
@@ -144,7 +144,11 @@ export default function ConsolidadoEgresoPage() {
     }, [instituteId, programFilter, admissionYearFilter, turnoFilter, semesterFilter, lastVisible, eligibilityMap, toast]);
 
     const fetchRegistryData = useCallback(async () => {
-        if (!instituteId) return;
+        if (!instituteId || !registryProgram || registryProgram === 'none') {
+            setGraduates([]);
+            setHasSearchedRegistry(false);
+            return;
+        }
         setLoadingRegistry(true);
         setHasSearchedRegistry(true);
         try {
@@ -154,7 +158,7 @@ export default function ConsolidadoEgresoPage() {
             });
             setGraduates(data);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudo cargar el padrón.", variant: "destructive" });
+            toast({ title: "Error", description: "No se pudo cargar el padrón. Verifique que haya seleccionado un programa válido.", variant: "destructive" });
         } finally {
             setLoadingRegistry(false);
         }
@@ -384,16 +388,22 @@ export default function ConsolidadoEgresoPage() {
                                 <div className="space-y-2">
                                     <Label>Programa de Estudios</Label>
                                     <Select value={registryProgram} onValueChange={setRegistryProgram} disabled={!isFullAdmin}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Seleccione un Programa..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">Todas las Carreras</SelectItem>
+                                            <SelectItem value="none">-- Seleccione un Programa --</SelectItem>
                                             {programs.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="flex items-end">
-                                    <Button variant="outline" className="w-full" onClick={fetchRegistryData}>
-                                        <Search className="mr-2 h-4 w-4" /> Actualizar Padrón
+                                    <Button 
+                                        variant="outline" 
+                                        className="w-full" 
+                                        onClick={fetchRegistryData} 
+                                        disabled={!registryProgram || registryProgram === 'none' || loadingRegistry}
+                                    >
+                                        {loadingRegistry ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+                                        Actualizar Padrón
                                     </Button>
                                 </div>
                             </div>
@@ -425,7 +435,7 @@ export default function ConsolidadoEgresoPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {loadingRegistry ? (
-                                            <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="animate-spin mx-auto h-6 w-6" /></TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="animate-spin mx-auto h-6 w-6 text-primary" /></TableCell></TableRow>
                                         ) : graduates.length > 0 ? (
                                             graduates.map((egresado, idx) => (
                                                 <TableRow key={egresado.documentId}>
@@ -448,7 +458,7 @@ export default function ConsolidadoEgresoPage() {
                                                 <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
                                                     <div className="flex flex-col items-center justify-center gap-2">
                                                         <Archive className="h-10 w-10 opacity-20" />
-                                                        <p>{hasSearchedRegistry ? "No se encontraron egresados con los filtros seleccionados." : "Utilice los filtros superiores y haga clic en 'Actualizar Padrón' para cargar los datos."}</p>
+                                                        <p>{hasSearchedRegistry ? "No se encontraron egresados con los filtros seleccionados." : "Utilice los filtros superiores para cargar el padrón del programa seleccionado."}</p>
                                                     </div>
                                                 </TableCell>
                                             </TableRow>
