@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -137,7 +137,7 @@ export function AppSidebarContents() {
                   {user.roleName || (user.role === 'Student' ? 'Estudiante' : user.role)}
               </p>
               {user.programName && (
-                <p className="text-[9px] font-bold text-accent uppercase mt-1 leading-tight line-clamp-2">
+                <p className="text-[9px] font-bold text-sidebar-foreground uppercase mt-1 leading-tight line-clamp-2">
                   {user.programName}
                 </p>
               )}
