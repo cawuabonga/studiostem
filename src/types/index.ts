@@ -104,6 +104,8 @@ export interface CompanyProfile {
     instituteId: string;
 }
 
+export type JobOfferSource = 'Interna' | 'LinkedIn' | 'CompuTrabajo' | 'Indeed' | 'Portal de Estado' | 'Otros';
+
 export interface JobOffer {
     id: string;
     companyId: string;
@@ -125,6 +127,10 @@ export interface JobOffer {
     createdAt: Timestamp;
     deadline?: Timestamp;
     applicantCount?: number; // Contador de postulantes
+    // New fields for Job Monitor & External jobs
+    isExternal?: boolean;
+    externalUrl?: string;
+    source?: JobOfferSource;
 }
 
 export interface JobApplication {
@@ -378,6 +384,7 @@ export type Permission =
   | 'admin:supplies:manage'
   | 'admin:deliveries:view'
   | 'admin:companies:manage'
+  | 'admin:jobs:monitor'
   | 'users:staff:manage'
   | 'users:student:manage'
   | 'planning:schedule:manage'
@@ -430,6 +437,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:supplies:manage', label: 'Gestionar Abastecimiento e Insumos' },
             { id: 'admin:deliveries:view', label: 'Ver Entregas (PECOSAS)' },
             { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
+            { id: 'admin:jobs:monitor', label: 'Monitorear Ofertas Laborales' },
         ],
     },
     {

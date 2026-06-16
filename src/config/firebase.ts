@@ -235,6 +235,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
                 'admin:supplies:manage': true, 
                 'admin:deliveries:view': true, 
                 'admin:companies:manage': true, 
+                'admin:jobs:monitor': true,
                 'academic:program:manage': true, 
                 'academic:unit:manage': true, 
                 'academic:unit:manage:own': true,
@@ -545,7 +546,7 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
             active: !!data.linkedUserUid,
             condition: data.condition,
             programId: data.programId,
-            programName: programMap.get(data.programId) || 'N/A'
+            programName: programName ? programMap.get(data.programId) : 'N/A'
         } as Teacher;
     });
 };
@@ -744,27 +745,20 @@ export const getStudentsPaginated = async (options: {
 
     // Inequality + Ordering
     // Note: To support various combinations of optional equality filters with an inequality, 
-    // we need many composite indexes. For MVP, we'll avoid inequality on server if 
-    // it's problematic or requires too many specific indexes.
-    if (options.excludeEgresados) {
-        // Query optimization: fetch and filter client-side to avoid index-hell 
-        // with dynamic combinations of Program/Year/Turno + Inequality.
-        // We'll query by lastName primarily.
-    }
-
+    // we need many composite indexes. For MVP, we'll avoid index-hell by doing client-side filtering.
     q_parts.push(orderBy("lastName"));
 
     if (options.startAfterDoc) {
         q_parts.push(startAfter(options.startAfterDoc));
     }
-    q_parts.push(limit(options.limitCount * 2)); // Fetch more to compensate for client-side filtering
+    q_parts.push(limit(options.limitCount * 2)); 
 
     const q = query(studentsCol, ...q_parts);
     const snapshot = await getDocs(q);
     
     let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
     
-    // Client-side filters
+    // Client-side filters for Egresados
     if (options.excludeEgresados) {
         students = students.filter(s => s.academicStatus !== 'Egresado');
     }
@@ -786,7 +780,6 @@ export const getStudentsPaginated = async (options: {
         });
     }
 
-    // Truncate to requested limit
     const finalStudents = students.slice(0, options.limitCount);
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
     
@@ -868,8 +861,6 @@ export const getGraduates = async (instituteId: string, options: { year?: string
     if (options.year && options.year !== 'all') q_parts.push(where("graduationYear", "==", options.year));
     if (options.programId && options.programId !== 'all') q_parts.push(where("programId", "==", options.programId));
     
-    // Simplificación de ordenamiento para evitar fallos por índices faltantes en desarrollo inicial
-    // si no hay filtros, ordenamos solo por nombre.
     let q;
     if (options.year && options.year !== 'all') {
         q = query(studentsCol, ...q_parts, orderBy("graduationYear", "desc"), orderBy("lastName", "asc"));
@@ -1506,8 +1497,6 @@ export const getAcademicRecordForStudent = async (instituteId: string, unitId: s
 
 export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
     // Firestore rules limit get() and exists() calls to 10 per request.
-    // To avoid "Missing or Insufficient Permissions" due to rule complexity,
-    // we process updates in chunks.
     const CHUNK_SIZE = 8;
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
         const chunk = records.slice(i, i + CHUNK_SIZE);
@@ -1639,7 +1628,6 @@ export const addTaskToWeek = async (instituteId: string, unitId: string, weekNum
         fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
     }
     
-    // Create a clean object without undefined properties to prevent arrayUnion errors
     const newTaskObj: any = {
         id: taskId,
         title: data.title || '',
@@ -1666,7 +1654,6 @@ export const updateTaskInWeek = async (instituteId: string, unitId: string, week
             fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/week_${weekNumber}/tasks/${taskId}/reference`);
         }
         
-        // Merge and clean object
         const updatedTask = { ...weekData.tasks[index], ...data, fileUrl };
         const cleanedTask = Object.fromEntries(
             Object.entries(updatedTask).filter(([_, v]) => v !== undefined)
@@ -2234,7 +2221,6 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
     const studentData = studentSnap.data();
 
     const batch = writeBatch(db);
-    // 1. Update profile
     batch.update(studentRef, {
         academicStatus: 'Egresado',
         graduationYear,
@@ -2242,7 +2228,6 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
         roleId: 'graduate'
     });
 
-    // 2. Update user document if linked
     if (studentData.linkedUserUid) {
         const userRef = doc(db, 'users', studentData.linkedUserUid);
         batch.update(userRef, {
@@ -2286,37 +2271,25 @@ export const gradeTaskSubmission = async (instituteId: string, unitId: string, p
 };
 
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {
-    // Optimization: Fetch all relevant matriculations first
     const matriculationsCol = getSubCollectionRef(instituteId, 'matriculations');
     const q = query(matriculationsCol, where("unitId", "==", unitId), where("year", "==", year));
     const mSnap = await getDocs(q);
-    
-    // Map matriculations to students for quick lookup
     const mIdsByStudent = new Map<string, string[]>();
     mSnap.forEach(d => {
         const sId = d.data().studentId;
         if (!mIdsByStudent.has(sId)) mIdsByStudent.set(sId, []);
         mIdsByStudent.get(sId)!.push(d.id);
     });
-
-    // Process closing in chunks of 5 students (each student updates 1 record + matriculations)
     const CHUNK_SIZE = 5;
     for (let i = 0; i < results.length; i += CHUNK_SIZE) {
         const chunk = results.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(db);
-        
         chunk.forEach(r => {
-            // Update Academic Record
             const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${r.studentId}_${year}_${period}`);
             batch.update(recordRef, { finalGrade: r.finalGrade, status: r.status });
-            
-            // Update associated Matriculations
             const mIds = mIdsByStudent.get(r.studentId) || [];
-            mIds.forEach(mId => {
-                batch.update(doc(matriculationsCol, mId), { status: r.status });
-            });
+            mIds.forEach(mId => { batch.update(doc(matriculationsCol, mId), { status: r.status }); });
         });
-        
         await batch.commit();
     }
 };
@@ -2400,12 +2373,15 @@ export const deleteJobOffer = async (instituteId: string, offerId: string) => {
     await deleteDoc(offerRef);
 };
 
-export const getJobOffers = async (instituteId: string, options: { programId?: string, companyId?: string } = {}): Promise<JobOffer[]> => {
+export const getJobOffers = async (instituteId: string, options: { programId?: string, companyId?: string, all?: boolean } = {}): Promise<JobOffer[]> => {
     const col = getSubCollectionRef(instituteId, 'jobOffers');
     const q_parts = [orderBy('createdAt', 'desc')];
     
-    if (options.companyId) q_parts.unshift(where('companyId', '==', options.companyId));
-    else q_parts.unshift(where('status', '==', 'Abierta')); // Students only see open offers
+    if (options.companyId) {
+        q_parts.unshift(where('companyId', '==', options.companyId));
+    } else if (!options.all) {
+        q_parts.unshift(where('status', '==', 'Abierta')); 
+    }
     
     const snap = await getDocs(query(col, ...q_parts));
     let offers = snap.docs.map(d => ({ id: d.id, ...d.data() } as JobOffer));
@@ -2423,7 +2399,6 @@ export const applyToJob = async (instituteId: string, application: Omit<JobAppli
     const existing = await getDocs(q);
     if (!existing.empty) throw new Error("Ya has postulado a esta oferta.");
     
-    // Fetch latest student info for the application record
     const student = await getStudentProfile(instituteId, application.studentId);
     if (!student) throw new Error("Error: Perfil de estudiante no encontrado.");
 
@@ -2436,8 +2411,6 @@ export const applyToJob = async (instituteId: string, application: Omit<JobAppli
     };
     
     await addDoc(col, finalApplication);
-
-    // Incrementar el contador de postulantes en la oferta laboral
     const jobOfferRef = doc(db, 'institutes', instituteId, 'jobOffers', application.jobId);
     await updateDoc(jobOfferRef, { applicantCount: increment(1) });
 };

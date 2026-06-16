@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -70,6 +70,13 @@ export function JobBoard() {
     const handleApply = async (offer: JobOffer) => {
         if (!instituteId || !user?.documentId) return;
         
+        // Check if it's an external offer
+        if (offer.isExternal && offer.externalUrl) {
+            window.open(offer.externalUrl, '_blank');
+            toast({ title: "Redirigiendo...", description: `Abriendo postulación en ${offer.source}.` });
+            return;
+        }
+
         const isProfileComplete = (user.skills?.length || 0) >= 3 && !!user.bio && !!user.cvUrl;
         const currentSem = (user as any).currentSemester || 1;
         const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
@@ -164,7 +171,7 @@ export function JobBoard() {
                     {filteredOffers.length > 0 ? filteredOffers.map(offer => {
                         const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
                         const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
-                        const canApply = isProfileComplete && meetsSemRequirement && !alreadyApplied;
+                        const canApply = offer.isExternal || (isProfileComplete && meetsSemRequirement && !alreadyApplied);
 
                         return (
                             <Card key={offer.id} className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col border-none shadow-xl bg-white">
@@ -182,8 +189,12 @@ export function JobBoard() {
                                             <Badge variant="outline" className="uppercase font-black text-[10px] px-3 py-1 rounded-full border-primary/20 text-primary bg-primary/5">
                                                 {offer.jobType}
                                             </Badge>
-                                            <Badge className="bg-green-100 text-green-700 border-none px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-tighter flex items-center gap-1">
-                                                <ShieldCheck className="h-3 w-3" /> Verificada
+                                            <Badge className={cn(
+                                                "border-none px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-tighter flex items-center gap-1",
+                                                offer.isExternal ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                                            )}>
+                                                {offer.isExternal ? <Globe className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} 
+                                                {offer.isExternal ? `Oferta en ${offer.source}` : "Verificada"}
                                             </Badge>
                                         </div>
                                     </div>
@@ -237,31 +248,35 @@ export function JobBoard() {
                                 </CardContent>
                                 
                                 <CardFooter className="p-8 pt-0 mt-auto flex flex-col gap-3">
-                                    {!meetsSemRequirement && (
+                                    {!offer.isExternal && !meetsSemRequirement && (
                                         <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-700 w-full">
                                             <AlertTriangle className="h-4 w-4 shrink-0" />
                                             <p className="text-[10px] font-bold">No cumples con el semestre mínimo requerido para este puesto.</p>
                                         </div>
                                     )}
                                     
-                                    {!isProfileComplete && (
+                                    {!offer.isExternal && !isProfileComplete && (
                                         <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 w-full">
                                             <Info className="h-4 w-4 shrink-0" />
                                             <p className="text-[10px] font-bold">Debes completar tu CV (PDF), habilidades y biografía en tu perfil.</p>
                                         </div>
                                     )}
 
-                                    {alreadyApplied ? (
+                                    {alreadyApplied && !offer.isExternal ? (
                                         <Button className="w-full h-14 bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-2xl font-black uppercase tracking-widest" variant="outline" disabled>
                                             <CheckCircle2 className="mr-2 h-5 w-5" /> POSTULACIÓN ENVIADA
                                         </Button>
                                     ) : (
                                         <Button 
-                                            className="w-full h-14 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all" 
+                                            className={cn(
+                                                "w-full h-14 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all",
+                                                offer.isExternal ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
+                                            )}
                                             onClick={() => handleApply(offer)}
-                                            disabled={!canApply}
+                                            disabled={!offer.isExternal && !canApply}
                                         >
-                                            <Send className="mr-2 h-5 w-5" /> {canApply ? 'Postular con Perfil STEM' : 'Postulación Bloqueada'}
+                                            {offer.isExternal ? <ExternalLink className="mr-2 h-5 w-5" /> : <Send className="mr-2 h-5 w-5" />} 
+                                            {offer.isExternal ? `Ir a ${offer.source}` : (canApply ? 'Postular con Perfil STEM' : 'Postulación Bloqueada')}
                                         </Button>
                                     )}
                                 </CardFooter>

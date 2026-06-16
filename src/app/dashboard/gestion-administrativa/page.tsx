@@ -2,7 +2,7 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive, Library, BriefcaseBusiness } from "lucide-react";
+import { CreditCard, History, CheckSquare, Banknote, Fingerprint, Users, PencilRuler, BarChart2, Building, Archive, Library, BriefcaseBusiness, Monitor } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
@@ -82,6 +82,13 @@ const adminModules: AdminModule[] = [
     permission: "admin:companies:manage",
   },
   {
+    title: "Monitor de Ofertas Laborales",
+    description: "Supervise las vacantes de empresas y publique ofertas capturadas de fuentes externas.",
+    href: "/dashboard/gestion-administrativa/bolsa-laboral/monitor",
+    icon: Monitor,
+    permission: "admin:jobs:monitor",
+  },
+  {
     title: "Control de Acceso (RFID)",
     description: "Monitorear y ver los registros de entrada y salida del personal y estudiantes.",
     href: "/dashboard/control-de-acceso",
@@ -131,7 +138,7 @@ export default function GestionAdministrativaPage() {
         return <p>Cargando...</p>;
     }
   
-    const accessibleModules = user.role === 'Student' 
+    const accessibleModules = user.role === 'Student' || user.role === 'Graduate'
         ? studentModules.filter(m => hasPermission(m.permission as Permission))
         : adminModules.filter(m => hasPermission(m.permission as Permission));
 

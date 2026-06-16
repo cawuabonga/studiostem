@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -40,7 +41,7 @@ import {
   MapPin as MapPinIcon, 
   Cpu as CpuIcon, 
   BriefcaseBusiness as BriefcaseBusinessIcon,
-  CreditCard as PlansIcon,
+  Monitor as MonitorIcon,
   History as HistoryIcon
 } from 'lucide-react';
 
@@ -57,7 +58,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2Icon, permission: 'superadmin:institute:manage' },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: UsersIcon, permission: 'superadmin:users:manage' },
     { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
-    { href: '/dashboard/superadmin/manage-plans', label: 'Gestionar Planes', icon: PlansIcon, permission: 'superadmin:plans:manage' },
+    { href: '/dashboard/superadmin/manage-plans', label: 'Gestionar Planes', icon: CreditCardIcon, permission: 'superadmin:plans:manage' },
     { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: CpuIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: GalleryIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/documentation', label: 'Documentación', icon: FolderKanbanIcon, permission: 'superadmin:institute:manage' },
@@ -68,6 +69,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCapIcon, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view', 'academic:efsrt:manage'] },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClockIcon, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCardIcon, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
+    { href: '/dashboard/gestion-administrativa/bolsa-laboral/monitor', label: 'Monitor de Empleos', icon: MonitorIcon, permission: 'admin:jobs:monitor' },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: FingerprintIcon, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: UsersIcon, permission: ['users:staff:manage', 'users:student:manage'] },
     
@@ -133,7 +135,7 @@ export function AppSidebarContents() {
             </Avatar>
             <div className="text-center group-data-[collapsible=icon]:hidden px-2">
               <p className="font-semibold text-sidebar-foreground text-sm leading-tight">{user.displayName}</p>
-              <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60 leading-tight mt-1">
+              <p className="text-[10px] uppercase font-black tracking-tighter text-white leading-tight mt-1">
                   {user.roleName || (user.role === 'Student' ? 'Estudiante' : user.role)}
               </p>
               {user.programName && (
