@@ -203,7 +203,7 @@ export default function ConsolidadoEgresoPage() {
                 <head>
                     <title>Constancia de Egreso - ${student.fullName}</title>
                     <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
+                        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@800&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
                         
                         body { 
                             font-family: 'Lato', sans-serif; 
@@ -215,20 +215,22 @@ export default function ConsolidadoEgresoPage() {
                         .page-container {
                             width: 210mm;
                             height: 297mm;
-                            padding: 25mm;
+                            padding: 20mm;
                             box-sizing: border-box;
                             position: relative;
-                            border: 15px double #1e3a8a;
                             margin: auto;
+                            border: 1px solid #e2e8f0;
                         }
                         .watermark {
                             position: absolute;
                             top: 50%;
                             left: 50%;
-                            transform: translate(-50%, -50%) rotate(-45deg);
-                            opacity: 0.07;
+                            transform: translate(-50%, -50%);
+                            opacity: 0.05;
                             z-index: 0;
                             width: 500px;
+                            height: 500px;
+                            object-fit: contain;
                             pointer-events: none;
                         }
                         .content-wrapper {
@@ -237,91 +239,101 @@ export default function ConsolidadoEgresoPage() {
                             height: 100%;
                             display: flex;
                             flex-direction: column;
+                            border: 1px solid #1e3a8a;
+                            padding: 10mm;
                         }
                         header {
-                            text-align: center;
-                            margin-bottom: 50px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            position: relative;
+                            margin-bottom: 40px;
+                            padding-bottom: 20px;
+                            border-bottom: 1px solid #eee;
                         }
                         .logo-main {
-                            height: 90px;
-                            margin-bottom: 15px;
+                            height: 60px;
+                            position: absolute;
+                            left: 0;
                             object-fit: contain;
                         }
+                        .inst-info {
+                            text-align: center;
+                        }
                         .inst-name {
-                            font-family: 'Cinzel', serif;
-                            font-size: 22pt;
+                            font-family: 'Montserrat', sans-serif;
+                            font-size: 16pt;
                             margin: 0;
                             color: #1e3a8a;
-                            letter-spacing: 2px;
+                            text-transform: uppercase;
                         }
                         .inst-subtitle {
-                            font-size: 9pt;
+                            font-size: 8pt;
                             font-weight: bold;
                             color: #666;
-                            margin-top: 5px;
+                            margin-top: 4px;
                             text-transform: uppercase;
-                            letter-spacing: 4px;
+                            letter-spacing: 2px;
                         }
                         .title-box {
                             text-align: center;
-                            margin: 60px 0;
+                            margin: 40px 0;
                         }
                         .main-title {
-                            font-family: 'Cinzel', serif;
-                            font-size: 32pt;
+                            font-family: 'Montserrat', sans-serif;
+                            font-size: 28pt;
                             color: #1e3a8a;
                             margin: 0;
-                            text-decoration: none;
-                            border-bottom: 3px solid #1e3a8a;
-                            display: inline-block;
-                            padding-bottom: 10px;
+                            letter-spacing: -1px;
                         }
                         .body-text {
                             text-align: justify;
-                            font-size: 14pt;
+                            font-size: 13pt;
                             line-height: 1.8;
-                            margin: 40px 0;
+                            margin: 30px 0;
+                            flex-grow: 1;
                         }
                         .highlight {
                             font-weight: 800;
                             text-transform: uppercase;
                             color: #000;
+                            border-bottom: 1px solid #ccc;
                         }
                         .date-location {
                             text-align: right;
-                            font-size: 12pt;
-                            margin-top: 60px;
+                            font-size: 11pt;
+                            margin-top: 40px;
                             font-style: italic;
+                            color: #444;
                         }
                         .signature-section {
-                            margin-top: auto;
+                            margin-top: 60px;
                             display: flex;
                             justify-content: space-around;
-                            padding-bottom: 60px;
+                            padding-bottom: 40px;
                         }
                         .sig-box {
                             text-align: center;
-                            width: 250px;
-                            border-top: 1px solid #333;
+                            width: 220px;
+                            border-top: 1px solid #1a1a1a;
                             padding-top: 10px;
-                            font-size: 10pt;
+                            font-size: 9pt;
                             font-weight: bold;
+                            text-transform: uppercase;
+                            letter-spacing: 1px;
                         }
                         footer {
-                            position: absolute;
-                            bottom: 20px;
-                            left: 0;
-                            right: 0;
                             text-align: center;
-                            font-size: 8pt;
+                            font-size: 7.5pt;
                             color: #999;
                             border-top: 1px solid #eee;
-                            padding-top: 10px;
-                            margin: 0 40px;
+                            padding-top: 15px;
+                            margin-top: auto;
                         }
                         @media print {
-                            .page-container { border: 15px double #1e3a8a !important; -webkit-print-color-adjust: exact; }
-                            .inst-name, .main-title { color: #1e3a8a !important; }
+                            body { margin: 0; padding: 0; }
+                            .page-container { border: none !important; margin: 0 !important; }
+                            .content-wrapper { border: 1px solid #1e3a8a !important; }
                         }
                     </style>
                 </head>
@@ -332,8 +344,10 @@ export default function ConsolidadoEgresoPage() {
                         <div class="content-wrapper">
                             <header>
                                 ${logoUrl ? `<img src="${logoUrl}" class="logo-main" />` : ''}
-                                <h1 class="inst-name">${instituteName.toUpperCase()}</h1>
-                                <div class="inst-subtitle">Dirección de Asuntos Académicos</div>
+                                <div class="inst-info">
+                                    <h1 class="inst-name">${instituteName}</h1>
+                                    <div class="inst-subtitle">Secretaría Académica - Dirección General</div>
+                                </div>
                             </header>
 
                             <div class="title-box">
@@ -341,10 +355,10 @@ export default function ConsolidadoEgresoPage() {
                             </div>
 
                             <div class="body-text">
-                                <p>La Dirección del <strong>${instituteName}</strong>, hace constar que el estudiante:</p>
-                                <p style="text-align: center; font-size: 18pt; margin: 30px 0;" class="highlight">${student.fullName}</p>
-                                <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas exigidas por la ley.</p>
-                                <p>Se expide la presente a solicitud del interesado para los fines legales y administrativos que correspondan.</p>
+                                <p>La Dirección del <strong>${instituteName}</strong>, mediante el presente documento oficial, deja constancia que el estudiante:</p>
+                                <p style="text-align: center; font-size: 18pt; margin: 25px 0;" class="highlight">${student.fullName}</p>
+                                <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas en situaciones reales de trabajo (EFSRT) exigidas por la normativa educativa vigente.</p>
+                                <p>Se expide la presente a solicitud del interesado para los fines legales, administrativos y de titulación que correspondan.</p>
                             </div>
 
                             <div class="date-location">
@@ -353,16 +367,16 @@ export default function ConsolidadoEgresoPage() {
 
                             <div class="signature-section">
                                 <div class="sig-box">
-                                    DIRECCIÓN GENERAL
+                                    Firma del Director General
                                 </div>
                                 <div class="sig-box">
-                                    SECRETARÍA ACADÉMICA
+                                    Área de Secretaría Académica
                                 </div>
                             </div>
 
                             <footer>
-                                ${address} | Tel: ${phone} | ${email}<br/>
-                                Validado mediante el Sistema STEM V2
+                                ${address} ${phone ? '| Tel: ' + phone : ''} ${email ? '| ' + email : ''}<br/>
+                                Documento generado y validado electrónicamente mediante el Sistema STEM V2
                             </footer>
                         </div>
                     </div>
