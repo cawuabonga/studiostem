@@ -215,11 +215,10 @@ export default function ConsolidadoEgresoPage() {
                         .page-container {
                             width: 210mm;
                             height: 297mm;
-                            padding: 20mm;
+                            padding: 15mm;
                             box-sizing: border-box;
                             position: relative;
                             margin: auto;
-                            border: 1px solid #e2e8f0;
                         }
                         .watermark {
                             position: absolute;
@@ -239,22 +238,25 @@ export default function ConsolidadoEgresoPage() {
                             height: 100%;
                             display: flex;
                             flex-direction: column;
-                            border: 1px solid #1e3a8a;
-                            padding: 10mm;
+                            border: 1.5px solid #1e3a8a;
+                            padding: 15mm;
+                            box-sizing: border-box;
                         }
                         header {
-                            display: flex;
+                            display: grid;
+                            grid-template-columns: 100px 1fr 100px;
                             align-items: center;
-                            justify-content: center;
-                            position: relative;
                             margin-bottom: 40px;
-                            padding-bottom: 20px;
+                            padding-bottom: 25px;
                             border-bottom: 1px solid #eee;
                         }
+                        .logo-container {
+                            display: flex;
+                            justify-content: flex-start;
+                        }
                         .logo-main {
-                            height: 60px;
-                            position: absolute;
-                            left: 0;
+                            height: 70px;
+                            width: auto;
                             object-fit: contain;
                         }
                         .inst-info {
@@ -262,35 +264,28 @@ export default function ConsolidadoEgresoPage() {
                         }
                         .inst-name {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 16pt;
+                            font-size: 18pt;
                             margin: 0;
                             color: #1e3a8a;
                             text-transform: uppercase;
-                        }
-                        .inst-subtitle {
-                            font-size: 8pt;
-                            font-weight: bold;
-                            color: #666;
-                            margin-top: 4px;
-                            text-transform: uppercase;
-                            letter-spacing: 2px;
+                            line-height: 1.2;
                         }
                         .title-box {
                             text-align: center;
-                            margin: 40px 0;
+                            margin: 45px 0;
                         }
                         .main-title {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 28pt;
+                            font-size: 30pt;
                             color: #1e3a8a;
                             margin: 0;
                             letter-spacing: -1px;
                         }
                         .body-text {
                             text-align: justify;
-                            font-size: 13pt;
+                            font-size: 13.5pt;
                             line-height: 1.8;
-                            margin: 30px 0;
+                            margin: 40px 0;
                             flex-grow: 1;
                         }
                         .highlight {
@@ -307,17 +302,17 @@ export default function ConsolidadoEgresoPage() {
                             color: #444;
                         }
                         .signature-section {
-                            margin-top: 60px;
+                            margin-top: 70px;
                             display: flex;
                             justify-content: space-around;
                             padding-bottom: 40px;
                         }
                         .sig-box {
                             text-align: center;
-                            width: 220px;
+                            width: 240px;
                             border-top: 1px solid #1a1a1a;
-                            padding-top: 10px;
-                            font-size: 9pt;
+                            padding-top: 12px;
+                            font-size: 9.5pt;
                             font-weight: bold;
                             text-transform: uppercase;
                             letter-spacing: 1px;
@@ -333,7 +328,6 @@ export default function ConsolidadoEgresoPage() {
                         @media print {
                             body { margin: 0; padding: 0; }
                             .page-container { border: none !important; margin: 0 !important; }
-                            .content-wrapper { border: 1px solid #1e3a8a !important; }
                         }
                     </style>
                 </head>
@@ -343,11 +337,13 @@ export default function ConsolidadoEgresoPage() {
                         
                         <div class="content-wrapper">
                             <header>
-                                ${logoUrl ? `<img src="${logoUrl}" class="logo-main" />` : ''}
+                                <div class="logo-container">
+                                    ${logoUrl ? `<img src="${logoUrl}" class="logo-main" />` : ''}
+                                </div>
                                 <div class="inst-info">
                                     <h1 class="inst-name">${instituteName}</h1>
-                                    <div class="inst-subtitle">Secretaría Académica - Dirección General</div>
                                 </div>
+                                <div class="header-spacer"></div>
                             </header>
 
                             <div class="title-box">
@@ -356,7 +352,7 @@ export default function ConsolidadoEgresoPage() {
 
                             <div class="body-text">
                                 <p>La Dirección del <strong>${instituteName}</strong>, mediante el presente documento oficial, deja constancia que el estudiante:</p>
-                                <p style="text-align: center; font-size: 18pt; margin: 25px 0;" class="highlight">${student.fullName}</p>
+                                <p style="text-align: center; font-size: 18pt; margin: 30px 0;" class="highlight">${student.fullName}</p>
                                 <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas en situaciones reales de trabajo (EFSRT) exigidas por la normativa educativa vigente.</p>
                                 <p>Se expide la presente a solicitud del interesado para los fines legales, administrativos y de titulación que correspondan.</p>
                             </div>
@@ -519,9 +515,11 @@ export default function ConsolidadoEgresoPage() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell className="text-right">
-                                                        <Button variant="outline" size="sm" onClick={() => { setSelectedStudent(student); setIsAuditModalOpen(true); }}>
-                                                            <FileStack className="mr-2 h-4 w-4" /> Ver Auditoría
-                                                        </Button>
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button variant="outline" size="sm" onClick={() => { setSelectedStudent(student); setIsAuditModalOpen(true); }}>
+                                                                <FileStack className="mr-2 h-4 w-4" /> Ver Auditoría
+                                                            </Button>
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             );
