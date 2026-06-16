@@ -50,6 +50,7 @@ export default function ConsolidadoEgresoPage() {
     const [graduates, setGraduates] = useState<StudentProfile[]>([]);
     const [registryYear, setRegistryYear] = useState('all');
     const [registryProgram, setRegistryProgram] = useState('all');
+    const [hasSearchedRegistry, setHasSearchedRegistry] = useState(false);
     
     // Common States
     const [programs, setPrograms] = useState<Program[]>([]);
@@ -145,6 +146,7 @@ export default function ConsolidadoEgresoPage() {
     const fetchRegistryData = useCallback(async () => {
         if (!instituteId) return;
         setLoadingRegistry(true);
+        setHasSearchedRegistry(true);
         try {
             const data = await getGraduates(instituteId, { 
                 year: registryYear, 
@@ -157,10 +159,6 @@ export default function ConsolidadoEgresoPage() {
             setLoadingRegistry(false);
         }
     }, [instituteId, registryYear, registryProgram, toast]);
-
-    useEffect(() => {
-        if (activeTab === 'padron') fetchRegistryData();
-    }, [activeTab, fetchRegistryData]);
 
     const handlePromote = async () => {
         if (!instituteId || !selectedStudent) return;
@@ -426,23 +424,30 @@ export default function ConsolidadoEgresoPage() {
                                     <TableBody>
                                         {loadingRegistry ? (
                                             <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="animate-spin mx-auto h-6 w-6" /></TableCell></TableRow>
-                                        ) : graduates.length > 0 ? graduates.map((egresado, idx) => (
-                                            <TableRow key={egresado.documentId}>
-                                                <TableCell className="text-center font-bold text-muted-foreground">{idx + 1}</TableCell>
-                                                <TableCell>
-                                                    <div className="font-bold text-sm uppercase">{egresado.fullName}</div>
-                                                    <div className="text-[10px] font-mono opacity-60">{egresado.documentId}</div>
-                                                </TableCell>
-                                                <TableCell className="text-xs">{programs.find(p => p.id === egresado.programId)?.name || 'N/A'}</TableCell>
-                                                <TableCell className="text-center"><Badge variant="outline" className="font-black">{egresado.graduationYear}</Badge></TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handlePrintConstancia(egresado)}>
-                                                        <Printer className="mr-1 h-3 w-3" /> CONSTANCIA
-                                                    </Button>
+                                        ) : graduates.length > 0 ? (
+                                            graduates.map((egresado, idx) => (
+                                                <TableRow key={egresado.documentId}>
+                                                    <TableCell className="text-center font-bold text-muted-foreground">{idx + 1}</TableCell>
+                                                    <TableCell>
+                                                        <div className="font-bold text-sm uppercase">{egresado.fullName}</div>
+                                                        <div className="text-[10px] font-mono opacity-60">{egresado.documentId}</div>
+                                                    </TableCell>
+                                                    <TableCell className="text-xs">{programs.find(p => p.id === egresado.programId)?.name || 'N/A'}</TableCell>
+                                                    <TableCell className="text-center"><Badge variant="outline" className="font-black">{egresado.graduationYear}</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Button variant="outline" size="sm" className="h-8 text-[10px] font-black" onClick={() => handlePrintConstancia(egresado)}>
+                                                            <Printer className="mr-1 h-3 w-3" /> CONSTANCIA
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
+                                                    <Archive className="h-10 w-10 opacity-20" />
+                                                    <p>{hasSearchedRegistry ? "No se encontraron egresados con los filtros seleccionados." : "Utilice los filtros superiores y haga clic en 'Actualizar Padrón' para cargar los datos."}</p>
                                                 </TableCell>
                                             </TableRow>
-                                        )) : (
-                                            <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No se encontraron egresados.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
