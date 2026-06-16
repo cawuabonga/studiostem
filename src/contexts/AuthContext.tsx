@@ -130,7 +130,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
             if (baseUserData.documentId) {
                 let profileData: StudentProfile | StaffProfile | null = null;
-                if (baseUserData.role === 'Student') {
+                
+                // AJUSTE CRÍTICO: Detectar si el usuario debe buscarse en perfiles de alumnos (Estudiantes y Egresados)
+                const isStudentType = 
+                    baseUserData.role === 'Student' || 
+                    baseUserData.role === 'Graduate' || 
+                    baseUserData.roleId === 'student' || 
+                    baseUserData.roleId === 'graduate';
+
+                if (isStudentType) {
                     profileData = await getStudentProfile(baseUserData.instituteId, baseUserData.documentId);
                 } else {
                     profileData = await getStaffProfileByDocumentId(baseUserData.instituteId, baseUserData.documentId);
@@ -182,7 +190,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await fetchAndSetUser(firebaseUser);
       } else {
         setUser(null);
-        // NO reseteamos instituteId aquí para que el login mantenga la marca al cerrar sesión
       }
       setLoading(false);
     });
@@ -242,15 +249,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOutUser = async () => {
     try {
-      // Importante: Capturar los datos necesarios ANTES de cerrar sesión
-      // porque el objeto 'user' se volverá inaccesible inmediatamente
       const currentInstId = user?.instituteId || instituteId;
       const isSuperAdmin = user?.role === 'SuperAdmin';
 
       await firebaseSignOut(auth);
       
       let redirectPath = '/';
-      // Si el usuario pertenece a un instituto, lo devolvemos a su login personalizado
       if (currentInstId && !isSuperAdmin) {
           redirectPath = `/login/${currentInstId}`;
       }

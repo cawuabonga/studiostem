@@ -841,7 +841,16 @@ export const getGraduates = async (instituteId: string, options: { year?: string
     const q_parts = [where("academicStatus", "==", "Egresado")];
     if (options.year && options.year !== 'all') q_parts.push(where("graduationYear", "==", options.year));
     if (options.programId && options.programId !== 'all') q_parts.push(where("programId", "==", options.programId));
-    const q = query(studentsCol, ...q_parts, orderBy("graduationYear", "desc"), orderBy("lastName", "asc"));
+    
+    // Simplificación de ordenamiento para evitar fallos por índices faltantes en desarrollo inicial
+    // si no hay filtros, ordenamos solo por nombre.
+    let q;
+    if (options.year && options.year !== 'all') {
+        q = query(studentsCol, ...q_parts, orderBy("graduationYear", "desc"), orderBy("lastName", "asc"));
+    } else {
+        q = query(studentsCol, ...q_parts, orderBy("lastName", "asc"));
+    }
+    
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
 };
@@ -1027,16 +1036,6 @@ export const getPaymentConcepts = async (instituteId: string, activeOnly = false
     const snapshot = await getDocs(q);
     const concepts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PaymentConcept));
     return concepts.sort((a,b) => a.name.localeCompare(b.name));
-};
-
-export const updatePaymentConcept = async (instituteId: string, conceptId: string, data: Partial<PaymentConcept>): Promise<void> => {
-    const conceptRef = doc(db, 'institutes', instituteId, 'paymentConcepts', conceptId);
-    await updateDoc(conceptRef, data);
-};
-
-export const deletePaymentConcept = async (instituteId: string, conceptId: string): Promise<void> => {
-    const conceptRef = doc(db, 'institutes', instituteId, 'paymentConcepts', conceptId);
-    await deleteDoc(conceptRef);
 };
 
 export const registerPayment = async (
