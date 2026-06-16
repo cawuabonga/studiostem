@@ -34,7 +34,7 @@ export default function ConsolidadoEgresoPage() {
     // Search & Filter States
     const [searchTerm, setSearchTerm] = useState('');
     const [programFilter, setProgramFilter] = useState('all');
-    const [admissionYearFilter, setAdmissionYearFilter] = useState('');
+    const [admissionYearFilter, setAdmissionYearFilter] = useState('all');
     const [turnoFilter, setTurnoFilter] = useState<UnitTurno | 'all'>('all');
     const [semesterFilter, setSemesterFilter] = useState<string>('all');
 
@@ -115,7 +115,7 @@ export default function ConsolidadoEgresoPage() {
             const result = await getStudentsPaginated({
                 instituteId,
                 programId: programFilter,
-                admissionYear: admissionYearFilter || undefined,
+                admissionYear: admissionYearFilter === 'all' ? undefined : admissionYearFilter,
                 turno: turnoFilter === 'all' ? undefined : turnoFilter,
                 semester: semesterFilter === 'all' ? undefined : parseInt(semesterFilter),
                 limitCount: 25,
@@ -266,7 +266,17 @@ export default function ConsolidadoEgresoPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Año de Ingreso</Label>
-                                        <Input placeholder="Ej: 2024" value={admissionYearFilter} onChange={e => setAdmissionYearFilter(e.target.value)} />
+                                        <Select value={admissionYearFilter} onValueChange={setAdmissionYearFilter}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Todos los Años" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Ver Todos los Años</SelectItem>
+                                                {Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() - i).toString()).map(y => (
+                                                    <SelectItem key={y} value={y}>{y}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Turno</Label>
