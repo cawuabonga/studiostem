@@ -338,9 +338,11 @@ export default function ConsolidadoEgresoPage() {
                                             );
                                         }) : (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="h-60 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
-                                                    <UserSquare2 className="h-12 w-12 opacity-20" />
-                                                    <p>Utilice los filtros superiores para consultar alumnos.</p>
+                                                <TableCell colSpan={6} className="h-60 text-center text-muted-foreground">
+                                                    <div className="flex flex-col items-center justify-center gap-2">
+                                                        <UserSquare2 className="h-12 w-12 opacity-20" />
+                                                        <p>Utilice los filtros superiores para consultar alumnos.</p>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -443,9 +445,11 @@ export default function ConsolidadoEgresoPage() {
                                             ))
                                         ) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
-                                                    <Archive className="h-10 w-10 opacity-20" />
-                                                    <p>{hasSearchedRegistry ? "No se encontraron egresados con los filtros seleccionados." : "Utilice los filtros superiores y haga clic en 'Actualizar Padrón' para cargar los datos."}</p>
+                                                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground">
+                                                    <div className="flex flex-col items-center justify-center gap-2">
+                                                        <Archive className="h-10 w-10 opacity-20" />
+                                                        <p>{hasSearchedRegistry ? "No se encontraron egresados con los filtros seleccionados." : "Utilice los filtros superiores y haga clic en 'Actualizar Padrón' para cargar los datos."}</p>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         )}
