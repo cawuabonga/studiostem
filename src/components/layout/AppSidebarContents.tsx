@@ -56,7 +56,7 @@ const allNavItems: NavItem[] = [
     // SuperAdmin
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2Icon, permission: 'superadmin:institute:manage' },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: UsersIcon, permission: 'superadmin:users:manage' },
-    { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
     { href: '/dashboard/superadmin/manage-plans', label: 'Gestionar Planes', icon: PlansIcon, permission: 'superadmin:plans:manage' },
     { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: CpuIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: GalleryIcon, permission: 'superadmin:design:manage' },
@@ -136,6 +136,11 @@ export function AppSidebarContents() {
               <p className="text-[10px] uppercase font-black tracking-tighter text-sidebar-foreground/60 leading-tight mt-1">
                   {user.roleName || (user.role === 'Student' ? 'Estudiante' : user.role)}
               </p>
+              {user.programName && (
+                <p className="text-[9px] font-bold text-accent uppercase mt-1 leading-tight line-clamp-2">
+                  {user.programName}
+                </p>
+              )}
             </div>
           </div>
         )}
