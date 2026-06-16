@@ -158,42 +158,6 @@
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "accessPointId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "accessPointId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
           "fieldPath": "userDocumentId",
           "order": "ASCENDING"
         },
@@ -274,42 +238,6 @@
       ]
     },
     {
-      "collectionGroup": "scheduleBlocks",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "unitId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "year",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "scheduleBlocks",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "year",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "semester",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "assets",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -325,6 +253,46 @@
       "fields": [
         {
           "fieldPath": "academicStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "graduationYear",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "lastName",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "studentProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "academicStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "programId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "lastName",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "studentProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "academicStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "programId",
           "order": "ASCENDING"
         },
         {
