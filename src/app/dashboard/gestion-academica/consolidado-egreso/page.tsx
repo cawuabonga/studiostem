@@ -188,40 +188,194 @@ export default function ConsolidadoEgresoPage() {
 
     const handlePrintConstancia = (student: StudentProfile) => {
         const programName = programs.find(p => p.id === student.programId)?.name || 'N/A';
-        const today = format(new Date(), 'dd MMMM yyyy', { locale: es });
+        const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es });
+        const instituteName = institute?.name || 'INSTITUTO SUPERIOR';
+        const logoUrl = institute?.logoUrl || '';
+        const address = institute?.publicProfile?.contactAddress || '';
+        const phone = institute?.publicProfile?.contactPhone || '';
+        const email = institute?.publicProfile?.contactEmail || '';
+
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
+        
         printWindow.document.write(`
             <html>
                 <head>
                     <title>Constancia de Egreso - ${student.fullName}</title>
                     <style>
-                        body { font-family: sans-serif; padding: 50px; line-height: 1.6; color: #000; }
-                        .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 40px; }
-                        .header img { max-width: 100px; }
-                        .title { text-align: center; text-decoration: underline; font-weight: bold; font-size: 1.5em; margin-bottom: 50px; }
-                        .content { text-align: justify; font-size: 1.1em; margin-bottom: 80px; }
-                        .footer { margin-top: 100px; display: flex; justify-content: space-around; text-align: center; }
-                        .signature { border-top: 1px solid #000; padding-top: 10px; width: 250px; }
+                        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Lato:ital,wght@0,400;0,700;1,400&display=swap');
+                        
+                        body { 
+                            font-family: 'Lato', sans-serif; 
+                            margin: 0; 
+                            padding: 0; 
+                            color: #1a1a1a;
+                            background-color: #fff;
+                        }
+                        .page-container {
+                            width: 210mm;
+                            height: 297mm;
+                            padding: 25mm;
+                            box-sizing: border-box;
+                            position: relative;
+                            border: 15px double #1e3a8a;
+                            margin: auto;
+                        }
+                        .watermark {
+                            position: absolute;
+                            top: 50%;
+                            left: 50%;
+                            transform: translate(-50%, -50%) rotate(-45deg);
+                            opacity: 0.07;
+                            z-index: 0;
+                            width: 500px;
+                            pointer-events: none;
+                        }
+                        .content-wrapper {
+                            position: relative;
+                            z-index: 10;
+                            height: 100%;
+                            display: flex;
+                            flex-direction: column;
+                        }
+                        header {
+                            text-align: center;
+                            margin-bottom: 50px;
+                        }
+                        .logo-main {
+                            height: 90px;
+                            margin-bottom: 15px;
+                            object-fit: contain;
+                        }
+                        .inst-name {
+                            font-family: 'Cinzel', serif;
+                            font-size: 22pt;
+                            margin: 0;
+                            color: #1e3a8a;
+                            letter-spacing: 2px;
+                        }
+                        .inst-subtitle {
+                            font-size: 9pt;
+                            font-weight: bold;
+                            color: #666;
+                            margin-top: 5px;
+                            text-transform: uppercase;
+                            letter-spacing: 4px;
+                        }
+                        .title-box {
+                            text-align: center;
+                            margin: 60px 0;
+                        }
+                        .main-title {
+                            font-family: 'Cinzel', serif;
+                            font-size: 32pt;
+                            color: #1e3a8a;
+                            margin: 0;
+                            text-decoration: none;
+                            border-bottom: 3px solid #1e3a8a;
+                            display: inline-block;
+                            padding-bottom: 10px;
+                        }
+                        .body-text {
+                            text-align: justify;
+                            font-size: 14pt;
+                            line-height: 1.8;
+                            margin: 40px 0;
+                        }
+                        .highlight {
+                            font-weight: 800;
+                            text-transform: uppercase;
+                            color: #000;
+                        }
+                        .date-location {
+                            text-align: right;
+                            font-size: 12pt;
+                            margin-top: 60px;
+                            font-style: italic;
+                        }
+                        .signature-section {
+                            margin-top: auto;
+                            display: flex;
+                            justify-content: space-around;
+                            padding-bottom: 60px;
+                        }
+                        .sig-box {
+                            text-align: center;
+                            width: 250px;
+                            border-top: 1px solid #333;
+                            padding-top: 10px;
+                            font-size: 10pt;
+                            font-weight: bold;
+                        }
+                        footer {
+                            position: absolute;
+                            bottom: 20px;
+                            left: 0;
+                            right: 0;
+                            text-align: center;
+                            font-size: 8pt;
+                            color: #999;
+                            border-top: 1px solid #eee;
+                            padding-top: 10px;
+                            margin: 0 40px;
+                        }
+                        @media print {
+                            .page-container { border: 15px double #1e3a8a !important; -webkit-print-color-adjust: exact; }
+                            .inst-name, .main-title { color: #1e3a8a !important; }
+                        }
                     </style>
                 </head>
                 <body>
-                    <div class="header">
-                        ${institute?.logoUrl ? `<img src="${institute.logoUrl}" />` : ''}
-                        <h1>${institute?.name || 'INSTITUTO'}</h1>
+                    <div class="page-container">
+                        ${logoUrl ? `<img src="${logoUrl}" class="watermark" />` : ''}
+                        
+                        <div class="content-wrapper">
+                            <header>
+                                ${logoUrl ? `<img src="${logoUrl}" class="logo-main" />` : ''}
+                                <h1 class="inst-name">${instituteName.toUpperCase()}</h1>
+                                <div class="inst-subtitle">Dirección de Asuntos Académicos</div>
+                            </header>
+
+                            <div class="title-box">
+                                <h2 class="main-title">CONSTANCIA DE EGRESO</h2>
+                            </div>
+
+                            <div class="body-text">
+                                <p>La Dirección del <strong>${instituteName}</strong>, hace constar que el estudiante:</p>
+                                <p style="text-align: center; font-size: 18pt; margin: 30px 0;" class="highlight">${student.fullName}</p>
+                                <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas exigidas por la ley.</p>
+                                <p>Se expide la presente a solicitud del interesado para los fines legales y administrativos que correspondan.</p>
+                            </div>
+
+                            <div class="date-location">
+                                Dado en la sede institucional, a los ${today}.
+                            </div>
+
+                            <div class="signature-section">
+                                <div class="sig-box">
+                                    DIRECCIÓN GENERAL
+                                </div>
+                                <div class="sig-box">
+                                    SECRETARÍA ACADÉMICA
+                                </div>
+                            </div>
+
+                            <footer>
+                                ${address} | Tel: ${phone} | ${email}<br/>
+                                Validado mediante el Sistema STEM V2
+                            </footer>
+                        </div>
                     </div>
-                    <div class="title">CONSTANCIA DE EGRESO</div>
-                    <div class="content">
-                        <p>HACE CONSTAR QUE EL ESTUDIANTE:</p>
-                        <p style="text-align: center; font-size: 1.3em;"><strong>${student.fullName.toUpperCase()}</strong></p>
-                        <p>HA CULMINADO SATISFACTORIAMENTE EL PLAN DE ESTUDIOS DE: <strong>${programName.toUpperCase()}</strong></p>
-                        <p>Lugar y Fecha: ${today}</p>
-                    </div>
+                    <script>
+                        window.onload = () => {
+                            window.print();
+                            setTimeout(() => { window.close(); }, 500);
+                        };
+                    </script>
                 </body>
             </html>
         `);
         printWindow.document.close();
-        printWindow.print();
     };
 
     return (
@@ -430,7 +584,7 @@ export default function ConsolidadoEgresoPage() {
                                     <AccordionTrigger className="hover:no-underline py-4 font-bold text-sm uppercase">
                                         <div className="flex items-center gap-2">
                                             <Upload className="h-4 w-4 text-primary" />
-                                            Carga Masiva de Egresados Históricos
+                                            <span className="truncate">Carga Masiva de Egresados Históricos</span>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="pb-6">
