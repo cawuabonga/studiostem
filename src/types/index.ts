@@ -1,7 +1,7 @@
 
 import type { Timestamp } from 'firebase/firestore';
 
-export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin' | 'Company';
+export type UserRole = 'SuperAdmin' | 'Student' | 'Teacher' | 'Coordinator' | 'Admin' | 'Company' | 'Graduate';
 
 export interface SocialLinks {
     linkedin?: string;
@@ -54,8 +54,8 @@ export interface StudentProfile {
   admissionYear: string;
   admissionPeriod: UnitPeriod;
   turno: UnitTurno;
-  role: 'Student';
-  roleId: 'student';
+  role: 'Student' | 'Graduate';
+  roleId: 'student' | 'graduate';
   condition?: 'NOMBRADO' | 'CONTRATADO';
   rfidCardId?: string;
   linkedUserUid?: string | null;
@@ -398,6 +398,8 @@ export type Permission =
   | 'student:efsrt:view'
   | 'student:jobs:view'
   | 'student:jobs:apply'
+  | 'graduate:jobs:view'
+  | 'graduate:profile:view'
   | 'company:jobs:manage'
   | 'company:applicants:view';
 
@@ -474,6 +476,14 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
             { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
+        ],
+    },
+     {
+        category: 'Acciones de Egresados',
+        description: 'Permisos específicos para los estudiantes que han culminado sus estudios.',
+        permissions: [
+            { id: 'graduate:jobs:view', label: 'Ver Bolsa Laboral para Egresados' },
+            { id: 'graduate:profile:view', label: 'Ver Perfil Público de Egresado' },
         ],
     },
      {

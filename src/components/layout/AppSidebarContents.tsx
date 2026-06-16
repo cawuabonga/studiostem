@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -72,8 +71,8 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: FingerprintIcon, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: UsersIcon, permission: ['users:staff:manage', 'users:student:manage'] },
     
-    // Bolsa Laboral (Visible para Alumnos y Empresas)
-    { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusinessIcon, permission: ['student:jobs:view', 'company:jobs:manage'] },
+    // Bolsa Laboral (Visible para Alumnos, Egresados y Empresas)
+    { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusinessIcon, permission: ['student:jobs:view', 'graduate:jobs:view', 'company:jobs:manage'] },
 
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopyIcon, permission: 'teacher:unit:view' },
@@ -81,8 +80,8 @@ const allNavItems: NavItem[] = [
 
     // Student & General Staff
     { href: '/dashboard/academic/mis-unidades', label: 'Mis Unidades Didácticas', icon: BookCopyIcon, permission: 'student:unit:view' },
-    { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPinIcon, permission: 'student:efsrt:view' },
-    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: PercentIcon, permission: 'student:grades:view' },
+    { href: '/dashboard/academic/efsrt', label: 'Mis Prácticas (EFSRT)', icon: MapPinIcon, permission: ['student:efsrt:view', 'student:efsrt:view'] },
+    { href: '/dashboard/academic/grades', label: 'Mis Calificaciones', icon: PercentIcon, permission: ['student:grades:view', 'student:grades:view'] },
     { href: '/dashboard/mis-accesos', label: 'Mis Accesos', icon: HistoryIcon, permission: 'user:access:view:own' },
     { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: PencilIcon, permission: 'user:supplies:request' },
     { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: PackageIcon, permission: 'user:supplies:request' },

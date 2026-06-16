@@ -141,7 +141,7 @@ export const updateUserProfile = async (data: {
             await updateDoc(userDocRef, firestoreUpdates);
 
             if (userData.instituteId && userData.documentId) {
-                const profileCollection = userData.role === 'Student' ? 'studentProfiles' : 'staffProfiles';
+                const profileCollection = (userData.role === 'Student' || userData.role === 'Graduate') ? 'studentProfiles' : 'staffProfiles';
                 const profileRef = doc(db, 'institutes', userData.instituteId, profileCollection, userData.documentId);
                 await updateDoc(profileRef, firestoreUpdates);
             }
@@ -185,6 +185,19 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
                 'user:supplies:request': true,
                 'user:access:view:own': true,
                 'planning:schedule:view:own': true
+            } 
+        },
+        { 
+            id: 'graduate', 
+            name: 'Egresado', 
+            description: 'Acceso para ex-alumnos con enfoque en bolsa laboral.', 
+            permissions: { 
+                'graduate:jobs:view': true, 
+                'graduate:profile:view': true, 
+                'student:grades:view': true, // Ver historial
+                'student:efsrt:view': true, 
+                'student:payments:manage': true,
+                'user:access:view:own': true
             } 
         },
         { 
@@ -798,6 +811,25 @@ export const bulkAddStudents = async (instituteId: string, studentList: Omit<Stu
             instituteId,
             fullName: `${studentData.firstName} ${studentData.lastName}`,
             linkedUserUid: null,
+        };
+        batch.set(docRef, profileData);
+    });
+    await batch.commit();
+};
+
+export const bulkAddGraduates = async (instituteId: string, graduateList: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
+    const batch = writeBatch(db);
+    const studentsCol = getSubCollectionRef(instituteId, 'studentProfiles');
+    graduateList.forEach(data => {
+        const docRef = doc(studentsCol, data.documentId);
+        const profileData: Omit<StudentProfile, 'id'> = {
+            ...data,
+            instituteId,
+            fullName: `${data.firstName} ${data.lastName}`,
+            linkedUserUid: null,
+            academicStatus: 'Egresado',
+            role: 'Graduate',
+            roleId: 'graduate',
         };
         batch.set(docRef, profileData);
     });
@@ -2171,7 +2203,29 @@ export const checkEgresoEligibility = async (instituteId: string, studentId: str
 };
 
 export const promoteToEgresado = async (instituteId: string, studentId: string, graduationYear: string) => {
-    await updateDoc(doc(db, 'institutes', instituteId, 'studentProfiles', studentId), { academicStatus: 'Egresado', graduationYear });
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+    const studentSnap = await getDoc(studentRef);
+    if (!studentSnap.exists()) throw new Error("Student not found");
+    const studentData = studentSnap.data();
+
+    const batch = writeBatch(db);
+    // 1. Update profile
+    batch.update(studentRef, {
+        academicStatus: 'Egresado',
+        graduationYear,
+        role: 'Graduate',
+        roleId: 'graduate'
+    });
+
+    // 2. Update user document if linked
+    if (studentData.linkedUserUid) {
+        const userRef = doc(db, 'users', studentData.linkedUserUid);
+        batch.update(userRef, {
+            role: 'Graduate',
+            roleId: 'graduate'
+        });
+    }
+    await batch.commit();
 };
 
 export const getTaskSubmissions = async (instituteId: string, unitId: string, weekNumber: number, taskId: string): Promise<TaskSubmission[]> => {

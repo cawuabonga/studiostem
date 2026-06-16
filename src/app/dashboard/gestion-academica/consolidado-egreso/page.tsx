@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, Award, Loader2, Info, AlertTriangle, UserCheck, Search, Printer, GraduationCap, ListChecks, Archive, ArrowRight, UserSquare2, FileStack } from 'lucide-react';
+import { CheckCircle, Award, Loader2, Info, AlertTriangle, UserCheck, Search, Printer, GraduationCap, ListChecks, Archive, ArrowRight, UserSquare2, FileStack, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +20,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { StudentAuditExpediente } from '@/components/egreso/StudentAuditExpediente';
+import { BulkUploadGraduates } from '@/components/egreso/BulkUploadGraduates';
 import type { DocumentSnapshot } from 'firebase/firestore';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
@@ -165,7 +167,7 @@ export default function ConsolidadoEgresoPage() {
         setIsSubmitting(true);
         try {
             await promoteToEgresado(instituteId, selectedStudent.documentId, graduationYear);
-            toast({ title: "Estudiante Promocionado", description: `${selectedStudent.fullName} ahora es Egresado.` });
+            toast({ title: "Estudiante Promocionado", description: `${selectedStudent.fullName} ahora tiene el Rol de Egresado.` });
             setIsPromoteDialogOpen(false);
             setCandidates(prev => prev.filter(c => c.documentId !== selectedStudent.documentId));
         } catch (error) {
@@ -396,6 +398,20 @@ export default function ConsolidadoEgresoPage() {
                                 </div>
                             </div>
 
+                            <Accordion type="single" collapsible className="w-full">
+                                <AccordionItem value="bulk-graduates" className="border rounded-xl px-4 bg-muted/10">
+                                    <AccordionTrigger className="hover:no-underline py-4 font-bold text-sm uppercase">
+                                        <div className="flex items-center gap-2">
+                                            <Upload className="h-4 w-4 text-primary" />
+                                            Carga Masiva de Egresados Históricos
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent className="pb-6">
+                                        <BulkUploadGraduates onUploadSuccess={fetchRegistryData} />
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+
                             <div className="rounded-md border">
                                 <Table>
                                     <TableHeader>
@@ -468,7 +484,7 @@ export default function ConsolidadoEgresoPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2"><Award className="h-5 w-5 text-amber-500" /> Confirmar Egreso Oficial</DialogTitle>
                         <DialogDescription>
-                            Al confirmar, el estado de <strong>{selectedStudent?.fullName}</strong> cambiará a "Egresado".
+                            Al confirmar, el estado de <strong>{selectedStudent?.fullName}</strong> cambiará a "Egresado" y se le asignará el Rol de Egresado automáticamente.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
@@ -478,7 +494,7 @@ export default function ConsolidadoEgresoPage() {
                         </div>
                         <div className="p-3 bg-amber-50 border border-amber-100 rounded-md flex gap-3 text-xs text-amber-800">
                             <AlertTriangle className="h-5 w-5 shrink-0" />
-                            <p>Esta acción es oficial e irreversible desde este panel. El usuario pasará al padrón histórico.</p>
+                            <p>Esta acción es oficial. El usuario pasará al padrón histórico y su acceso al sistema se limitará a funciones de Egresado.</p>
                         </div>
                     </div>
                     <DialogFooter>
