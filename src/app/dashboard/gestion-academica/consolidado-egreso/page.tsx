@@ -215,7 +215,7 @@ export default function ConsolidadoEgresoPage() {
                         .page-container {
                             width: 210mm;
                             height: 297mm;
-                            padding: 15mm;
+                            padding: 10mm;
                             box-sizing: border-box;
                             position: relative;
                             margin: auto;
@@ -225,7 +225,7 @@ export default function ConsolidadoEgresoPage() {
                             top: 50%;
                             left: 50%;
                             transform: translate(-50%, -50%);
-                            opacity: 0.05;
+                            opacity: 0.03;
                             z-index: 0;
                             width: 500px;
                             height: 500px;
@@ -238,24 +238,23 @@ export default function ConsolidadoEgresoPage() {
                             height: 100%;
                             display: flex;
                             flex-direction: column;
-                            border: 1.5px solid #1e3a8a;
-                            padding: 15mm;
+                            padding: 10mm 15mm;
                             box-sizing: border-box;
                         }
                         header {
                             display: grid;
                             grid-template-columns: 100px 1fr 100px;
                             align-items: center;
-                            margin-bottom: 40px;
-                            padding-bottom: 25px;
-                            border-bottom: 1px solid #eee;
+                            margin-bottom: 30px;
+                            padding-bottom: 20px;
+                            border-bottom: 1px solid #f0f0f0;
                         }
                         .logo-container {
                             display: flex;
                             justify-content: flex-start;
                         }
                         .logo-main {
-                            height: 70px;
+                            height: 65px;
                             width: auto;
                             object-fit: contain;
                         }
@@ -264,7 +263,7 @@ export default function ConsolidadoEgresoPage() {
                         }
                         .inst-name {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 18pt;
+                            font-size: 16pt;
                             margin: 0;
                             color: #1e3a8a;
                             text-transform: uppercase;
@@ -272,47 +271,47 @@ export default function ConsolidadoEgresoPage() {
                         }
                         .title-box {
                             text-align: center;
-                            margin: 45px 0;
+                            margin: 35px 0;
                         }
                         .main-title {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 30pt;
+                            font-size: 28pt;
                             color: #1e3a8a;
                             margin: 0;
                             letter-spacing: -1px;
                         }
                         .body-text {
                             text-align: justify;
-                            font-size: 13.5pt;
+                            font-size: 13pt;
                             line-height: 1.8;
-                            margin: 40px 0;
+                            margin: 30px 0;
                             flex-grow: 1;
                         }
                         .highlight {
                             font-weight: 800;
                             text-transform: uppercase;
                             color: #000;
-                            border-bottom: 1px solid #ccc;
+                            border-bottom: 1px solid #ddd;
                         }
                         .date-location {
                             text-align: right;
-                            font-size: 11pt;
-                            margin-top: 40px;
+                            font-size: 10pt;
+                            margin-top: 30px;
                             font-style: italic;
                             color: #444;
                         }
                         .signature-section {
-                            margin-top: 70px;
+                            margin-top: 60px;
                             display: flex;
                             justify-content: space-around;
-                            padding-bottom: 40px;
+                            padding-bottom: 30px;
                         }
                         .sig-box {
                             text-align: center;
-                            width: 240px;
+                            width: 220px;
                             border-top: 1px solid #1a1a1a;
-                            padding-top: 12px;
-                            font-size: 9.5pt;
+                            padding-top: 10px;
+                            font-size: 9pt;
                             font-weight: bold;
                             text-transform: uppercase;
                             letter-spacing: 1px;
@@ -352,7 +351,7 @@ export default function ConsolidadoEgresoPage() {
 
                             <div class="body-text">
                                 <p>La Dirección del <strong>${instituteName}</strong>, mediante el presente documento oficial, deja constancia que el estudiante:</p>
-                                <p style="text-align: center; font-size: 18pt; margin: 30px 0;" class="highlight">${student.fullName}</p>
+                                <p style="text-align: center; font-size: 18pt; margin: 25px 0;" class="highlight">${student.fullName}</p>
                                 <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas en situaciones reales de trabajo (EFSRT) exigidas por la normativa educativa vigente.</p>
                                 <p>Se expide la presente a solicitud del interesado para los fines legales, administrativos y de titulación que correspondan.</p>
                             </div>
@@ -692,7 +691,7 @@ export default function ConsolidadoEgresoPage() {
                     <div className="py-4 space-y-4">
                         <div className="space-y-2">
                             <Label>Año de Graduación</Label>
-                            <Input value={graduationYear} onChange={e => setGraduationYear(e.target.value)} />
+                            <Input value={graduationYear} onChange={e => setgraduationYear(e.target.value)} />
                         </div>
                         <div className="p-3 bg-amber-50 border border-amber-100 rounded-md flex gap-3 text-xs text-amber-800">
                             <AlertTriangle className="h-5 w-5 shrink-0" />
