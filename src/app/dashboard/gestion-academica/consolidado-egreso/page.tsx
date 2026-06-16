@@ -379,7 +379,7 @@ export default function ConsolidadoEgresoPage() {
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Ver Todos los Años</SelectItem>
-                                            {Array.from({ length: 10 }, (_, i) => (new Date().getFullYear() - i).toString()).map(y => (
+                                            {Array.from({ length: 40 }, (_, i) => (new Date().getFullYear() - i).toString()).map(y => (
                                                 <SelectItem key={y} value={y}>{y}</SelectItem>
                                             ))}
                                         </SelectContent>
