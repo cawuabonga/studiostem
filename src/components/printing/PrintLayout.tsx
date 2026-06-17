@@ -19,40 +19,40 @@ export function PrintLayout({ institute, program, unit, teacher, title, children
 
     return (
         <div className="printable-area bg-white text-black p-0 font-sans">
-            {/* Header Profesional de 3 Columnas */}
-            <div className="grid grid-cols-12 items-center border-b-2 border-black pb-4 mb-6">
-                {/* Columna 1: Logo */}
-                <div className="col-span-3 flex justify-start">
-                    {institute?.logoUrl ? (
-                        <img 
-                            src={institute.logoUrl} 
-                            alt="Logo" 
-                            className="w-[75px] h-[75px] object-contain" 
-                        />
-                    ) : (
-                        <div className="w-[75px] h-[75px] border-2 border-dashed border-gray-300 flex items-center justify-center text-[8px] text-gray-400">
-                            LOGO
-                        </div>
-                    )}
-                </div>
-
-                {/* Columna 2: Info Institucional Centrada */}
-                <div className="col-span-6 text-center">
-                    <h1 className="text-[14pt] font-black uppercase tracking-tight leading-none mb-1">
+            {/* Header Rediseñado: Nombre grande arriba, logo y fecha debajo */}
+            <div className="mb-6 border-b-2 border-black pb-4">
+                {/* Fila 1: Nombre del Instituto (Dominante y Centrado) */}
+                <div className="w-full text-center mb-4">
+                    <h1 className="text-[22pt] font-black uppercase tracking-tight leading-tight text-black">
                         {institute?.name || 'INSTITUTO SUPERIOR'}
                     </h1>
-                    <p className="text-[8pt] font-bold text-gray-500 uppercase tracking-[0.2em]">
-                        Sistema Tecnológico de Educación Modular (STEM)
-                    </p>
                 </div>
 
-                {/* Columna 3: Fecha y Hora */}
-                <div className="col-span-3 text-right">
-                     <div className="inline-block text-left">
-                        <p className="text-[7pt] font-black text-gray-400 uppercase leading-none">Fecha de Emisión</p>
-                        <p className="text-[9pt] font-bold text-black">{format(today, 'dd/MM/yyyy')}</p>
-                        <p className="text-[8pt] font-medium text-gray-600">{format(today, 'HH:mm:ss')}</p>
-                     </div>
+                {/* Fila 2: Logo (Costado) y Fecha/Hora */}
+                <div className="flex justify-between items-end">
+                    {/* Logo a un costado */}
+                    <div className="flex justify-start">
+                        {institute?.logoUrl ? (
+                            <img 
+                                src={institute.logoUrl} 
+                                alt="Logo" 
+                                className="w-[65px] h-[65px] object-contain" 
+                            />
+                        ) : (
+                            <div className="w-[65px] h-[65px] border border-dashed border-gray-300 flex items-center justify-center text-[6pt] text-gray-400">
+                                LOGO
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Fecha y Hora al otro costado */}
+                    <div className="text-right">
+                         <div className="inline-block text-left">
+                            <p className="text-[7pt] font-black text-gray-400 uppercase leading-none">Fecha de Emisión</p>
+                            <p className="text-[9pt] font-bold text-black">{format(today, 'dd/MM/yyyy')}</p>
+                            <p className="text-[8pt] font-medium text-gray-600">{format(today, 'HH:mm:ss')}</p>
+                         </div>
+                    </div>
                 </div>
             </div>
 
