@@ -10,30 +10,34 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1cm 1.5cm; /* Margen superior/inferior 1cm, lateral 1.5cm */
+    margin: 10mm 15mm; /* 1cm arriba/abajo, 1.5cm laterales como solicitado */
   }
 
-  /* Reset suave para permitir el flujo natural de páginas */
-  html, body {
+  /* Reset agresivo para anular los contenedores h-screen del dashboard y permitir múltiples páginas */
+  html, body, #__next, [data-sidebar-provider], main, .printable-content {
     background: white !important;
     color: black !important;
     font-family: 'Lato', sans-serif !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
-    height: auto !important; /* CRÍTICO: Permite generar múltiples páginas */
+    height: auto !important;
+    min-height: auto !important;
+    position: static !important;
+    display: block !important;
   }
 
   /* Ocultar elementos de la interfaz web */
   .no-print, 
-  header, 
+  header.page-header, 
   nav, 
   aside, 
   .sidebar-container, 
   .page-header,
   .screen-only,
   button,
-  [role="dialog"] > button {
+  [role="dialog"] > button,
+  [data-sidebar="trigger"] {
     display: none !important;
   }
 
