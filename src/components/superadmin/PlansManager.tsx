@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -101,13 +102,31 @@ export function PlansManager() {
                             
                             <Separator />
                             
-                            <ul className="space-y-3">
-                                {plan.features.map((feature, i) => (
-                                    <li key={i} className="flex items-start gap-3 text-xs font-bold text-slate-600">
-                                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                                        <span>{feature}</span>
-                                    </li>
-                                ))}
+                            <ul className="space-y-4">
+                                {plan.features.map((feature, i) => {
+                                    const [name, ...descParts] = feature.split(':');
+                                    const description = descParts.join(':');
+                                    const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
+
+                                    return (
+                                        <li key={i} className="space-y-1.5">
+                                            <div className="flex items-start gap-3 text-xs font-black text-slate-800 uppercase tracking-tight">
+                                                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                                                <span>{name}</span>
+                                            </div>
+                                            {items.length > 0 && (
+                                                <div className="ml-7 flex flex-col gap-1.5">
+                                                    {items.map((item, itemIdx) => (
+                                                        <div key={itemIdx} className="text-[10px] text-slate-500 font-bold leading-tight flex items-start gap-1.5">
+                                                            <div className="h-1 w-1 rounded-full bg-slate-300 mt-1 shrink-0" />
+                                                            <span>{item}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         </CardContent>
                         <CardFooter className="border-t bg-muted/20 p-4 flex gap-2">
