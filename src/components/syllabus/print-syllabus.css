@@ -1,5 +1,5 @@
 
-/* Estilos de impresión exclusivos para el Sílabo Académico */
+/* Estilos exclusivos para la impresión del Sílabo Académico */
 
 @media screen {
   .print-only {
@@ -14,7 +14,7 @@
   }
 
   /* Reset radical para evitar que contenedores de React/Next corten el flujo */
-  html, body, #root, #__next, [data-sidebar-provider], main, .printable-content {
+  html, body, #root, #__next, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
     background: white !important;
     color: black !important;
     font-family: 'Lato', sans-serif !important;
@@ -30,7 +30,6 @@
     print-color-adjust: exact;
   }
 
-  /* Ocultar elementos innecesarios */
   .no-print, 
   header, 
   nav, 
@@ -47,7 +46,7 @@
     display: block !important;
   }
 
-  /* Layout Base del Sílabo */
+  /* Layout Base */
   .printable-area {
     display: block !important;
     width: 100% !important;
@@ -65,10 +64,9 @@
     font-weight: 700 !important;
     color: black !important;
     text-transform: uppercase;
-    margin: 0;
   }
 
-  /* Tablas de Reporte */
+  /* Tablas */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
