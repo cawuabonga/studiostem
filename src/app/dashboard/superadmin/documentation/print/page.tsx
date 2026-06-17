@@ -23,7 +23,7 @@ async function getFullManualContent() {
     );
     
     // Orden lógico de las secciones
-    const order = ['arquitectura', 'tecnologias', 'identidad-acceso', 'integracion-iot'];
+    const order = ['arquitectura', 'eficiencia-datos', 'tecnologias', 'identidad-acceso', 'integracion-iot'];
     return docs.sort((a, b) => {
         const idxA = order.indexOf(a.slug);
         const idxB = order.indexOf(b.slug);
