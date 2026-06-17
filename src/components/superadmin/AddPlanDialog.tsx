@@ -31,19 +31,35 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
 
-// Listado maestro de módulos de la plataforma para gestión automática
+// Listado granular de módulos de la plataforma
 const PLATFORM_MODULES = [
-    { id: 'lms_core', name: 'LMS Core', defaultDesc: 'Planificación, Materiales y Tareas.' },
-    { id: 'aula_virtual', name: 'Aula Virtual STEM', defaultDesc: 'Videoclases en vivo (Jitsi/8x8).' },
-    { id: 'gestion_academica', name: 'Gestión Académica', defaultDesc: 'Matrículas, Unidades y Programas.' },
-    { id: 'notas_asistencia', name: 'Evaluación y Asistencia', defaultDesc: 'Registro de notas y control de asistencia manual.' },
-    { id: 'iot_rfid', name: 'Integración IoT (RFID)', defaultDesc: 'Control de acceso automatizado con hardware.' },
-    { id: 'pagos_tesoreria', name: 'Tesorería y Pagos', defaultDesc: 'Gestión de tasas y validación de vouchers.' },
-    { id: 'bolsa_laboral', name: 'Bolsa de Trabajo', defaultDesc: 'Conexión con empresas y postulaciones.' },
-    { id: 'infraestructura', name: 'Infraestructura e Inventario', defaultDesc: 'Gestión de ambientes y activos fijos.' },
-    { id: 'abastecimiento', name: 'Abastecimiento y Almacén', defaultDesc: 'Catálogo de insumos y PECOSAs.' },
-    { id: 'ia_genkit', name: 'Inteligencia Artificial', defaultDesc: 'Generación de contenidos con Google/Ollama.' },
-    { id: 'reportes_analytics', name: 'Reportes y Analítica', defaultDesc: 'Gráficos avanzados y reportes exportables.' },
+    // GESTIÓN ACADÉMICA
+    { id: 'programs_units', name: 'Programas y Unidades', defaultDesc: 'Gestión de currícula y catálogo de cursos.' },
+    { id: 'enrollment_manager', name: 'Matrícula Digital', defaultDesc: 'Proceso de inscripción y gestión de secciones.' },
+    { id: 'gradebook_system', name: 'Registro de Evaluación', defaultDesc: 'Sistema centralizado de notas por indicador.' },
+    { id: 'attendance_tracking', name: 'Control de Asistencia', defaultDesc: 'Monitoreo de asistencia presencial y virtual.' },
+    { id: 'efsrt_supervision', name: 'Seguimiento EFSRT', defaultDesc: 'Supervisión de experiencias formativas (prácticas).' },
+    { id: 'graduation_audit', name: 'Auditoría de Egreso', defaultDesc: 'Verificación de requisitos para egresados.' },
+    
+    // APRENDIZAJE Y LMS
+    { id: 'lms_workspace', name: 'LMS Estudiantil', defaultDesc: 'Materiales, tareas y comunicación por semana.' },
+    { id: 'virtual_classroom', name: 'Aula Virtual HD', defaultDesc: 'Videoclases seguras integradas (Jitsi JaaS).' },
+    
+    // ADMINISTRACIÓN Y TESORERÍA
+    { id: 'treasury_core', name: 'Tesorería y Pagos', defaultDesc: 'Gestión de tasas y validación de vouchers.' },
+    { id: 'pos_cashier', name: 'Terminal de Cobro (Caja)', defaultDesc: 'Módulo de cobranza presencial para tesorería.' },
+    { id: 'physical_infrastructure', name: 'Gestión de Ambientes', defaultDesc: 'Control de edificios, aulas y laboratorios.' },
+    { id: 'asset_inventory', name: 'Inventario Patrimonial', defaultDesc: 'Control de activos fijos y bienes institucionales.' },
+    { id: 'supply_chain', name: 'Almacén de Insumos', defaultDesc: 'Pedidos de materiales y control de stock.' },
+    
+    // INTEGRACIONES Y SERVICIOS
+    { id: 'job_board_pro', name: 'Bolsa de Trabajo Pro', defaultDesc: 'Monitor de empleos y conexión con empresas.' },
+    { id: 'iot_access_control', name: 'Seguridad IoT (RFID)', defaultDesc: 'Control de acceso físico mediante hardware.' },
+    { id: 'user_profiles', name: 'Gestión de Usuarios', defaultDesc: 'Control de perfiles, roles y vinculación DNI.' },
+    
+    // AVANZADO
+    { id: 'ai_hybrid_engine', name: 'Inteligencia Artificial', defaultDesc: 'Generación de sílabos e imágenes (Cloud/Local).' },
+    { id: 'bi_reports', name: 'Reportes y BI', defaultDesc: 'Dashboards avanzados de gestión y recaudación.' },
 ];
 
 const planSchema = z.object({
@@ -66,7 +82,6 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Estado local para los módulos seleccionados y sus descripciones personalizadas
   const [selectedModules, setSelectedModules] = useState<Record<string, { included: boolean, description: string }>>({});
 
   const isEditMode = !!existingPlan;
@@ -93,7 +108,6 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
           isActive: existingPlan.isActive,
         });
 
-        // Reconstruir la selección de módulos a partir del array de strings 'features'
         const initialModules: Record<string, { included: boolean, description: string }> = {};
         PLATFORM_MODULES.forEach(mod => {
             const foundFeature = existingPlan.features.find(f => f.startsWith(`${mod.name}:`));
@@ -117,7 +131,6 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
           isActive: true,
         });
         
-        // Inicializar con todos los módulos desactivados
         const initialModules: Record<string, { included: boolean, description: string }> = {};
         PLATFORM_MODULES.forEach(mod => {
             initialModules[mod.id] = { included: false, description: mod.defaultDesc };
@@ -148,7 +161,6 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
   };
 
   const onSubmit = async (data: FormValues) => {
-    // Validar que haya al menos un módulo seleccionado
     const selectedCount = Object.values(selectedModules).filter(m => m.included).length;
     if (selectedCount === 0) {
         toast({ title: "Plan Incompleto", description: "Selecciona al menos un módulo para incluir en este plan.", variant: "destructive" });
@@ -157,7 +169,6 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
 
     setIsSubmitting(true);
     
-    // Transformar los módulos seleccionados en el formato "Nombre: Descripción"
     const featuresArray = PLATFORM_MODULES
         .filter(mod => selectedModules[mod.id]?.included)
         .map(mod => `${mod.name}: ${selectedModules[mod.id].description}`);
@@ -185,7 +196,7 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
         <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
           <div className="flex items-center gap-4">
              <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
@@ -193,9 +204,9 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
              </div>
              <div>
                 <DialogTitle className="text-2xl font-black uppercase tracking-tight">
-                    {isEditMode ? 'Editar Plan de Servicio' : 'Diseñar Nuevo Plan SaaS'}
+                    {isEditMode ? 'Editar Configuración del Plan' : 'Arquitectura de Nuevo Plan'}
                 </DialogTitle>
-                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los módulos incluidos y los límites comerciales.</DialogDescription>
+                <DialogDescription className="text-primary-foreground/80 font-medium">Habilite funciones granulares y defina límites por módulo.</DialogDescription>
              </div>
           </div>
         </DialogHeader>
@@ -205,16 +216,15 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
             <ScrollArea className="flex-1">
                 <div className="p-8 space-y-8">
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* COLUMNA IZQUIERDA: Datos Básicos */}
                         <div className="lg:col-span-4 space-y-6">
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Información Comercial</h3>
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Detalles Comerciales</h3>
                             
                             <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem><FormLabel className="font-bold">Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Plan Institucional Pro" {...field} className="h-11" /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel className="font-bold">Nombre del Plan</FormLabel><FormControl><Input placeholder="Ej: Plan Educación 360" {...field} className="h-11" /></FormControl><FormMessage /></FormItem>
                             )} />
 
                             <FormField control={form.control} name="price" render={({ field }) => (
-                                <FormItem><FormLabel className="font-bold">Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-11 font-mono" /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel className="font-bold">Precio Base (S/)</FormLabel><FormControl><Input type="number" step="0.01" {...field} className="h-11 font-black text-lg" /></FormControl><FormMessage /></FormItem>
                             )} />
 
                             <FormField control={form.control} name="billingCycle" render={({ field }) => (
@@ -229,36 +239,37 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
                             )} />
 
                             <FormField control={form.control} name="description" render={({ field }) => (
-                                <FormItem><FormLabel className="font-bold">Resumen de Ventas</FormLabel><FormControl><Textarea placeholder="Describe el público objetivo de este plan..." {...field} className="resize-none h-24 text-xs" /></FormControl><FormMessage /></FormItem>
+                                <FormItem><FormLabel className="font-bold">Resumen para Clientes</FormLabel><FormControl><Textarea placeholder="Ej: Ideal para institutos de más de 1,000 alumnos..." {...field} className="resize-none h-24 text-xs font-medium" /></FormControl><FormMessage /></FormItem>
                             )} />
 
                             <FormField control={form.control} name="isActive" render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-muted/20">
+                                <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-primary/5">
                                     <div className="space-y-0.5">
-                                        <FormLabel className="font-bold text-xs uppercase">Visibilidad</FormLabel>
-                                        <p className="text-[10px] text-muted-foreground uppercase font-black">Plan Publicado</p>
+                                        <FormLabel className="font-black text-[10px] uppercase tracking-wider">Estado del Plan</FormLabel>
+                                        <p className={cn("text-xs font-bold uppercase", field.value ? "text-green-600" : "text-muted-foreground")}>
+                                            {field.value ? "PÚBLICO" : "BORRADOR"}
+                                        </p>
                                     </div>
                                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                                 </FormItem>
                             )} />
                         </div>
 
-                        {/* COLUMNA DERECHA: Configuración de Módulos (Features) */}
                         <div className="lg:col-span-8 space-y-6">
                             <div className="flex items-center justify-between">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Configuración de Módulos Incluidos</h3>
-                                <Badge variant="outline" className="font-black text-[10px] uppercase">
-                                    {Object.values(selectedModules).filter(m => m.included).length} Seleccionados
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-primary">Selección de Funciones Específicas</h3>
+                                <Badge variant="secondary" className="font-black text-[10px] uppercase h-6 px-3">
+                                    {Object.values(selectedModules).filter(m => m.included).length} de {PLATFORM_MODULES.length} módulos
                                 </Badge>
                             </div>
                             
-                            <div className="grid grid-cols-1 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 {PLATFORM_MODULES.map(mod => {
                                     const isSelected = selectedModules[mod.id]?.included;
                                     return (
                                         <div key={mod.id} className={cn(
-                                            "p-4 rounded-2xl border transition-all flex flex-col gap-3 group",
-                                            isSelected ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 opacity-70 grayscale-[0.5]"
+                                            "p-4 rounded-2xl border transition-all flex flex-col gap-3 group h-fit",
+                                            isSelected ? "bg-white border-primary ring-2 ring-primary/10 shadow-lg" : "bg-muted/10 opacity-60 grayscale-[0.3] hover:opacity-100 hover:grayscale-0"
                                         )}>
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-3">
@@ -266,31 +277,25 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
                                                         id={mod.id} 
                                                         checked={isSelected} 
                                                         onCheckedChange={() => toggleModule(mod.id)}
-                                                        className="h-5 w-5 rounded-md"
+                                                        className="h-5 w-5 rounded-md border-2"
                                                     />
-                                                    <Label htmlFor={mod.id} className="text-sm font-black uppercase tracking-tight cursor-pointer">
+                                                    <Label htmlFor={mod.id} className="text-xs font-black uppercase tracking-tight cursor-pointer leading-tight">
                                                         {mod.name}
                                                     </Label>
                                                 </div>
-                                                {isSelected ? (
-                                                    <Badge className="bg-green-100 text-green-700 border-none font-black text-[9px] uppercase tracking-tighter">Incluido en Plan</Badge>
-                                                ) : (
-                                                    <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest opacity-40">Desactivado</span>
-                                                )}
+                                                {isSelected && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                                             </div>
 
                                             {isSelected && (
-                                                <div className="animate-in slide-in-from-top-2 duration-300">
+                                                <div className="animate-in slide-in-from-top-1 duration-200">
                                                     <div className="relative">
-                                                        <Info className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                                                         <Input 
                                                             value={selectedModules[mod.id].description} 
                                                             onChange={e => updateModuleDesc(mod.id, e.target.value)}
-                                                            placeholder="Detalle comercial o límite (ej: Hasta 500 alumnos)"
-                                                            className="h-10 pl-9 text-xs border-primary/10 bg-white"
+                                                            placeholder="Límite o detalle comercial..."
+                                                            className="h-9 pl-3 text-[11px] border-primary/20 bg-primary/5 font-medium"
                                                         />
                                                     </div>
-                                                    <p className="text-[9px] text-muted-foreground mt-2 ml-1 italic">Este texto aparecerá en las tarjetas de precios para los clientes.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -303,10 +308,10 @@ export function AddPlanDialog({ isOpen, onClose, existingPlan }: AddPlanDialogPr
             </ScrollArea>
 
             <DialogFooter className="p-8 bg-muted/20 border-t shrink-0">
-              <DialogClose asChild><Button type="button" variant="ghost" className="font-bold h-12 px-8">CANCELAR</Button></DialogClose>
+              <DialogClose asChild><Button type="button" variant="ghost" className="font-bold h-12 px-8">CERRAR</Button></DialogClose>
               <Button type="submit" disabled={isSubmitting} className="font-black h-12 px-12 shadow-xl shadow-primary/20">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                {isEditMode ? 'ACTUALIZAR PLAN OFICIAL' : 'REGISTRAR PLAN DE SERVICIO'}
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                {isEditMode ? 'GUARDAR CAMBIOS' : 'CREAR PLAN DE SERVICIO'}
               </Button>
             </DialogFooter>
           </form>
