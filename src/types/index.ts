@@ -397,6 +397,7 @@ export type Permission =
   | 'superadmin:design:manage'
   | 'superadmin:roles:manage'
   | 'superadmin:plans:manage'
+  | 'superadmin:observability:view'
   | 'teacher:unit:view'
   | 'teacher:efsrt:supervise'
   | 'student:unit:view'
@@ -513,6 +514,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'superadmin:design:manage', label: 'Gestionar Diseño del Login' },
             { id: 'superadmin:roles:manage', label: 'Gestionar Roles y Permisos' },
             { id: 'superadmin:plans:manage', label: 'Gestionar Planes de Servicio' },
+            { id: 'superadmin:observability:view', label: 'Ver Métricas de Observabilidad' },
         ],
     },
 ];
@@ -528,4 +530,12 @@ export interface AIConfig {
     ollamaUrl?: string;
     ollamaModel?: string;
     lastUpdated?: Timestamp;
+}
+
+export interface InstituteMetrics {
+    totalStudents: number;
+    totalStaff: number;
+    totalUnits: number;
+    totalPayments: number;
+    totalRevenue: number;
 }

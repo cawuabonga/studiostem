@@ -42,7 +42,8 @@ import {
   Cpu as CpuIcon, 
   BriefcaseBusiness as BriefcaseBusinessIcon,
   Monitor as MonitorIcon,
-  History as HistoryIcon
+  History as HistoryIcon,
+  BarChart3 as BarChart3Icon
 } from 'lucide-react';
 
 interface NavItem {
@@ -58,6 +59,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/superadmin/manage-institutes', label: 'Gestionar Institutos', icon: Building2Icon, permission: 'superadmin:institute:manage' },
     { href: '/dashboard/superadmin/manage-users', label: 'Gestionar Usuarios', icon: UsersIcon, permission: 'superadmin:users:manage' },
     { href: '/dashboard/superadmin/manage-roles', label: 'Gestionar Roles', icon: ShieldCheckIcon, permission: 'superadmin:roles:manage' },
+    { href: '/dashboard/superadmin/observability', label: 'Observabilidad', icon: BarChart3Icon, permission: 'superadmin:observability:view' },
     { href: '/dashboard/superadmin/manage-plans', label: 'Gestionar Planes', icon: CreditCardIcon, permission: 'superadmin:plans:manage' },
     { href: '/dashboard/superadmin/manage-ai', label: 'Configuración IA', icon: CpuIcon, permission: 'superadmin:design:manage' },
     { href: '/dashboard/superadmin/manage-login-image', label: 'Diseño e Imágenes Login', icon: GalleryIcon, permission: 'superadmin:design:manage' },
