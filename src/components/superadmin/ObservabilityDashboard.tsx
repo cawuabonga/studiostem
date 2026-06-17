@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Activity, Users, GraduationCap, DollarSign, Loader2, RefreshCw, BarChart3, TrendingUp, Info } from 'lucide-react';
+import { Activity, Users, GraduationCap, DollarSign, Loader2, RefreshCw, BarChart3, TrendingUp, Info, UserCheck, ShieldCheck, Briefcase } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { cn } from '@/lib/utils';
@@ -67,14 +67,14 @@ export function ObservabilityDashboard() {
     const globalStats = useMemo(() => {
         return institutes.reduce((acc, inst) => {
             if (inst.metrics) {
-                acc.students += inst.metrics.totalStudents;
-                acc.staff += inst.metrics.totalStaff;
-                acc.units += inst.metrics.totalUnits;
-                acc.revenue += inst.metrics.totalRevenue;
-                acc.payments += inst.metrics.totalPayments;
+                acc.totalStudents += inst.metrics.totalStudents;
+                acc.totalStaff += inst.metrics.totalStaff;
+                acc.activeToday += (inst.metrics.activeToday?.total || 0);
+                acc.activeStudents += (inst.metrics.activeToday?.student || 0);
+                acc.activeTeachers += (inst.metrics.activeToday?.teacher || 0);
             }
             return acc;
-        }, { students: 0, staff: 0, units: 0, revenue: 0, payments: 0 });
+        }, { totalStudents: 0, totalStaff: 0, activeToday: 0, activeStudents: 0, activeTeachers: 0 });
     }, [institutes]);
 
     const chartData = useMemo(() => {
@@ -82,21 +82,19 @@ export function ObservabilityDashboard() {
             .filter(i => i.metrics)
             .map(inst => ({
                 name: inst.name.length > 15 ? inst.name.substring(0, 15) + '...' : inst.name,
-                Alumnos: inst.metrics!.totalStudents,
-                Recaudacion: inst.metrics!.totalRevenue,
+                "Activos Hoy": inst.metrics!.activeToday?.total || 0,
+                "Total Alumnos": inst.metrics!.totalStudents,
             }))
-            .sort((a, b) => b.Alumnos - a.Alumnos);
+            .sort((a, b) => b["Activos Hoy"] - a["Activos Hoy"]);
     }, [institutes]);
 
     const distributionData = useMemo(() => {
-        return institutes
-            .filter(i => i.metrics)
-            .map(inst => ({
-                name: inst.name,
-                value: inst.metrics!.totalStudents
-            }))
-            .sort((a, b) => b.value - a.value);
-    }, [institutes]);
+        return [
+            { name: 'Estudiantes', value: globalStats.activeStudents },
+            { name: 'Docentes', value: globalStats.activeTeachers },
+            { name: 'Otros', value: globalStats.activeToday - globalStats.activeStudents - globalStats.activeTeachers }
+        ].filter(d => d.value > 0);
+    }, [globalStats]);
 
     if (loading) return (
         <div className="space-y-6">
@@ -109,23 +107,23 @@ export function ObservabilityDashboard() {
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Cabecera de Resumen Global */}
+            {/* Cabecera de Resumen de Adopción */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard title="Estudiantes Globales" value={globalStats.students.toLocaleString()} icon={Users} description="Alumnos en toda la red" />
-                <StatCard title="Fuerza Laboral" value={globalStats.staff.toLocaleString()} icon={GraduationCap} description="Docentes y administrativos" />
-                <StatCard title="Recaudación Total" value={`S/ ${globalStats.revenue.toLocaleString()}`} icon={DollarSign} description="Monto total procesado" />
-                <StatCard title="Unidades de Valor" value={globalStats.units.toLocaleString()} icon={Activity} description="Contenidos educativos" />
+                <StatCard title="Usuarios Activos Hoy" value={globalStats.activeToday.toLocaleString()} icon={UserCheck} description="Total de Sesiones Únicas hoy" />
+                <StatCard title="Estudiantes en Plataforma" value={globalStats.totalStudents.toLocaleString()} icon={Users} description="Alumnos registrados" />
+                <StatCard title="Docentes Activos" value={globalStats.activeTeachers.toLocaleString()} icon={GraduationCap} description="Sesiones de docentes hoy" />
+                <StatCard title="Salud de Adopción" value={`${globalStats.totalStudents > 0 ? Math.round((globalStats.activeStudents / globalStats.totalStudents) * 100) : 0}%`} icon={Activity} description="Tasa de uso estudiantil" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Gráfico Comparativo */}
+                {/* Gráfico de Actividad Diaria */}
                 <Card className="lg:col-span-8 shadow-xl border-primary/5 rounded-3xl">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                                <BarChart3 className="h-5 w-5 text-primary" /> Comparativa de Alumnado
+                                <TrendingUp className="h-5 w-5 text-primary" /> Actividad por Instituto (Hoy)
                             </CardTitle>
-                            <CardDescription>Distribución de carga por cada institución educativa.</CardDescription>
+                            <CardDescription>Sesiones únicas detectadas en las últimas 24 horas.</CardDescription>
                         </div>
                         <Button variant="ghost" size="icon" onClick={() => { setIsRefreshing(true); fetchData(); }} disabled={isRefreshing}>
                             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
@@ -141,40 +139,49 @@ export function ObservabilityDashboard() {
                                     cursor={{ fill: '#f8fafc' }}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                 />
-                                <Bar dataKey="Alumnos" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} barSize={45} />
+                                <Legend verticalAlign="top" align="right" height={36}/>
+                                <Bar dataKey="Activos Hoy" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} barSize={45} />
+                                <Bar dataKey="Total Alumnos" fill="hsl(var(--muted))" radius={[8, 8, 0, 0]} barSize={45} />
                             </BarChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
 
-                {/* Pie Chart: Distribución de Mercado */}
+                {/* Pie Chart: Mix de Usuarios */}
                 <Card className="lg:col-span-4 shadow-xl border-primary/5 rounded-3xl">
                     <CardHeader>
-                        <CardTitle className="text-lg font-black uppercase tracking-tight">Market Share</CardTitle>
-                        <CardDescription>Participación por Alumnado.</CardDescription>
+                        <CardTitle className="text-lg font-black uppercase tracking-tight">Mix de Usuarios</CardTitle>
+                        <CardDescription>Distribución de sesiones activas hoy.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[350px] flex flex-col items-center">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={distributionData}
-                                    innerRadius={70}
-                                    outerRadius={100}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {distributionData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <ChartTooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        {distributionData.length > 0 ? (
+                             <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={distributionData}
+                                        innerRadius={70}
+                                        outerRadius={100}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {distributionData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <ChartTooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full opacity-20">
+                                <Users className="h-12 w-12" />
+                                <p className="text-[10px] font-black uppercase">Sin actividad</p>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2 w-full mt-4">
-                            {distributionData.slice(0, 4).map((entry, i) => (
+                            {distributionData.map((entry, i) => (
                                 <div key={i} className="flex items-center gap-2">
                                     <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                                    <span className="text-[9px] font-black uppercase truncate">{entry.name}</span>
+                                    <span className="text-[9px] font-black uppercase truncate">{entry.name}: {entry.value}</span>
                                 </div>
                             ))}
                         </div>
@@ -182,24 +189,24 @@ export function ObservabilityDashboard() {
                 </Card>
             </div>
 
-            {/* Matriz de Consumo Detallada */}
+            {/* Matriz de Adopción Detallada */}
             <Card className="shadow-2xl border-none rounded-3xl overflow-hidden">
                 <CardHeader className="bg-muted/30 pb-6 border-b">
                     <CardTitle className="text-xl font-black uppercase tracking-tight flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-primary" /> Matriz de Consumo y Actividad
+                        <BarChart3 className="h-5 w-5 text-primary" /> Matriz de Adopción por Rol
                     </CardTitle>
-                    <CardDescription>Detalle técnico y financiero por cada "Tenant" (Instituto).</CardDescription>
+                    <CardDescription>Usuarios únicos que han interactuado hoy con la plataforma.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
                     <Table>
                         <TableHeader className="bg-slate-50/50">
                             <TableRow>
                                 <TableHead className="font-black text-[10px] uppercase pl-8 py-4">Institución</TableHead>
-                                <TableHead className="text-center font-black text-[10px] uppercase">Alumnos</TableHead>
-                                <TableHead className="text-center font-black text-[10px] uppercase">Docentes</TableHead>
-                                <TableHead className="text-center font-black text-[10px] uppercase">U. Didácticas</TableHead>
-                                <TableHead className="text-center font-black text-[10px] uppercase">Pagos Aprob.</TableHead>
-                                <TableHead className="text-right font-black text-[10px] uppercase pr-8">Recaudación (S/)</TableHead>
+                                <TableHead className="text-center font-black text-[10px] uppercase">Estudiantes Hoy</TableHead>
+                                <TableHead className="text-center font-black text-[10px] uppercase">Docentes Hoy</TableHead>
+                                <TableHead className="text-center font-black text-[10px] uppercase">Admin Hoy</TableHead>
+                                <TableHead className="text-center font-black text-[10px] uppercase">Egresados/Emp.</TableHead>
+                                <TableHead className="text-right font-black text-[10px] uppercase pr-8">Total Activos</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -221,26 +228,31 @@ export function ObservabilityDashboard() {
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-center">
-                                        <Badge variant="outline" className="font-black text-xs px-3">{inst.metrics?.totalStudents || 0}</Badge>
-                                    </TableCell>
-                                    <TableCell className="text-center text-sm font-medium text-slate-600">
-                                        {inst.metrics?.totalStaff || 0}
-                                    </TableCell>
-                                    <TableCell className="text-center text-sm font-medium text-slate-600">
-                                        {inst.metrics?.totalUnits || 0}
+                                        <div className="flex flex-col items-center">
+                                            <span className="text-sm font-black text-blue-600">{inst.metrics?.activeToday?.student || 0}</span>
+                                            <span className="text-[8px] font-bold text-muted-foreground uppercase">de {inst.metrics?.totalStudents || 0}</span>
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <div className="flex flex-col items-center">
-                                            <span className="text-sm font-black text-green-600">{inst.metrics?.totalPayments || 0}</span>
-                                            <span className="text-[8px] font-bold text-muted-foreground uppercase">Transacciones</span>
+                                            <span className="text-sm font-black text-green-600">{inst.metrics?.activeToday?.teacher || 0}</span>
+                                            <span className="text-[8px] font-bold text-muted-foreground uppercase">Sesiones</span>
                                         </div>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                         <Badge variant="outline" className="font-black text-xs">{inst.metrics?.activeToday?.admin || 0}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-center">
+                                        <span className="text-xs font-bold text-slate-500">
+                                            {(inst.metrics?.activeToday?.graduate || 0) + (inst.metrics?.activeToday?.company || 0)}
+                                        </span>
                                     </TableCell>
                                     <TableCell className="text-right pr-8">
                                         <div className="flex flex-col items-end">
-                                            <span className="text-lg font-black text-primary">
-                                                {inst.metrics?.totalRevenue.toLocaleString('es-PE', { style: 'currency', currency: 'PEN' })}
+                                            <span className="text-xl font-black text-primary">
+                                                {inst.metrics?.activeToday?.total || 0}
                                             </span>
-                                            <Badge className="bg-green-100 text-green-700 text-[8px] font-black uppercase mt-1 border-none">Activo</Badge>
+                                            <Badge className="bg-green-100 text-green-700 text-[8px] font-black uppercase mt-1 border-none">Online Hoy</Badge>
                                         </div>
                                     </TableCell>
                                 </TableRow>
@@ -253,7 +265,7 @@ export function ObservabilityDashboard() {
             <div className="p-4 bg-primary/5 rounded-2xl border border-dashed border-primary/20 flex gap-3 items-center no-print">
                 <Info className="h-5 w-5 text-primary shrink-0" />
                 <p className="text-xs text-muted-foreground leading-relaxed font-medium">
-                    Las métricas mostradas son obtenidas mediante consultas de agregación de servidor (Cheap Aggregations), lo que minimiza el consumo de recursos mientras mantiene una visión de negocio precisa de toda la plataforma.
+                    La métrica de **"Total Activos"** representa usuarios únicos diarios (DAU). El sistema utiliza una estrategia de rastreo pasivo que minimiza el consumo de lecturas/escrituras, cumpliendo con los estándares de eficiencia de la plataforma.
                 </p>
             </div>
         </div>

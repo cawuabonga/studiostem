@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment, getCountFromServer } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity } from '@/types';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -47,26 +47,63 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
 
 // --- Observability Functions ---
 
+export const trackDailyActivity = async (instituteId: string, roleId: string, userId: string): Promise<void> => {
+    if (!instituteId || !roleId) return;
+    
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const activityRef = doc(db, 'institutes', instituteId, 'analytics', `activity_${today}`);
+    const trackingKey = `track_${userId}_${today}`;
+    
+    // Simple debouncing/deduplication using localStorage
+    if (typeof window !== 'undefined') {
+        if (localStorage.getItem(trackingKey)) return;
+        localStorage.setItem(trackingKey, 'true');
+    }
+
+    const fieldMap: Record<string, string> = {
+        'student': 'student',
+        'teacher': 'teacher',
+        'admin': 'admin',
+        'coordinator': 'coordinator',
+        'graduate': 'graduate',
+        'company': 'company'
+    };
+    
+    const roleField = fieldMap[roleId.toLowerCase()] || 'other';
+
+    await setDoc(activityRef, {
+        total: increment(1),
+        [roleField]: increment(1),
+        lastUpdate: Timestamp.now()
+    }, { merge: true });
+};
+
 export const getInstituteMetrics = async (instituteId: string): Promise<InstituteMetrics> => {
     const studentsCol = collection(db, 'institutes', instituteId, 'studentProfiles');
     const staffCol = collection(db, 'institutes', instituteId, 'staffProfiles');
     const unitsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas');
     const paymentsCol = collection(db, 'institutes', instituteId, 'payments');
 
+    const today = new Date().toISOString().split('T')[0];
+    const activityDocRef = doc(db, 'institutes', instituteId, 'analytics', `activity_${today}`);
+
     // Use getCountFromServer for efficient and cheap counting
-    const [studentsSnap, staffSnap, unitsSnap, paymentsSnap] = await Promise.all([
+    const [studentsSnap, staffSnap, unitsSnap, paymentsSnap, activitySnap] = await Promise.all([
         getCountFromServer(studentsCol),
         getCountFromServer(staffCol),
         getCountFromServer(unitsCol),
-        getDocs(query(paymentsCol, where("status", "==", "Aprobado")))
+        getDocs(query(paymentsCol, where("status", "==", "Aprobado"))),
+        getDoc(activityDocRef)
     ]);
 
     const totalRevenue = paymentsSnap.docs.reduce((acc, doc) => acc + (doc.data().amount || 0), 0);
+    const activeToday = activitySnap.exists() ? activitySnap.data() as DailyActivity : { total: 0, student: 0, teacher: 0, admin: 0, coordinator: 0, graduate: 0, company: 0, lastUpdate: Timestamp.now() };
 
     return {
         totalStudents: studentsSnap.data().count,
         totalStaff: staffSnap.data().count,
         totalUnits: unitsSnap.data().count,
+        activeToday,
         totalPayments: paymentsSnap.size,
         totalRevenue
     };
@@ -275,6 +312,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
                 'academic:efsrt:manage': true, 
                 'planning:schedule:manage': true, 
                 'planning:environment:manage': true, 
+                'planning:schedule:view:own': true, 
                 'users:staff:manage': true, 
                 'users:student:manage': true 
             } 
@@ -2445,13 +2483,13 @@ export const applyToJob = async (instituteId: string, application: Omit<JobAppli
 export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const snap = await getDocs(query(col, where('jobId', '==', jobId), orderBy('appliedAt', 'desc')));
-    return snap.docs.map(d => ({ id: doc.id, ...doc.data() } as JobApplication));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
 };
 
 export const getApplicationsForStudent = async (instituteId: string, studentId: string): Promise<JobApplication[]> => {
     const col = getSubCollectionRef(instituteId, 'jobApplications');
     const snap = await getDocs(query(col, where('studentId', '==', studentId), orderBy('appliedAt', 'desc')));
-    return snap.docs.map(d => ({ id: doc.id, ...doc.data() } as JobApplication));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
 };
 
 export const updateJobApplication = async (instituteId: string, applicationId: string, data: Partial<JobApplication>) => {

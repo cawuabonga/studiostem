@@ -1,6 +1,6 @@
 
 "use client";
-import React from 'react';
+import React, { useEffect } from 'react';
 import Image from 'next/image';
 import { SidebarProvider, Sidebar, SidebarInset, SidebarTrigger, SidebarRail } from '@/components/ui/sidebar';
 import { AppSidebarContents } from './AppSidebarContents';
@@ -9,6 +9,7 @@ import { Skeleton } from '../ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { trackDailyActivity } from '@/config/firebase';
 
 
 export default function DashboardMainLayout({
@@ -18,7 +19,14 @@ export default function DashboardMainLayout({
 }) {
   // El hook useAuthRedirect protege la ruta y usa el 'sticky branding' para redirigir si no hay sesión
   const { user, loading } = useAuthRedirect({ protect: true });
-  const { institute } = useAuth();
+  const { institute, instituteId } = useAuth();
+
+  useEffect(() => {
+    // RASTREO DE ADOPCIÓN: Registramos actividad diaria por rol
+    if (user && instituteId && user.roleId && user.role !== 'SuperAdmin') {
+        trackDailyActivity(instituteId, user.roleId, user.uid).catch(console.error);
+    }
+  }, [user, instituteId]);
 
   if (loading || !user) {
     return (

@@ -532,10 +532,22 @@ export interface AIConfig {
     lastUpdated?: Timestamp;
 }
 
+export interface DailyActivity {
+    total: number;
+    student: number;
+    teacher: number;
+    admin: number;
+    coordinator: number;
+    graduate: number;
+    company: number;
+    lastUpdate: Timestamp;
+}
+
 export interface InstituteMetrics {
     totalStudents: number;
     totalStaff: number;
     totalUnits: number;
+    activeToday: DailyActivity;
     totalPayments: number;
     totalRevenue: number;
 }
