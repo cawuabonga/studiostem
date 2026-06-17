@@ -12,6 +12,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Le
 import { Activity, Users, GraduationCap, DollarSign, Loader2, RefreshCw, BarChart3, TrendingUp, Info } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
+import { cn } from '@/lib/utils';
 
 interface InstituteWithMetrics extends Institute {
     metrics?: InstituteMetrics;
@@ -26,7 +27,7 @@ const StatCard = ({ title, value, icon: Icon, description }: { title: string, va
             <Icon className="h-4 w-4 text-primary opacity-60" />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-black tracking-tighter">{value}</div>
+            <div className="text-2xl font-bold">{value}</div>
             <p className="text-[9px] text-muted-foreground uppercase font-bold mt-1">{description}</p>
         </CardContent>
     </Card>
