@@ -1,0 +1,140 @@
+
+/* Estilos de impresión exclusivos para el Sílabo Académico */
+
+@media screen {
+  .print-only {
+    display: none !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 15mm 15mm 15mm;
+  }
+
+  /* Reset radical para evitar que contenedores de React/Next corten el flujo */
+  html, body, #root, #__next, [data-sidebar-provider], main, .printable-content {
+    background: white !important;
+    color: black !important;
+    font-family: 'Lato', sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    display: block !important;
+    position: static !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ocultar elementos innecesarios */
+  .no-print, 
+  header, 
+  nav, 
+  aside, 
+  .sidebar-container, 
+  .page-header,
+  .screen-only,
+  button,
+  [role="dialog"] > button {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  /* Layout Base del Sílabo */
+  .printable-area {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Tipografía formal */
+  h1, h2, h3, h4 {
+    font-family: 'Montserrat', sans-serif !important;
+    font-weight: 700 !important;
+    color: black !important;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  /* Tablas de Reporte */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    margin-bottom: 1rem;
+    table-layout: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    color: black !important;
+    font-weight: 700 !important;
+    font-size: 8pt !important;
+    border: 1px solid #000 !important;
+    padding: 4px !important;
+    text-align: center;
+  }
+
+  td {
+    border: 1px solid #000 !important;
+    padding: 4px !important;
+    font-size: 7.5pt !important;
+    vertical-align: middle;
+    color: black !important;
+  }
+
+  /* Saltos de página controlados */
+  .page-break {
+    break-after: page !important;
+    page-break-after: always !important;
+    display: block !important;
+    clear: both !important;
+    position: relative !important;
+    min-height: 250mm;
+    background: white !important;
+    counter-increment: page;
+  }
+
+  .no-print-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Pie de página con numeración */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 6.5pt;
+    color: #999;
+    padding-top: 5px;
+    background: white;
+  }
+
+  .page-number:after {
+    content: "Página " counter(page);
+  }
+}

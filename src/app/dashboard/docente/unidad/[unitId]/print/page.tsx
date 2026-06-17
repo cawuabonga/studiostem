@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SyllabusPrintLayout } from '@/components/syllabus/SyllabusPrintLayout';
-import '@/app/dashboard/gestion-academica/print-grades.css';
+import '@/components/syllabus/print-syllabus.css';
 
 function PrintSyllabusContent() {
     const { instituteId, institute } = useAuth();

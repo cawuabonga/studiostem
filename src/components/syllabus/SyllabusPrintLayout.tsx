@@ -46,7 +46,7 @@ const PageHeader = ({ institute }: { institute: Institute | null }) => {
 
             {/* Fecha a la derecha */}
             <div className="w-[100px] shrink-0 text-right leading-none">
-                <p className="text-[6pt] font-black text-gray-400 uppercase mb-1">Emisión</p>
+                <p className="text-[6pt] font-black text-gray-400 uppercase mb-1 text-right">Emisión</p>
                 <p className="text-[8pt] font-bold text-black">{format(today, 'dd/MM/yyyy')}</p>
                 <p className="text-[7pt] text-gray-600 uppercase">{format(today, 'HH:mm')}</p>
             </div>
@@ -93,44 +93,6 @@ export function SyllabusPrintLayout({
 
     return (
         <div className="bg-white text-black font-sans w-full leading-normal">
-             <style jsx global>{`
-                @media print {
-                    @page {
-                        size: A4 portrait;
-                        margin: 10mm 15mm 15mm 15mm;
-                    }
-                    body {
-                        counter-reset: page;
-                        background-color: white !important;
-                    }
-                    .page-break {
-                        page-break-after: always;
-                        position: relative;
-                        background-color: white !important;
-                        display: block;
-                        min-height: 260mm;
-                    }
-                    .print-footer {
-                        position: fixed;
-                        bottom: 0;
-                        left: 0;
-                        right: 0;
-                        height: 30px;
-                        border-top: 1px solid #eee;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        font-size: 6.5pt;
-                        color: #999;
-                        padding-top: 5px;
-                        background: white;
-                    }
-                    .page-number:after {
-                        content: "Página " counter(page);
-                    }
-                }
-            `}</style>
-
             {/* --- PÁGINA 1: PORTADA --- */}
             <div className="page-break flex flex-col items-center">
                 <div className="w-full flex flex-col items-center justify-between h-[265mm] py-8">
@@ -179,7 +141,7 @@ export function SyllabusPrintLayout({
                 <div className="mt-6 space-y-8 px-4">
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">I</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">I</span>
                             INFORMACIÓN GENERAL
                         </h3>
                         <table className="w-full border-collapse border-2 border-black">
@@ -200,7 +162,7 @@ export function SyllabusPrintLayout({
 
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">II</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">II</span>
                             SUMILLA
                         </h3>
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black text-black font-medium">
@@ -210,7 +172,7 @@ export function SyllabusPrintLayout({
 
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">III</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">III</span>
                             COMPETENCIA DE LA UNIDAD DIDÁCTICA
                         </h3>
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black text-black">
@@ -231,7 +193,7 @@ export function SyllabusPrintLayout({
                 <div className="mt-6 space-y-12 px-4">
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">IV</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">IV</span>
                             CAPACIDAD DE LA UNIDAD DIDÁCTICA
                         </h3>
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black text-black">
@@ -241,7 +203,7 @@ export function SyllabusPrintLayout({
 
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">V</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">V</span>
                             COMPETENCIAS TRASVERSALES PARA LA EMPLEABILIDAD
                         </h3>
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black text-black">
@@ -251,7 +213,7 @@ export function SyllabusPrintLayout({
 
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">VI</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">VI</span>
                             INDICADORES DE LOGRO
                         </h3>
                         <div className="pl-6 space-y-2">
@@ -275,7 +237,7 @@ export function SyllabusPrintLayout({
                 <PageHeader institute={institute} />
                 <div className="px-4">
                     <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 my-4 flex items-center gap-2 text-black no-print-break">
-                        <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">VII</span>
+                        <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">VII</span>
                         ORGANIZACIÓN DE ACTIVIDADES Y CONTENIDOS
                     </h3>
                     <table className="w-full border-collapse border-2 border-black text-[7pt]">
@@ -329,7 +291,7 @@ export function SyllabusPrintLayout({
                 <div className="mt-6 space-y-10 px-4">
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">VIII</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">VIII</span>
                             METODOLOGÍA
                         </h3>
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black text-black">
@@ -339,7 +301,7 @@ export function SyllabusPrintLayout({
 
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black no-print-break">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[24px] text-center">IX</span>
+                            <span className="bg-black text-white px-2 py-0.5 text-[8pt] min-w-[28px] text-center">IX</span>
                             FUENTES DE INFORMACIÓN Y BIBLIOGRAFÍA
                         </h3>
                         <div className="text-justify pl-6 text-[8pt] leading-relaxed border-l-4 border-black text-black font-mono">
@@ -358,8 +320,8 @@ export function SyllabusPrintLayout({
                             {/* Coordinador a la derecha */}
                             <div className="text-center border-t-2 border-black pt-2">
                                 <p className="font-black text-[10pt] uppercase text-black">Firma y Sello</p>
-                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>
-                                <p className="text-[7pt] font-bold text-gray-400 uppercase leading-tight">{program?.name}</p>
+                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest text-center">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>
+                                <p className="text-[7pt] font-bold text-gray-400 uppercase leading-tight text-center">{program?.name}</p>
                             </div>
                         </div>
 
