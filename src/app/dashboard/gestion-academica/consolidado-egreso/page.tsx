@@ -49,7 +49,7 @@ export default function ConsolidadoEgresoPage() {
     // Graduates Registry Tab States
     const [graduates, setGraduates] = useState<StudentProfile[]>([]);
     const [registryYear, setRegistryYear] = useState('all');
-    const [registryProgram, setRegistryProgram] = useState(''); // Empty string as default
+    const [registryProgram, setRegistryProgram] = useState('');
     const [hasSearchedRegistry, setHasSearchedRegistry] = useState(false);
     const [hasSearchedCandidates, setHasSearchedCandidates] = useState(false);
     
@@ -92,7 +92,6 @@ export default function ConsolidadoEgresoPage() {
             if (student) {
                 setCandidates([student]);
                 setIsLastPage(true);
-                // Perform quick audit for the single result
                 const audit = await checkEgresoEligibility(instituteId, student.documentId);
                 setEligibilityMap({ [student.documentId]: audit });
             } else {
@@ -132,10 +131,8 @@ export default function ConsolidadoEgresoPage() {
             setLastVisible(result.lastVisible);
             setIsLastPage(!result.lastVisible || result.students.length < 25);
 
-            // Audit results
             const audits: Record<string, StudentEgresoAudit> = { ...eligibilityMap };
             for (const s of result.students) {
-                // Ensure we don't repeat audits already fetched
                 if (!audits[s.documentId]) {
                     audits[s.documentId] = await checkEgresoEligibility(instituteId, s.documentId);
                 }
@@ -189,11 +186,8 @@ export default function ConsolidadoEgresoPage() {
     const handlePrintConstancia = (student: StudentProfile) => {
         const programName = programs.find(p => p.id === student.programId)?.name || 'N/A';
         const today = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es });
-        const instituteName = institute?.name || 'INSTITUTO SUPERIOR';
+        const instituteName = (institute?.name || 'INSTITUTO SUPERIOR').toUpperCase();
         const logoUrl = institute?.logoUrl || '';
-        const address = institute?.publicProfile?.contactAddress || '';
-        const phone = institute?.publicProfile?.contactPhone || '';
-        const email = institute?.publicProfile?.contactEmail || '';
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
@@ -209,26 +203,28 @@ export default function ConsolidadoEgresoPage() {
                             font-family: 'Lato', sans-serif; 
                             margin: 0; 
                             padding: 0; 
-                            color: #1a1a1a;
+                            color: #000;
                             background-color: #fff;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
                         }
                         .page-container {
                             width: 210mm;
                             height: 297mm;
-                            padding: 10mm;
-                            box-sizing: border-box;
+                            margin: 0 auto;
                             position: relative;
-                            margin: auto;
+                            box-sizing: border-box;
+                            overflow: hidden;
                         }
                         .watermark {
                             position: absolute;
                             top: 50%;
                             left: 50%;
                             transform: translate(-50%, -50%);
-                            opacity: 0.03;
+                            opacity: 0.04;
                             z-index: 0;
-                            width: 500px;
-                            height: 500px;
+                            width: 550px;
+                            height: 550px;
                             object-fit: contain;
                             pointer-events: none;
                         }
@@ -238,95 +234,83 @@ export default function ConsolidadoEgresoPage() {
                             height: 100%;
                             display: flex;
                             flex-direction: column;
-                            padding: 10mm 15mm;
+                            padding: 25mm 25mm;
                             box-sizing: border-box;
                         }
                         header {
                             display: grid;
                             grid-template-columns: 100px 1fr 100px;
                             align-items: center;
-                            margin-bottom: 30px;
-                            padding-bottom: 10px;
-                            border-bottom: 1px solid #f0f0f0;
-                        }
-                        .logo-container {
-                            display: flex;
-                            justify-content: flex-start;
+                            margin-bottom: 50px;
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 20px;
                         }
                         .logo-main {
-                            height: 65px;
+                            height: 75px;
                             width: auto;
-                            object-fit: contain;
-                        }
-                        .inst-info {
-                            text-align: center;
+                            object-contain: contain;
                         }
                         .inst-name {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 20pt;
+                            font-size: 22pt;
                             margin: 0;
-                            color: #1e3a8a;
-                            text-transform: uppercase;
-                            line-height: 1.2;
+                            text-align: center;
+                            line-height: 1.1;
+                            font-weight: 800;
                         }
                         .title-box {
                             text-align: center;
-                            margin: 35px 0;
+                            margin: 40px 0;
                         }
                         .main-title {
                             font-family: 'Montserrat', sans-serif;
-                            font-size: 28pt;
-                            color: #1e3a8a;
+                            font-size: 32pt;
                             margin: 0;
                             letter-spacing: -1px;
+                            font-weight: 800;
                         }
                         .body-text {
                             text-align: justify;
-                            font-size: 13pt;
+                            font-size: 13.5pt;
                             line-height: 1.8;
-                            margin: 30px 0;
+                            margin-top: 20px;
                             flex-grow: 1;
                         }
                         .highlight {
                             font-weight: 800;
                             text-transform: uppercase;
-                            color: #000;
-                            border-bottom: 1px solid #ddd;
                         }
                         .date-location {
                             text-align: right;
-                            font-size: 10pt;
-                            margin-top: 30px;
+                            font-size: 11pt;
+                            margin-top: 40px;
                             font-style: italic;
-                            color: #444;
                         }
                         .signature-section {
-                            margin-top: 60px;
+                            margin-top: 80px;
                             display: flex;
                             justify-content: space-around;
                             padding-bottom: 30px;
                         }
                         .sig-box {
                             text-align: center;
-                            width: 220px;
-                            border-top: 1px solid #1a1a1a;
+                            width: 240px;
+                            border-top: 1px solid #000;
                             padding-top: 10px;
-                            font-size: 9pt;
+                            font-size: 10pt;
                             font-weight: bold;
                             text-transform: uppercase;
-                            letter-spacing: 1px;
                         }
                         footer {
                             text-align: center;
-                            font-size: 7.5pt;
-                            color: #999;
+                            font-size: 8pt;
+                            color: #777;
+                            padding-top: 20px;
                             border-top: 1px solid #eee;
-                            padding-top: 15px;
-                            margin-top: auto;
                         }
                         @media print {
                             body { margin: 0; padding: 0; }
-                            .page-container { border: none !important; margin: 0 !important; }
+                            .page-container { border: none !important; }
                         }
                     </style>
                 </head>
@@ -342,7 +326,7 @@ export default function ConsolidadoEgresoPage() {
                                 <div class="inst-info">
                                     <h1 class="inst-name">${instituteName}</h1>
                                 </div>
-                                <div class="header-spacer"></div>
+                                <div></div>
                             </header>
 
                             <div class="title-box">
@@ -350,8 +334,8 @@ export default function ConsolidadoEgresoPage() {
                             </div>
 
                             <div class="body-text">
-                                <p>La Dirección del <strong>${instituteName}</strong>, mediante el presente documento oficial, deja constancia que el estudiante:</p>
-                                <p style="text-align: center; font-size: 18pt; margin: 25px 0;" class="highlight">${student.fullName}</p>
+                                <p>La Dirección del <strong>${instituteName}</strong>, hace constar que el estudiante:</p>
+                                <p style="text-align: center; font-size: 20pt; margin: 30px 0; border-bottom: 1px solid #eee; padding-bottom: 10px;" class="highlight">${student.fullName}</p>
                                 <p>Ha culminado satisfactoriamente el Plan de Estudios vigente del Programa de Estudios de <span class="highlight">${programName}</span>, habiendo aprobado la totalidad de las unidades didácticas y experiencias formativas en situaciones reales de trabajo (EFSRT) exigidas por la normativa educativa vigente.</p>
                                 <p>Se expide la presente a solicitud del interesado para los fines legales, administrativos y de titulación que correspondan.</p>
                             </div>
@@ -362,7 +346,7 @@ export default function ConsolidadoEgresoPage() {
 
                             <div class="signature-section">
                                 <div class="sig-box">
-                                    Director General
+                                    Firma del Director General
                                 </div>
                                 <div class="sig-box">
                                     Área de Secretaría Académica
@@ -370,15 +354,16 @@ export default function ConsolidadoEgresoPage() {
                             </div>
 
                             <footer>
-                                ${address} ${phone ? '| Tel: ' + phone : ''} ${email ? '| ' + email : ''}<br/>
-                                Documento generado y validado electrónicamente mediante el Sistema STEM V2
+                                Documento de carácter académico generado mediante el Sistema de Gestión Educativa STEM V2
                             </footer>
                         </div>
                     </div>
                     <script>
                         window.onload = () => {
-                            window.print();
-                            setTimeout(() => { window.close(); }, 500);
+                            setTimeout(() => { 
+                                window.print();
+                                window.close(); 
+                            }, 500);
                         };
                     </script>
                 </body>
@@ -409,7 +394,6 @@ export default function ConsolidadoEgresoPage() {
                 </TabsList>
 
                 <TabsContent value="verificacion" className="space-y-4 pt-4">
-                    {/* Search & Filters */}
                     <Card className="border-t-4 border-t-primary">
                         <CardHeader className="pb-4">
                             <CardTitle className="text-lg">Búsqueda y Filtros de Auditoría</CardTitle>
@@ -469,7 +453,6 @@ export default function ConsolidadoEgresoPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Candidates Table */}
                     <Card>
                         <CardContent className="pt-6">
                             <div className="rounded-md border bg-card">
@@ -546,7 +529,6 @@ export default function ConsolidadoEgresoPage() {
                     </Card>
                 </TabsContent>
 
-                {/* Tab: Padrón Oficial (Egresados) */}
                 <TabsContent value="padron" className="space-y-4 pt-4">
                     <Card>
                         <CardHeader>
@@ -653,7 +635,6 @@ export default function ConsolidadoEgresoPage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Audit Modal (Expediente) */}
             <Dialog open={isAuditModalOpen} onOpenChange={setIsAuditModalOpen}>
                 <DialogContent className="max-w-5xl max-h-[95vh] flex flex-col">
                     <DialogHeader className="flex flex-row justify-between items-start border-b pb-4">
@@ -679,7 +660,6 @@ export default function ConsolidadoEgresoPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Promote Dialog */}
             <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -691,7 +671,7 @@ export default function ConsolidadoEgresoPage() {
                     <div className="py-4 space-y-4">
                         <div className="space-y-2">
                             <Label>Año de Graduación</Label>
-                            <Input value={graduationYear} onChange={e => setgraduationYear(e.target.value)} />
+                            <Input value={graduationYear} onChange={e => setGraduationYear(e.target.value)} />
                         </div>
                         <div className="p-3 bg-amber-50 border border-amber-100 rounded-md flex gap-3 text-xs text-amber-800">
                             <AlertTriangle className="h-5 w-5 shrink-0" />
@@ -701,8 +681,7 @@ export default function ConsolidadoEgresoPage() {
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsPromoteDialogOpen(false)}>Cancelar</Button>
                         <Button onClick={handlePromote} disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirmar Egreso
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Confirmar Egreso"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

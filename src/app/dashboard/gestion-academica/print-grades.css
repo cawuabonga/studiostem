@@ -10,27 +10,21 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.2cm;
+    margin: 1.5cm;
   }
 
-  /* Reset radical para evitar que contenedores de React/Next corten el flujo */
-  html, body, #root, #__next, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
+  /* Reset suave para permitir el flujo natural de páginas */
+  html, body {
     background: white !important;
     color: black !important;
-    font-family: 'Lato', serif !important;
+    font-family: 'Lato', sans-serif !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
     height: auto !important;
-    min-height: 0 !important;
-    width: 100% !important;
-    display: block !important;
-    position: static !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
   }
 
-  /* Ocultar elementos innecesarios */
+  /* Ocultar elementos de la interfaz web */
   .no-print, 
   header, 
   nav, 
@@ -47,7 +41,7 @@
     display: block !important;
   }
 
-  /* Layout Base de Reportes (Notas/Asistencia) */
+  /* Contenedor principal de impresión */
   .printable-area {
     display: block !important;
     width: 100% !important;
@@ -55,59 +49,56 @@
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
-    overflow: visible !important;
   }
 
-  /* Tipografía formal */
+  /* Tipografía institucional */
   h1, h2, h3, h4 {
     font-family: 'Montserrat', sans-serif !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     color: black !important;
     text-transform: uppercase;
+    margin: 0;
   }
 
-  /* Tablas de Reporte */
+  /* Tablas de Reporte Académico */
   table {
     width: 100% !important;
     border-collapse: collapse !important;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     table-layout: auto !important;
-    page-break-inside: auto !important;
   }
 
+  /* Evitar que las filas se corten entre páginas */
   tr {
     page-break-inside: avoid !important;
-    page-break-after: auto !important;
   }
 
   th {
-    background-color: #f3f4f6 !important;
+    background-color: #f8fafc !important;
     color: black !important;
-    font-weight: 700 !important;
+    font-weight: 800 !important;
     font-size: 8pt !important;
     border: 1px solid #000 !important;
-    padding: 4px !important;
+    padding: 6px 4px !important;
     text-align: center;
+    -webkit-print-color-adjust: exact;
   }
 
   td {
     border: 1px solid #000 !important;
-    padding: 4px !important;
-    font-size: 7.5pt !important;
+    padding: 4px 6px !important;
+    font-size: 8pt !important;
     vertical-align: middle;
     color: black !important;
   }
 
-  /* Saltos de página controlados */
+  /* Clase para forzar salto de página */
   .page-break {
-    break-after: page !important;
-    page-break-after: always !important;
-    display: block !important;
-    clear: both !important;
+    page-break-before: always !important;
   }
 
+  /* Mantener bloques de firmas unidos */
   .no-print-break {
     page-break-inside: avoid !important;
-    break-inside: avoid !important;
   }
 }
