@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -24,7 +25,7 @@ const defaultOptions: SyllabusDesignOptions = {
 };
 
 const PageHeader = ({ institute }: { institute: Institute | null }) => (
-    <div className="inst-header flex items-center justify-between border-b-2 border-black pb-2 mb-4">
+    <div className="inst-header flex items-center justify-between border-b-2 border-black pb-2 mb-6">
         <div className="flex items-center gap-4">
             {institute?.logoUrl && (
                 <img src={institute.logoUrl} alt="Logo" className="w-[50px] h-[50px] object-contain" />
@@ -38,6 +39,13 @@ const PageHeader = ({ institute }: { institute: Institute | null }) => (
             <p className="font-bold">SÍLABO ACADÉMICO</p>
             <p className="uppercase">{format(new Date(), 'MMMM yyyy', { locale: es })}</p>
         </div>
+    </div>
+);
+
+const SectionTitle = ({ numeral, title }: { numeral: string, title: string }) => (
+    <div className="bg-black text-white p-2 mb-6 flex items-center gap-4 uppercase tracking-widest">
+        <span className="bg-white text-black px-3 py-0.5 font-black text-[10pt]">{numeral}</span>
+        <h3 className="text-[11pt] font-black">{title}</h3>
     </div>
 );
 
@@ -80,9 +88,47 @@ export function SyllabusPrintLayout({
 
     return (
         <div className="bg-white text-black font-sans w-full">
+            <style jsx global>{`
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 20mm 15mm 20mm 15mm;
+                    }
+                    body {
+                        counter-reset: page;
+                    }
+                    .page-break {
+                        page-break-after: always;
+                        position: relative;
+                        min-height: 250mm;
+                    }
+                    .print-footer {
+                        position: fixed;
+                        bottom: 0;
+                        left: 0;
+                        right: 0;
+                        height: 40px;
+                        border-top: 1px solid #000;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        font-size: 8pt;
+                        color: #000;
+                        padding-top: 5px;
+                        background: white;
+                    }
+                    .page-number:after {
+                        content: "Página " counter(page);
+                    }
+                    .section-container {
+                        page-break-inside: avoid;
+                    }
+                }
+            `}</style>
+
             {/* --- PÁGINA 1: PORTADA --- */}
             <div className="page-break flex flex-col items-center">
-                <div className="w-full flex flex-col items-center justify-between h-[265mm] py-8">
+                <div className="w-full flex flex-col items-center justify-between h-[260mm] py-8">
                     <div className="w-full space-y-6 flex flex-col items-center">
                         <div className="text-center space-y-4">
                             <h1 className="text-[24pt] font-black tracking-tight leading-tight max-w-4xl text-black">
@@ -124,12 +170,9 @@ export function SyllabusPrintLayout({
             <div className="page-break py-4">
                 <PageHeader institute={institute} />
                 
-                <div className="mt-6 space-y-8 px-4">
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">I</span>
-                            INFORMACIÓN GENERAL
-                        </h3>
+                <div className="mt-6 space-y-10 px-4">
+                    <section className="section-container">
+                        <SectionTitle numeral="I" title="INFORMACIÓN GENERAL" />
                         <table className="w-full border-collapse border-2 border-black">
                             <tbody className="text-[8.5pt]">
                                 <tr><th className="w-[30%] text-left bg-gray-100 p-1.5 border border-black uppercase font-bold text-black">Sector Económico</th><td className="p-1.5 border border-black uppercase text-black">{program?.economicSector || '---'}</td></tr>
@@ -147,77 +190,71 @@ export function SyllabusPrintLayout({
                         </table>
                     </section>
 
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">II</span>
-                            SUMILLA
-                        </h3>
+                    <section className="section-container">
+                        <SectionTitle numeral="II" title="SUMILLA" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.summary)}
                         </div>
                     </section>
 
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">III</span>
-                            COMPETENCIA DE LA UNIDAD DIDÁCTICA
-                        </h3>
+                    <section className="section-container">
+                        <SectionTitle numeral="III" title="COMPETENCIA DE LA UNIDAD DIDÁCTICA" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.competence)}
                         </div>
                     </section>
                 </div>
+
+                <footer className="print-footer">
+                    <div className="font-bold uppercase">{institute?.name}</div>
+                    <div className="page-number font-black"></div>
+                </footer>
             </div>
 
             {/* --- PÁGINA 3: CAPACIDAD, TRASVERSALES E INDICADORES --- */}
             <div className="page-break py-4">
                 <PageHeader institute={institute} />
-                <div className="mt-6 space-y-8 px-4">
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">IV</span>
-                            CAPACIDAD DE LA UNIDAD DIDÁCTICA
-                        </h3>
+                <div className="mt-6 space-y-10 px-4">
+                    <section className="section-container">
+                        <SectionTitle numeral="IV" title="CAPACIDAD DE LA UNIDAD DIDÁCTICA" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.capacity)}
                         </div>
                     </section>
 
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">V</span>
-                            COMPETENCIAS TRASVERSALES PARA LA EMPLEABILIDAD
-                        </h3>
+                    <section className="section-container">
+                        <SectionTitle numeral="V" title="COMPETENCIAS TRASVERSALES PARA LA EMPLEABILIDAD" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.transversalCompetencies)}
                         </div>
                     </section>
 
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">VI</span>
-                            INDICADORES DE LOGRO
-                        </h3>
-                        <div className="pl-6 space-y-2">
+                    <section className="section-container">
+                        <SectionTitle numeral="VI" title="INDICADORES DE LOGRO" />
+                        <div className="pl-6 space-y-3">
                             {indicators.map((ind, idx) => (
-                                <div key={ind.id} className="flex gap-4 items-center">
-                                    <span className="font-bold text-[9pt] text-primary whitespace-nowrap">{(idx + 1).toString().padStart(2, '0')}.</span>
+                                <div key={ind.id} className="flex gap-4 items-start">
+                                    <span className="font-bold text-[9pt] text-primary whitespace-nowrap pt-0.5">{(idx + 1).toString().padStart(2, '0')}.</span>
                                     <p className="text-[9pt] font-bold uppercase leading-tight text-black">{ind.name}</p>
                                 </div>
                             ))}
                         </div>
                     </section>
                 </div>
+
+                <footer className="print-footer">
+                    <div className="font-bold uppercase">{unit.name} - {unit.code}</div>
+                    <div className="page-number font-black"></div>
+                </footer>
             </div>
 
             {/* --- PÁGINA 4: ORGANIZACIÓN --- */}
             <div className="page-break py-4">
                 <PageHeader institute={institute} />
                 <div className="px-4">
-                    <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 my-4 flex items-center gap-2 text-black">
-                        <span className="bg-black text-white px-2 py-0.5 text-[8pt]">VII</span>
-                        ORGANIZACIÓN DE ACTIVIDADES Y CONTENIDOS
-                    </h3>
+                    <div className="mb-6">
+                        <SectionTitle numeral="VII" title="ORGANIZACIÓN DE ACTIVIDADES Y CONTENIDOS" />
+                    </div>
                     <table className="w-full border-collapse border-2 border-black text-[7pt]">
                         <thead>
                             <tr className="bg-gray-100 font-bold uppercase text-black">
@@ -257,33 +294,32 @@ export function SyllabusPrintLayout({
                         </tbody>
                     </table>
                 </div>
+
+                <footer className="print-footer">
+                    <div className="font-bold uppercase">Programación Académica {currentYear}</div>
+                    <div className="page-number font-black"></div>
+                </footer>
             </div>
 
             {/* --- ÚLTIMA PÁGINA: METODOLOGÍA Y FIRMAS --- */}
-            <div className="py-4">
+            <div className="py-4 relative">
                 <PageHeader institute={institute} />
-                <div className="mt-6 space-y-8 px-4">
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">VIII</span>
-                            METODOLOGÍA
-                        </h3>
+                <div className="mt-6 space-y-10 px-4">
+                    <section className="section-container">
+                        <SectionTitle numeral="VIII" title="METODOLOGÍA" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.methodology)}
                         </div>
                     </section>
 
-                    <section>
-                        <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-2 text-black">
-                            <span className="bg-black text-white px-2 py-0.5 text-[8pt]">IX</span>
-                            FUENTES DE INFORMACIÓN Y BIBLIOGRAFÍA
-                        </h3>
+                    <section className="section-container">
+                        <SectionTitle numeral="IX" title="FUENTES DE INFORMACIÓN Y BIBLIOGRAFÍA" />
                         <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-gray-100 text-black">
                             {renderHtml(syllabus?.bibliography)}
                         </div>
                     </section>
 
-                    <section className="pt-24">
+                    <section className="pt-24 no-print-break">
                         <div className="flex justify-around items-end">
                             <div className="text-center w-72 border-t-2 border-black pt-2">
                                 <p className="font-black text-[10pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
@@ -296,6 +332,11 @@ export function SyllabusPrintLayout({
                         </div>
                     </section>
                 </div>
+
+                <footer className="print-footer">
+                    <div className="text-[7pt] italic opacity-50">Generado digitalmente por STEM V2 - Plataforma de Gestión Modular</div>
+                    <div className="page-number font-black"></div>
+                </footer>
             </div>
         </div>
     );
