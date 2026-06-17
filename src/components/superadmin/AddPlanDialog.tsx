@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -23,7 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { addPlan, updatePlan } from '@/config/firebase';
 import type { Plan } from '@/types';
-import { Loader2, CheckCircle2, ListChecks, Info } from 'lucide-react';
+import { Loader2, CheckCircle2, ListChecks, Info, Save } from 'lucide-react';
 import { Checkbox } from '../ui/checkbox';
 import { Label } from '../ui/label';
 import { Separator } from '../ui/separator';
