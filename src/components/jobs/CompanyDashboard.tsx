@@ -14,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -547,7 +547,7 @@ export function CompanyDashboard() {
                                             </div>
                                             
                                             <div className="flex gap-2 w-full sm:w-auto">
-                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild disabled={!app.cvUrl}>
+                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild>
                                                     <a href={app.cvUrl || '#'} target="_blank">
                                                         <Download className="mr-2 h-4 w-4" /> CV
                                                     </a>
