@@ -26,7 +26,9 @@ import {
     UserCircle,
     UserCheck,
     Briefcase,
-    Pencil
+    Pencil,
+    FileWarning,
+    FileCheck
 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 
@@ -69,6 +71,9 @@ export default function WelcomeMessage() {
     setIsLinkProfileOpen(false);
   }
 
+  const isStudentOrGraduate = user.role === 'Student' || user.role === 'Graduate';
+  const hasCV = !!user.cvUrl;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
       
@@ -88,6 +93,24 @@ export default function WelcomeMessage() {
                 </Button>
             </CardContent>
         </Card>
+      )}
+
+      {/* ALERTA DE CV FALTANTE PARA ESTUDIANTES/EGRESADOS */}
+      {isStudentOrGraduate && !hasCV && !isUnlinked && (
+        <div className="p-4 bg-primary/10 border-2 border-dashed border-primary/40 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 animate-in slide-in-from-top-4">
+            <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-white rounded-xl text-primary shadow-sm">
+                    <FileWarning className="h-6 w-6" />
+                </div>
+                <div>
+                    <h4 className="font-black text-sm uppercase text-primary">Currículum Vitae Pendiente</h4>
+                    <p className="text-xs font-medium text-slate-600">Sube tu CV en PDF para activar tu perfil en la Bolsa Laboral y postular a vacantes.</p>
+                </div>
+            </div>
+            <Button onClick={() => setIsEditOpen(true)} size="sm" className="font-bold rounded-xl px-6 h-10 shadow-lg">
+                SUBIR CV AHORA
+            </Button>
+        </div>
       )}
 
       {/* DASHBOARD PRINCIPAL */}
@@ -182,6 +205,17 @@ export default function WelcomeMessage() {
                                     <Badge variant="outline" className="mt-1 bg-white">ID: {user.programId}</Badge>
                                 </div>
                             </div>
+                            {isStudentOrGraduate && (
+                                <div className={cn(
+                                    "p-3 rounded-xl flex items-center gap-3 border transition-all",
+                                    hasCV ? "bg-green-50 border-green-100 text-green-700" : "bg-red-50 border-red-100 text-red-700"
+                                )}>
+                                    {hasCV ? <FileCheck className="h-5 w-5" /> : <FileWarning className="h-5 w-5" />}
+                                    <span className="text-[10px] font-black uppercase tracking-widest">
+                                        CV DIGITAL: {hasCV ? "VINCULADO" : "PENDIENTE"}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-4 bg-background rounded-xl border shadow-sm text-center">

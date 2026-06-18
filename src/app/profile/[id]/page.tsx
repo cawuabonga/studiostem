@@ -7,7 +7,7 @@ import type { StaffProfile, StudentProfile, Unit, Program, EFSRTAssignment, Matr
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, BookOpen, Briefcase, GraduationCap, Share2, Mail, MapPin, Globe, Linkedin, Github, CheckCircle2, Award, Calendar, ExternalLink, Printer, Star, UserCircle, Phone, Facebook, Instagram } from 'lucide-react';
+import { Building, BookOpen, Briefcase, GraduationCap, Share2, Mail, MapPin, Globe, Linkedin, Github, CheckCircle2, Award, Calendar, ExternalLink, Printer, Star, UserCircle, Phone, Facebook, Instagram, Download, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -159,6 +159,7 @@ export default function PublicProfilePage() {
   const displayName = 'displayName' in profile ? profile.displayName : profile.fullName;
   const photoURL = profile.photoURL || `https://placehold.co/400x400.png?text=${displayName[0]}`;
   const bannerURL = profile.coverImageUrl || 'https://picsum.photos/seed/tech/1200/400';
+  const cvUrl = (profile as StudentProfile).cvUrl;
 
   return (
     <div className="min-h-screen bg-slate-50/50 print:bg-white pb-20 selection:bg-primary/10">
@@ -241,6 +242,16 @@ export default function PublicProfilePage() {
                 {/* --- SIDEBAR COLUMN --- */}
                 <div className="lg:col-span-4 space-y-8">
                     
+                    {/* CV Download Button */}
+                    {cvUrl && (
+                        <Button className="w-full h-16 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest shadow-xl shadow-green-600/20 group transition-all no-print" asChild>
+                            <a href={cvUrl} target="_blank" rel="noopener noreferrer">
+                                <Download className="mr-3 h-6 w-6 group-hover:bounce" />
+                                Descargar CV (PDF)
+                            </a>
+                        </Button>
+                    )}
+
                     {/* Contact & Identity Card */}
                     <Card className="rounded-3xl border-none shadow-lg card-widget">
                         <CardHeader>

@@ -207,8 +207,8 @@ export function EditProfileDialog({ user, isOpen, onClose }: EditProfileDialogPr
                         )} />
                     </div>
 
-                    {/* Nueva Carga de CV */}
-                    {user.role === 'Student' && (
+                    {/* Nueva Carga de CV - Ahora también para Egresados */}
+                    {(user.role === 'Student' || user.role === 'Graduate') && (
                         <div className="bg-primary/5 p-4 rounded-2xl border-2 border-dashed border-primary/20 space-y-3">
                              <FormField control={form.control} name="cvFile" render={({ field }) => (
                                 <FormItem>
