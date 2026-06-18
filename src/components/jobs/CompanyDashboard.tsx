@@ -284,9 +284,12 @@ export function CompanyDashboard() {
         try {
             let interviewTimestamp = null;
             if (manageData.interviewDate) {
+                // CORRECCIÓN DE FECHA: Desglosamos YYYY-MM-DD y usamos constructor local
+                const [year, month, day] = manageData.interviewDate.split('-').map(Number);
                 const [h, m] = manageData.interviewTime.split(':').map(Number);
-                const date = new Date(manageData.interviewDate);
-                date.setHours(h, m, 0, 0);
+                
+                // Creamos la fecha en hora local del navegador
+                const date = new Date(year, month - 1, day, h, m);
                 interviewTimestamp = Timestamp.fromDate(date);
             }
 
