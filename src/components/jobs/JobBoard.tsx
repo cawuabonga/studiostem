@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText, Globe, Users2, XCircle } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText, Globe, Users2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -29,6 +29,9 @@ export function JobBoard() {
     const [myApplications, setMyApplications] = useState<JobApplication[]>([]);
     const [programs, setPrograms] = useState<Program[]>([]);
     const [loading, setLoading] = useState(true);
+    
+    // UI state for expandable descriptions
+    const [expandedOfferIds, setExpandedOfferIds] = useState<Set<string>>(new Set());
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
@@ -107,6 +110,15 @@ export function JobBoard() {
         }
     };
 
+    const toggleExpand = (offerId: string) => {
+        setExpandedOfferIds(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(offerId)) newSet.delete(offerId);
+            else newSet.add(offerId);
+            return newSet;
+        });
+    };
+
     if (loading) return <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div>;
 
     const isProfileComplete = (user?.skills?.length || 0) >= 3 && !!user?.bio && !!user?.cvUrl;
@@ -178,45 +190,68 @@ export function JobBoard() {
                             const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
                             const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
                             const canApply = offer.isExternal || (isProfileComplete && meetsSemRequirement && !alreadyApplied);
+                            const isExpanded = expandedOfferIds.has(offer.id);
 
                             return (
                                 <Card key={offer.id} className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col border-none shadow-xl bg-white">
                                     <CardHeader className="relative pb-0 p-8">
                                         <div className="flex justify-between items-start mb-6">
-                                            <div className="h-20 w-20 relative rounded-3xl overflow-hidden border-4 border-slate-50 bg-white shadow-lg p-2 transition-transform duration-500 group-hover:scale-110">
-                                                <Image 
-                                                    src={offer.companyLogo || `https://placehold.co/200x200.png?text=${offer.companyName[0]}`} 
-                                                    alt={offer.companyName} 
-                                                    fill 
-                                                    className="object-contain p-1"
-                                                />
+                                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                <div className="h-20 w-20 relative rounded-3xl overflow-hidden border-4 border-slate-50 bg-white shadow-lg p-2 shrink-0 transition-transform duration-500 group-hover:scale-110">
+                                                    <Image 
+                                                        src={offer.companyLogo || `https://placehold.co/200x200.png?text=${offer.companyName[0]}`} 
+                                                        alt={offer.companyName} 
+                                                        fill 
+                                                        className="object-contain p-1"
+                                                    />
+                                                </div>
+                                                <div className="truncate">
+                                                    <p className="text-sm font-black uppercase text-primary leading-tight truncate tracking-tight">{offer.companyName}</p>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <Badge variant="outline" className="uppercase font-black text-[9px] px-2 h-4 border-primary/20 text-primary bg-primary/5">
+                                                            {offer.jobType}
+                                                        </Badge>
+                                                        {!offer.isExternal && <ShieldCheck className="h-3 w-3 text-green-500" />}
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2">
-                                                <Badge variant="outline" className="uppercase font-black text-[10px] px-3 py-1 rounded-full border-primary/20 text-primary bg-primary/5">
-                                                    {offer.jobType}
-                                                </Badge>
+                                            <div className="flex flex-col items-end gap-2 shrink-0">
                                                 <Badge className={cn(
                                                     "border-none px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-tighter flex items-center gap-1",
                                                     offer.isExternal ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
                                                 )}>
-                                                    {offer.isExternal ? <Globe className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} 
-                                                    {offer.isExternal ? `Oferta en ${offer.source}` : "CONVOCATORIA VIGENTE"}
+                                                    {offer.isExternal ? <Globe className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />} 
+                                                    {offer.isExternal ? offer.source : "VIGENTE"}
                                                 </Badge>
                                             </div>
                                         </div>
                                         <CardTitle className="text-2xl font-black uppercase tracking-tight group-hover:text-primary transition-colors leading-tight line-clamp-2 min-h-[4rem]">
                                             {offer.title}
                                         </CardTitle>
-                                        <CardDescription className="text-lg font-bold text-slate-700 mt-2 flex items-center gap-2">
-                                            <Building2 className="h-5 w-5 text-primary/60" /> {offer.companyName}
-                                        </CardDescription>
                                     </CardHeader>
                                     
                                     <CardContent className="flex-grow space-y-6 p-8">
                                         <div className="space-y-4">
-                                            <p className="text-sm text-slate-500 line-clamp-3 leading-relaxed font-medium">
-                                                {offer.description}
-                                            </p>
+                                            <div className="relative">
+                                                <p className={cn(
+                                                    "text-sm text-slate-500 leading-relaxed font-medium transition-all duration-300",
+                                                    isExpanded ? "" : "line-clamp-3"
+                                                )}>
+                                                    {offer.description}
+                                                </p>
+                                                <Button 
+                                                    variant="link" 
+                                                    size="sm" 
+                                                    className="h-auto p-0 text-primary font-bold text-xs mt-2"
+                                                    onClick={() => toggleExpand(offer.id)}
+                                                >
+                                                    {isExpanded ? (
+                                                        <span className="flex items-center gap-1"><ChevronUp className="h-3 w-3" /> Ver menos</span>
+                                                    ) : (
+                                                        <span className="flex items-center gap-1"><ChevronDown className="h-3 w-3" /> Leer descripción completa...</span>
+                                                    )}
+                                                </Button>
+                                            </div>
                                             
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 transition-colors group-hover:bg-white">
