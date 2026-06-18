@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -23,7 +22,7 @@ import { updateUserProfile, uploadFileAndGetURL } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Textarea } from '../ui/textarea';
 import { Separator } from '../ui/separator';
-import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X, Image as ImageIcon, UserCircle, FileText } from 'lucide-react';
+import { Github, Linkedin, Facebook, Instagram, Globe, Loader2, Plus, X, Image as ImageIcon, UserCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import Image from 'next/image';
 
