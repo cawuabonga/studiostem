@@ -305,23 +305,23 @@ export function SyllabusPrintLayout({
                     </section>
 
                     {/* SECCIÓN DE FIRMAS ACTUALIZADA */}
-                    <section className="pt-32 no-print-break">
+                    <section className="pt-29 no-print-break">
                         <div className="grid grid-cols-2 gap-x-20 items-end px-12">
                             <div className="text-center border-t-2 border-black pt-2">
                                 <p className="font-black text-[10pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
-                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
+                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
                             </div>
                             <div className="text-center border-t-2 border-black pt-2">
-                                <p className="font-black text-[10pt] uppercase text-black">Firma y Sello</p>
-                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest text-center leading-tight">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>
-                                <p className="text-[7pt] font-bold text-gray-400 uppercase leading-tight text-center">{program?.name}</p>
+                                <p className="font-black text-[10pt] uppercase text-black">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>
+                              {/*   <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest text-center leading-tight">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>*/}
+                              <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
                             </div>
                         </div>
 
                         <div className="mt-20 flex justify-center">
                             <div className="text-center w-[300px] border-t-2 border-black pt-2">
-                                <p className="font-black text-[10pt] uppercase text-black">V° B° DIRECCIÓN</p>
-                                <p className="text-[8pt] font-black text-gray-500 uppercase tracking-[0.3em]">UNIDAD ACADÉMICA</p>
+                                <p className="font-black text-[10pt] uppercase text-black">V° B° UNIDAD ACADÉMICA</p>
+                                {/*   <p className="text-[8pt] font-black text-gray-500 uppercase tracking-[0.3em]">UNIDAD ACADÉMICA</p>*/}
                             </div>
                         </div>
                     </section>

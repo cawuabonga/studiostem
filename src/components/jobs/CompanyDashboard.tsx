@@ -14,12 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Link from 'next/link';
+import Link from 'next/navigation';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
@@ -60,7 +60,9 @@ export function CompanyDashboard() {
         contractType: 'Tiempo Completo' as any,
         salaryRange: '',
         programIds: [] as string[],
-        minSemester: 1
+        minSemester: 1,
+        vacancies: 1,
+        deadline: '',
     });
 
     // Applications View
@@ -107,7 +109,9 @@ export function CompanyDashboard() {
             contractType: 'Tiempo Completo',
             salaryRange: '', 
             programIds: [],
-            minSemester: 1
+            minSemester: 1,
+            vacancies: 1,
+            deadline: '',
         });
         setIsDialogOpen(true);
     };
@@ -123,7 +127,9 @@ export function CompanyDashboard() {
             contractType: offer.contractType,
             salaryRange: offer.salaryRange || '',
             programIds: offer.programIds,
-            minSemester: offer.minSemester
+            minSemester: offer.minSemester,
+            vacancies: offer.vacancies || 1,
+            deadline: offer.deadline ? format(offer.deadline.toDate(), 'yyyy-MM-dd') : '',
         });
         setIsDialogOpen(true);
     };
@@ -143,7 +149,8 @@ export function CompanyDashboard() {
                 companyLogo: companyProfile.logoUrl,
                 companyAddress: companyProfile.address,
                 isVerified: true,
-                requirements: [], 
+                requirements: [],
+                deadline: formData.deadline ? Timestamp.fromDate(new Date(formData.deadline)) : undefined,
             };
 
             if (editingOfferId) {
@@ -298,12 +305,22 @@ export function CompanyDashboard() {
                                 </div>
                             </div>
                             <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
-                            <CardDescription className="text-xs font-bold flex items-center gap-1.5 mt-2 text-primary">
-                                <GraduationCap className="h-3.5 w-3.5" /> Requisito: Semestre {offer.minSemester}+
-                            </CardDescription>
-                            <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-1">
+                            <div className="flex flex-wrap items-center gap-2 mt-2">
+                                <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                    <Users2 className="h-3 w-3 mr-1" /> {offer.vacancies || 1} Vacantes
+                                </Badge>
+                                <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                    <GraduationCap className="h-3 w-3 mr-1" /> Ciclo {offer.minSemester}+
+                                </Badge>
+                            </div>
+                            <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-2">
                                 <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
                             </CardDescription>
+                            {offer.deadline && (
+                                <CardDescription className="text-xs font-bold text-destructive mt-1 flex items-center gap-1.5">
+                                    <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}
+                                </CardDescription>
+                            )}
                         </CardHeader>
                         <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
                             <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
@@ -393,6 +410,19 @@ export function CompanyDashboard() {
                                     </Select>
                                 </div>
 
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Vigente hasta (Límite)</Label>
+                                    <div className="relative">
+                                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            type="date" 
+                                            value={formData.deadline} 
+                                            onChange={e => setFormData({...formData, deadline: e.target.value})} 
+                                            className="pl-9 bg-background h-10"
+                                        />
+                                    </div>
+                                </div>
+
                                 <Separator />
 
                                 <div className="space-y-2">
@@ -433,6 +463,20 @@ export function CompanyDashboard() {
                                             value={formData.salaryRange} 
                                             onChange={e => setFormData({...formData, salaryRange: e.target.value})} 
                                             className="pl-9 bg-background font-mono"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Vacantes Disponibles</Label>
+                                    <div className="relative">
+                                        <Users2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            type="number" 
+                                            min="1"
+                                            value={formData.vacancies} 
+                                            onChange={e => setFormData({...formData, vacancies: parseInt(e.target.value) || 1})} 
+                                            className="pl-9 bg-background h-10 font-bold"
                                         />
                                     </div>
                                 </div>

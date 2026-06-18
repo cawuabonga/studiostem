@@ -126,6 +126,7 @@ export interface JobOffer {
     status: 'Abierta' | 'Cerrada';
     createdAt: Timestamp;
     deadline?: Timestamp;
+    vacancies?: number; // Número de vacantes disponibles
     applicantCount?: number; // Contador de postulantes
     // New fields for Job Monitor & External jobs
     isExternal?: boolean;

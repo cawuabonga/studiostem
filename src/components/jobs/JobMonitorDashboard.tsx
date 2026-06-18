@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -13,7 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Globe, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, Search, Monitor } from 'lucide-react';
+import { PlusCircle, Globe, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, Search, Monitor, Users2, CalendarDays, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -21,7 +22,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
-import Link from 'next/link';
+import Link from 'next/navigation';
+import { Timestamp } from 'firebase/firestore';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -61,6 +63,8 @@ export function JobMonitorDashboard() {
         minSemester: 1,
         source: 'LinkedIn' as JobOfferSource,
         externalUrl: '',
+        vacancies: 1,
+        deadline: '',
     });
 
     const [filter, setFilter] = useState('');
@@ -98,7 +102,30 @@ export function JobMonitorDashboard() {
             programIds: [],
             minSemester: 1,
             source: 'LinkedIn',
-            externalUrl: ''
+            externalUrl: '',
+            vacancies: 1,
+            deadline: '',
+        });
+        setIsDialogOpen(true);
+    };
+
+    const handleOpenEditExternal = (offer: JobOffer) => {
+        setEditingOfferId(offer.id);
+        setFormData({
+            title: offer.title,
+            companyName: offer.companyName,
+            description: offer.description,
+            location: offer.location,
+            modality: offer.modality,
+            jobType: offer.jobType,
+            contractType: offer.contractType,
+            salaryRange: offer.salaryRange || '',
+            programIds: offer.programIds,
+            minSemester: offer.minSemester,
+            source: offer.source || 'LinkedIn',
+            externalUrl: offer.externalUrl || '',
+            vacancies: offer.vacancies || 1,
+            deadline: offer.deadline ? format(offer.deadline.toDate(), 'yyyy-MM-dd') : '',
         });
         setIsDialogOpen(true);
     };
@@ -117,6 +144,7 @@ export function JobMonitorDashboard() {
                 isExternal: true,
                 isVerified: true,
                 requirements: [], 
+                deadline: formData.deadline ? Timestamp.fromDate(new Date(formData.deadline)) : undefined,
             };
 
             if (editingOfferId) {
@@ -228,8 +256,13 @@ export function JobMonitorDashboard() {
                                             <MapPin className="h-3.5 w-3.5" /> {offer.location}
                                         </div>
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase">
-                                            <GraduationCap className="h-3.5 w-3.5" /> Ciclo {offer.minSemester}+
+                                            <Users2 className="h-3.5 w-3.5" /> {offer.vacancies || 1} Vacantes
                                         </div>
+                                        {offer.deadline && (
+                                            <div className="flex items-center gap-2 text-[10px] font-bold text-destructive uppercase">
+                                                <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd/MM/yy")}
+                                            </div>
+                                        )}
                                     </div>
                                     <Separator className="opacity-50" />
                                     <div className="flex justify-between items-center text-[10px] font-black text-muted-foreground uppercase">
@@ -241,9 +274,12 @@ export function JobMonitorDashboard() {
                                     <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => handleToggleStatus(offer)}>
                                         {offer.status === 'Abierta' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </Button>
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl" onClick={() => handleOpenEditExternal(offer)}>
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
                                     {offer.isExternal ? (
                                         <Button variant="outline" className="flex-1 font-bold h-10 rounded-xl" asChild>
-                                            <a href={offer.externalUrl} target="_blank"><ExternalLink className="h-4 w-4 mr-2" /> Link Origen</a>
+                                            <a href={offer.externalUrl} target="_blank"><ExternalLink className="h-4 w-4 mr-2" /> Origen</a>
                                         </Button>
                                     ) : (
                                         <Button variant="outline" className="flex-1 font-bold h-10 rounded-xl" asChild>
@@ -352,8 +388,16 @@ export function JobMonitorDashboard() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Vigente hasta</Label>
+                                    <Input type="date" value={formData.deadline} onChange={e => setFormData({...formData, deadline: e.target.value})} className="h-10 text-xs bg-background" />
+                                </div>
+                                <div className="space-y-2">
                                     <Label className="text-xs font-bold">Ubicación</Label>
                                     <Input value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})} className="h-10 text-xs bg-background" placeholder="Sede o Ciudad" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-bold">Vacantes</Label>
+                                    <Input type="number" min="1" value={formData.vacancies} onChange={e => setFormData({...formData, vacancies: parseInt(e.target.value) || 1})} className="h-10 font-bold bg-background" />
                                 </div>
                             </div>
                         </div>
@@ -363,7 +407,7 @@ export function JobMonitorDashboard() {
                         <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold h-12 px-8">CANCELAR</Button>
                         <Button onClick={handleSaveExternal} disabled={isSubmitting} className="font-black h-12 px-12 shadow-xl shadow-primary/20">
                             {isSubmitting ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="h-5 w-5 mr-2" />}
-                            PUBLICAR OFERTA CAPTURADA
+                            {editingOfferId ? "GUARDAR CAMBIOS" : "PUBLICAR OFERTA CAPTURADA"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
