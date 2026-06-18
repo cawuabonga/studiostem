@@ -127,41 +127,41 @@ export function JobBoard() {
     return (
         <div className="w-full">
             <Tabs defaultValue="ofertas" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-muted/50 p-1 rounded-2xl">
-                    <TabsTrigger value="ofertas" className="text-base font-black uppercase tracking-tight"><Search className="mr-2 h-5 w-5" /> Vacantes para Mi Perfil</TabsTrigger>
-                    <TabsTrigger value="mis-postulaciones" className="text-base font-black uppercase tracking-tight"><Briefcase className="mr-2 h-5 w-5" /> Mis Postulaciones</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-muted/50 p-1 rounded-xl">
+                    <TabsTrigger value="ofertas" className="text-sm font-black uppercase tracking-tight"><Search className="mr-2 h-4 w-4" /> Vacantes para Mi Perfil</TabsTrigger>
+                    <TabsTrigger value="mis-postulaciones" className="text-sm font-black uppercase tracking-tight"><Briefcase className="mr-2 h-4 w-4" /> Mis Postulaciones</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="ofertas" className="space-y-8">
+                <TabsContent value="ofertas" className="space-y-6">
                     {!isProfileComplete && (
-                        <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-2xl flex gap-4 items-center animate-in fade-in slide-in-from-top-4">
-                            <div className="p-3 bg-white rounded-xl shadow-sm">
-                                <UserCircle className="h-8 w-8 text-amber-500" />
+                        <div className="p-4 bg-amber-50 border-2 border-dashed border-amber-200 rounded-xl flex gap-4 items-center animate-in fade-in slide-in-from-top-4">
+                            <div className="p-2 bg-white rounded-lg shadow-sm">
+                                <UserCircle className="h-6 w-6 text-amber-500" />
                             </div>
                             <div className="flex-1">
-                                <h4 className="font-black text-amber-800 uppercase text-sm">Tu Perfil está Incompleto</h4>
-                                <p className="text-xs text-amber-700 font-medium">Para postular a vacantes oficiales, debes registrar al menos 3 habilidades, una biografía y <strong>subir tu CV en PDF</strong> en tu perfil.</p>
+                                <h4 className="font-black text-amber-800 uppercase text-xs">Tu Perfil está Incompleto</h4>
+                                <p className="text-[11px] text-amber-700 font-medium">Para postular a vacantes oficiales, debes registrar al menos 3 habilidades, una biografía y <strong>subir tu CV en PDF</strong>.</p>
                             </div>
-                            <Button variant="outline" size="sm" className="font-bold border-amber-200 text-amber-700 bg-white" asChild>
+                            <Button variant="outline" size="sm" className="font-bold h-8 text-[11px] border-amber-200 text-amber-700 bg-white" asChild>
                                 <Link href="/dashboard/academic">Ir a Mi Perfil</Link>
                             </Button>
                         </div>
                     )}
 
-                    <Card className="border-primary/10 shadow-lg rounded-3xl overflow-hidden">
-                        <CardContent className="p-8">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-                                <div className="md:col-span-2 space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Búsqueda Directa</Label>
+                    <Card className="border-primary/10 shadow-md rounded-2xl overflow-hidden">
+                        <CardContent className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                                <div className="md:col-span-2 space-y-1.5">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Búsqueda Directa</Label>
                                     <div className="relative">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                        <Input placeholder="Puesto, empresa o palabra clave..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-12 h-12 rounded-xl bg-muted/30 border-none shadow-inner" />
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                        <Input placeholder="Puesto, empresa o palabra clave..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 rounded-lg bg-muted/30 border-none shadow-inner text-sm" />
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Modalidad</Label>
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Modalidad</Label>
                                     <Select value={modalityFilter} onValueChange={setModalityFilter}>
-                                        <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none shadow-inner"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg bg-muted/30 border-none shadow-inner text-sm"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todas</SelectItem>
                                             <SelectItem value="Presencial">Presencial</SelectItem>
@@ -170,10 +170,10 @@ export function JobBoard() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Categoría</Label>
+                                <div className="space-y-1.5">
+                                    <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Categoría</Label>
                                     <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                        <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none shadow-inner"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="h-10 rounded-lg bg-muted/30 border-none shadow-inner text-sm"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Cualquiera</SelectItem>
                                             <SelectItem value="Trabajo (Laboral)">Oportunidad Laboral</SelectItem>
@@ -185,7 +185,7 @@ export function JobBoard() {
                         </CardContent>
                     </Card>
 
-                    <div className="grid gap-8 md:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2">
                         {filteredOffers.length > 0 ? filteredOffers.map(offer => {
                             const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
                             const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
@@ -193,11 +193,11 @@ export function JobBoard() {
                             const isExpanded = expandedOfferIds.has(offer.id);
 
                             return (
-                                <Card key={offer.id} className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden flex flex-col border-none shadow-xl bg-white">
-                                    <CardHeader className="relative pb-0 p-8">
-                                        <div className="flex justify-between items-start mb-6">
-                                            <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                <div className="h-20 w-20 relative rounded-3xl overflow-hidden border-4 border-slate-50 bg-white shadow-lg p-2 shrink-0 transition-transform duration-500 group-hover:scale-110">
+                                <Card key={offer.id} className="group hover:border-primary/40 hover:shadow-xl transition-all duration-300 rounded-2xl overflow-hidden flex flex-col border-slate-100 shadow-md bg-white">
+                                    <CardHeader className="relative pb-0 p-5">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="h-14 w-14 relative rounded-xl overflow-hidden border-2 border-slate-50 bg-white shadow-sm p-1.5 shrink-0 group-hover:scale-105 transition-transform duration-300">
                                                     <Image 
                                                         src={offer.companyLogo || `https://placehold.co/200x200.png?text=${offer.companyName[0]}`} 
                                                         alt={offer.companyName} 
@@ -206,205 +206,196 @@ export function JobBoard() {
                                                     />
                                                 </div>
                                                 <div className="truncate">
-                                                    <p className="text-sm font-black uppercase text-primary leading-tight truncate tracking-tight">{offer.companyName}</p>
-                                                    <div className="flex items-center gap-1.5 mt-1">
-                                                        <Badge variant="outline" className="uppercase font-black text-[9px] px-2 h-4 border-primary/20 text-primary bg-primary/5">
+                                                    <p className="text-[11px] font-black uppercase text-primary leading-none truncate tracking-tight mb-1">{offer.companyName}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Badge variant="outline" className="uppercase font-black text-[8px] px-1.5 h-4 border-primary/20 text-primary bg-primary/5">
                                                             {offer.jobType}
                                                         </Badge>
                                                         {!offer.isExternal && <ShieldCheck className="h-3 w-3 text-green-500" />}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex flex-col items-end gap-2 shrink-0">
-                                                <Badge className={cn(
-                                                    "border-none px-3 py-1 rounded-full font-black text-[9px] uppercase tracking-tighter flex items-center gap-1",
-                                                    offer.isExternal ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
-                                                )}>
-                                                    {offer.isExternal ? <Globe className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />} 
-                                                    {offer.isExternal ? offer.source : "VIGENTE"}
-                                                </Badge>
-                                            </div>
+                                            <Badge className={cn(
+                                                "border-none px-2 py-0.5 rounded-full font-black text-[8px] uppercase tracking-tighter flex items-center gap-1",
+                                                offer.isExternal ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                                            )}>
+                                                {offer.isExternal ? <Globe className="h-2.5 w-2.5" /> : <CheckCircle2 className="h-2.5 w-2.5" />} 
+                                                {offer.isExternal ? offer.source : "VIGENTE"}
+                                            </Badge>
                                         </div>
-                                        <CardTitle className="text-2xl font-black uppercase tracking-tight group-hover:text-primary transition-colors leading-tight line-clamp-2">
+                                        <CardTitle className="text-lg font-black uppercase tracking-tight group-hover:text-primary transition-colors leading-tight line-clamp-2">
                                             {offer.title}
                                         </CardTitle>
                                     </CardHeader>
                                     
-                                    <CardContent className="flex-grow space-y-6 p-8 pt-4">
-                                        <div className="space-y-4">
+                                    <CardContent className="flex-grow space-y-4 p-5 pt-2">
+                                        <div className="space-y-3">
                                             <div className="relative">
                                                 <p className={cn(
-                                                    "text-sm text-slate-500 leading-relaxed font-medium transition-all duration-300",
-                                                    isExpanded ? "" : "line-clamp-3"
+                                                    "text-[12px] text-slate-500 leading-snug font-medium transition-all duration-300",
+                                                    isExpanded ? "" : "line-clamp-2"
                                                 )}>
                                                     {offer.description}
                                                 </p>
                                                 <Button 
                                                     variant="link" 
                                                     size="sm" 
-                                                    className="h-auto p-0 text-primary font-bold text-xs mt-2"
+                                                    className="h-auto p-0 text-primary font-bold text-[11px] mt-1"
                                                     onClick={() => toggleExpand(offer.id)}
                                                 >
-                                                    {isExpanded ? (
-                                                        <span className="flex items-center gap-1"><ChevronUp className="h-3 w-3" /> Ver menos</span>
-                                                    ) : (
-                                                        <span className="flex items-center gap-1"><ChevronDown className="h-3 w-3" /> Leer descripción completa...</span>
-                                                    )}
+                                                    {isExpanded ? "Ver menos" : "Leer más..."}
                                                 </Button>
                                             </div>
                                             
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 transition-colors group-hover:bg-white">
-                                                    <div className="p-2 bg-white rounded-lg shadow-sm text-primary"><MapPin className="h-4 w-4" /></div>
-                                                    <span className="text-[10px] font-black uppercase truncate text-slate-600">{offer.location}</span>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100 transition-colors group-hover:bg-white">
+                                                    <div className="p-1.5 bg-white rounded-lg shadow-xs text-primary"><MapPin className="h-3.5 w-3.5" /></div>
+                                                    <span className="text-[9px] font-black uppercase truncate text-slate-600">{offer.location}</span>
                                                 </div>
-                                                <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 transition-colors group-hover:bg-white">
-                                                    <div className="p-2 bg-white rounded-lg shadow-sm text-green-600"><DollarSign className="h-4 w-4" /></div>
-                                                    <span className="text-[11px] font-black truncate text-slate-800">S/ {offer.salaryRange || 'Acordar'}</span>
+                                                <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-100 transition-colors group-hover:bg-white">
+                                                    <div className="p-1.5 bg-white rounded-lg shadow-xs text-green-600"><DollarSign className="h-3.5 w-3.5" /></div>
+                                                    <span className="text-[10px] font-black truncate text-slate-800">S/ {offer.salaryRange || 'Acordar'}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <GraduationCap className="h-5 w-5 text-primary" />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="bg-primary/5 p-2.5 rounded-xl flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <GraduationCap className="h-4 w-4 text-primary" />
                                                     <div>
-                                                        <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Requisito</p>
-                                                        <p className="text-xs font-bold uppercase">{offer.minSemester || 1}° Ciclo</p>
+                                                        <p className="text-[8px] font-black uppercase text-muted-foreground leading-none mb-0.5">Requisito</p>
+                                                        <p className="text-[10px] font-bold uppercase">{offer.minSemester || 1}° Ciclo</p>
                                                     </div>
                                                 </div>
-                                                {meetsSemRequirement ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
+                                                {meetsSemRequirement ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <XCircle className="h-3.5 w-3.5 text-destructive" />}
                                             </div>
-                                            <div className="bg-primary/5 p-4 rounded-2xl flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <Users2 className="h-5 w-5 text-primary" />
+                                            <div className="bg-primary/5 p-2.5 rounded-xl flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <Users2 className="h-4 w-4 text-primary" />
                                                     <div>
-                                                        <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Vacantes</p>
-                                                        <p className="text-xs font-bold uppercase">{offer.vacancies || 1} Disponibles</p>
+                                                        <p className="text-[8px] font-black uppercase text-muted-foreground leading-none mb-0.5">Vacantes</p>
+                                                        <p className="text-[10px] font-bold uppercase">{offer.vacancies || 1} Libres</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <Separator className="opacity-40" />
+                                        <Separator className="opacity-30" />
                                         
-                                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest">
-                                            <div className="flex flex-col gap-1">
-                                                <span className="flex items-center gap-1.5 text-slate-400"><Clock className="h-3.5 w-3.5" /> Publicado {format(offer.createdAt.toDate(), "dd MMM", { locale: es })}</span>
-                                                {offer.deadline && <span className="flex items-center gap-1.5 text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}</span>}
+                                        <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest">
+                                            <div className="flex flex-col gap-0.5">
+                                                <span className="flex items-center gap-1 text-slate-400"><Clock className="h-3 w-3" /> {format(offer.createdAt.toDate(), "dd MMM", { locale: es })}</span>
+                                                {offer.deadline && <span className="flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> Límite: {format(offer.deadline.toDate(), "dd MMM", { locale: es })}</span>}
                                             </div>
-                                            <span className="bg-muted px-2 py-1 rounded-md text-slate-500">{offer.contractType || 'Por definir'}</span>
+                                            <span className="bg-muted px-2 py-0.5 rounded text-slate-500">{offer.contractType || '---'}</span>
                                         </div>
                                     </CardContent>
                                     
-                                    <CardFooter className="p-8 pt-0 mt-auto flex flex-col gap-3">
+                                    <CardFooter className="p-5 pt-0 mt-auto flex flex-col gap-2">
                                         {!offer.isExternal && !meetsSemRequirement && (
-                                            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-700 w-full">
-                                                <AlertTriangle className="h-4 w-4 shrink-0" />
-                                                <p className="text-[10px] font-bold">No cumples con el semestre mínimo requerido para este puesto.</p>
+                                            <div className="flex items-center gap-2 p-2 bg-red-50 rounded-lg text-red-700 w-full">
+                                                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                                                <p className="text-[9px] font-bold">Ciclo insuficiente para este puesto.</p>
                                             </div>
                                         )}
                                         
                                         {!offer.isExternal && !isProfileComplete && (
-                                            <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 w-full">
-                                                <Info className="h-4 w-4 shrink-0" />
-                                                <p className="text-[10px] font-bold">Debes completar tu CV (PDF), habilidades y biografía en tu perfil.</p>
+                                            <div className="flex items-center gap-2 p-2 bg-amber-50 rounded-lg text-amber-700 w-full">
+                                                <Info className="h-3.5 w-3.5 shrink-0" />
+                                                <p className="text-[9px] font-bold">Completa tu CV (PDF) y biografía.</p>
                                             </div>
                                         )}
 
                                         {alreadyApplied && !offer.isExternal ? (
-                                            <Button className="w-full h-14 bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-2xl font-black uppercase tracking-widest" variant="outline" disabled>
-                                                <CheckCircle2 className="mr-2 h-5 w-5" /> POSTULACIÓN ENVIADA
+                                            <Button className="w-full h-11 bg-green-50 text-green-700 border-2 border-green-200 hover:bg-green-100 rounded-xl font-black text-xs uppercase tracking-widest" variant="outline" disabled>
+                                                <CheckCircle2 className="mr-2 h-4 w-4" /> POSTULACIÓN ENVIADA
                                             </Button>
                                         ) : (
                                             <Button 
                                                 className={cn(
-                                                    "w-full h-14 font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl transition-all",
+                                                    "w-full h-11 font-black text-xs uppercase tracking-[0.1em] rounded-xl shadow-lg transition-all",
                                                     offer.isExternal ? "bg-blue-600 hover:bg-blue-700 text-white" : ""
                                                 )}
                                                 onClick={() => handleApply(offer)}
                                                 disabled={!offer.isExternal && !canApply}
                                             >
-                                                {offer.isExternal ? <ExternalLink className="mr-2 h-5 w-5" /> : <Send className="mr-2 h-5 w-5" />} 
-                                                {offer.isExternal ? `Ir a ${offer.source}` : (canApply ? 'Postular con Perfil STEM' : 'Postulación Bloqueada')}
+                                                {offer.isExternal ? <ExternalLink className="mr-2 h-4 w-4" /> : <Send className="mr-2 h-4 w-4" />} 
+                                                {offer.isExternal ? `Ver en ${offer.source}` : (canApply ? 'Postular Ahora' : 'Bloqueado')}
                                             </Button>
                                         )}
                                     </CardFooter>
                                 </Card>
                             )
                         }) : (
-                            <div className="col-span-full py-32 text-center text-muted-foreground bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
-                                <Info className="h-16 w-16 mx-auto mb-6 opacity-10" />
-                                <p className="text-xl font-black uppercase tracking-widest">Sin ofertas para tu perfil</p>
-                                <p className="mt-2 text-sm font-medium">Vuelve pronto o ajusta tus habilidades en tu perfil personal.</p>
+                            <div className="col-span-full py-24 text-center text-muted-foreground bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                                <Info className="h-12 w-12 mx-auto mb-4 opacity-10" />
+                                <p className="text-lg font-black uppercase tracking-widest">Sin ofertas disponibles</p>
+                                <p className="mt-1 text-xs font-medium">Prueba ajustando los filtros de búsqueda.</p>
                             </div>
                         )}
                     </div>
                 </TabsContent>
 
                 <TabsContent value="mis-postulaciones">
-                    <Card className="rounded-[2.5rem] border-none shadow-xl overflow-hidden">
-                        <CardContent className="p-8">
+                    <Card className="rounded-3xl border-none shadow-lg overflow-hidden">
+                        <CardContent className="p-6">
                             {myApplications.length > 0 ? (
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     {myApplications.map(app => (
-                                        <div key={app.id} className="p-6 rounded-[2rem] border bg-card flex flex-col gap-6 group hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
-                                            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                                                <div className="flex items-center gap-6 flex-1 w-full sm:w-auto">
-                                                    <div className="p-4 bg-primary/10 rounded-2xl text-primary transition-transform group-hover:rotate-12">
-                                                        <Briefcase className="h-6 w-6" />
+                                        <div key={app.id} className="p-4 rounded-2xl border bg-card flex flex-col gap-4 group hover:border-primary/40 hover:bg-primary/5 transition-all duration-300">
+                                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                                <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+                                                    <div className="p-3 bg-primary/10 rounded-xl text-primary transition-transform group-hover:rotate-6">
+                                                        <Briefcase className="h-5 w-5" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <h4 className="font-black text-lg uppercase tracking-tight text-slate-800 truncate">{app.jobTitle}</h4>
-                                                        <div className="flex items-center gap-3 mt-1.5">
-                                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-tighter">{app.companyName}</p>
-                                                            <span className="h-1 w-1 rounded-full bg-slate-300" />
-                                                            <p className="text-[10px] text-slate-400 font-bold uppercase">Enviado el {format(app.appliedAt.toDate(), "dd 'de' MMMM", { locale: es })}</p>
+                                                        <h4 className="font-black text-sm uppercase tracking-tight text-slate-800 truncate">{app.jobTitle}</h4>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tighter">{app.companyName}</p>
+                                                            <span className="h-0.5 w-0.5 rounded-full bg-slate-300" />
+                                                            <p className="text-[9px] text-slate-400 font-bold uppercase">{format(app.appliedAt.toDate(), "dd MMM", { locale: es })}</p>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-4 w-full sm:w-auto justify-between">
-                                                    <Badge className={cn(
-                                                        "font-black text-[11px] uppercase px-5 h-9 rounded-full border-none shadow-sm",
-                                                        app.status === 'Pendiente' ? "bg-amber-100 text-amber-700" :
-                                                        app.status === 'Visto' ? "bg-blue-100 text-blue-700" :
-                                                        app.status === 'En Proceso' ? "bg-blue-100 text-blue-700" :
-                                                        app.status === 'Aceptado' ? "bg-green-100 text-green-700" :
-                                                        app.status === 'Rechazado' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
-                                                    )}>
-                                                        {app.status}
-                                                    </Badge>
-                                                </div>
+                                                <Badge className={cn(
+                                                    "font-black text-[10px] uppercase px-4 h-8 rounded-full border-none shadow-sm",
+                                                    app.status === 'Pendiente' ? "bg-amber-100 text-amber-700" :
+                                                    app.status === 'Visto' ? "bg-blue-100 text-blue-700" :
+                                                    app.status === 'En Proceso' ? "bg-blue-100 text-blue-700" :
+                                                    app.status === 'Aceptado' ? "bg-green-100 text-green-700" :
+                                                    app.status === 'Rechazado' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+                                                )}>
+                                                    {app.status}
+                                                </Badge>
                                             </div>
 
-                                            {/* Detalle de Respuesta de la Empresa */}
                                             {(app.interviewDate || app.notes) && (
-                                                <div className="bg-white rounded-2xl p-6 border-2 border-primary/10 shadow-sm animate-in zoom-in-95 duration-500">
-                                                    <h5 className="text-[10px] font-black uppercase text-primary tracking-widest mb-4 flex items-center gap-2">
-                                                        <Info className="h-4 w-4" /> Respuesta de la Empresa
+                                                <div className="bg-white rounded-xl p-4 border border-primary/10 shadow-sm animate-in zoom-in-95 duration-500">
+                                                    <h5 className="text-[9px] font-black uppercase text-primary tracking-widest mb-3 flex items-center gap-1.5">
+                                                        <Info className="h-3.5 w-3.5" /> Feedback de la Empresa
                                                     </h5>
                                                     
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         {app.interviewDate && (
-                                                            <div className="flex items-start gap-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                                                <div className="p-2 bg-white rounded-lg text-blue-600 shadow-sm"><CalendarCheck className="h-5 w-5" /></div>
+                                                            <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                                                <div className="p-1.5 bg-white rounded-md text-blue-600 shadow-xs"><CalendarCheck className="h-4 w-4" /></div>
                                                                 <div>
-                                                                    <p className="text-[9px] font-black text-blue-800 uppercase leading-none mb-1">Cita para Entrevista</p>
-                                                                    <p className="text-sm font-black text-blue-700 capitalize">
-                                                                        {format(app.interviewDate.toDate(), "EEEE dd 'de' MMMM", { locale: es })}
+                                                                    <p className="text-[8px] font-black text-blue-800 uppercase leading-none mb-1">Cita para Entrevista</p>
+                                                                    <p className="text-[11px] font-black text-blue-700">
+                                                                        {format(app.interviewDate.toDate(), "EEE dd 'de' MMM", { locale: es })}
                                                                     </p>
-                                                                    <p className="text-xs font-bold text-blue-500 mt-0.5">Hora: {format(app.interviewDate.toDate(), 'HH:mm')}</p>
+                                                                    <p className="text-[10px] font-bold text-blue-500 mt-0.5">{format(app.interviewDate.toDate(), 'HH:mm')}</p>
                                                                 </div>
                                                             </div>
                                                         )}
                                                         
                                                         {app.notes && (
-                                                            <div className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                                                <div className="p-2 bg-white rounded-lg text-slate-600 shadow-sm"><MessageSquareText className="h-5 w-5" /></div>
+                                                            <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                                                <div className="p-1.5 bg-white rounded-md text-slate-600 shadow-xs"><MessageSquareText className="h-4 w-4" /></div>
                                                                 <div>
-                                                                    <p className="text-[9px] font-black text-slate-500 uppercase leading-none mb-1">Mensaje del Reclutador</p>
-                                                                    <p className="text-xs font-medium text-slate-700 italic leading-relaxed">"{app.notes}"</p>
+                                                                    <p className="text-[8px] font-black text-slate-500 uppercase leading-none mb-1">Nota del Reclutador</p>
+                                                                    <p className="text-[10px] font-medium text-slate-700 italic">"{app.notes}"</p>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -415,9 +406,9 @@ export function JobBoard() {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="py-24 text-center text-muted-foreground flex flex-col items-center opacity-40">
-                                    <Briefcase className="h-12 w-12 mb-4" />
-                                    <p className="font-black uppercase tracking-[0.2em] text-sm">Aún no has postulado a ninguna vacante</p>
+                                <div className="py-20 text-center text-muted-foreground flex flex-col items-center opacity-30">
+                                    <Briefcase className="h-10 w-10 mb-4" />
+                                    <p className="font-black uppercase tracking-[0.1em] text-xs">Sin postulaciones registradas</p>
                                 </div>
                             )}
                         </CardContent>
