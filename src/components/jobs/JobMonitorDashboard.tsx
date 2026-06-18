@@ -138,13 +138,16 @@ export function JobMonitorDashboard() {
         }
         setIsSubmitting(true);
         try {
+            // Se corrige el desfase de fecha añadiendo la hora T12:00:00 para evitar que la conversión a UTC desplace el día
+            const deadlineDate = formData.deadline ? new Date(formData.deadline + 'T12:00:00') : undefined;
+
             const payload = {
                 ...formData,
                 companyId: 'EXTERNAL_SOURCE',
                 isExternal: true,
                 isVerified: true,
                 requirements: [], 
-                deadline: formData.deadline ? Timestamp.fromDate(new Date(formData.deadline)) : undefined,
+                deadline: deadlineDate ? Timestamp.fromDate(deadlineDate) : undefined,
             };
 
             if (editingOfferId) {

@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays, Clock, ChevronLeft, ChevronRight, History } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -175,6 +174,9 @@ export function CompanyDashboard() {
         }
         setIsSubmitting(true);
         try {
+            // Se corrige el desfase de fecha añadiendo la hora T12:00:00 para evitar que la conversión a UTC desplace el día
+            const deadlineDate = formData.deadline ? new Date(formData.deadline + 'T12:00:00') : undefined;
+
             const payload = {
                 ...formData,
                 companyId: user.documentId,
@@ -183,7 +185,7 @@ export function CompanyDashboard() {
                 companyAddress: companyProfile.address,
                 isVerified: true,
                 requirements: [],
-                deadline: formData.deadline ? Timestamp.fromDate(new Date(formData.deadline)) : undefined,
+                deadline: deadlineDate ? Timestamp.fromDate(deadlineDate) : undefined,
             };
 
             if (editingOfferId) {
@@ -430,7 +432,7 @@ export function CompanyDashboard() {
                 </div>
             </div>
 
-            {/* Dialogs: Create/Edit, Applicants, Manage (Remains the same but ensures proper icons) */}
+            {/* Dialogs: Create/Edit, Applicants, Manage */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground">
