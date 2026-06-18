@@ -14,10 +14,40 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays, Clock, ChevronLeft, ChevronRight, History } from 'lucide-react';
+import { 
+    PlusCircle, 
+    Users, 
+    ExternalLink, 
+    Eye, 
+    Loader2, 
+    Save, 
+    Trash2, 
+    MapPin, 
+    Briefcase, 
+    DollarSign, 
+    Building2, 
+    ShieldCheck, 
+    ClipboardList, 
+    GraduationCap, 
+    Edit, 
+    EyeOff, 
+    CheckCircle, 
+    FileText, 
+    Download, 
+    CalendarCheck, 
+    Settings2, 
+    MessageSquareText, 
+    Users2, 
+    CalendarDays, 
+    Clock, 
+    ChevronLeft, 
+    ChevronRight, 
+    History 
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import Link from 'next/link';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
