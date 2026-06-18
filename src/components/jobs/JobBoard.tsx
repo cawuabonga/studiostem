@@ -225,12 +225,12 @@ export function JobBoard() {
                                                 </Badge>
                                             </div>
                                         </div>
-                                        <CardTitle className="text-2xl font-black uppercase tracking-tight group-hover:text-primary transition-colors leading-tight line-clamp-2 min-h-[4rem]">
+                                        <CardTitle className="text-2xl font-black uppercase tracking-tight group-hover:text-primary transition-colors leading-tight line-clamp-2">
                                             {offer.title}
                                         </CardTitle>
                                     </CardHeader>
                                     
-                                    <CardContent className="flex-grow space-y-6 p-8">
+                                    <CardContent className="flex-grow space-y-6 p-8 pt-4">
                                         <div className="space-y-4">
                                             <div className="relative">
                                                 <p className={cn(
@@ -271,7 +271,7 @@ export function JobBoard() {
                                                     <GraduationCap className="h-5 w-5 text-primary" />
                                                     <div>
                                                         <p className="text-[9px] font-black uppercase text-muted-foreground leading-none mb-1">Requisito</p>
-                                                        <p className="text-xs font-bold uppercase">{offer.minSemester}° Ciclo</p>
+                                                        <p className="text-xs font-bold uppercase">{offer.minSemester || 1}° Ciclo</p>
                                                     </div>
                                                 </div>
                                                 {meetsSemRequirement ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
@@ -368,8 +368,10 @@ export function JobBoard() {
                                                     <Badge className={cn(
                                                         "font-black text-[11px] uppercase px-5 h-9 rounded-full border-none shadow-sm",
                                                         app.status === 'Pendiente' ? "bg-amber-100 text-amber-700" :
+                                                        app.status === 'Visto' ? "bg-blue-100 text-blue-700" :
+                                                        app.status === 'En Proceso' ? "bg-blue-100 text-blue-700" :
                                                         app.status === 'Aceptado' ? "bg-green-100 text-green-700" :
-                                                        app.status === 'Rechazado' ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                                                        app.status === 'Rechazado' ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
                                                     )}>
                                                         {app.status}
                                                     </Badge>
