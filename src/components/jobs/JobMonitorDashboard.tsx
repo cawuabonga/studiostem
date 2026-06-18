@@ -22,7 +22,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
 import { Separator } from '../ui/separator';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { Timestamp } from 'firebase/firestore';
 import {
     AlertDialog,

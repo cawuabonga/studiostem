@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Link from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
@@ -547,10 +547,10 @@ export function CompanyDashboard() {
                                             </div>
                                             
                                             <div className="flex gap-2 w-full sm:w-auto">
-                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild>
-                                                    <Link href={app.cvUrl || '#'} target="_blank" disabled={!app.cvUrl}>
+                                                <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-bold border-primary/20 hover:bg-primary/5" asChild disabled={!app.cvUrl}>
+                                                    <a href={app.cvUrl || '#'} target="_blank">
                                                         <Download className="mr-2 h-4 w-4" /> CV
-                                                    </Link>
+                                                    </a>
                                                 </Button>
                                                 <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-black" asChild>
                                                     <Link href={`/profile/${app.studentId}`} target="_blank">
