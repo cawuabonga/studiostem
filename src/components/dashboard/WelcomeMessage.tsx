@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,6 +30,7 @@ import {
     FileCheck
 } from 'lucide-react';
 import { Separator } from '../ui/separator';
+import { cn } from '@/lib/utils';
 
 const SocialButton = ({ href, icon: Icon, color }: { href?: string, icon: any, color: string }) => {
     if (!href) return null;
