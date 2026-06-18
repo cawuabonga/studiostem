@@ -113,10 +113,11 @@ export default function ManageCompaniesPage() {
         }
         setIsSubmitting(true);
         try {
+            // Se corrige el desfase de fecha añadiendo la hora T12:00:00 para evitar que la conversión a UTC desplace el día
             const dataToSave = {
                 ...formData,
-                agreementStartDate: formData.agreementStartDate ? Timestamp.fromDate(new Date(formData.agreementStartDate)) : undefined,
-                agreementEndDate: formData.agreementEndDate ? Timestamp.fromDate(new Date(formData.agreementEndDate)) : undefined,
+                agreementStartDate: formData.agreementStartDate ? Timestamp.fromDate(new Date(formData.agreementStartDate + 'T12:00:00')) : undefined,
+                agreementEndDate: formData.agreementEndDate ? Timestamp.fromDate(new Date(formData.agreementEndDate + 'T12:00:00')) : undefined,
                 role: 'Company' as const,
                 roleId: 'company',
                 instituteId
@@ -370,7 +371,7 @@ export default function ManageCompaniesPage() {
                                         <div className="space-y-2"><Label>Fecha Inicio</Label><Input type="date" value={formData.agreementStartDate} onChange={e => setFormData({...formData, agreementStartDate: e.target.value})} className="h-11" /></div>
                                         <div className="space-y-2"><Label>Fecha Fin</Label><Input type="date" value={formData.agreementEndDate} onChange={e => setFormData({...formData, agreementEndDate: e.target.value})} className="h-11" /></div>
                                     </div>
-                                    <div className="space-y-2"><Label>Sitio Web</Label><div className="relative"><Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/><Input placeholder="https://..." value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} className="pl-10 h-11" /></div></div>
+                                    <div className="space-y-2"><Label>Sitio Web</Label><div className="relative"><Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary"/><Input placeholder="https://..." value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} className="pl-10 h-11" /></div></div>
                                 </div>
                             </div>
                         </div>
