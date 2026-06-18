@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { getJobOffers, addJobOffer, updateJobOffer, deleteJobOffer, getJobApplications, getPrograms, getCompanyProfiles, updateJobApplication } from '@/config/firebase';
 import type { JobOffer, JobApplication, Program, CompanyProfile } from '@/types';
@@ -14,13 +14,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays, Clock } from 'lucide-react';
+import { PlusCircle, Users, ExternalLink, Eye, Loader2, Save, Trash2, MapPin, Briefcase, DollarSign, Building2, ShieldCheck, ClipboardList, GraduationCap, Edit, EyeOff, CheckCircle, FileText, Download, CalendarCheck, Settings2, MessageSquareText, Users2, CalendarDays, Clock, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Separator } from '../ui/separator';
 import { Checkbox } from '../ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -38,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
+const EXPIRED_PAGE_SIZE = 10;
 
 export function CompanyDashboard() {
     const { instituteId, user } = useAuth();
@@ -47,6 +47,9 @@ export function CompanyDashboard() {
     const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
     const [loading, setLoading] = useState(true);
     
+    // Pagination for expired offers
+    const [expiredPage, setExpiredPage] = useState(1);
+
     // Offer Creation / Editing
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingOfferId, setEditingOfferId] = useState<string | null>(null);
@@ -79,7 +82,7 @@ export function CompanyDashboard() {
         setLoading(true);
         try {
             const [fetchedOffers, fetchedPrograms, profile] = await Promise.all([
-                getJobOffers(instituteId, { companyId: user.documentId }),
+                getJobOffers(instituteId, { companyId: user.documentId, all: true }),
                 getPrograms(instituteId),
                 getCompanyProfiles(instituteId).then(list => list.find(c => c.documentId === user.documentId) || null)
             ]);
@@ -97,6 +100,36 @@ export function CompanyDashboard() {
     }, [instituteId, user, editingOfferId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
+
+    // Split offers into active and expired/closed
+    const { activeOffers, expiredOffers } = useMemo(() => {
+        const now = new Date();
+        const active: JobOffer[] = [];
+        const expired: JobOffer[] = [];
+
+        offers.forEach(offer => {
+            const hasPassedDeadline = offer.deadline && offer.deadline.toDate() < now;
+            const isClosedManually = offer.status === 'Cerrada';
+            
+            if (isClosedManually || hasPassedDeadline) {
+                expired.push(offer);
+            } else {
+                active.push(offer);
+            }
+        });
+
+        return {
+            activeOffers: active,
+            expiredOffers: expired.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+        };
+    }, [offers]);
+
+    const paginatedExpiredOffers = useMemo(() => {
+        const start = (expiredPage - 1) * EXPIRED_PAGE_SIZE;
+        return expiredOffers.slice(start, start + EXPIRED_PAGE_SIZE);
+    }, [expiredOffers, expiredPage]);
+
+    const totalExpiredPages = Math.ceil(expiredOffers.length / EXPIRED_PAGE_SIZE);
 
     const handleOpenCreate = () => {
         setEditingOfferId(null);
@@ -172,7 +205,7 @@ export function CompanyDashboard() {
         if (!instituteId) return;
         try {
             await deleteJobOffer(instituteId, offerId);
-            toast({ title: "Oferta Elimada" });
+            toast({ title: "Oferta Eliminada" });
             fetchData();
         } catch (error) {
             toast({ title: "Error al eliminar", variant: "destructive" });
@@ -252,95 +285,152 @@ export function CompanyDashboard() {
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <h3 className="text-2xl font-black uppercase tracking-tight text-primary flex items-center gap-2">
                     <Briefcase className="h-6 w-6" /> Mis Vacantes Publicadas
                 </h3>
-                <Button onClick={handleOpenCreate} className="font-bold shadow-lg h-12 px-6">
+                <Button onClick={handleOpenCreate} className="font-bold shadow-lg h-12 px-6 w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-5 w-5" /> PUBLICAR NUEVA OFERTA
                 </Button>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {offers.length > 0 ? offers.map(offer => (
-                    <Card key={offer.id} className={cn(
-                        "hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group flex flex-col",
-                        offer.status === 'Cerrada' && "opacity-75 grayscale-[0.5]"
-                    )}>
-                        <CardHeader className="pb-4 relative">
-                            <div className="flex justify-between items-start mb-4">
-                                <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
-                                <div className="flex gap-1">
-                                    <Badge variant="secondary" className={cn(
-                                        "font-bold uppercase text-[9px]",
-                                        offer.status === 'Abierta' ? "bg-green-100 text-green-700" : "bg-slate-200 text-slate-600"
-                                    )}>
-                                        {offer.status}
-                                    </Badge>
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
-                                            <Edit className="h-3 w-3" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive" onClick={() => handleToggleStatus(offer)}>
-                                            {offer.status === 'Abierta' ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                                        </Button>
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive">
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Eliminar vacante?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Esta acción es permanente y eliminará la oferta "{offer.title}".</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(offer.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </div>
-                                </div>
-                            </div>
-                            <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
-                                    <Users2 className="h-3 w-3 mr-1" /> {offer.vacancies || 1} Vacantes
-                                </Badge>
-                                <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
-                                    <GraduationCap className="h-3 w-3 mr-1" /> Ciclo {offer.minSemester}+
-                                </Badge>
-                            </div>
-                            <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-2">
-                                <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
-                            </CardDescription>
-                            {offer.deadline && (
-                                <CardDescription className="text-xs font-bold text-destructive mt-1 flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}
-                                </CardDescription>
-                            )}
-                        </CardHeader>
-                        <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
-                            <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
-                                <Users className="mr-2 h-4 w-4" /> Ver Candidatos
-                            </Button>
-                            <Badge variant="secondary" className="h-10 px-4 rounded-xl font-black text-sm bg-primary/10 text-primary border-none" title="Total de candidatos">
-                                {offer.applicantCount || 0}
-                            </Badge>
-                        </CardFooter>
-                    </Card>
-                )) : (
-                    <div className="col-span-full py-24 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/10">
-                        <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                        <p className="font-bold text-lg uppercase">No tienes vacantes activas</p>
-                        <p className="text-sm mt-1">Crea tu primera oferta para empezar a recibir perfiles verificados.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* Columnas 1 y 2: Vacantes Activas */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <h4 className="font-black uppercase text-sm tracking-widest text-slate-700">OFERTAS VIGENTES ({activeOffers.length})</h4>
                     </div>
-                )}
+                    
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {activeOffers.length > 0 ? activeOffers.map(offer => (
+                            <Card key={offer.id} className="hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group flex flex-col border-green-100 bg-white">
+                                <CardHeader className="pb-4 relative">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
+                                        <div className="flex gap-1">
+                                            <Badge variant="secondary" className="font-bold uppercase text-[9px] bg-green-100 text-green-700">
+                                                ABIERTA
+                                            </Badge>
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
+                                                    <Edit className="h-3 w-3" />
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive" onClick={() => handleToggleStatus(offer)}>
+                                                    <EyeOff className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
+                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                        <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                            <Users2 className="h-3 w-3 mr-1" /> {offer.vacancies || 1} Vacantes
+                                        </Badge>
+                                        <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                            <GraduationCap className="h-3 w-3 mr-1" /> Ciclo {offer.minSemester}+
+                                        </Badge>
+                                    </div>
+                                    <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-2">
+                                        <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
+                                    </CardDescription>
+                                    {offer.deadline && (
+                                        <CardDescription className="text-xs font-bold text-destructive mt-1 flex items-center gap-1.5">
+                                            <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}
+                                        </CardDescription>
+                                    )}
+                                </CardHeader>
+                                <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
+                                    <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
+                                        <Users className="mr-2 h-4 w-4" /> Ver Candidatos
+                                    </Button>
+                                    <Badge variant="secondary" className="h-10 px-4 rounded-xl font-black text-sm bg-primary/10 text-primary border-none">
+                                        {offer.applicantCount || 0}
+                                    </Badge>
+                                </CardFooter>
+                            </Card>
+                        )) : (
+                            <div className="col-span-full py-20 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
+                                <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                                <p className="font-bold text-sm uppercase">Sin ofertas vigentes en este momento</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Columna 3: Historial de Vacantes (Vencidas/Cerradas) */}
+                <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                        <History className="h-5 w-5 text-muted-foreground" />
+                        <h4 className="font-black uppercase text-sm tracking-widest text-slate-500">HISTORIAL ({expiredOffers.length})</h4>
+                    </div>
+
+                    <div className="space-y-4">
+                        {paginatedExpiredOffers.length > 0 ? (
+                            <>
+                                {paginatedExpiredOffers.map(offer => (
+                                    <Card key={offer.id} className="p-4 rounded-xl border bg-muted/20 opacity-70 group hover:opacity-100 transition-all border-dashed">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <Badge variant="outline" className="text-[8px] font-black uppercase py-0 px-2 h-4">{offer.jobType}</Badge>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
+                                                    <Edit className="h-3 w-3" />
+                                                </Button>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive">
+                                                            <Trash2 className="h-3 w-3" />
+                                                        </Button>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Eliminar vacante?</AlertDialogTitle>
+                                                            <AlertDialogDescription>Esta acción es permanente y eliminará la oferta "{offer.title}".</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(offer.id)} className="bg-destructive">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </div>
+                                        <h5 className="text-sm font-black uppercase tracking-tight text-slate-700 line-clamp-1">{offer.title}</h5>
+                                        <div className="flex justify-between items-center mt-3">
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase">{format(offer.createdAt.toDate(), "dd MMM yy")}</p>
+                                            <Button size="sm" variant="ghost" className="h-7 text-[9px] font-black uppercase" onClick={() => handleViewApplicants(offer)}>
+                                                {offer.applicantCount || 0} Candidatos <Eye className="ml-1 h-3 w-3" />
+                                            </Button>
+                                        </div>
+                                    </Card>
+                                ))}
+
+                                {totalExpiredPages > 1 && (
+                                    <div className="flex items-center justify-between pt-2">
+                                        <p className="text-[9px] font-black text-muted-foreground uppercase">Página {expiredPage} de {totalExpiredPages}</p>
+                                        <div className="flex gap-1">
+                                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setExpiredPage(p => Math.max(1, p - 1))} disabled={expiredPage === 1}>
+                                                <ChevronLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setExpiredPage(p => Math.min(totalExpiredPages, p + 1))} disabled={expiredPage === totalExpiredPages}>
+                                                <ChevronRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        ) : (
+                            <div className="py-12 text-center text-muted-foreground border-2 border-dashed rounded-2xl">
+                                <History className="h-8 w-8 mx-auto mb-2 opacity-10" />
+                                <p className="text-[10px] font-bold uppercase">Sin historial</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Dialog: Nueva/Editar Oferta */}
+            {/* Dialogs: Create/Edit, Applicants, Manage (Remains the same but ensures proper icons) */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground">
@@ -506,7 +596,6 @@ export function CompanyDashboard() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Candidatos */}
             <Dialog open={!!selectedOffer} onOpenChange={open => !open && setSelectedOffer(null)}>
                 <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden shadow-2xl rounded-2xl">
                     <DialogHeader className="p-8 border-b bg-muted/20 shrink-0">
@@ -578,7 +667,6 @@ export function CompanyDashboard() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Gestionar Postulación */}
             <Dialog open={!!selectedApp} onOpenChange={open => !open && setSelectedApp(null)}>
                 <DialogContent className="max-w-md rounded-2xl shadow-2xl">
                     <DialogHeader>
@@ -626,7 +714,7 @@ export function CompanyDashboard() {
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setSelectedApp(null)} className="font-bold">CANCELAR</Button>
                         <Button onClick={handleUpdateApplication} disabled={isSubmitting} className="font-black px-8">
-                            {isSubmitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                            {isSubmitting ? <Loader2 className="animate-spin h-3.5 w-3.5 mr-2" /> : <Save className="mr-2 h-4 w-4" />}
                             GUARDAR CAMBIOS
                         </Button>
                     </DialogFooter>

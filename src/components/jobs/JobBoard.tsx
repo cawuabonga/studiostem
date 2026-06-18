@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText, Globe, Users2 } from 'lucide-react';
+import { Search, MapPin, DollarSign, Clock, Building2, Send, CheckCircle2, Info, Filter, Briefcase, ShieldCheck, ExternalLink, GraduationCap, AlertTriangle, UserCircle, FileText, CalendarCheck, MessageSquareText, Globe, Users2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -58,7 +58,12 @@ export function JobBoard() {
     useEffect(() => { fetchData(); }, [fetchData]);
 
     const filteredOffers = useMemo(() => {
+        const now = new Date();
         return offers.filter(o => {
+            // Check expiry: exclude if deadline passed
+            const isExpired = o.deadline && o.deadline.toDate() < now;
+            if (isExpired) return false;
+
             const matchesText = o.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                                o.companyName.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesModality = modalityFilter === 'all' || o.modality === modalityFilter;
@@ -195,7 +200,7 @@ export function JobBoard() {
                                                     offer.isExternal ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
                                                 )}>
                                                     {offer.isExternal ? <Globe className="h-3 w-3" /> : <ShieldCheck className="h-3 w-3" />} 
-                                                    {offer.isExternal ? `Oferta en ${offer.source}` : "Verificada"}
+                                                    {offer.isExternal ? `Oferta en ${offer.source}` : "CONVOCATORIA VIGENTE"}
                                                 </Badge>
                                             </div>
                                         </div>
