@@ -119,7 +119,13 @@ export function JobBoard() {
         });
     };
 
-    if (loading) return <div className="grid md:grid-cols-2 gap-6"><Skeleton className="h-64 w-full" /><Skeleton className="h-64 w-full" /></div>;
+    if (loading) return (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <Skeleton className="h-80 w-full rounded-2xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
+            <Skeleton className="h-80 w-full rounded-2xl" />
+        </div>
+    );
 
     const isProfileComplete = (user?.skills?.length || 0) >= 3 && !!user?.bio && !!user?.cvUrl;
     const currentSem = (user as any)?.currentSemester || 1;
@@ -185,7 +191,7 @@ export function JobBoard() {
                         </CardContent>
                     </Card>
 
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {filteredOffers.length > 0 ? filteredOffers.map(offer => {
                             const alreadyApplied = myApplications.some(a => a.jobId === offer.id);
                             const meetsSemRequirement = currentSem >= (offer.minSemester || 1);
