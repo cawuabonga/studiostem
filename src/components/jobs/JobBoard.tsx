@@ -206,7 +206,7 @@ export function JobBoard() {
                                                     />
                                                 </div>
                                                 <div className="truncate">
-                                                    <p className="text-[11px] font-black uppercase text-primary leading-none truncate tracking-tight mb-1">{offer.companyName}</p>
+                                                    <p className="text-[13px] font-black uppercase text-primary leading-none truncate tracking-tight mb-1">{offer.companyName}</p>
                                                     <div className="flex items-center gap-1.5">
                                                         <Badge variant="outline" className="uppercase font-black text-[8px] px-1.5 h-4 border-primary/20 text-primary bg-primary/5">
                                                             {offer.jobType}
