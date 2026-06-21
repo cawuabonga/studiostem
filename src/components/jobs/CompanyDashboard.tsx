@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -339,53 +338,56 @@ export function CompanyDashboard() {
                     </div>
                     
                     <div className="grid gap-6 md:grid-cols-2">
-                        {activeOffers.length > 0 ? activeOffers.map(offer => (
-                            <Card key={offer.id} className="hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group flex flex-col border-green-100 bg-white">
-                                <CardHeader className="pb-4 relative">
-                                    <div className="flex justify-between items-start mb-4">
-                                        <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
-                                        <div className="flex gap-1">
-                                            <Badge variant="secondary" className="font-bold uppercase text-[9px] bg-green-100 text-green-700">
-                                                ABIERTA
-                                            </Badge>
-                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
-                                                    <Edit className="h-3 w-3" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive" onClick={() => handleToggleStatus(offer)}>
-                                                    <EyeOff className="h-3 w-3" />
-                                                </Button>
+                        {activeOffers.length > 0 ? activeOffers.map(offer => {
+                            const totalVacancies = offer.vacancies || 1;
+                            return (
+                                <Card key={offer.id} className="hover:border-primary transition-all shadow-md rounded-2xl overflow-hidden group flex flex-col border-green-100 bg-white">
+                                    <CardHeader className="pb-4 relative">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <Badge variant="outline" className="text-[10px] font-black uppercase border-primary/20 text-primary">{offer.jobType}</Badge>
+                                            <div className="flex gap-1">
+                                                <Badge variant="secondary" className="font-bold uppercase text-[9px] bg-green-100 text-green-700">
+                                                    ABIERTA
+                                                </Badge>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => handleOpenEdit(offer)}>
+                                                        <Edit className="h-3 w-3" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full text-destructive" onClick={() => handleToggleStatus(offer)}>
+                                                        <EyeOff className="h-3 w-3" />
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                    <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
-                                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                                        <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
-                                            <Users2 className="h-3 w-3 mr-1" /> {offer.vacancies || 1} Vacantes
-                                        </Badge>
-                                        <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
-                                            <GraduationCap className="h-3 w-3 mr-1" /> Ciclo {offer.minSemester}+
-                                        </Badge>
-                                    </div>
-                                    <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-2">
-                                        <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
-                                    </CardDescription>
-                                    {offer.deadline && (
-                                        <CardDescription className="text-xs font-bold text-destructive mt-1 flex items-center gap-1.5">
-                                            <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}
+                                        <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight min-h-[3rem] line-clamp-2">{offer.title}</CardTitle>
+                                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                                            <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                                <Users2 className="h-3 w-3 mr-1" /> {totalVacancies} Vacantes
+                                            </Badge>
+                                            <Badge variant="secondary" className="text-[9px] font-bold bg-primary/5 text-primary border-none">
+                                                <GraduationCap className="h-3 w-3 mr-1" /> Ciclo {offer.minSemester}+
+                                            </Badge>
+                                        </div>
+                                        <CardDescription className="text-xs font-medium flex items-center gap-1.5 mt-2">
+                                            <MapPin className="h-3.5 w-3.5 opacity-60" /> {offer.modality} • {offer.location}
                                         </CardDescription>
-                                    )}
-                                </CardHeader>
-                                <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
-                                    <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
-                                        <Users className="mr-2 h-4 w-4" /> Ver Candidatos
-                                    </Button>
-                                    <Badge variant="secondary" className="h-10 px-4 rounded-xl font-black text-sm bg-primary/10 text-primary border-none">
-                                        {offer.applicantCount || 0}
-                                    </Badge>
-                                </CardFooter>
-                            </Card>
-                        )) : (
+                                        {offer.deadline && (
+                                            <CardDescription className="text-xs font-bold text-destructive mt-1 flex items-center gap-1.5">
+                                                <Clock className="h-3.5 w-3.5" /> Límite: {format(offer.deadline.toDate(), "dd 'de' MMM", { locale: es })}
+                                            </CardDescription>
+                                        )}
+                                    </CardHeader>
+                                    <CardFooter className="border-t pt-4 bg-muted/20 mt-auto flex items-center gap-2">
+                                        <Button variant="ghost" className="flex-1 font-bold group-hover:bg-primary group-hover:text-primary-foreground transition-all" onClick={() => handleViewApplicants(offer)}>
+                                            <Users className="mr-2 h-4 w-4" /> Ver Candidatos
+                                        </Button>
+                                        <Badge variant="secondary" className="h-10 px-4 rounded-xl font-black text-sm bg-primary/10 text-primary border-none">
+                                            {offer.applicantCount || 0}
+                                        </Badge>
+                                    </CardFooter>
+                                </Card>
+                            );
+                        }) : (
                             <div className="col-span-full py-20 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
                                 <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-20" />
                                 <p className="font-bold text-sm uppercase">Sin ofertas vigentes en este momento</p>
@@ -467,8 +469,8 @@ export function CompanyDashboard() {
 
             {/* Dialogs: Create/Edit, Applicants, Manage */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl">
-                    <DialogHeader className="p-8 bg-primary text-primary-foreground">
+                <DialogContent className="max-w-5xl p-0 overflow-hidden rounded-3xl border-none shadow-2xl max-h-[95vh] flex flex-col">
+                    <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
                                 <Briefcase className="h-6 w-6 text-accent" />
@@ -482,46 +484,48 @@ export function CompanyDashboard() {
                         </div>
                     </DialogHeader>
                     
-                    <div className="flex flex-col lg:flex-row min-h-[600px]">
-                        <div className="flex-1 p-8 space-y-6">
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Título del Puesto</Label>
-                                <Input 
-                                    value={formData.title} 
-                                    onChange={e => setFormData({...formData, title: e.target.value})} 
-                                    placeholder="Ej: Técnico en Mantenimiento Junior" 
-                                    className="h-12 text-lg font-bold border-primary/10"
-                                />
-                            </div>
+                    <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+                        <ScrollArea className="flex-1">
+                            <div className="p-8 space-y-6">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Título del Puesto</Label>
+                                    <Input 
+                                        value={formData.title} 
+                                        onChange={e => setFormData({...formData, title: e.target.value})} 
+                                        placeholder="Ej: Técnico en Mantenimiento Junior" 
+                                        className="h-12 text-lg font-bold border-primary/10"
+                                    />
+                                </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Detallada y Requisitos</Label>
-                                <Textarea 
-                                    rows={10} 
-                                    value={formData.description} 
-                                    onChange={e => setFormData({...formData, description: e.target.value})} 
-                                    placeholder="Describa las funciones, competencias técnicas requeridas y beneficios..."
-                                    className="resize-none border-primary/10 leading-relaxed font-medium"
-                                />
-                            </div>
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Detallada y Requisitos</Label>
+                                    <Textarea 
+                                        rows={10} 
+                                        value={formData.description} 
+                                        onChange={e => setFormData({...formData, description: e.target.value})} 
+                                        placeholder="Describa las funciones, competencias técnicas requeridas y beneficios..."
+                                        className="resize-none border-primary/10 leading-relaxed font-medium"
+                                    />
+                                </div>
 
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Programas de Estudio Objetivo (Filtro Match)</Label>
-                                <ScrollArea className="h-40 border rounded-xl p-4 bg-muted/20">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {programs.map(p => (
-                                            <div key={p.id} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-primary/10">
-                                                <Checkbox id={p.id} checked={formData.programIds.includes(p.id)} onCheckedChange={() => toggleProgram(p.id)} />
-                                                <Label htmlFor={p.id} className="text-xs font-bold leading-none cursor-pointer uppercase truncate">{p.name}</Label>
-                                            </div>
-                                        ))}
+                                <div className="space-y-3">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-primary">Programas de Estudio Objetivo (Filtro Match)</Label>
+                                    <div className="border rounded-xl p-4 bg-muted/20">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {programs.map(p => (
+                                                <div key={p.id} className="flex items-center space-x-2 p-2 rounded-lg hover:bg-background transition-colors border border-transparent hover:border-primary/10">
+                                                    <Checkbox id={p.id} checked={formData.programIds.includes(p.id)} onCheckedChange={() => toggleProgram(p.id)} />
+                                                    <Label htmlFor={p.id} className="text-xs font-bold leading-none cursor-pointer uppercase truncate">{p.name}</Label>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </ScrollArea>
-                                <p className="text-[10px] text-muted-foreground italic">La oferta solo será visible para estudiantes de las carreras seleccionadas.</p>
+                                    <p className="text-[10px] text-muted-foreground italic">La oferta solo será visible para estudiantes de las carreras seleccionadas.</p>
+                                </div>
                             </div>
-                        </div>
+                        </ScrollArea>
 
-                        <div className="w-full lg:w-[350px] bg-muted/30 border-l p-8 space-y-6">
+                        <div className="w-full lg:w-[350px] bg-muted/30 border-l p-8 space-y-6 shrink-0 overflow-y-auto">
                             <div className="space-y-4">
                                 <h4 className="text-[10px] font-black uppercase tracking-widest text-primary">Requisitos Académicos</h4>
                                 
@@ -621,7 +625,7 @@ export function CompanyDashboard() {
                         </div>
                     </div>
 
-                    <DialogFooter className="p-6 bg-muted/50 border-t flex gap-3">
+                    <DialogFooter className="p-6 bg-muted/50 border-t flex gap-3 shrink-0">
                         <Button variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold">CANCELAR</Button>
                         <Button onClick={handleSaveOffer} disabled={isSubmitting} className="font-black px-12 shadow-xl shadow-primary/20">
                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
@@ -696,7 +700,7 @@ export function CompanyDashboard() {
                             )}
                         </ScrollArea>
                     </div>
-                    <DialogFooter className="p-6 border-t bg-muted/20">
+                    <DialogFooter className="p-6 border-t bg-muted/20 shrink-0">
                          <Button variant="ghost" onClick={() => setSelectedOffer(null)} className="font-black">CERRAR PANEL</Button>
                     </DialogFooter>
                 </DialogContent>
