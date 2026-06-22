@@ -28,6 +28,7 @@
     position: static !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    counter-reset: page;
   }
 
   .no-print, 
@@ -105,7 +106,7 @@
     display: block !important;
     clear: both !important;
     position: relative !important;
-    min-height: 250mm;
+    min-height: 272mm;
     background: white !important;
     counter-increment: page;
   }
@@ -115,9 +116,9 @@
     break-inside: avoid !important;
   }
 
-  /* Pie de página con numeración */
+  /* Pie de página con numeración corregida (Absolute vs Fixed) */
   .print-footer {
-    position: fixed;
+    position: absolute;
     bottom: 0;
     left: 0;
     right: 0;

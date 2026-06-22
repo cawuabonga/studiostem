@@ -281,7 +281,7 @@ export function SyllabusPrintLayout({
             </div>
 
             {/* --- ÚLTIMA PÁGINA: METODOLOGÍA Y FIRMAS --- */}
-            <div className="py-4">
+            <div className="page-break py-4">
                 <PageHeader institute={institute} />
                 <div className="mt-6 space-y-10 px-4">
                     <section>
