@@ -89,7 +89,7 @@ export function SyllabusPrintLayout({
     return (
         <div className="printable-area bg-white text-black font-sans w-full leading-normal">
             
-            {/* Pie de Página Fijo (15mm) - Se repite en todas las páginas por CSS position:fixed */}
+            {/* Pie de Página Fijo (15mm) - Se repite en todas las páginas automáticamente */}
             <div className="print-footer">
                 <div className="flex flex-col">
                     <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
@@ -102,7 +102,7 @@ export function SyllabusPrintLayout({
             </div>
 
             {/* --- PÁGINA 1: PORTADA --- */}
-            <div className="cover-page flex flex-col items-center justify-between">
+            <div className="cover-page">
                 <div className="w-full space-y-6 flex flex-col items-center">
                     <div className="text-center space-y-4">
                         <h1 className="text-[24pt] font-black tracking-tight leading-tight max-w-4xl text-black">
@@ -127,13 +127,13 @@ export function SyllabusPrintLayout({
                     </div>
                 </div>
 
-                <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pt-8 border-t-2 border-black">
+                <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pb-10 border-t-2 border-black pt-8">
                     <div className="space-y-1">
                         <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
                         <p className="text-[12pt] font-bold uppercase text-black">{teacher?.fullName || 'Personal Asignado'}</p>
                     </div>
                     <div className="space-y-1 text-right">
-                        <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Año</p>
+                        <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Año Académico</p>
                         <p className="text-[20pt] font-black text-black leading-none">{currentYear}</p>
                     </div>
                 </div>
@@ -143,7 +143,7 @@ export function SyllabusPrintLayout({
             <div className="second-page-fixed pt-4">
                 <PageHeader institute={institute} />
                 
-                <div className="mt-6 space-y-8 px-4">
+                <div className="mt-6 space-y-8 px-4 flex-1">
                     <section>
                         <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-4 flex items-center gap-3 text-black">
                             <span className="bg-black text-white px-2 py-0.5 text-[9pt] min-w-[30px] text-center rounded-sm">I</span>

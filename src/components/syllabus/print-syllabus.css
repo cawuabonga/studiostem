@@ -11,7 +11,7 @@
   @page {
     size: A4 portrait;
     /* Margen inferior de 25mm reserva espacio para el pie de página de 15mm + aire */
-    margin: 12mm 15mm 25mm 15mm;
+    margin: 15mm 15mm 25mm 15mm;
   }
 
   /* Reset radical de Next.js y React para flujo de impresión puro */
@@ -38,29 +38,29 @@
     display: block !important;
     width: 100% !important;
     background: white !important;
+    /* Reiniciamos el contador de página al inicio del documento */
     counter-reset: page;
   }
 
   /* PAGINA 1: PORTADA FIJA */
   .cover-page {
-    height: 275mm; /* Asegura que ocupe casi toda la página física */
+    height: 250mm; /* Altura segura para evitar saltos dobles */
     page-break-after: always;
     break-after: page;
-    display: flex;
+    display: flex !important;
     flex-direction: column;
     justify-content: space-between;
     padding: 10mm 0;
-    position: relative;
-    z-index: 1000;
     background: white;
   }
 
   /* PAGINA 2: INFO Y SUMILLA FIJA */
   .second-page-fixed {
-    height: 275mm;
+    height: 250mm; /* Altura segura para evitar saltos dobles */
     page-break-after: always;
     break-after: page;
-    display: block;
+    display: flex !important;
+    flex-direction: column;
     background: white;
   }
 
@@ -75,20 +75,20 @@
   .print-footer {
     position: fixed;
     bottom: 0;
-    left: 15mm;
-    right: 15mm;
+    left: 0;
+    right: 0;
     height: 15mm;
     border-top: 1.5px solid black;
     display: flex !important;
     justify-content: space-between;
     align-items: center;
+    padding: 0 15mm;
     background: white;
     z-index: 999;
   }
 
-  /* Numeración de páginas */
+  /* Numeración de páginas dinámica basada en el motor del navegador */
   .page-number-display:after {
-    counter-increment: page;
     content: "Página " counter(page);
   }
 
@@ -105,6 +105,7 @@
 
   section {
     page-break-inside: avoid !important;
+    margin-bottom: 2rem;
   }
 
   .no-print-break {
