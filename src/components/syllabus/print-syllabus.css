@@ -1,5 +1,5 @@
 
-/* Estilos exclusivos para la impresión del Sílabo Académico */
+/* Estilos definitivos para impresión oficial de Sílabo STEM */
 
 @media screen {
   .print-only {
@@ -10,15 +10,14 @@
 @media print {
   @page {
     size: A4 portrait;
-    /* Margen inferior amplio para el pie de página de 15mm + 5mm de aire */
-    margin: 15mm 15mm 25mm 15mm;
+    /* Margen inferior de 25mm reserva espacio para el pie de página de 15mm + aire */
+    margin: 12mm 15mm 25mm 15mm;
   }
 
-  /* Reset radical para evitar que contenedores de React/Next corten el flujo */
-  html, body, #root, #__next, [data-sidebar-wrapper], .sidebar-inset, .printable-content {
+  /* Reset radical de Next.js y React para flujo de impresión puro */
+  html, body, #__next, [data-sidebar-provider], main, .printable-content {
     background: white !important;
     color: black !important;
-    font-family: 'Lato', sans-serif !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
@@ -27,128 +26,85 @@
     width: 100% !important;
     display: block !important;
     position: static !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    counter-reset: page;
   }
 
-  /* Padding inferior en todas las páginas para evitar solapamiento con el footer fijo */
-  body {
-    padding-bottom: 20mm !important;
-  }
-
-  .no-print, 
-  header, 
-  nav, 
-  aside, 
-  .sidebar-container, 
-  .page-header,
-  .screen-only,
-  button,
-  [role="dialog"] > button {
+  /* Ocultar elementos de UI */
+  .no-print, header.page-header, nav, aside, .sidebar-container {
     display: none !important;
   }
 
-  .print-only {
-    display: block !important;
-  }
-
-  /* Layout Base */
+  /* Contenedor principal */
   .printable-area {
     display: block !important;
     width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
     background: white !important;
-    overflow: visible !important;
-    height: auto !important;
+    counter-reset: page;
   }
 
-  /* Tipografía formal */
-  h1, h2, h3, h4 {
-    font-family: 'Montserrat', sans-serif !important;
-    font-weight: 700 !important;
-    color: black !important;
-    text-transform: uppercase;
+  /* PAGINA 1: PORTADA FIJA */
+  .cover-page {
+    height: 275mm; /* Asegura que ocupe casi toda la página física */
+    page-break-after: always;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 10mm 0;
+    position: relative;
+    z-index: 1000;
+    background: white;
   }
 
-  /* Tablas */
+  /* PAGINA 2: INFO Y SUMILLA FIJA */
+  .second-page-fixed {
+    height: 275mm;
+    page-break-after: always;
+    break-after: page;
+    display: block;
+    background: white;
+  }
+
+  /* PÁGINA 3+: CONTENIDO DINÁMICO */
+  .dynamic-content {
+    display: block;
+    width: 100%;
+    page-break-before: always;
+  }
+
+  /* PIE DE PÁGINA INSTITUCIONAL FIJO (15mm) */
+  .print-footer {
+    position: fixed;
+    bottom: 0;
+    left: 15mm;
+    right: 15mm;
+    height: 15mm;
+    border-top: 1.5px solid black;
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    z-index: 999;
+  }
+
+  /* Numeración de páginas */
+  .page-number-display:after {
+    counter-increment: page;
+    content: "Página " counter(page);
+  }
+
+  /* Evitar cortes en elementos críticos */
   table {
+    page-break-inside: auto !important;
     width: 100% !important;
     border-collapse: collapse !important;
-    margin-bottom: 1rem;
-    table-layout: auto !important;
-    page-break-inside: auto !important;
   }
 
   tr {
     page-break-inside: avoid !important;
-    page-break-after: auto !important;
   }
 
-  th {
-    background-color: #f3f4f6 !important;
-    color: black !important;
-    font-weight: 700 !important;
-    font-size: 8pt !important;
-    border: 1px solid #000 !important;
-    padding: 4px !important;
-    text-align: center;
-  }
-
-  td {
-    border: 1px solid #000 !important;
-    padding: 4px !important;
-    font-size: 7.5pt !important;
-    vertical-align: middle;
-    color: black !important;
-  }
-
-  /* Saltos de página controlados */
-  .page-break {
-    break-after: page !important;
-    page-break-after: always !important;
-    display: block !important;
-    clear: both !important;
-    position: relative !important;
-    min-height: 265mm;
-    background: white !important;
-  }
-
-  /* Pie de página fijo de 15mm */
-  .print-footer {
-    position: fixed;
-    bottom: -15mm; /* Ajustado por el margen de @page */
-    left: 0;
-    right: 0;
-    height: 15mm;
-    border-top: 1px solid #000;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 15mm;
-    background: white;
-    z-index: 9999;
-  }
-
-  /* Ocultar footer en la primera página (Portada) */
-  .page-break:first-child ~ .print-footer {
-    display: flex;
-  }
-  
-  /* Truco para ocultar el footer específicamente en la portada usando z-index y fondo */
-  .first-page-cover {
-    position: relative;
-    z-index: 10000;
-    background: white !important;
-    min-height: 297mm;
-    margin-bottom: 0;
-  }
-
-  .page-number:after {
-    counter-increment: page;
-    content: "Página " counter(page);
+  section {
+    page-break-inside: avoid !important;
   }
 
   .no-print-break {
@@ -156,13 +112,11 @@
     break-inside: avoid !important;
   }
 
-  img {
-    max-width: 100%;
-    page-break-inside: avoid;
-  }
-
-  section {
-    page-break-inside: avoid;
+  /* Tipografía base */
+  body {
+    font-size: 9pt;
+    line-height: 1.4;
+    color: black;
   }
 
   h1, h2, h3, h4 {

@@ -87,62 +87,60 @@ export function SyllabusPrintLayout({
     const weeklyHours = (unit.theoreticalHours || 0) + (unit.practicalHours || 0);
 
     return (
-        <div className="bg-white text-black font-sans w-full leading-normal">
+        <div className="printable-area bg-white text-black font-sans w-full leading-normal">
             
-            {/* Pie de Página Fijo (15mm) - Aparecerá en todas las páginas por CSS position:fixed */}
-            <div className="print-footer no-print-break">
+            {/* Pie de Página Fijo (15mm) - Se repite en todas las páginas por CSS position:fixed */}
+            <div className="print-footer">
                 <div className="flex flex-col">
                     <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
                     <span className="text-[6pt] text-gray-500 italic">Documento Académico Generado Digitalmente por STEM V2</span>
                 </div>
                 <div className="flex flex-col items-end">
                     <span className="text-[7pt] font-black uppercase">{unit.code} | {unit.turno}</span>
-                    <span className="page-number text-[7pt] font-bold"></span>
+                    <span className="page-number-display text-[7pt] font-bold"></span>
                 </div>
             </div>
 
             {/* --- PÁGINA 1: PORTADA --- */}
-            <div className="page-break first-page-cover flex flex-col items-center">
-                <div className="w-full flex flex-col items-center justify-between h-[265mm] py-8">
-                    <div className="w-full space-y-6 flex flex-col items-center">
-                        <div className="text-center space-y-4">
-                            <h1 className="text-[24pt] font-black tracking-tight leading-tight max-w-4xl text-black">
-                                {institute?.name?.toUpperCase() || ''}
-                            </h1>
-                            <div className="h-1.5 w-48 bg-black mx-auto"></div>
-                        </div>
-
-                        <div className="py-4">
-                            {designOptions.showLogo && institute?.logoUrl && (
-                                <img src={institute.logoUrl} alt="Logo" className="w-[200px] h-[200px] object-contain" />
-                            )}
-                        </div>
-
-                        <div className="text-center space-y-2 pt-2">
-                            <p className="text-[11pt] font-bold text-gray-600 uppercase tracking-[0.4em]">Programa de Estudios</p>
-                            <h2 className="text-[16pt] font-black uppercase px-12 leading-snug text-black">{program?.name?.toUpperCase() || ''}</h2>
-                        </div>
-                        
-                        <div className="border-y-2 border-black py-8 w-full text-center my-4 bg-gray-50">
-                            <h2 className="text-[20pt] font-black tracking-[0.1em] text-black px-4 uppercase">SÍLABO DE {unit.name}</h2>
-                        </div>
+            <div className="cover-page flex flex-col items-center justify-between">
+                <div className="w-full space-y-6 flex flex-col items-center">
+                    <div className="text-center space-y-4">
+                        <h1 className="text-[24pt] font-black tracking-tight leading-tight max-w-4xl text-black">
+                            {institute?.name?.toUpperCase() || ''}
+                        </h1>
+                        <div className="h-1.5 w-48 bg-black mx-auto"></div>
                     </div>
 
-                    <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pt-8 border-t-2 border-black">
-                        <div className="space-y-1">
-                            <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
-                            <p className="text-[12pt] font-bold uppercase text-black">{teacher?.fullName || 'Personal Asignado'}</p>
-                        </div>
-                        <div className="space-y-1 text-right">
-                            <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Año</p>
-                            <p className="text-[20pt] font-black text-black leading-none">{currentYear}</p>
-                        </div>
+                    <div className="py-12">
+                        {designOptions.showLogo && institute?.logoUrl && (
+                            <img src={institute.logoUrl} alt="Logo" className="w-[200px] h-[200px] object-contain" />
+                        )}
+                    </div>
+
+                    <div className="text-center space-y-2 pt-2">
+                        <p className="text-[11pt] font-bold text-gray-600 uppercase tracking-[0.4em]">Programa de Estudios</p>
+                        <h2 className="text-[16pt] font-black uppercase px-12 leading-snug text-black">{program?.name?.toUpperCase() || ''}</h2>
+                    </div>
+                    
+                    <div className="border-y-2 border-black py-8 w-full text-center my-4 bg-gray-50">
+                        <h2 className="text-[20pt] font-black tracking-[0.1em] text-black px-4 uppercase">SÍLABO DE {unit.name}</h2>
+                    </div>
+                </div>
+
+                <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pt-8 border-t-2 border-black">
+                    <div className="space-y-1">
+                        <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
+                        <p className="text-[12pt] font-bold uppercase text-black">{teacher?.fullName || 'Personal Asignado'}</p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                        <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Año</p>
+                        <p className="text-[20pt] font-black text-black leading-none">{currentYear}</p>
                     </div>
                 </div>
             </div>
 
-            {/* --- PÁGINA 2: INFORMACIÓN GENERAL Y SUMILLA (Agrupados) --- */}
-            <div className="page-break py-4">
+            {/* --- PÁGINA 2: INFORMACIÓN GENERAL Y SUMILLA --- */}
+            <div className="second-page-fixed pt-4">
                 <PageHeader institute={institute} />
                 
                 <div className="mt-6 space-y-8 px-4">
@@ -152,18 +150,18 @@ export function SyllabusPrintLayout({
                             INFORMACIÓN GENERAL
                         </h3>
                         <table className="w-full border-collapse border-2 border-black">
-                            <tbody className="text-[8.5pt]">
-                                <tr><th className="w-[30%] text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Sector Económico</th><td className="p-1.5 border border-black uppercase text-black">{program?.economicSector || '---'}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Familia Productiva</th><td className="p-1.5 border border-black uppercase text-black">{program?.productiveFamily || '---'}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Activity Económica</th><td className="p-1.5 border border-black uppercase text-black">{program?.economicActivity || '---'}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Programa de Estudios</th><td className="p-1.5 border border-black uppercase font-bold text-black">{program?.name}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Módulo Profesional</th><td className="p-1.5 border border-black uppercase text-black">{currentModule?.name}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Unidad Didáctica</th><td className="p-1.5 border border-black font-black uppercase text-[9.5pt] text-primary">{unit.name}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Ciclo / Semestre</th><td className="p-1.5 border border-black font-bold text-black">{unit.semester}° Semestre</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Créditos</th><td className="p-1.5 border border-black text-black">{unit.credits}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Horas Semanales / Totales</th><td className="p-1.5 border border-black text-black">{weeklyHours} h/s | {unit.totalHours} Totales</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Turno / Periodo</th><td className="p-1.5 border border-black font-bold uppercase text-black">{unit.turno} | {unit.period} {currentYear}</td></tr>
-                                <tr><th className="text-left bg-gray-100 p-1.5 border border-black uppercase font-black text-black">Docente Responsable</th><td className="p-1.5 border border-black font-bold uppercase text-black">{teacher?.fullName}</td></tr>
+                            <tbody className="text-[8pt]">
+                                <tr><th className="w-[30%] text-left bg-gray-100 p-1 border border-black uppercase font-black">Sector Económico</th><td className="p-1 border border-black uppercase">{program?.economicSector || '---'}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Familia Productiva</th><td className="p-1 border border-black uppercase">{program?.productiveFamily || '---'}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Activity Económica</th><td className="p-1 border border-black uppercase">{program?.economicActivity || '---'}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Programa de Estudios</th><td className="p-1 border border-black uppercase font-bold">{program?.name}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Módulo Profesional</th><td className="p-1 border border-black uppercase">{currentModule?.name}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Unidad Didáctica</th><td className="p-1 border border-black font-black uppercase text-[9pt] text-primary">{unit.name}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Ciclo / Semestre</th><td className="p-1 border border-black font-bold">{unit.semester}° Semestre</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Créditos</th><td className="p-1 border border-black">{unit.credits}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Horas Semanales / Totales</th><td className="p-1 border border-black">{weeklyHours} h/s | {unit.totalHours} Totales</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Turno / Periodo</th><td className="p-1 border border-black font-bold uppercase">{unit.turno} | {unit.period} {currentYear}</td></tr>
+                                <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Docente Responsable</th><td className="p-1 border border-black font-bold uppercase">{teacher?.fullName}</td></tr>
                             </tbody>
                         </table>
                     </section>
@@ -180,8 +178,8 @@ export function SyllabusPrintLayout({
                 </div>
             </div>
 
-            {/* --- PÁGINAS 3 EN ADELANTE: FLUJO AUTOMÁTICO --- */}
-            <div className="py-4">
+            {/* --- PÁGINAS 3 EN ADELANTE: CONTENIDO FLUIDO --- */}
+            <div className="dynamic-content pt-4">
                 <PageHeader institute={institute} />
                 <div className="space-y-12 px-4">
                     
@@ -238,11 +236,11 @@ export function SyllabusPrintLayout({
                         <table className="w-full border-collapse border-2 border-black text-[7pt]">
                             <thead>
                                 <tr className="bg-gray-100 font-black uppercase text-black">
-                                    <th className="border-2 border-black p-1.5 w-[12%]">SEM.</th>
-                                    <th className="border-2 border-black p-1.5 w-[33%]">ELEMENTOS DE CAPACIDAD</th>
-                                    <th className="border-2 border-black p-1.5 w-[25%]">ACTIVIDADES DE APRENDIZAJE</th>
-                                    <th className="border-2 border-black p-1.5 w-[22%]">ACTIVIDAD FORMATIVA</th>
-                                    <th className="border-2 border-black p-1.5 w-[8%]">HORAS</th>
+                                    <th className="border-2 border-black p-1 w-[8%]">SEM.</th>
+                                    <th className="border-2 border-black p-1 w-[35%]">ELEMENTOS DE CAPACIDAD</th>
+                                    <th className="border-2 border-black p-1 w-[25%]">ACTIVIDADES DE APRENDIZAJE</th>
+                                    <th className="border-2 border-black p-1 w-[22%]">ACTIVIDAD FORMATIVA</th>
+                                    <th className="border-2 border-black p-1 w-[10%]">HORAS</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -251,21 +249,21 @@ export function SyllabusPrintLayout({
                                     return (
                                         <React.Fragment key={ind.id}>
                                             <tr className="bg-gray-200">
-                                                <td colSpan={5} className="border-2 border-black p-1.5 font-black uppercase text-black text-center italic tracking-wider">
+                                                <td colSpan={5} className="border-2 border-black p-1 font-black uppercase text-black text-center italic tracking-wider">
                                                     {ind.name}
                                                 </td>
                                             </tr>
                                             {weeksInIndicator.map(week => (
                                                 <tr key={week.weekNumber}>
-                                                    <td className="border border-black p-1.5 text-center font-black bg-white text-black leading-tight">
+                                                    <td className="border border-black p-1 text-center font-black bg-white text-black leading-tight">
                                                         {week.weekNumber}
                                                         <br />
-                                                        <span className="text-[5.5pt] font-bold text-gray-500">({getWeekDateRange(week.weekNumber)})</span>
+                                                        <span className="text-[5pt] font-bold text-gray-500">({getWeekDateRange(week.weekNumber)})</span>
                                                     </td>
-                                                    <td className="border border-black p-1.5 align-top text-black">{renderHtml(week.capacityElement)}</td>
-                                                    <td className="border border-black p-1.5 align-top text-black">{renderHtml(week.learningActivities)}</td>
-                                                    <td className="border border-black p-1.5 align-top font-bold italic text-black">{renderHtml(week.basicContents)}</td>
-                                                    <td className="border border-black p-1.5 text-center align-middle font-black text-black">{weeklyHours}h</td>
+                                                    <td className="border border-black p-1 align-top text-black">{renderHtml(week.capacityElement)}</td>
+                                                    <td className="border border-black p-1 align-top text-black">{renderHtml(week.learningActivities)}</td>
+                                                    <td className="border border-black p-1 align-top font-bold italic text-black">{renderHtml(week.basicContents)}</td>
+                                                    <td className="border border-black p-1 text-center align-middle font-black text-black">{weeklyHours}h</td>
                                                 </tr>
                                             ))}
                                         </React.Fragment>
@@ -296,21 +294,21 @@ export function SyllabusPrintLayout({
                     </section>
 
                     {/* SECCIÓN DE FIRMAS */}
-                    <section className="pt-28 no-print-break">
+                    <section className="pt-24 no-print-break">
                         <div className="grid grid-cols-2 gap-x-20 items-end px-12">
-                            <div className="text-center border-t-2 border-black pt-2">
-                                <p className="font-black text-[10pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
-                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
+                            <div className="text-center border-t-2 border-black pt-1">
+                                <p className="font-black text-[9pt] uppercase text-black">{teacher?.fullName || 'Firma del Docente'}</p>
+                                <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
                             </div>
-                            <div className="text-center border-t-2 border-black pt-2">
-                                <p className="font-black text-[10pt] uppercase text-black">COORDINADOR DEL PROGRAMA DE ESTUDIOS</p>
-                                <p className="text-[7.5pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
+                            <div className="text-center border-t-2 border-black pt-1">
+                                <p className="font-black text-[9pt] uppercase text-black">COORDINACIÓN DE PROGRAMA</p>
+                                <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest">{program?.name}</p>
                             </div>
                         </div>
 
-                        <div className="mt-20 flex justify-center">
-                            <div className="text-center w-[300px] border-t-2 border-black pt-2">
-                                <p className="font-black text-[10pt] uppercase text-black">V° B° UNIDAD ACADÉMICA</p>
+                        <div className="mt-16 flex justify-center">
+                            <div className="text-center w-[250px] border-t-2 border-black pt-1">
+                                <p className="font-black text-[9pt] uppercase text-black">V° B° UNIDAD ACADÉMICA</p>
                             </div>
                         </div>
                     </section>
