@@ -1,5 +1,5 @@
 
-/* Estilos definitivos para impresión oficial de Sílabo STEM */
+/* Estilos definitivos para impresión oficial de Sílabo STEM V2.1 */
 
 @media screen {
   .print-only {
@@ -10,11 +10,11 @@
 @media print {
   @page {
     size: A4 portrait;
-    /* Margen de 8mm desde los bordes como solicitado */
+    /* Margen de 8mm desde los bordes superior/inferior y 15mm laterales */
     margin: 8mm 15mm 8mm 15mm;
   }
 
-  /* Reset radical de Next.js y React para flujo de impresión puro */
+  /* Reset radical para flujo de impresión puro */
   html, body, #__next, [data-sidebar-provider], main, .printable-content {
     background: white !important;
     color: black !important;
@@ -28,109 +28,82 @@
     position: static !important;
   }
 
-  /* Ocultar elementos de UI */
+  /* Ocultar elementos de interfaz web */
   .no-print, header.page-header, nav, aside, .sidebar-container {
     display: none !important;
   }
 
-  /* Contenedor principal */
+  /* Contenedor principal: Reinicia el contador de página */
   .printable-area {
     display: block !important;
     width: 100% !important;
     background: white !important;
-    /* Reiniciamos el contador de página */
     counter-reset: page;
   }
 
-  /* Clase base para saltos de página que incrementa el contador */
-  .page-break {
-    display: block !important;
-    page-break-after: always;
-    break-after: page;
-    position: relative;
-    background-color: white !important;
-    counter-increment: page;
-    /* Reserva de espacio para el pie de página fijo */
-    padding-bottom: 25mm;
-  }
-
-  /* PAGINA 1: PORTADA FIJA */
+  /* PORTADA: Se fuerza a ocupar toda la página y salta al final */
   .cover-page {
-    min-height: 260mm; 
+    height: 270mm;
     display: flex !important;
     flex-direction: column;
     justify-content: space-between;
-    padding: 0;
+    position: relative;
+    page-break-after: always;
   }
 
-  /* PAGINA 2: INFO Y SUMILLA FIJA */
-  .second-page-fixed {
-    min-height: 260mm;
-    display: flex !important;
-    flex-direction: column;
+  /* Bloqueador del pie de página para la primera hoja */
+  .footer-hider {
+    position: absolute;
+    bottom: -8mm;
+    left: -15mm;
+    right: -15mm;
+    height: 30mm;
+    background: white !important;
+    z-index: 9999;
   }
 
-  /* PÁGINA 3+: CONTENIDO DINÁMICO */
-  .dynamic-content {
-    display: block;
-    width: 100%;
-    min-height: 260mm;
-  }
-
-  /* PIE DE PÁGINA INSTITUCIONAL FIJO (15mm alto, a 8mm del borde) */
+  /* PIE DE PÁGINA INSTITUCIONAL FIJO (15mm alto) */
   .print-footer {
     position: fixed;
-    bottom: 0mm; /* El margen de @page ya nos da los 8mm */
+    bottom: 0mm;
     left: 0;
     right: 0;
     height: 15mm;
-    border-top: 1.5px solid black;
+    border-top: 2px solid black;
     display: flex !important;
     justify-content: space-between;
     align-items: center;
-    padding: 0 5mm;
+    padding: 0 2mm;
     background: white;
     z-index: 50;
   }
 
-  /* Bloque para ocultar el pie de página en la primera hoja */
-  .footer-hider {
-    position: absolute;
-    bottom: -8mm; /* Cubre el margen inferior */
-    left: -15mm;  /* Cubre el margen izquierdo */
-    width: 210mm;
-    height: 30mm; /* Suficiente para tapar el pie de página */
-    background: white !important;
-    z-index: 100;
-  }
-
-  /* Numeración de páginas dinámica */
+  /* Numeración de páginas dinámica: El navegador la calcula automáticamente */
   .page-number-display:after {
     content: "Página " counter(page);
   }
 
-  /* Evitar cortes en elementos críticos */
-  table {
-    page-break-inside: auto !important;
-    width: 100% !important;
-    border-collapse: collapse !important;
+  /* REPETICIÓN DE ENCABEZADO: Lógica de tabla */
+  .print-body-table {
+    border-collapse: collapse;
+    width: 100%;
   }
 
-  tr {
-    page-break-inside: avoid !important;
+  .print-body-table thead {
+    display: table-header-group;
   }
 
-  section {
-    page-break-inside: avoid !important;
-    margin-bottom: 2rem;
-  }
-
+  /* Evitar cortes de secciones importantes */
   .no-print-break {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }
 
-  /* Tipografía base */
+  section {
+    page-break-inside: auto;
+  }
+
+  /* Estética base del Sílabo */
   body {
     font-size: 9pt;
     line-height: 1.4;
@@ -139,5 +112,6 @@
 
   h1, h2, h3, h4 {
     page-break-after: avoid;
+    font-family: 'Montserrat', sans-serif !important;
   }
 }
