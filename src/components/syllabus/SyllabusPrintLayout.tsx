@@ -89,7 +89,7 @@ export function SyllabusPrintLayout({
     return (
         <div className="printable-area bg-white text-black font-sans w-full leading-normal">
             
-            {/* Pie de Página Fijo (15mm) - Se repite en todas las páginas automáticamente */}
+            {/* Pie de Página Fijo (15mm) - Se oculta en la hoja 1 mediante el footer-hider */}
             <div className="print-footer">
                 <div className="flex flex-col">
                     <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
@@ -102,7 +102,7 @@ export function SyllabusPrintLayout({
             </div>
 
             {/* --- PÁGINA 1: PORTADA --- */}
-            <div className="cover-page">
+            <div className="cover-page page-break">
                 <div className="w-full space-y-6 flex flex-col items-center">
                     <div className="text-center space-y-4">
                         <h1 className="text-[24pt] font-black tracking-tight leading-tight max-w-4xl text-black">
@@ -127,7 +127,8 @@ export function SyllabusPrintLayout({
                     </div>
                 </div>
 
-                <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pb-10 border-t-2 border-black pt-8">
+                {/* Docente y Año desplazados más abajo */}
+                <div className="w-full max-w-3xl mx-auto px-12 grid grid-cols-2 gap-12 pb-20 border-t-2 border-black pt-12 mt-12">
                     <div className="space-y-1">
                         <p className="text-[9pt] font-black text-gray-500 uppercase tracking-widest">Docente Responsable</p>
                         <p className="text-[12pt] font-bold uppercase text-black">{teacher?.fullName || 'Personal Asignado'}</p>
@@ -137,10 +138,13 @@ export function SyllabusPrintLayout({
                         <p className="text-[20pt] font-black text-black leading-none">{currentYear}</p>
                     </div>
                 </div>
+
+                {/* Ocultador de Pie de Página para Hoja 1 */}
+                <div className="footer-hider"></div>
             </div>
 
             {/* --- PÁGINA 2: INFORMACIÓN GENERAL Y SUMILLA --- */}
-            <div className="second-page-fixed pt-4">
+            <div className="second-page-fixed page-break pt-4">
                 <PageHeader institute={institute} />
                 
                 <div className="mt-6 space-y-8 px-4 flex-1">
@@ -179,7 +183,7 @@ export function SyllabusPrintLayout({
             </div>
 
             {/* --- PÁGINAS 3 EN ADELANTE: CONTENIDO FLUIDO --- */}
-            <div className="dynamic-content pt-4">
+            <div className="dynamic-content page-break pt-4">
                 <PageHeader institute={institute} />
                 <div className="space-y-12 px-4">
                     
