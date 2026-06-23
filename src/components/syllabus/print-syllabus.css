@@ -15,7 +15,7 @@
   }
 
   /* Reset radical para flujo de impresión puro */
-  html, body, #__next, [data-sidebar-provider], main, .printable-content {
+  html, body, #__next, [data-sidebar-provider], main, .printable-area {
     background: white !important;
     color: black !important;
     margin: 0 !important;
@@ -33,12 +33,11 @@
     display: none !important;
   }
 
-  /* Contenedor principal: Reinicia el contador de página */
+  /* Contenedor principal: Eliminado counter-reset para permitir numeración nativa desde 1 */
   .printable-area {
     display: block !important;
     width: 100% !important;
     background: white !important;
-    counter-reset: page;
   }
 
   /* PORTADA: Se fuerza a ocupar toda la página y salta al final */
@@ -57,7 +56,7 @@
     bottom: -8mm;
     left: -15mm;
     right: -15mm;
-    height: 30mm;
+    height: 16mm;
     background: white !important;
     z-index: 9999;
   }
