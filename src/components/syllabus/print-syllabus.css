@@ -14,13 +14,18 @@
     margin: 8mm 15mm 8mm 15mm;
   }
 
+  /* Inicialización del contador de páginas en el nivel raíz */
+  html {
+    counter-reset: page 0;
+  }
+
   /* Reset radical para flujo de impresión puro */
-  html, body, #__next, [data-sidebar-provider], main, .printable-area {
+  html, body, #__next, [data-sidebar-provider], main, .printable-area, .cover-page {
     background: white !important;
     color: black !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important;
+    overflow: visible !important; /* CRÍTICO: overflow:hidden bloquea los contadores de página */
     height: auto !important;
     min-height: 0 !important;
     width: 100% !important;
@@ -31,13 +36,6 @@
   /* Ocultar elementos de interfaz web */
   .no-print, header.page-header, nav, aside, .sidebar-container {
     display: none !important;
-  }
-
-  /* Contenedor principal: Eliminado counter-reset para permitir numeración nativa desde 1 */
-  .printable-area {
-    display: block !important;
-    width: 100% !important;
-    background: white !important;
   }
 
   /* PORTADA: Se fuerza a ocupar toda la página y salta al final */
@@ -77,7 +75,7 @@
     z-index: 50;
   }
 
-  /* Numeración de páginas dinámica: El navegador la calcula automáticamente */
+  /* Numeración de páginas dinámica nativa */
   .page-number-display:after {
     content: "Página " counter(page);
   }

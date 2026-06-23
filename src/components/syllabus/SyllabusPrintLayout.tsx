@@ -89,18 +89,6 @@ export function SyllabusPrintLayout({
     return (
         <div className="printable-area bg-white text-black font-sans w-full leading-normal">
             
-            {/* PIE DE PÁGINA FIJO INSTITUCIONAL */}
-            <div className="print-footer">
-                <div className="flex flex-col text-left">
-                    <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
-                    <span className="text-[6pt] text-gray-500 italic">Documento Académico Generado Digitalmente por STEM V2</span>
-                </div>
-                <div className="flex flex-col items-end">
-                    <span className="text-[7pt] font-black uppercase">{unit.code} | {unit.turno}</span>
-                    <span className="page-number-display text-[7pt] font-bold"></span>
-                </div>
-            </div>
-
             {/* --- PÁGINA 1: PORTADA --- */}
             <div className="cover-page page-break flex flex-col">
                 <div className="flex-grow">
@@ -332,6 +320,18 @@ export function SyllabusPrintLayout({
                     </tr>
                 </tbody>
             </table>
+
+            {/* PIE DE PÁGINA FIJO INSTITUCIONAL (Movido al final del DOM para mejor evaluación del contador por el navegador) */}
+            <div className="print-footer">
+                <div className="flex flex-col text-left">
+                    <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
+                    <span className="text-[6pt] text-gray-500 italic">Documento Académico Generado Digitalmente por STEM V2</span>
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className="text-[7pt] font-black uppercase">{unit.code} | {unit.turno}</span>
+                    <span className="page-number-display text-[7pt] font-bold"></span>
+                </div>
+            </div>
         </div>
     );
 }
