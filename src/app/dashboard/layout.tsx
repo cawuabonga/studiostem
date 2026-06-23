@@ -29,13 +29,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [institute]);
 
-  // Si es una ruta de impresión, no envolvemos en el layout del dashboard
-  // Esto evita que h-screen y overflow-hidden corten las páginas al imprimir
+  // Si es una ruta de impresión, eliminamos los contenedores de Next.js
+  // que tienen alturas fijas o flexbox para permitir que el navegador maneje las páginas.
   const isPrintRoute = pathname.includes('/print');
 
   if (isPrintRoute) {
       return (
-        <div className="bg-white min-h-screen w-full overflow-visible">
+        <div className="bg-white block overflow-visible h-auto w-full">
             {children}
         </div>
       );

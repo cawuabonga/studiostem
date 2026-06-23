@@ -14,38 +14,31 @@
     margin: 8mm 15mm 8mm 15mm;
   }
 
-  /* Inicialización del contador de páginas en el nivel raíz */
-  html {
-    counter-reset: page 0;
-  }
-
-  /* Reset radical para flujo de impresión puro */
-  html, body, #__next, [data-sidebar-provider], main, .printable-area, .cover-page {
+  /* RESET RADICAL: Eliminamos cualquier rastro de Flexbox o alturas fijas que rompen el conteo de páginas */
+  html, body {
     background: white !important;
     color: black !important;
     margin: 0 !important;
     padding: 0 !important;
-    overflow: visible !important; /* CRÍTICO: overflow:hidden bloquea los contadores de página */
-    height: auto !important;
-    min-height: 0 !important;
-    width: 100% !important;
     display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    width: 100% !important;
     position: static !important;
   }
 
   /* Ocultar elementos de interfaz web */
-  .no-print, header.page-header, nav, aside, .sidebar-container {
+  .no-print, header.page-header, nav, aside, .sidebar-container, .sidebar-rail {
     display: none !important;
   }
 
-  /* PORTADA: Se fuerza a ocupar toda la página y salta al final */
+  /* PORTADA: Forzamos el flujo de página */
   .cover-page {
     height: 270mm;
-    display: flex !important;
-    flex-direction: column;
-    justify-content: space-between;
+    display: block !important;
     position: relative;
     page-break-after: always;
+    break-after: page;
   }
 
   /* Bloqueador del pie de página para la primera hoja */
@@ -54,7 +47,7 @@
     bottom: -8mm;
     left: -15mm;
     right: -15mm;
-    height: 16mm;
+    height: 18mm;
     background: white !important;
     z-index: 9999;
   }
@@ -66,7 +59,7 @@
     left: 0;
     right: 0;
     height: 15mm;
-    border-top: 2px solid black;
+    border-top: 1px solid black;
     display: flex !important;
     justify-content: space-between;
     align-items: center;
@@ -75,19 +68,20 @@
     z-index: 50;
   }
 
-  /* Numeración de páginas dinámica nativa */
+  /* Numeración de páginas dinámica nativa sin counter-reset manual */
   .page-number-display:after {
     content: "Página " counter(page);
   }
 
-  /* REPETICIÓN DE ENCABEZADO: Lógica de tabla */
+  /* REPETICIÓN DE ENCABEZADO: Lógica de tabla para flujo continuo */
   .print-body-table {
-    border-collapse: collapse;
+    display: table !important;
     width: 100%;
+    border-collapse: collapse;
   }
 
   .print-body-table thead {
-    display: table-header-group;
+    display: table-header-group !important;
   }
 
   /* Evitar cortes de secciones importantes */
@@ -97,6 +91,7 @@
   }
 
   section {
+    display: block;
     page-break-inside: auto;
   }
 
@@ -109,6 +104,7 @@
 
   h1, h2, h3, h4 {
     page-break-after: avoid;
+    break-after: avoid;
     font-family: 'Montserrat', sans-serif !important;
   }
 }
