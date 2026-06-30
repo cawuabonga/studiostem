@@ -18,116 +18,88 @@ const AccessAttemptOutputSchema = z.object({
 
 /**
  * Procesa un intento de acceso mediante RFID.
- * Utiliza una transacción para garantizar la consistencia del estado de presencia.
+ * La dirección (Entrada/Salida) solo cambia si el último acceso fue exitoso.
  */
 async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSchema>) {
     const { accessPointId, rfidCardId } = input;
     
+    // 1. BUSCAR AL USUARIO (Fuera de la transacción para evitar errores de consulta en bloque)
+    let userProfile: any = null;
+    let instituteId = '';
+    let userDocumentId = '';
+    let userName = '';
+    let userRoleId = '';
+
+    const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('rfidCardId', '==', rfidCardId));
+    const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
+    
+    const [staffSnap, studentSnap] = await Promise.all([getDocs(staffQuery), getDocs(studentQuery)]);
+
+    if (!staffSnap.empty) {
+        const d = staffSnap.docs[0];
+        userProfile = d.data();
+        userDocumentId = d.id;
+        instituteId = userProfile.instituteId;
+        userName = userProfile.displayName || userProfile.fullName;
+        userRoleId = userProfile.roleId;
+    } else if (!studentSnap.empty) {
+        const d = studentSnap.docs[0];
+        userProfile = d.data();
+        userDocumentId = d.id;
+        instituteId = userProfile.instituteId;
+        userName = userProfile.fullName || userProfile.displayName;
+        userRoleId = userProfile.roleId;
+    }
+
+    if (!userProfile || !instituteId) {
+        return { status: 'error', message: 'RFID card not registered.', action: 'deny' };
+    }
+
+    // 2. PROCESAR ACCESO Y PRESENCIA EN TRANSACCIÓN
     return await runTransaction(db, async (transaction) => {
         const now = Timestamp.now();
         
-        // 1. BUSCAR AL USUARIO EN TODA LA PLATAFORMA POR SU RFID
-        // Nota: En producción, lo ideal sería que el dispositivo envíe su instituteId.
-        // Aquí mantenemos la búsqueda global para flexibilidad.
-        let userProfile: any = null;
-        let instituteId = '';
-        let userDocumentId = '';
-        let userName = '';
-        let userRoleId = '';
-        let collectionType: 'staffProfiles' | 'studentProfiles' = 'staffProfiles';
-
-        // Buscamos en todas las colecciones de perfiles usando collectionGroup para mayor eficiencia
-        const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('rfidCardId', '==', rfidCardId));
-        const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
-        
-        const [staffSnap, studentSnap] = await Promise.all([getDocs(staffQuery), getDocs(studentQuery)]);
-
-        if (!staffSnap.empty) {
-            const d = staffSnap.docs[0];
-            userProfile = d.data();
-            userDocumentId = d.id;
-            instituteId = userProfile.instituteId;
-            userName = userProfile.displayName || userProfile.fullName;
-            userRoleId = userProfile.roleId;
-            collectionType = 'staffProfiles';
-        } else if (!studentSnap.empty) {
-            const d = studentSnap.docs[0];
-            userProfile = d.data();
-            userDocumentId = d.id;
-            instituteId = userProfile.instituteId;
-            userName = userProfile.fullName || userProfile.displayName;
-            userRoleId = userProfile.roleId;
-            collectionType = 'studentProfiles';
-        }
-
-        // Si el usuario no existe, registramos un log de error y denegamos inmediatamente
-        if (!userProfile || !instituteId) {
-            const unknownLogRef = doc(collection(db, 'unknown_access_logs'));
-            transaction.set(unknownLogRef, {
-                timestamp: now,
-                status: 'Denegado',
-                rfidCardId,
-                accessPointId,
-                reason: "Tarjeta RFID no vinculada a ningún perfil activo."
-            });
-            return { status: 'error', message: 'RFID card not registered.', action: 'deny' };
-        }
-
-        // 2. OBTENER DATOS DEL PUNTO DE ACCESO Y EL ROL (Dentro de la transacción)
+        // Obtener Punto de Acceso
         const apCol = collection(db, 'institutes', instituteId, 'accessPoints');
         const apQuery = query(apCol, where('accessPointId', '==', accessPointId));
         const apSnap = await getDocs(apQuery);
         
-        if (apSnap.empty) {
-            return { status: 'error', message: `Access point '${accessPointId}' not found in institute.`, action: 'deny' };
-        }
-        
+        if (apSnap.empty) throw new Error("Access point not found.");
         const apDoc = apSnap.docs[0];
         const targetAccessPoint = { id: apDoc.id, ...apDoc.data() } as AccessPoint;
-        const accessPointDocId = apDoc.id;
 
-        const roleDocRef = doc(db, 'institutes', instituteId, 'roles', userRoleId);
-        const roleSnap = await transaction.get(roleDocRef);
-        const userRoleName = roleSnap.exists() ? (roleSnap.data() as Role).name : 'Usuario';
-
-        // 3. DETERMINAR LA DIRECCIÓN (ENTRADA/SALIDA) BASADO EN PRESENCIA REAL
-        // Usamos un documento de presencia global para el usuario en el instituto
+        // Obtener estado de presencia actual
         const presenceDocRef = doc(db, 'institutes', instituteId, 'userPresence', userDocumentId);
         const presenceSnap = await transaction.get(presenceDocRef);
         
-        // Lógica de "Toggle" Inteligente:
-        // Si no hay registro previo o el último fue "Salida", el intento actual es "Entrada".
-        // Si el último registro fue "Entrada", el intento actual es "Salida".
-        const lastSuccessState = presenceSnap.exists() ? presenceSnap.data()?.lastType : 'Salida';
-        const intendedLogType: 'Entrada' | 'Salida' = lastSuccessState === 'Entrada' ? 'Salida' : 'Entrada';
+        // DETERMINAR INTENCIÓN: Si no hay presencia previa o la última fue Salida, intenta Entrar.
+        const lastSuccessfulType = presenceSnap.exists() ? presenceSnap.data()?.lastType : 'Salida';
+        const intendedLogType: 'Entrada' | 'Salida' = lastSuccessfulType === 'Entrada' ? 'Salida' : 'Entrada';
 
-        // 4. VALIDAR PERMISOS DE SEGURIDAD
+        // VALIDAR PERMISOS
         const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRoleId);
         const finalStatus = hasPermission ? 'Permitido' : 'Denegado';
 
-        // 5. ACTUALIZAR ESTADO DE PRESENCIA (SOLO SI EL ACCESO ES PERMITIDO)
+        // 3. ACTUALIZAR PRESENCIA (SOLO SI ES PERMITIDO)
         if (hasPermission) {
             transaction.set(presenceDocRef, {
                 lastType: intendedLogType,
                 timestamp: now,
-                accessPointId: accessPointDocId,
+                accessPointId: apDoc.id,
                 accessPointName: targetAccessPoint.name
             }, { merge: true });
         }
 
-        // 6. REGISTRAR EL LOG DE ACCESO CON LA DIRECCIÓN CALCULADA
-        const logCol = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
-        const logDocRef = doc(logCol);
-        
+        // 4. REGISTRAR EL LOG (Siempre se registra, pero con el tipo de intención calculado)
+        const logDocRef = doc(collection(db, 'institutes', instituteId, 'accessPoints', apDoc.id, 'accessLogs'));
         transaction.set(logDocRef, {
             timestamp: now,
             type: intendedLogType,
             status: finalStatus,
             userDocumentId,
             userName,
-            userRole: userRoleName,
             userRoleId,
-            accessPointId,
+            accessPointId: apDoc.id,
             accessPointName: targetAccessPoint.name,
             rfidCardId,
             instituteId
@@ -135,49 +107,18 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
 
         return {
             status: hasPermission ? 'success' : 'error',
-            message: hasPermission ? `Access granted: ${intendedLogType}` : `Access denied: ${intendedLogType}`,
+            message: hasPermission ? `Acceso concedido: ${intendedLogType}` : `Acceso denegado: ${intendedLogType}`,
             action: hasPermission ? 'open' : 'deny'
         };
     });
 }
 
-export async function GET() {
-  return NextResponse.json({ message: "Access Control API is active." });
-}
-
 export async function POST(req: NextRequest) {
-    const isFromBrowser = !req.headers.get('Authorization');
-
-    if (!isFromBrowser) {
-        const authHeader = req.headers.get('Authorization');
-        const apiKey = process.env.DEVICE_API_KEY;
-
-        if (!apiKey) {
-            return NextResponse.json({ error: 'DEVICE_API_KEY not configured.' }, { status: 500 });
-        }
-        if (authHeader !== `Bearer ${apiKey}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-    }
-
     try {
         const body = await req.json();
-        const validatedInput = AccessAttemptInputSchema.safeParse(body);
-
-        if (!validatedInput.success) {
-            return NextResponse.json({ error: 'Invalid input data' }, { status: 400 });
-        }
-
-        const result = await processAccessAttempt(validatedInput.data);
-        const validatedOutput = AccessAttemptOutputSchema.parse(result);
-        
-        return NextResponse.json(validatedOutput);
-
+        const result = await processAccessAttempt(body);
+        return NextResponse.json(result);
     } catch (error: any) {
-        console.error('[CRITICAL_API_ERROR] Access Attempt Processing failed:', error);
-        return NextResponse.json({ 
-            error: 'Internal Server Error', 
-            message: error.message 
-        }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Error', message: error.message }, { status: 500 });
     }
 }
