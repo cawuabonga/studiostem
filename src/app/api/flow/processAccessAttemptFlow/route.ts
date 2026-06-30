@@ -3,27 +3,21 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { db } from '@/config/firebase';
 import { collection, doc, runTransaction, Timestamp, getDocs, query, where, collectionGroup } from 'firebase/firestore';
-import type { AccessPoint, Role } from '@/types';
+import type { AccessPoint } from '@/types';
 
 const AccessAttemptInputSchema = z.object({
   accessPointId: z.string().describe('The unique ID of the access point device making the request.'),
   rfidCardId: z.string().describe('The RFID card ID that was scanned.'),
 });
 
-const AccessAttemptOutputSchema = z.object({
-  status: z.enum(['success', 'error']),
-  message: z.string(),
-  action: z.enum(['open', 'deny']),
-});
-
 /**
  * Procesa un intento de acceso mediante RFID.
- * La dirección (Entrada/Salida) solo cambia si el último acceso fue exitoso.
+ * Se corrigió el error de transacción y se blindó la alternancia de Entrada/Salida.
  */
 async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSchema>) {
     const { accessPointId, rfidCardId } = input;
     
-    // 1. BUSCAR AL USUARIO (Fuera de la transacción para evitar errores de consulta en bloque)
+    // 1. BUSCAR AL USUARIO (Fuera de la transacción)
     let userProfile: any = null;
     let instituteId = '';
     let userDocumentId = '';
@@ -55,24 +49,27 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         return { status: 'error', message: 'RFID card not registered.', action: 'deny' };
     }
 
-    // 2. PROCESAR ACCESO Y PRESENCIA EN TRANSACCIÓN
+    // 2. BUSCAR EL PUNTO DE ACCESO (Fuera de la transacción porque es una query)
+    const apCol = collection(db, 'institutes', instituteId, 'accessPoints');
+    const apQuery = query(apCol, where('accessPointId', '==', accessPointId));
+    const apSnap = await getDocs(apQuery);
+    
+    if (apSnap.empty) {
+        return { status: 'error', message: 'Access point not found.', action: 'deny' };
+    }
+    
+    const apDocId = apSnap.docs[0].id;
+    const targetAccessPoint = { id: apDocId, ...apSnap.docs[0].data() } as AccessPoint;
+
+    // 3. PROCESAR DENTRO DE TRANSACCIÓN (Solo con DocRefs)
     return await runTransaction(db, async (transaction) => {
         const now = Timestamp.now();
         
-        // Obtener Punto de Acceso
-        const apCol = collection(db, 'institutes', instituteId, 'accessPoints');
-        const apQuery = query(apCol, where('accessPointId', '==', accessPointId));
-        const apSnap = await getDocs(apQuery);
-        
-        if (apSnap.empty) throw new Error("Access point not found.");
-        const apDoc = apSnap.docs[0];
-        const targetAccessPoint = { id: apDoc.id, ...apDoc.data() } as AccessPoint;
-
         // Obtener estado de presencia actual
         const presenceDocRef = doc(db, 'institutes', instituteId, 'userPresence', userDocumentId);
         const presenceSnap = await transaction.get(presenceDocRef);
         
-        // DETERMINAR INTENCIÓN: Si no hay presencia previa o la última fue Salida, intenta Entrar.
+        // DETERMINAR INTENCIÓN: Se basa en el último acceso EXITOSO
         const lastSuccessfulType = presenceSnap.exists() ? presenceSnap.data()?.lastType : 'Salida';
         const intendedLogType: 'Entrada' | 'Salida' = lastSuccessfulType === 'Entrada' ? 'Salida' : 'Entrada';
 
@@ -80,18 +77,18 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
         const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRoleId);
         const finalStatus = hasPermission ? 'Permitido' : 'Denegado';
 
-        // 3. ACTUALIZAR PRESENCIA (SOLO SI ES PERMITIDO)
+        // ACTUALIZAR PRESENCIA (SOLO SI ES PERMITIDO)
         if (hasPermission) {
             transaction.set(presenceDocRef, {
                 lastType: intendedLogType,
                 timestamp: now,
-                accessPointId: apDoc.id,
+                accessPointId: apDocId,
                 accessPointName: targetAccessPoint.name
             }, { merge: true });
         }
 
-        // 4. REGISTRAR EL LOG (Siempre se registra, pero con el tipo de intención calculado)
-        const logDocRef = doc(collection(db, 'institutes', instituteId, 'accessPoints', apDoc.id, 'accessLogs'));
+        // REGISTRAR EL LOG
+        const logDocRef = doc(collection(db, 'institutes', instituteId, 'accessPoints', apDocId, 'accessLogs'));
         transaction.set(logDocRef, {
             timestamp: now,
             type: intendedLogType,
@@ -99,7 +96,7 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
             userDocumentId,
             userName,
             userRoleId,
-            accessPointId: apDoc.id,
+            accessPointId: apDocId,
             accessPointName: targetAccessPoint.name,
             rfidCardId,
             instituteId
@@ -119,6 +116,7 @@ export async function POST(req: NextRequest) {
         const result = await processAccessAttempt(body);
         return NextResponse.json(result);
     } catch (error: any) {
+        console.error("[API ERROR]", error);
         return NextResponse.json({ error: 'Internal Error', message: error.message }, { status: 500 });
     }
 }
