@@ -1,10 +1,9 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getAccessPoints, getRoles, db } from '@/config/firebase';
-import { collection, doc, runTransaction, Timestamp, getDocs, query, where, setDoc } from 'firebase/firestore';
-import type { AccessState } from '@/types';
-
+import { db } from '@/config/firebase';
+import { collection, doc, runTransaction, Timestamp, getDocs, query, where } from 'firebase/firestore';
+import type { AccessState, AccessPoint, Role } from '@/types';
 
 const AccessAttemptInputSchema = z.object({
   accessPointId: z.string().describe('The unique ID of the access point device making the request.'),
@@ -19,154 +18,137 @@ const AccessAttemptOutputSchema = z.object({
 
 async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSchema>) {
     const { accessPointId, rfidCardId } = input;
-    let userProfile: any = null;
-    let userRoleId = '';
-    let userRoleName = '';
-    let userName = '';
-    let userDocumentId = '';
-    let instituteId = '';
-    let accessPointDocId = ''; // To store the Firestore document ID of the access point
-
-    const institutesSnap = await getDocs(collection(db, 'institutes'));
-    for (const instituteDoc of institutesSnap.docs) {
-        const id = instituteDoc.id;
-        const staffCol = collection(db, 'institutes', id, 'staffProfiles');
-        const staffQuery = await getDocs(query(staffCol, where('rfidCardId', '==', rfidCardId)));
-        if (!staffQuery.empty) {
-            const doc = staffQuery.docs[0];
-            userProfile = { ...doc.data(), type: 'staff', documentId: doc.id };
-            instituteId = id;
-            break;
-        }
-
-        const studentCol = collection(db, 'institutes', id, 'studentProfiles');
-        const studentQuery = await getDocs(query(studentCol, where('rfidCardId', '==', rfidCardId)));
-        if (!studentQuery.empty) {
-            const doc = studentQuery.docs[0];
-            userProfile = { ...doc.data(), type: 'student', documentId: doc.id };
-            instituteId = id;
-            break;
-        }
-    }
     
-    // This function now uses a transaction to ensure atomicity
-    const logAccess = async (status: 'Permitido' | 'Denegado') => {
+    // Todo el proceso se ejecuta en una sola transacción atómica
+    return await runTransaction(db, async (transaction) => {
         const now = Timestamp.now();
-        
-        if (!instituteId) {
-             console.error("Cannot log access: instituteId not found for the given RFID card.");
-             // Log to a generic collection if institute is unknown
-             const unknownLogCollectionRef = collection(db, 'unknown_access_logs');
-             const logDocRef = doc(unknownLogCollectionRef);
-             await setDoc(logDocRef, {
+        const currentDate = now.toDate().toISOString().split('T')[0];
+
+        let userProfile: any = null;
+        let instituteId = '';
+        let userDocumentId = '';
+        let userName = '';
+        let userRoleId = '';
+        let userRoleName = '';
+        let targetAccessPoint: AccessPoint | null = null;
+        let accessPointDocId = '';
+
+        // 1. Buscar al usuario y su instituto por el ID de tarjeta RFID
+        const institutesSnap = await getDocs(collection(db, 'institutes'));
+        for (const instituteDoc of institutesSnap.docs) {
+            const instId = instituteDoc.id;
+            
+            // Buscar en Staff
+            const staffCol = collection(db, 'institutes', instId, 'staffProfiles');
+            const staffQuery = await getDocs(query(staffCol, where('rfidCardId', '==', rfidCardId)));
+            if (!staffQuery.empty) {
+                const d = staffQuery.docs[0];
+                userProfile = d.data();
+                userDocumentId = d.id;
+                instituteId = instId;
+                userName = userProfile.displayName || userProfile.fullName;
+                userRoleId = userProfile.roleId;
+                break;
+            }
+
+            // Buscar en Estudiantes
+            const studentCol = collection(db, 'institutes', instId, 'studentProfiles');
+            const studentQuery = await getDocs(query(studentCol, where('rfidCardId', '==', rfidCardId)));
+            if (!studentQuery.empty) {
+                const d = studentQuery.docs[0];
+                userProfile = d.data();
+                userDocumentId = d.id;
+                instituteId = instId;
+                userName = userProfile.displayName || userProfile.fullName;
+                userRoleId = userProfile.roleId;
+                break;
+            }
+        }
+
+        // Si no se encuentra al usuario, registramos un intento desconocido y denegamos
+        if (!userProfile || !instituteId) {
+            const unknownLogRef = doc(collection(db, 'unknown_access_logs'));
+            transaction.set(unknownLogRef, {
                 timestamp: now,
-                status,
+                status: 'Denegado',
                 rfidCardId,
                 accessPointId,
-                reason: "Institute not found for this RFID card."
+                reason: "Tarjeta no registrada o instituto no identificado."
             });
-            return;
+            return { status: 'error', message: 'RFID card not registered.', action: 'deny' };
         }
-        
-        const accessPoints = await getAccessPoints(instituteId);
-        const accessPoint = accessPoints.find(p => p.accessPointId === accessPointId);
-        
-        if (!accessPoint) {
-            console.error(`Access point with ID ${accessPointId} not found in institute ${instituteId}. Logging attempt anyway.`);
-            accessPointDocId = 'unknown_access_point';
-        } else {
-            accessPointDocId = accessPoint.id;
-        }
-        
-        try {
-            await runTransaction(db, async (transaction) => {
-                const currentDate = now.toDate().toISOString().split('T')[0]; // YYYY-MM-DD
-                let logType: 'Entrada' | 'Salida' = 'Entrada'; // Default
 
-                if (userDocumentId) {
-                    const statesCol = collection(db, 'institutes', instituteId, 'accessStates');
-                    const stateDocRef = doc(statesCol, userDocumentId);
-                    const stateDoc = await transaction.get(stateDocRef);
-                    const stateData = stateDoc.exists() ? stateDoc.data() as AccessState : null;
-                    const lastState = stateData?.lastStateByAccessPoint?.[accessPointDocId];
-                    
-                    if (lastState) {
-                        const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
-                        // Solo cambiamos a Salida si el último registro exitoso fue una Entrada el mismo día
-                        if (lastState.type === 'Entrada' && lastDate === currentDate) {
-                             logType = 'Salida';
-                        }
-                    }
-                    
-                    // CORRECCIÓN CRÍTICA: Solo actualizamos el estado persistente si el acceso fue PERMITIDO
-                    if (status === 'Permitido') {
-                        transaction.set(stateDocRef, {
-                            lastStateByAccessPoint: {
-                                ...stateData?.lastStateByAccessPoint,
-                                [accessPointDocId]: { type: logType, timestamp: now }
-                            }
-                        }, { merge: true });
-                    }
+        // 2. Obtener datos del Punto de Acceso y el Rol
+        const apCol = collection(db, 'institutes', instituteId, 'accessPoints');
+        const apQuery = await getDocs(query(apCol, where('accessPointId', '==', accessPointId)));
+        if (!apQuery.empty) {
+            const apDoc = apQuery.docs[0];
+            targetAccessPoint = { id: apDoc.id, ...apDoc.data() } as AccessPoint;
+            accessPointDocId = apDoc.id;
+        }
+
+        const rolesCol = collection(db, 'institutes', instituteId, 'roles');
+        const roleDocRef = doc(rolesCol, userRoleId);
+        const roleSnap = await transaction.get(roleDocRef);
+        userRoleName = roleSnap.exists() ? (roleSnap.data() as Role).name : (userProfile.role || 'Desconocido');
+
+        if (!targetAccessPoint) {
+            return { status: 'error', message: `Access point '${accessPointId}' not found.`, action: 'deny' };
+        }
+
+        // 3. DETERMINAR LA DIRECCIÓN (Entrada/Salida) BASADO EN EL ÚLTIMO ÉXITO
+        const statesCol = collection(db, 'institutes', instituteId, 'accessStates');
+        const stateDocRef = doc(statesCol, userDocumentId);
+        const stateSnap = await transaction.get(stateDocRef);
+        const stateData = stateSnap.exists() ? stateSnap.data() as AccessState : { lastStateByAccessPoint: {} };
+        const lastSuccess = stateData.lastStateByAccessPoint[accessPointDocId];
+
+        let logType: 'Entrada' | 'Salida' = 'Entrada'; // Por defecto
+        if (lastSuccess) {
+            const lastDate = lastSuccess.timestamp.toDate().toISOString().split('T')[0];
+            // Solo alternamos si el último éxito fue hoy y fue una Entrada
+            if (lastSuccess.type === 'Entrada' && lastDate === currentDate) {
+                logType = 'Salida';
+            }
+        }
+
+        // 4. VALIDAR PERMISOS
+        const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRoleId);
+        const finalStatus = hasPermission ? 'Permitido' : 'Denegado';
+
+        // 5. ACTUALIZAR ESTADO DE UBICACIÓN (SOLO SI ES PERMITIDO)
+        if (hasPermission) {
+            transaction.set(stateDocRef, {
+                lastStateByAccessPoint: {
+                    ...stateData.lastStateByAccessPoint,
+                    [accessPointDocId]: { type: logType, timestamp: now }
                 }
-
-                // Log Document Creation
-                const logCollectionRef = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
-                const logDocRef = doc(logCollectionRef);
-                transaction.set(logDocRef, {
-                    timestamp: now,
-                    type: logType,
-                    status,
-                    userDocumentId: userDocumentId || 'Desconocido',
-                    userName: userName || 'Tarjeta no registrada',
-                    userRole: userRoleName || 'Desconocido',
-                    userRoleId: userRoleId || 'Desconocido',
-                    accessPointId,
-                    accessPointName: accessPoint?.name || 'Punto de Acceso Desconocido',
-                    rfidCardId,
-                    instituteId: instituteId,
-                });
-            });
-            console.log('Access Log Transaction successful.');
-        } catch (e) {
-            console.error("Access Log Transaction failed: ", e);
+            }, { merge: true });
         }
-    };
 
-    if (!userProfile) {
-        await logAccess('Denegado');
-        return { status: 'error', message: 'RFID card not registered.', action: 'deny' };
-    }
-    
-    userDocumentId = userProfile.documentId;
-    userName = userProfile.displayName || userProfile.fullName;
-    userRoleId = userProfile.roleId;
+        // 6. REGISTRAR LOG DE ACCESO
+        const logCol = collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs');
+        const logDocRef = doc(logCol);
+        transaction.set(logDocRef, {
+            timestamp: now,
+            type: logType,
+            status: finalStatus,
+            userDocumentId,
+            userName,
+            userRole: userRoleName,
+            userRoleId,
+            accessPointId,
+            accessPointName: targetAccessPoint.name,
+            rfidCardId,
+            instituteId
+        });
 
-    if (!instituteId) {
-        await logAccess('Denegado');
-        return { status: 'error', message: 'Could not determine institute for the user.', action: 'deny' };
-    }
-    
-    const allRoles = await getRoles(instituteId);
-    const userRole = allRoles.find(r => r.id === userRoleId);
-    userRoleName = userRole?.name || userProfile.role;
-
-    const allAccessPoints = await getAccessPoints(instituteId);
-    const targetAccessPoint = allAccessPoints.find(p => p.accessPointId === accessPointId);
-    
-    if (!targetAccessPoint) {
-        await logAccess('Denegado');
-        return { status: 'error', message: `Access point '${accessPointId}' not found.`, action: 'deny' };
-    }
-
-    const hasPermission = targetAccessPoint.allowedRoleIds?.includes(userRoleId);
-
-    if (hasPermission) {
-        await logAccess('Permitido');
-        return { status: 'success', message: 'Access granted.', action: 'open' };
-    } else {
-        await logAccess('Denegado');
-        return { status: 'error', message: 'Access denied for this role.', action: 'deny' };
-    }
+        return {
+            status: hasPermission ? 'success' : 'error',
+            message: hasPermission ? 'Access granted.' : 'Access denied for this role.',
+            action: hasPermission ? 'open' : 'deny'
+        };
+    });
 }
 
 export async function GET() {
