@@ -92,18 +92,21 @@ async function processAccessAttempt(input: z.infer<typeof AccessAttemptInputSche
                     
                     if (lastState) {
                         const lastDate = lastState.timestamp.toDate().toISOString().split('T')[0];
+                        // Solo cambiamos a Salida si el último registro exitoso fue una Entrada el mismo día
                         if (lastState.type === 'Entrada' && lastDate === currentDate) {
                              logType = 'Salida';
                         }
                     }
                     
-                    // Update state within the transaction
-                    transaction.set(stateDocRef, {
-                        lastStateByAccessPoint: {
-                            ...stateData?.lastStateByAccessPoint,
-                            [accessPointDocId]: { type: logType, timestamp: now }
-                        }
-                    }, { merge: true });
+                    // CORRECCIÓN CRÍTICA: Solo actualizamos el estado persistente si el acceso fue PERMITIDO
+                    if (status === 'Permitido') {
+                        transaction.set(stateDocRef, {
+                            lastStateByAccessPoint: {
+                                ...stateData?.lastStateByAccessPoint,
+                                [accessPointDocId]: { type: logType, timestamp: now }
+                            }
+                        }, { merge: true });
+                    }
                 }
 
                 // Log Document Creation
