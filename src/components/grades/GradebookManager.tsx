@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -21,7 +20,7 @@ import {
 } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-center';
+import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
