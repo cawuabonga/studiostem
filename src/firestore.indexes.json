@@ -132,6 +132,10 @@
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -150,6 +154,10 @@
         {
           "fieldPath": "timestamp",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
       ]
     },
@@ -157,30 +165,20 @@
       "collectionGroup": "accessLogs",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "timestamp",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "accessLogs",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        {
-          "fieldPath": "instituteId",
-          "order": "ASCENDING"
-        },
         {
           "fieldPath": "userDocumentId",
           "order": "ASCENDING"
         },
         {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "timestamp",
+          "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
           "order": "DESCENDING"
         }
       ]
