@@ -8,15 +8,16 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { AccessLogTable } from "@/components/access-control/AccessLogTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Settings, History, Loader2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Settings, History, Loader2, ChevronLeft, ChevronRight, Search, Zap } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { getAccessLogsPaginated, getAccessPoints } from "@/config/firebase";
+import { getAccessLogsPaginated, getAccessPoints, listenToAccessLogs } from "@/config/firebase";
 import type { AccessLog, AccessPoint } from "@/types";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { DocumentSnapshot } from "firebase/firestore";
+import { Badge } from "@/components/ui/badge";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 export default function ControlDeAccesoPage() {
   const { hasPermission, loading: authLoading, instituteId } = useAuth();
@@ -62,29 +63,10 @@ export default function ControlDeAccesoPage() {
     }
   }, [instituteId]);
 
-  const fetchLogs = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
-    if (!instituteId) return;
-    setLoading(true);
+  // Logic to build query options based on filters
+  const queryOptions = useMemo(() => {
+    if (!instituteId) return null;
 
-    let cursor: DocumentSnapshot | null = null;
-    let newPage = page;
-
-    if (direction === 'next') {
-        cursor = lastVisible;
-        newPage = page + 1;
-        setPageHistory(prev => [...prev, lastVisible]);
-    } else if (direction === 'prev') {
-        newPage = page > 1 ? page - 1 : 1;
-        cursor = pageHistory[newPage - 1] || null;
-        setPageHistory(prev => prev.slice(0, newPage));
-    } else {
-        newPage = 1;
-        cursor = null;
-        setPageHistory([null]);
-    }
-    setPage(newPage);
-
-    // Calculate Date Range
     let startDate: Date | undefined;
     let endDate: Date | undefined;
 
@@ -106,34 +88,80 @@ export default function ControlDeAccesoPage() {
         }
     }
 
-    try {
-        const { logs: fetchedLogs, lastVisible: newLastVisible } = await getAccessLogsPaginated({
-            instituteId,
-            accessPointId: selectedPointId,
-            userDocumentId: dniSearch || undefined,
-            startDate,
-            endDate,
-            limitCount: PAGE_SIZE,
-            startAfterDoc: cursor,
-        });
+    return {
+        instituteId,
+        accessPointId: selectedPointId,
+        userDocumentId: dniSearch || undefined,
+        startDate,
+        endDate,
+        limitCount: PAGE_SIZE,
+    };
+  }, [instituteId, selectedPointId, dniSearch, selectedYear, selectedMonth, selectedDay]);
 
-        setLogs(fetchedLogs);
-        setLastVisible(newLastVisible);
-        setIsLastPage(!newLastVisible || fetchedLogs.length < PAGE_SIZE);
-    } catch (error) {
-        console.error("Error fetching access logs:", error);
-    } finally {
-        setLoading(false);
-    }
-  }, [instituteId, selectedPointId, dniSearch, selectedYear, selectedMonth, selectedDay, page, lastVisible, pageHistory]);
 
+  // Real-time synchronization when on page 1
   useEffect(() => {
-    fetchLogs('first');
-  }, [selectedPointId, selectedYear, selectedMonth, selectedDay]);
+    if (page === 1 && queryOptions) {
+        setLoading(true);
+        const unsubscribe = listenToAccessLogs(queryOptions, (newLogs, newLastVisible) => {
+            setLogs(newLogs);
+            setLastVisible(newLastVisible);
+            setIsLastPage(!newLastVisible || newLogs.length < PAGE_SIZE);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }
+  }, [page, queryOptions]);
+
+  const fetchLogs = useCallback(async (direction: 'next' | 'prev' | 'first' = 'first') => {
+    if (!instituteId || !queryOptions) return;
+    
+    // Si estamos en la página 1, el useEffect del listener ya maneja la carga.
+    // Solo ejecutamos fetchLogs manual para paginación (Página 2 en adelante).
+    if (direction === 'first' && page === 1) return;
+
+    setLoading(true);
+
+    let cursor: DocumentSnapshot | null = null;
+    let newPage = page;
+
+    if (direction === 'next') {
+        cursor = lastVisible;
+        newPage = page + 1;
+        setPageHistory(prev => [...prev, lastVisible]);
+    } else if (direction === 'prev') {
+        newPage = page > 1 ? page - 1 : 1;
+        cursor = pageHistory[newPage - 1] || null;
+        setPageHistory(prev => prev.slice(0, newPage));
+    } else {
+        newPage = 1;
+        cursor = null;
+        setPageHistory([null]);
+    }
+    setPage(newPage);
+
+    if (newPage > 1) {
+        try {
+            const { logs: fetchedLogs, lastVisible: newLastVisible } = await getAccessLogsPaginated({
+                ...queryOptions,
+                startAfterDoc: cursor,
+            });
+
+            setLogs(fetchedLogs);
+            setLastVisible(newLastVisible);
+            setIsLastPage(!newLastVisible || fetchedLogs.length < PAGE_SIZE);
+        } catch (error) {
+            console.error("Error fetching access logs:", error);
+        } finally {
+            setLoading(false);
+        }
+    }
+  }, [instituteId, queryOptions, page, lastVisible, pageHistory]);
 
   const handleDniSearch = (e: React.FormEvent) => {
       e.preventDefault();
-      fetchLogs('first');
+      setPage(1);
+      setPageHistory([null]);
   }
 
   if (authLoading) return <p className="p-8">Verificando seguridad...</p>;
@@ -143,7 +171,14 @@ export default function ControlDeAccesoPage() {
       <Card>
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-                <CardTitle>Control de Acceso e Identidad</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                    Control de Acceso e Identidad
+                    {page === 1 && (
+                        <Badge className="bg-green-100 text-green-700 animate-pulse border-green-200 uppercase font-black text-[9px] h-5">
+                            <Zap className="h-3 w-3 mr-1 fill-current" /> Monitor en Vivo
+                        </Badge>
+                    )}
+                </CardTitle>
                 <CardDescription>
                     Auditoría de eventos capturados por los lectores RFID en tiempo real.
                 </CardDescription>
@@ -169,7 +204,7 @@ export default function ControlDeAccesoPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                 <div className="space-y-2">
                     <Label htmlFor="year-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Año</Label>
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <Select value={selectedYear} onValueChange={(v) => { setSelectedYear(v); setPage(1); }}>
                         <SelectTrigger id="year-select"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
@@ -178,7 +213,7 @@ export default function ControlDeAccesoPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="month-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Mes</Label>
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                    <Select value={selectedMonth} onValueChange={(v) => { setSelectedMonth(v); setPage(1); }}>
                         <SelectTrigger id="month-select"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             {months.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
@@ -187,7 +222,7 @@ export default function ControlDeAccesoPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="day-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Día</Label>
-                    <Select value={selectedDay} onValueChange={setSelectedDay} disabled={selectedMonth === 'all'}>
+                    <Select value={selectedDay} onValueChange={(v) => { setSelectedDay(v); setPage(1); }} disabled={selectedMonth === 'all'}>
                         <SelectTrigger id="day-select"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Cualquier día</SelectItem>
@@ -197,7 +232,7 @@ export default function ControlDeAccesoPage() {
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="point-select" className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Punto de Acceso</Label>
-                    <Select value={selectedPointId} onValueChange={setSelectedPointId}>
+                    <Select value={selectedPointId} onValueChange={(v) => { setSelectedPointId(v); setPage(1); }}>
                         <SelectTrigger id="point-select"><SelectValue /></SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos los lectores</SelectItem>
@@ -234,7 +269,7 @@ export default function ControlDeAccesoPage() {
           </div>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          <AccessLogTable logs={logs} loading={loading && page === 1} />
+          <AccessLogTable logs={logs} loading={loading && logs.length === 0} />
           
           <div className="flex items-center justify-between py-4 border-t">
             <div className="text-xs text-muted-foreground font-medium uppercase tracking-wider">

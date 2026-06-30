@@ -1877,6 +1877,44 @@ export const getAccessLogsPaginated = async (options: {
     return { logs, lastVisible };
 };
 
+export const listenToAccessLogs = (options: {
+    instituteId: string;
+    accessPointId?: string;
+    userDocumentId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limitCount: number;
+}, callback: (logs: AccessLog[], lastVisible: DocumentSnapshot | null) => void): Unsubscribe => {
+    const q_parts: any[] = [
+        where('instituteId', '==', options.instituteId),
+    ];
+
+    if (options.accessPointId && options.accessPointId !== 'all') {
+        q_parts.push(where('accessPointId', '==', options.accessPointId));
+    }
+
+    if (options.userDocumentId) {
+        q_parts.push(where('userDocumentId', '==', options.userDocumentId));
+    }
+
+    if (options.startDate) {
+        q_parts.push(where('timestamp', '>=', Timestamp.fromDate(options.startDate)));
+    }
+    if (options.endDate) {
+        q_parts.push(where('timestamp', '<=', Timestamp.fromDate(options.endDate)));
+    }
+
+    q_parts.push(orderBy('timestamp', 'desc'));
+    q_parts.push(limit(options.limitCount));
+
+    const q = query(collectionGroup(db, 'accessLogs'), ...q_parts);
+    return onSnapshot(q, (snapshot) => {
+        const logs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog));
+        const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+        callback(logs, lastVisible);
+    });
+};
+
 export const listenToAccessLogsForPoint = (instituteId: string, accessPointDocId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
     const q = query(collection(db, 'institutes', instituteId, 'accessPoints', accessPointDocId, 'accessLogs'), orderBy('timestamp', 'desc'), limit(50));
     return onSnapshot(q, (snapshot) => { callback(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessLog))); });
