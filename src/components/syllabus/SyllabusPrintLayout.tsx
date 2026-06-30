@@ -117,7 +117,7 @@ export function SyllabusPrintLayout({
                     </div>
                 </div>
 
-                <div className="w-full max-w-3xl mx-auto px-12 flex justify-between items-baseline pt-4 border-t-2 border-black mb-10">
+                <div className="cover-teacher-block w-full max-w-3xl mx-auto px-12 flex justify-between items-baseline pt-4 border-t-2 border-black mb-5">
                     <div className="space-y-1">
                         <p className="text-[9pt] font-black uppercase tracking-widest !text-black">Docente Responsable</p>
                         <p className="text-[12pt] font-bold uppercase !text-black">{teacher?.fullName || 'Personal Asignado'}</p>

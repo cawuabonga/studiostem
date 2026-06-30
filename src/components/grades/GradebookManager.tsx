@@ -21,7 +21,7 @@ import {
 } from '@/config/firebase';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-react';
+import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-center';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';

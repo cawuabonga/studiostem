@@ -1561,16 +1561,26 @@ export const getAcademicRecordForStudent = async (instituteId: string, unitId: s
 }
 
 export const batchUpdateAcademicRecords = async (instituteId: string, records: AcademicRecord[]) => {
-    // Firestore rules limit get() and exists() calls to 10 per request.
-    const CHUNK_SIZE = 8;
+    const CHUNK_SIZE = 5; // Reduced for reliability with deep updates
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
         const chunk = records.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(db);
-        const recordsCol = getSubCollectionRef(instituteId, 'academicRecords');
-        chunk.forEach(record => {
-            const docRef = doc(recordsCol, record.id);
-            batch.set(docRef, record, { merge: true });
-        });
+        
+        for (const record of chunk) {
+            const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', record.id);
+            batch.set(recordRef, record, { merge: true });
+            
+            // ATOMIC SYNC: Propagate changed task grades back to the weekly planner
+            if (record.grades) {
+                for (const indicatorId in record.grades) {
+                    const taskGrades = record.grades[indicatorId].filter(g => g.type === 'task');
+                    for (const g of taskGrades) {
+                        const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', record.unitId, 'weeklyPlanner', `week_${g.weekNumber}`, 'tasks', g.refId, 'submissions', record.studentId);
+                        batch.update(subRef, { grade: g.grade });
+                    }
+                }
+            }
+        }
         await batch.commit();
     }
 }
@@ -2317,22 +2327,40 @@ export const submitTask = async (instituteId: string, unitId: string, weekNumber
     await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${weekNumber}`, 'tasks', taskId, 'submissions', s.documentId), data, { merge: true });
 };
 
-export const gradeTaskSubmission = async (instituteId: string, unitId: string, period: UnitPeriod, week: number, tId: string, tTitle: string, sId: string, studentName: string, grade: number, feedback: string) => {
-    await setDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', tId, 'submissions', sId), { 
-        grade, 
-        feedback,
-        studentName,
-    }, { merge: true });
-    const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${sId}_${new Date().getFullYear()}_${period}`);
-    const ind = (await getAchievementIndicators(instituteId, unitId)).find(i => week >= i.startWeek && week <= i.endWeek);
+export const gradeTaskSubmission = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, week: number, tId: string, tTitle: string, sId: string, studentName: string, grade: number, feedback: string) => {
+    const batch = writeBatch(db);
+    
+    // Update task submission
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'weeklyPlanner', `week_${week}`, 'tasks', tId, 'submissions', sId);
+    batch.set(subRef, { grade, feedback, studentName }, { merge: true });
+    
+    // Update academic record
+    const recordId = `${unitId}_${sId}_${year}_${period}`;
+    const recordRef = doc(db, 'institutes', instituteId, 'academicRecords', recordId);
+    
+    const recordSnap = await getDoc(recordRef);
+    const indicators = await getAchievementIndicators(instituteId, unitId);
+    const ind = indicators.find(i => week >= i.startWeek && week <= i.endWeek);
+
     if (ind) {
-        const grades = (await getDoc(recordRef)).data()?.grades || {};
+        const recordData = recordSnap.exists() ? recordSnap.data() as AcademicRecord : {
+            id: recordId, studentId: sId, unitId, year, period, grades: {}, evaluations: {}, status: 'cursando'
+        } as AcademicRecord;
+        
+        const grades = recordData.grades || {};
         if (!grades[ind.id]) grades[ind.id] = [];
+        
         const idx = grades[ind.id].findIndex((g: any) => g.refId === tId);
-        if (idx !== -1) grades[ind.id][idx] = { type: 'task', refId: tId, label: tTitle, grade, weekNumber: week };
-        else grades[ind.id].push({ type: 'task', refId: tId, label: tTitle, grade, weekNumber: week });
-        await setDoc(recordRef, { grades }, { merge: true });
+        if (idx !== -1) {
+            grades[ind.id][idx] = { type: 'task', refId: tId, label: tTitle, grade, weekNumber: week };
+        } else {
+            grades[ind.id].push({ type: 'task', refId: tId, label: tTitle, grade, weekNumber: week });
+        }
+        
+        batch.set(recordRef, { ...recordData, grades }, { merge: true });
     }
+    
+    await batch.commit();
 };
 
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: { studentId: string, finalGrade: number | null, status: 'aprobado' | 'desaprobado' }[]) => {

@@ -40,7 +40,14 @@
     page-break-after: always;
     break-after: page;
   }
-
+/* Bloque inferior de docente y año */
+.cover-teacher-block {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 25mm;
+  margin: 0 auto;
+}
   /* Bloqueador del pie de página para la primera hoja */
   .footer-hider {
     position: absolute;

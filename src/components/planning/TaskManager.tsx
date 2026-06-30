@@ -156,9 +156,11 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
       if (!instituteId || !selectedTaskForGrading || !gradingData.studentId) return;
       setIsSubmitting(true);
       try {
+          const currentYear = new Date().getFullYear().toString();
           await gradeTaskSubmission(
               instituteId, 
               unit.id, 
+              currentYear,
               unit.period,
               weekNumber, 
               selectedTaskForGrading.id, 
@@ -171,7 +173,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
           toast({ title: "Nota Guardada" });
           
           setGradingData({ studentId: '', studentName: '', grade: '', feedback: '' });
-          handleOpenGrading(selectedTaskForGrading);
+          await handleOpenGrading(selectedTaskForGrading);
       } catch (error) {
           toast({ title: "Error", variant: "destructive" });
       } finally { setIsSubmitting(false); }
