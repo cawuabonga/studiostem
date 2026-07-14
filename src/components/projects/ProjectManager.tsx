@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -19,6 +18,7 @@ import { Loader2, Save, Rocket, Globe, Shield, Plus, Trash2, CheckCircle2, Messa
 import { Separator } from '../ui/separator';
 import { Switch } from '../ui/switch';
 import { ProjectMentor } from './ProjectMentor';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const criteriaSchema = z.object({
     id: z.string(),
