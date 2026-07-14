@@ -1,0 +1,66 @@
+
+'use server';
+/**
+ * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM.
+ * 
+ * - mentorProject: Función que guía al alumno basándose en el contexto dinámico del proyecto.
+ * - ProjectMentorInput: Interfaz para el contexto inyectado (objetivos, rúbricas, entrada).
+ */
+
+import {ai, getActiveAIModel} from '@/ai/genkit';
+import {z} from 'genkit';
+
+const ProjectMentorInputSchema = z.object({
+  projectTitle: z.string().describe('The title of the project.'),
+  objective: z.string().describe('Main goal of the project.'),
+  competencies: z.string().describe('Academic competencies involved.'),
+  rubrics: z.string().describe('The evaluation criteria/rubrics as text.'),
+  userInput: z.string().describe('The student question or status update.'),
+});
+export type ProjectMentorInput = z.infer<typeof ProjectMentorInputSchema>;
+
+const projectMentorFlow = ai.defineFlow(
+  {
+    name: 'projectMentorFlow',
+    inputSchema: ProjectMentorInputSchema,
+    outputSchema: z.string(),
+  },
+  async (input) => {
+    const model = await getActiveAIModel();
+    
+    console.log(`[MENTOR IA] Analizando consulta para el proyecto: ${input.projectTitle}`);
+
+    const {text} = await ai.generate({
+      model,
+      system: `Eres el "Mentor STEM", un asistente especializado en metodología ABP (Aprendizaje Basado en Proyectos).
+      Tu misión es guiar a los estudiantes en su reto académico sin darles la solución directamente.
+      
+      CONTEXTO DEL PROYECTO ACTUAL:
+      - Título: ${input.projectTitle}
+      - Objetivo: ${input.objective}
+      - Competencias: ${input.competencies}
+      - Criterios de Evaluación (Rúbricas): ${input.rubrics}
+
+      INSTRUCCIONES DE COMPORTAMIENTO:
+      1. Responde de forma motivadora y profesional.
+      2. Usa analogías técnicas si el proyecto es de ingeniería o fabricación.
+      3. Asegúrate de que tus sugerencias ayuden al alumno a cumplir con las rúbricas mencionadas arriba.
+      4. Si el alumno está atascado, sugiere pasos de investigación o experimentación física en el Fab Lab si aplica.`,
+      prompt: input.userInput,
+    });
+    
+    return text;
+  }
+);
+
+/**
+ * Server Action wrapper.
+ */
+export async function mentorProject(input: ProjectMentorInput): Promise<string> {
+  try {
+    return await projectMentorFlow(input);
+  } catch (error: any) {
+    console.error("[MENTOR FLOW ERROR]", error);
+    throw new Error("No se pudo conectar con el mentor de IA.");
+  }
+}

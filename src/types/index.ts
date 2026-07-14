@@ -20,7 +20,7 @@ export interface AppUser {
   documentId?: string;
   instituteId: string | null;
   roleId?: string; 
-  roleName?: string; // Nombre amigable del rol desde la DB
+  roleName?: string; 
   permissions?: Permission[];
   programId?: string;
   programName?: string;
@@ -30,7 +30,8 @@ export interface AppUser {
   skills?: string[];
   socialLinks?: SocialLinks;
   coverImageUrl?: string;
-  cvUrl?: string; // Enlace al PDF de hoja de vida
+  cvUrl?: string; 
+  badges?: string[]; // IDs de insignias obtenidas
 }
 
 export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
@@ -49,7 +50,7 @@ export interface StudentProfile {
   address?: string;
   photoURL?: string;
   coverImageUrl?: string;
-  cvUrl?: string; // PDF
+  cvUrl?: string; 
   programId: string;
   admissionYear: string;
   admissionPeriod: UnitPeriod;
@@ -65,6 +66,7 @@ export interface StudentProfile {
   bio?: string;
   skills?: string[];
   socialLinks?: SocialLinks;
+  innovationPoints?: number; // Puntos para el ranking
 }
 
 export interface StaffProfile {
@@ -104,6 +106,60 @@ export interface CompanyProfile {
     instituteId: string;
 }
 
+// --- ABP / PBL (Aprendizaje Basado en Proyectos) ---
+
+export interface RubricCriteria {
+    id: string;
+    label: string;
+    description: string;
+    maxPoints: number;
+}
+
+export type ProjectVisibility = 'Borrador' | 'Interno' | 'Ecosistema Nacional';
+
+export interface Project {
+    id: string;
+    unitId: string;
+    instituteId: string;
+    title: string;
+    description: string;
+    objective: string;
+    competencies: string;
+    rubrics: RubricCriteria[];
+    visibility: ProjectVisibility;
+    fabLabRequired: boolean;
+    createdAt: Timestamp;
+    authorId: string;
+    authorName: string;
+}
+
+export interface ProjectTeam {
+    id: string;
+    projectId: string;
+    name: string;
+    memberIds: string[]; // DocumentIds de los estudiantes
+    leaderId: string;
+    progress: number; // 0-100
+}
+
+export interface ProjectEvidence {
+    id: string;
+    projectId: string;
+    teamId: string;
+    studentId: string;
+    weekNumber: number;
+    title: string;
+    description: string;
+    fileUrl?: string;
+    link?: string;
+    submittedAt: Timestamp;
+    grade?: number;
+    feedback?: string;
+    fabLabValidated?: boolean; // Validado por el encargado de FabLab
+}
+
+// --- Fin ABP ---
+
 export type JobOfferSource = 'Interna' | 'LinkedIn' | 'CompuTrabajo' | 'Indeed' | 'Portal de Estado' | 'Otros';
 
 export interface JobOffer {
@@ -121,14 +177,13 @@ export interface JobOffer {
     modality: 'Presencial' | 'Remoto' | 'Híbrido';
     jobType: 'Trabajo (Laboral)' | 'Prácticas (EFSRT)';
     contractType: 'Tiempo Completo' | 'Medio Tiempo' | 'Por Proyecto';
-    programIds: string[]; // Carreras a las que apunta
-    minSemester: number; // Mínimo semestre requerido para postular
+    programIds: string[]; 
+    minSemester: number; 
     status: 'Abierta' | 'Cerrada';
     createdAt: Timestamp;
     deadline?: Timestamp;
-    vacancies?: number; // Número de vacantes disponibles
-    applicantCount?: number; // Contador de postulantes
-    // New fields for Job Monitor & External jobs
+    vacancies?: number; 
+    applicantCount?: number; 
     isExternal?: boolean;
     externalUrl?: string;
     source?: JobOfferSource;
@@ -142,12 +197,12 @@ export interface JobApplication {
     companyName: string;
     studentId: string;
     studentName: string;
-    studentType: string; // Estudiante o Egresado
-    cvUrl: string; // Copia del CV al momento de postular
+    studentType: string; 
+    cvUrl: string; 
     status: 'Pendiente' | 'Visto' | 'En Proceso' | 'Aceptado' | 'Rechazado';
     appliedAt: Timestamp;
     notes?: string;
-    interviewDate?: Timestamp; // Nueva: Para agendar entrevistas
+    interviewDate?: Timestamp; 
 }
 
 export interface AccessPoint {
@@ -211,7 +266,7 @@ export interface Institute {
   logoUrl?: string;
   primaryColor?: string;
   publicProfile?: InstitutePublicProfile;
-  planId?: string; // ID del plan asignado
+  planId?: string; 
 }
 
 export interface InstitutePublicProfile {
@@ -332,6 +387,10 @@ export interface NonTeachingAssignment {
     assignedHours: number;
     year: string;
     period: UnitPeriod;
+    // New fields for FabLab and general evidence
+    evidenceUrls?: string[];
+    evidenceDescription?: string;
+    lastUpdate?: Timestamp;
 }
 
 export type EFSRTStatus = 'Programado' | 'En Curso' | 'Por Evaluar' | 'Aprobado' | 'Desaprobado';

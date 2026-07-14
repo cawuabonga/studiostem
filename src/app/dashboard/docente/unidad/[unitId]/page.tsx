@@ -9,19 +9,23 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndicatorsManager } from '@/components/indicators/IndicatorsManager';
 import { WeeklyPlanner } from '@/components/planning/WeeklyPlanner';
-import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay, BarChart3 } from 'lucide-react';
+import { NotebookText, CalendarDays, Percent, CalendarCheck, FileText, ArrowLeft, MonitorPlay, BarChart3, Rocket, Users } from 'lucide-react';
 import { GradebookManager } from '@/components/grades/GradebookManager';
 import { AttendanceManager } from '@/components/attendance/AttendanceManager';
 import { SyllabusManager } from '@/components/syllabus/SyllabusManager';
 import { VirtualClassroom } from '@/components/planning/VirtualClassroom';
 import { UnitProgressSummary } from '@/components/student/UnitProgressSummary';
+import { ProjectManager } from '@/components/projects/ProjectManager';
+import { TeamManager } from '@/components/projects/TeamManager';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
-type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom' | 'unit-progress';
+type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom' | 'unit-progress' | 'abp-project' | 'abp-teams';
 
 const moduleConfig = [
     { id: 'unit-progress', title: 'Mi Progreso Académico', icon: BarChart3, description: 'Consulta tu promedio parcial, porcentaje de asistencia y tareas pendientes.', component: UnitProgressSummary },
+    { id: 'abp-project', title: 'Proyecto de Innovación (ABP)', icon: Rocket, description: 'Metodología basada en retos reales y proyectos colaborativos.', component: ProjectManager },
+    { id: 'abp-teams', title: 'Gestión de Equipos', icon: Users, description: 'Organiza a los estudiantes en grupos de trabajo para el proyecto.', component: TeamManager },
     { id: 'syllabus', title: 'Sílabo', icon: FileText, description: 'Edita la información general del sílabo y genera el documento para imprimir.', component: SyllabusManager },
     { id: 'indicators', title: 'Indicadores de Logro', icon: NotebookText, description: 'Define los indicadores de logro que los estudiantes deben alcanzar.', component: IndicatorsManager },
     { id: 'planning', title: 'Planificación Semanal', icon: CalendarDays, description: 'Organiza contenidos, actividades y tareas para cada semana.', component: WeeklyPlanner },
@@ -95,12 +99,10 @@ export default function UnitManagementPage() {
                     {moduleConfig.map((module) => {
                         const isStudent = user?.role === 'Student';
                         
-                        // Si el usuario es estudiante, ocultar módulos administrativos
-                        if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades')) {
+                        if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades' || module.id === 'abp-teams')) {
                             return null;
                         }
 
-                        // Si el usuario es docente, ocultar módulo de progreso individual
                         if (!isStudent && module.id === 'unit-progress') {
                             return null;
                         }
@@ -109,7 +111,7 @@ export default function UnitManagementPage() {
                             <Card 
                                 key={module.id} 
                                 onClick={() => setActiveView(module.id as ActiveView)}
-                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card"
+                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card border-t-4 border-t-transparent hover:border-t-primary"
                             >
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
