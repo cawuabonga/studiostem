@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment, getCountFromServer } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, UnitTurno, TaskSubmission, AIConfig, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity, Project, ProjectTeam } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, UnitTurno, TaskSubmission, AIConfig, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity, Project, ProjectTeam, EFSRTVisit } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -556,6 +556,37 @@ export const updateUserByInstituteAdmin = async (instituteId: string, uid: strin
 export const getStaffProfiles = async (instituteId: string): Promise<StaffProfile[]> => {
     const snap = await getDocs(collection(db, 'institutes', instituteId, 'staffProfiles'));
     return snap.docs.map(doc => ({ documentId: doc.id, ...doc.data() } as StaffProfile));
+};
+
+export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
+    const staff = await getStaffProfiles(instituteId);
+    const roles = await getRoles(instituteId);
+    
+    // Identificamos el rol de docente y coordinador
+    const teacherRole = roles.find(r => 
+        r.name.toLowerCase() === 'docente' || 
+        r.name.toLowerCase() === 'teacher'
+    );
+    const coordinatorRole = roles.find(r => 
+        r.name.toLowerCase() === 'coordinador' || 
+        r.name.toLowerCase() === 'coordinator'
+    );
+
+    const teacherRoleIds = [teacherRole?.id, coordinatorRole?.id].filter(Boolean);
+
+    return staff
+        .filter(s => teacherRoleIds.includes(s.roleId) || s.role === 'Teacher' || s.role === 'Coordinator')
+        .map(s => ({
+            id: s.documentId,
+            documentId: s.documentId,
+            fullName: s.displayName,
+            email: s.email,
+            phone: s.phone || '',
+            active: true,
+            specialty: '',
+            programId: s.programId,
+            condition: s.condition
+        } as Teacher));
 };
 
 export const getStudentProfiles = async (instituteId: string): Promise<StudentProfile[]> => {
