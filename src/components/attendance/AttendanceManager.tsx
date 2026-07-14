@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -31,9 +30,10 @@ import '@/app/dashboard/gestion-academica/print-grades.css';
 
 interface AttendanceManagerProps {
     unit: Unit;
+    year?: string;
 }
 
-export function AttendanceManager({ unit }: AttendanceManagerProps) {
+export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
     const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     
@@ -55,7 +55,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const currentYear = new Date().getFullYear().toString();
+            const currentYear = year || new Date().getFullYear().toString();
             const [
                 enrolledStudents, 
                 attendanceRecord, 
@@ -120,7 +120,7 @@ export function AttendanceManager({ unit }: AttendanceManagerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit, toast, selectedIndicatorId]);
+    }, [instituteId, unit, year, toast, selectedIndicatorId]);
 
     useEffect(() => {
         fetchData();

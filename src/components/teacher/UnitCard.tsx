@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,10 +14,11 @@ interface AssignedUnit extends Unit {
 
 interface UnitCardProps {
     unit: AssignedUnit;
+    year: string;
     onUploadImageClick: (unit: Unit) => void;
 }
 
-export function UnitCard({ unit, onUploadImageClick }: UnitCardProps) {
+export function UnitCard({ unit, year, onUploadImageClick }: UnitCardProps) {
     return (
         <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-300 group">
              <div className="relative w-full h-40">
@@ -63,7 +63,7 @@ export function UnitCard({ unit, onUploadImageClick }: UnitCardProps) {
                 </div>
             </CardContent>
             <CardFooter>
-                <Link href={`/dashboard/docente/unidad/${unit.id}`} className="w-full">
+                <Link href={`/dashboard/docente/unidad/${unit.id}?year=${year}`} className="w-full">
                     <Button className="w-full">
                         Gestionar Unidad
                         <ArrowRight className="h-4 w-4 ml-2" />

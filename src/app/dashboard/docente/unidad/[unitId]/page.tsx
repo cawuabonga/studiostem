@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit } from '@/types';
 import { getUnit } from '@/config/firebase';
@@ -17,7 +16,7 @@ import { VirtualClassroom } from '@/components/planning/VirtualClassroom';
 import { UnitProgressSummary } from '@/components/student/UnitProgressSummary';
 import { ProjectManager } from '@/components/projects/ProjectManager';
 import { TeamManager } from '@/components/projects/TeamManager';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 type ActiveView = 'menu' | 'syllabus' | 'indicators' | 'planning' | 'attendance' | 'grades' | 'virtual-classroom' | 'unit-progress' | 'abp-project' | 'abp-teams';
@@ -34,11 +33,12 @@ const moduleConfig = [
     { id: 'grades', title: 'Registro de Calificaciones', icon: Percent, description: 'Ingresa y gestiona las calificaciones de los estudiantes por indicador.', component: GradebookManager },
 ] as const;
 
-
-export default function UnitManagementPage() {
+function UnitManagementContent() {
     const { instituteId, user } = useAuth();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const unitId = pathname.split('/').pop() || '';
+    const year = searchParams.get('year') || new Date().getFullYear().toString();
     
     const [unit, setUnit] = useState<Unit | null>(null);
     const [loading, setLoading] = useState(true);
@@ -131,7 +131,7 @@ export default function UnitManagementPage() {
         if (!selectedModule) return null;
 
         const Component = selectedModule.component;
-        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit };
+        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit, year };
 
         return (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -153,12 +153,20 @@ export default function UnitManagementPage() {
                 <CardHeader>
                     <CardTitle className="text-3xl font-black tracking-tighter uppercase">{unit.name}</CardTitle>
                     <CardDescription className="text-primary-foreground/80 font-medium">
-                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.turno}
+                        Código: {unit.code} | {unit.credits} Créditos | {unit.totalHours} Horas | {unit.turno} | Año: {year}
                     </CardDescription>
                 </CardHeader>
             </Card>
 
             {renderContent()}
         </div>
+    );
+}
+
+export default function UnitManagementPage() {
+    return (
+        <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+            <UnitManagementContent />
+        </Suspense>
     );
 }

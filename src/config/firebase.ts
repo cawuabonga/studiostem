@@ -562,16 +562,8 @@ export const getTeachers = async (instituteId: string): Promise<Teacher[]> => {
     const staff = await getStaffProfiles(instituteId);
     const roles = await getRoles(instituteId);
     
-    // Identificamos el rol de docente y coordinador
-    const teacherRole = roles.find(r => 
-        r.name.toLowerCase() === 'docente' || 
-        r.name.toLowerCase() === 'teacher'
-    );
-    const coordinatorRole = roles.find(r => 
-        r.name.toLowerCase() === 'coordinador' || 
-        r.name.toLowerCase() === 'coordinator'
-    );
-
+    const teacherRole = roles.find(r => r.name.toLowerCase() === 'docente' || r.name.toLowerCase() === 'teacher');
+    const coordinatorRole = roles.find(r => r.name.toLowerCase() === 'coordinador' || r.name.toLowerCase() === 'coordinator');
     const teacherRoleIds = [teacherRole?.id, coordinatorRole?.id].filter(Boolean);
 
     return staff
@@ -597,7 +589,6 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: string): Promise<StudentProfile[]> => {
     const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year));
     const matSnap = await getDocs(q);
-    // Aseguramos unicidad de IDs para evitar duplicados en el renderizado
     const studentIds = Array.from(new Set(matSnap.docs.map(d => d.data().studentId)));
     if (studentIds.length === 0) return [];
     const students: StudentProfile[] = [];
@@ -758,8 +749,17 @@ export const getSupplyItemHistory = async (instituteId: string, itemId: string):
 // --- Periodos Lectivos ---
 
 export const getAcademicPeriods = async (instituteId: string, year: string): Promise<AcademicYearSettings | null> => {
-    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'academicPeriods', year));
-    return docSnap.exists() ? docSnap.data() as AcademicYearSettings : null;
+    try {
+        const docRef = doc(db, 'institutes', instituteId, 'academicPeriods', year);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data() as AcademicYearSettings;
+        }
+        return null;
+    } catch (error) {
+        console.error("Error fetching academic periods:", error);
+        return null;
+    }
 };
 
 export const saveAcademicPeriods = async (instituteId: string, year: string, data: AcademicYearSettings): Promise<void> => {
@@ -1516,7 +1516,7 @@ export const updateNonTeachingActivity = async (instituteId: string, id: string,
 };
 
 export const deleteNonTeachingActivity = async (instituteId: string, id: string): Promise<void> => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'nonTeachingActivities', id));
+    await deleteDoc(db, 'institutes', instituteId, 'nonTeachingActivities', id));
 };
 
 export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
