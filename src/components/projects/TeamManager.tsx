@@ -9,7 +9,7 @@ import { getProjectTeams, saveProjectTeam, getEnrolledStudentProfiles, getUnitPr
 import type { Unit, Project, ProjectTeam, StudentProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, UserPlus, CheckCircle2, Shield, Trash2, MoreHorizontal, User } from 'lucide-react';
+import { Users, Plus, UserPlus, CheckCircle2, Shield, Trash2, MoreHorizontal, User, Rocket } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -17,6 +17,7 @@ import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { ScrollArea } from '../ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { cn } from '@/lib/utils';
 
 interface TeamManagerProps {
     unit: Unit;
