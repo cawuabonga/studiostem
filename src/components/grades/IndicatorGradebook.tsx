@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -131,7 +130,7 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                 const avg = calculateAverage(allGrades);
 
                                 return (
-                                    <TableRow key={student.documentId} className="h-10 hover:bg-slate-50 transition-colors">
+                                    <TableRow key={`${student.documentId}-${index}`} className="h-10 hover:bg-slate-50 transition-colors">
                                         <TableCell className="text-center sticky left-0 bg-white z-10 font-mono text-[10px] text-muted-foreground border-r border-b">
                                             {index + 1}
                                         </TableCell>

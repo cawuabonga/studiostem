@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -54,7 +53,7 @@ export function GradebookSummaryTable({ students, indicators, records }: Gradebo
                                 const finalAverage = calculateAverage(indicatorAverages);
 
                                 return (
-                                    <TableRow key={student.documentId} className="h-10 hover:bg-slate-50 transition-colors print:h-auto">
+                                    <TableRow key={`${student.documentId}-${index}`} className="h-10 hover:bg-slate-50 transition-colors print:h-auto">
                                         <TableCell className="text-center sticky left-0 bg-white z-10 font-mono text-[10px] text-muted-foreground border-r border-b print:static print:border-black">
                                             {index + 1}
                                         </TableCell>

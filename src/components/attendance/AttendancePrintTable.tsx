@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -101,7 +100,7 @@ export function AttendancePrintTable({
                         const isAtRisk = absencePercentage >= 30;
 
                         return (
-                            <tr key={student.documentId} className={cn(isAtRisk && "bg-gray-100")}>
+                            <tr key={`${student.documentId}-${index}`} className={cn(isAtRisk && "bg-gray-100")}>
                                 <td className="border border-black text-center p-1">{index + 1}</td>
                                 <td className="border border-black p-1 uppercase font-semibold text-[7pt]">
                                     {student.lastName}, {student.firstName}

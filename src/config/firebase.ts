@@ -597,7 +597,8 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: string): Promise<StudentProfile[]> => {
     const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year));
     const matSnap = await getDocs(q);
-    const studentIds = matSnap.docs.map(d => d.data().studentId);
+    // Aseguramos unicidad de IDs para evitar duplicados en el renderizado
+    const studentIds = Array.from(new Set(matSnap.docs.map(d => d.data().studentId)));
     if (studentIds.length === 0) return [];
     const students: StudentProfile[] = [];
     for (const id of studentIds) {

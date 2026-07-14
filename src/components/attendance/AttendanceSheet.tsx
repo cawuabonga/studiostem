@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -150,7 +149,7 @@ export function AttendanceSheet({
                                 const isAtRisk = absencePercentage >= 30;
 
                                 return (
-                                    <TableRow key={student.documentId} className={cn("h-9 hover:bg-slate-50 transition-colors", isAtRisk && "bg-red-50/70")}>
+                                    <TableRow key={`${student.documentId}-${index}`} className={cn("h-9 hover:bg-slate-50 transition-colors", isAtRisk && "bg-red-50/70")}>
                                         <TableCell className="text-center sticky left-0 bg-white z-10 font-mono text-[10px] text-muted-foreground border-r border-b">
                                             {index + 1}
                                         </TableCell>
@@ -235,4 +234,3 @@ export function AttendanceSheet({
         </div>
     );
 }
-
