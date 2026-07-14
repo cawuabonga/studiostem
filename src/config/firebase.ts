@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -42,6 +41,65 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
     const snapshot = await uploadBytes(storageRef, file);
     const downloadURL = await getDownloadURL(snapshot.ref);
     return downloadURL;
+};
+
+// --- Gestión de Perfiles y Usuarios ---
+
+export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
+    const docRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { documentId: docSnap.id, ...docSnap.data() } as StudentProfile : null;
+};
+
+export const getStaffProfileByDocumentId = async (instituteId: string, staffId: string): Promise<StaffProfile | null> => {
+    const docRef = doc(db, 'institutes', instituteId, 'staffProfiles', staffId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? { documentId: docSnap.id, ...docSnap.data() } as StaffProfile : null;
+};
+
+export const linkUserToProfile = async (uid: string, documentId: string, email: string): Promise<{ role: string, instituteName: string }> => {
+    const institutes = await getInstitutes();
+    let foundProfile: any = null;
+    let targetInstId = '';
+    let targetInstName = '';
+
+    for (const inst of institutes) {
+        const student = await getStudentProfile(inst.id, documentId);
+        if (student && student.email.toLowerCase() === email.toLowerCase()) {
+            foundProfile = student;
+            targetInstId = inst.id;
+            targetInstName = inst.name;
+            break;
+        }
+        const staff = await getStaffProfileByDocumentId(inst.id, documentId);
+        if (staff && staff.email.toLowerCase() === email.toLowerCase()) {
+            foundProfile = staff;
+            targetInstId = inst.id;
+            targetInstName = inst.name;
+            break;
+        }
+    }
+
+    if (!foundProfile) throw new Error("No se encontró un perfil que coincida con los datos proporcionados.");
+
+    const userRef = doc(db, 'users', uid);
+    await setDoc(userRef, {
+        documentId,
+        instituteId: targetInstId,
+        roleId: foundProfile.roleId,
+        role: foundProfile.role
+    }, { merge: true });
+
+    const profileRef = doc(db, 'institutes', targetInstId, foundProfile.roleId === 'student' ? 'studentProfiles' : 'staffProfiles', documentId);
+    await updateDoc(profileRef, { linkedUserUid: uid });
+
+    return { role: foundProfile.role, instituteName: targetInstName };
+};
+
+export const updateUserProfile = async (data: Partial<AppUser>): Promise<void> => {
+    if (!auth.currentUser) return;
+    const userRef = doc(db, 'users', auth.currentUser.uid);
+    await updateDoc(userRef, data);
 };
 
 // --- PBL / ABP (Aprendizaje Basado en Proyectos) ---
@@ -116,7 +174,7 @@ export const getInstituteMetrics = async (instituteId: string): Promise<Institut
         totalStaff: staffSnap.data().count,
         totalUnits: unitsSnap.data().count,
         activeToday: activitySnap.exists() ? activitySnap.data() as DailyActivity : { total: 0, student: 0, teacher: 0, admin: 0, coordinator: 0, graduate: 0, company: 0, lastUpdate: Timestamp.now() },
-        totalPayments: 0, // Simplified
+        totalPayments: 0,
         totalRevenue: 0
     };
 };
@@ -639,9 +697,10 @@ export const saveAcademicPeriods = async (instituteId: string, year: string, dat
 
 // --- Otras Funciones de Apoyo ---
 
-export const getAchievementIndicator = async (instituteId: string, unitId: string, indicatorId: string): Promise<AchievementIndicator | null> => {
-    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', indicatorId));
-    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as AchievementIndicator : null;
+export const getAchievementIndicators = async (instituteId: string, unitId: string): Promise<AchievementIndicator[]> => {
+    const col = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators');
+    const snap = await getDocs(col);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AchievementIndicator));
 };
 
 export const addAchievementIndicator = async (instituteId: string, unitId: string, data: Omit<AchievementIndicator, 'id'>) => {
@@ -679,4 +738,32 @@ export const getScheduledTimesForUnit = async (instituteId: string, unitId: stri
         });
     });
     return times;
+};
+
+export const saveSingleAssignment = async (instituteId: string, year: string, programId: string, period: UnitPeriod, unitId: string, teacherId: string | null): Promise<void> => {
+    const docId = `${year}_${programId}`;
+    const docRef = doc(db, 'institutes', instituteId, 'assignments', docId);
+    await setDoc(docRef, { [period]: { [unitId]: teacherId || deleteField() } }, { merge: true });
+};
+
+export const getAllAssignmentsForYear = async (instituteId: string, year: string): Promise<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }> => {
+    const q = query(collection(db, 'institutes', instituteId, 'assignments'));
+    const snap = await getDocs(q);
+    const results = { 'MAR-JUL': {}, 'AGO-DIC': {} } as any;
+    snap.docs.filter(d => d.id.startsWith(year)).forEach(d => {
+        const data = d.data();
+        if (data['MAR-JUL']) Object.assign(results['MAR-JUL'], data['MAR-JUL']);
+        if (data['AGO-DIC']) Object.assign(results['AGO-DIC'], data['AGO-DIC']);
+    });
+    return results;
+};
+
+export const getAssignments = async (instituteId: string, year: string, programId: string): Promise<{ 'MAR-JUL': Assignment; 'AGO-DIC': Assignment }> => {
+    const docId = `${year}_${programId}`;
+    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'assignments', docId));
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        return { 'MAR-JUL': data['MAR-JUL'] || {}, 'AGO-DIC': data['AGO-DIC'] || {} };
+    }
+    return { 'MAR-JUL': {}, 'AGO-DIC': {} };
 };

@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { AppUser, UserRole, Institute, Permission, StaffProfile, StudentProfile, Program, Role } from '@/types';
@@ -10,7 +9,6 @@ import {
   saveUserAdditionalData,
   getInstitute,
   createUserWithEmailAndPassword,
-  getRolePermissions,
   getStaffProfileByDocumentId,
   getStudentProfile,
   getPrograms,
