@@ -682,7 +682,9 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     const all: Record<string, ScheduleBlock> = {};
     snap.docs.forEach(d => {
         const blocks = d.data().blocks as Record<string, ScheduleBlock>;
-        Object.assign(all, blocks);
+        if (blocks) {
+            Object.assign(all, blocks);
+        }
     });
     return all;
 };
@@ -690,7 +692,10 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
 export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
     const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
     const snap = await getDocs(q);
-    return snap.docs.flatMap(d => Object.values(d.data().blocks as Record<string, ScheduleBlock>));
+    return snap.docs.flatMap(d => {
+        const blocks = d.data().blocks;
+        return blocks ? Object.values(blocks as Record<string, ScheduleBlock>) : [];
+    });
 };
 
 // --- Infraestructura y Activos ---
@@ -786,8 +791,11 @@ export const getScheduledDaysForUnit = async (instituteId: string, unitId: strin
     const snap = await getDocs(q);
     const days = new Set<string>();
     snap.docs.forEach(d => {
-        const blocks = Object.values(d.data().blocks as Record<string, ScheduleBlock>);
-        blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
+        const data = d.data();
+        if (data.blocks) {
+            const blocks = Object.values(data.blocks as Record<string, ScheduleBlock>);
+            blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
+        }
     });
     return Array.from(days);
 };
