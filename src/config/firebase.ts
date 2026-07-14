@@ -760,20 +760,6 @@ export const getScheduledDaysForUnit = async (instituteId: string, unitId: strin
     return Array.from(days);
 };
 
-export const getScheduledTimesForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<Record<string, string[]>> => {
-    const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year), where("semester", "==", semester));
-    const snap = await getDocs(q);
-    const times: Record<string, string[]> = {};
-    snap.docs.forEach(d => {
-        const blocks = Object.values(d.data().blocks as Record<string, ScheduleBlock>);
-        blocks.filter(b => b.unitId === unitId).forEach(b => {
-            if (!times[b.dayOfWeek]) times[b.dayOfWeek] = [];
-            times[b.dayOfWeek].push(b.startTime);
-        });
-    });
-    return times;
-};
-
 export const saveSingleAssignment = async (instituteId: string, year: string, programId: string, period: UnitPeriod, unitId: string, teacherId: string | null): Promise<void> => {
     const docId = `${year}_${programId}`;
     const docRef = doc(db, 'institutes', instituteId, 'assignments', docId);
@@ -1148,7 +1134,6 @@ export const checkEgresoEligibility = async (instituteId: string, studentId: str
     const approvedIds = new Set(history.filter(m => m.status === 'aprobado').map(m => m.unitId));
     const pendingUnits = progUnits.filter(u => !approvedIds.has(u.id)).map(u => u.name);
     
-    // Simplificación: necesita aprobar todos los módulos en EFSRT
     const programs = await getPrograms(instituteId);
     const prog = programs.find(p => p.id === student?.programId);
     const approvedModules = new Set(efsrt.filter(e => e.status === 'Aprobado').map(e => e.moduleId));
