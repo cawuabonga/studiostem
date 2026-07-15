@@ -589,8 +589,11 @@ export const getStudentProfiles = async (instituteId: string): Promise<StudentPr
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: string): Promise<StudentProfile[]> => {
     const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year));
     const matSnap = await getDocs(q);
+    
+    // Filtrar IDs únicos para evitar duplicados en la respuesta
     const studentIds = Array.from(new Set(matSnap.docs.map(d => d.data().studentId)));
     if (studentIds.length === 0) return [];
+    
     const students: StudentProfile[] = [];
     for (const id of studentIds) {
         const s = await getStudentProfile(instituteId, id);
@@ -1516,7 +1519,7 @@ export const updateNonTeachingActivity = async (instituteId: string, id: string,
 };
 
 export const deleteNonTeachingActivity = async (instituteId: string, id: string): Promise<void> => {
-    await deleteDoc(db, 'institutes', instituteId, 'nonTeachingActivities', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'nonTeachingActivities', id));
 };
 
 export const getNonTeachingAssignments = async (instituteId: string, teacherId: string, year: string, period: UnitPeriod): Promise<NonTeachingAssignment[]> => {
