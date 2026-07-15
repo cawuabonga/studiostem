@@ -336,6 +336,15 @@ export const getAttendanceForUnit = async (instituteId: string, unitId: string, 
     const docId = `${unitId}_${year}_${period}`;
     const docRef = doc(db, 'institutes', instituteId, 'attendance', docId);
     const docSnap = await getDoc(docRef);
+    
+    // Si no existe para el año solicitado (ej. 2026), intentamos buscar en el anterior (2025) por robustez automática
+    if (!docSnap.exists() && year === new Date().getFullYear().toString()) {
+        const lastYear = (parseInt(year) - 1).toString();
+        const lastYearRef = doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${lastYear}_${period}`);
+        const lastYearSnap = await getDoc(lastYearRef);
+        if (lastYearSnap.exists()) return { id: lastYearSnap.id, ...lastYearSnap.data() } as AttendanceRecord;
+    }
+
     return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as AttendanceRecord : null;
 };
 
@@ -698,14 +707,20 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
 };
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
-    // Robustez: Verificamos tanto número como texto para el semestre
-    const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
-    const snap = await getDocs(q);
-    const days = new Set<string>();
+    // Primero intentamos buscar en el año solicitado
+    let q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
+    let snap = await getDocs(q);
     
+    // Si no hay horarios para 2026 pero existen datos para el año actual o anterior, somos flexibles
+    if (snap.empty) {
+        const fallbackYear = (parseInt(year) - 1).toString();
+        q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", fallbackYear));
+        snap = await getDocs(q);
+    }
+
+    const days = new Set<string>();
     snap.docs.forEach(d => {
         const data = d.data();
-        // Solo procesamos si el semestre coincide (como número o string)
         if (data && data.blocks && (data.semester === semester || String(data.semester) === String(semester))) {
             const blocks = Object.values(data.blocks as Record<string, ScheduleBlock>);
             blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));

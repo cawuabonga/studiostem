@@ -95,7 +95,17 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
             const uniqueStudents = Array.from(new Map(enrolledStudents.map(s => [s.documentId, s])).values());
             setStudents(uniqueStudents.sort((a, b) => a.lastName.localeCompare(b.lastName, 'es')));
             
-            setScheduledDays(scheduledDaysForUnit);
+            // Lógica automática de columnas: Si no hay horario guardado pero HAY asistencia en la DB, inferimos columnas
+            if (scheduledDaysForUnit.length === 0 && attendanceRecord && Object.keys(attendanceRecord.records).length > 0) {
+                const firstStudentId = Object.keys(attendanceRecord.records)[0];
+                const firstWeekData = attendanceRecord.records[firstStudentId]?.week_1 || attendanceRecord.records[firstStudentId]?.week_11;
+                if (firstWeekData) {
+                    const inferredDays = firstWeekData.map((_, i) => `Día ${i + 1}`);
+                    setScheduledDays(inferredDays);
+                }
+            } else {
+                setScheduledDays(scheduledDaysForUnit);
+            }
             
             const sortedIndicators = unitIndicators.sort((a, b) => a.startWeek - b.startWeek);
             setIndicators(sortedIndicators);
