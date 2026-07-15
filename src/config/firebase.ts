@@ -675,8 +675,9 @@ export const getAllSchedules = async (instituteId: string, year: string, semeste
     const snap = await getDocs(q);
     const all: Record<string, ScheduleBlock> = {};
     snap.docs.forEach(d => {
-        const blocks = d.data().blocks as Record<string, ScheduleBlock>;
-        if (blocks) {
+        const data = d.data();
+        if (data && data.blocks) {
+            const blocks = data.blocks as Record<string, ScheduleBlock>;
             Object.assign(all, blocks);
         }
     });
@@ -687,8 +688,11 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
     const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
     const snap = await getDocs(q);
     return snap.docs.flatMap(d => {
-        const blocks = d.data().blocks;
-        return blocks ? Object.values(blocks as Record<string, ScheduleBlock>) : [];
+        const data = d.data();
+        if (data && data.blocks) {
+            return Object.values(data.blocks as Record<string, ScheduleBlock>);
+        }
+        return [];
     });
 };
 
@@ -753,7 +757,7 @@ export const getSupplyItemHistory = async (instituteId: string, itemId: string):
 
 export const getAcademicPeriods = async (instituteId: string, year: string): Promise<AcademicYearSettings | null> => {
     try {
-        const docRef = doc(db, 'institutes', instituteId, 'academicPeriods', year);
+        const docRef = doc(db, 'institutes', instituteId, 'academicYears', year);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             return docSnap.data() as AcademicYearSettings;
@@ -766,7 +770,7 @@ export const getAcademicPeriods = async (instituteId: string, year: string): Pro
 };
 
 export const saveAcademicPeriods = async (instituteId: string, year: string, data: AcademicYearSettings): Promise<void> => {
-    await setDoc(doc(db, 'institutes', instituteId, 'academicPeriods', year), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'academicYears', year), data);
 };
 
 // --- Otras Funciones de Apoyo ---
@@ -795,7 +799,7 @@ export const getScheduledDaysForUnit = async (instituteId: string, unitId: strin
     const days = new Set<string>();
     snap.docs.forEach(d => {
         const data = d.data();
-        if (data.blocks) {
+        if (data && data.blocks) {
             const blocks = Object.values(data.blocks as Record<string, ScheduleBlock>);
             blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
         }
