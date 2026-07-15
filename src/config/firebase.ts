@@ -6,7 +6,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment, getCountFromServer } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, UnitTurno, TaskSubmission, AIConfig, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity, Project, ProjectTeam, EFSRTVisit } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, AttendanceStatus, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, EFSRTAssignment, UnitTurno, TaskSubmission, AIConfig, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity, Project, ProjectTeam, EFSRTVisit } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -337,7 +337,6 @@ export const getAttendanceForUnit = async (instituteId: string, unitId: string, 
     const docRef = doc(db, 'institutes', instituteId, 'attendance', docId);
     const docSnap = await getDoc(docRef);
     
-    // Si no existe para el año solicitado (ej. 2026), intentamos buscar en el anterior (2025) por robustez automática
     if (!docSnap.exists() && year === new Date().getFullYear().toString()) {
         const lastYear = (parseInt(year) - 1).toString();
         const lastYearRef = doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${lastYear}_${period}`);
@@ -600,7 +599,6 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
     const q = query(collection(db, 'institutes', instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year));
     const matSnap = await getDocs(q);
     
-    // Filtrar IDs únicos para evitar duplicados en la respuesta
     const studentIds = Array.from(new Set(matSnap.docs.map(d => d.data().studentId)));
     if (studentIds.length === 0) return [];
     
@@ -707,11 +705,9 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
 };
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
-    // Primero intentamos buscar en el año solicitado
     let q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
     let snap = await getDocs(q);
     
-    // Si no hay horarios para 2026 pero existen datos para el año actual o anterior, somos flexibles
     if (snap.empty) {
         const fallbackYear = (parseInt(year) - 1).toString();
         q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", fallbackYear));
@@ -795,6 +791,15 @@ export const getAcademicPeriods = async (instituteId: string, year: string): Pro
         if (docSnap.exists()) {
             return docSnap.data() as AcademicYearSettings;
         }
+        
+        // Fallback to previous year if no data for requested year
+        const lastYear = (parseInt(year) - 1).toString();
+        const lastDocRef = doc(db, 'institutes', instituteId, 'academicYears', lastYear);
+        const lastDocSnap = await getDoc(lastDocRef);
+        if (lastDocSnap.exists()) {
+            return lastDocSnap.data() as AcademicYearSettings;
+        }
+
         return null;
     } catch (error) {
         console.error("Error fetching academic periods:", error);

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -36,12 +37,12 @@ export function AttendancePrintTable({
         (_, i) => selectedIndicator.startWeek + i
     );
 
-    const getWeekDateForDay = (weekNum: number, dayName: string): string => {
+    const getWeekDateForDay = (weekNum: number, dayName: string, dayIdx: number): string => {
         if (!periodStartDate) return '';
         try {
             const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
             const startOfTargetWeek = addDays(startOfFirstWeek, (weekNum - 1) * 7);
-            const dayOffset = dayNameToIndex[dayName] - 1;
+            const dayOffset = dayNameToIndex[dayName] ? dayNameToIndex[dayName] - 1 : dayIdx;
             const dateOfDay = addDays(startOfTargetWeek, dayOffset);
             return format(dateOfDay, 'dd/MM');
         } catch (e) { return ''; }
@@ -65,11 +66,11 @@ export function AttendancePrintTable({
                     </tr>
                     <tr className="bg-gray-100">
                         {weeksInRange.map(week => (
-                            scheduledDays.map(day => (
+                            scheduledDays.map((day, dIdx) => (
                                 <th key={`${week}-${day}`} className="border border-black text-center p-0.5 font-bold text-[6pt]">
                                     <div className="flex flex-col leading-tight">
                                         <span>{day.substring(0,3)}</span>
-                                        <span className="text-[5pt] font-normal">{getWeekDateForDay(week, day)}</span>
+                                        <span className="text-[5pt] font-normal">{getWeekDateForDay(week, day, dIdx)}</span>
                                     </div>
                                 </th>
                             ))
@@ -81,7 +82,6 @@ export function AttendancePrintTable({
                         const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
                         
                         if (attendanceRecord?.records[student.documentId]) {
-                            // Cálculo proporcional hasta la semana de corte seleccionada
                             for (let w = 1; w <= limitWeek; w++) {
                                 const weekData = attendanceRecord.records[student.documentId][`week_${w}`];
                                 if (weekData) {

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -72,12 +73,15 @@ export function AttendanceSheet({
         );
     }
 
-    const getWeekDateForDay = (weekNum: number, dayName: string): string | null => {
+    const getWeekDateForDay = (weekNum: number, dayName: string, dayIdx: number): string | null => {
         if (!periodStartDate) return null;
         try {
             const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
             const startOfTargetWeek = addDays(startOfFirstWeek, (weekNum - 1) * 7);
-            const dayOffset = dayNameToIndex[dayName] - 1;
+            
+            // Si el nombre del día es genérico (ej. "Día 1"), usamos el índice para offset (Día 1 = +0 días)
+            const dayOffset = dayNameToIndex[dayName] ? dayNameToIndex[dayName] - 1 : dayIdx;
+            
             const dateOfDay = addDays(startOfTargetWeek, dayOffset);
             return format(dateOfDay, 'dd/MM');
         } catch (e) { return null; }
@@ -109,7 +113,7 @@ export function AttendanceSheet({
                                         <TableHead key={`${week}-${day}`} className="text-center p-1 min-w-[70px] border-r border-b bg-slate-50">
                                             <div className="flex flex-col items-center leading-tight">
                                                 <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
-                                                <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day)}</span>
+                                                <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day, dIdx)}</span>
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
@@ -130,7 +134,6 @@ export function AttendanceSheet({
                                 const globalSummary = { P: 0, T: 0, F: 0, J: 0, U: 0 };
                                 
                                 if (attendanceRecord?.records[student.documentId]) {
-                                    // Calculamos inasistencias solo hasta la semana límite definida por el docente
                                     for (let w = 1; w <= limitWeek; w++) {
                                         const weekData = attendanceRecord.records[student.documentId][`week_${w}`];
                                         if (weekData) {
