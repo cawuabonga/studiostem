@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -55,7 +56,9 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
+            // Sincronización de Año: Priorizamos el año pasado por prop (ej. 2026)
             const currentYear = year || new Date().getFullYear().toString();
+            
             const [
                 enrolledStudents, 
                 attendanceRecord, 
@@ -88,8 +91,10 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
                 setTeacher(assignedTeacher);
             }
 
-            // ORDENAR POR APELLIDOS
-            setStudents(enrolledStudents.sort((a, b) => a.lastName.localeCompare(b.lastName)));
+            // ORDENAR POR APELLIDOS Y FILTRAR DUPLICADOS
+            const uniqueStudents = Array.from(new Map(enrolledStudents.map(s => [s.documentId, s])).values());
+            setStudents(uniqueStudents.sort((a, b) => a.lastName.localeCompare(b.lastName, 'es')));
+            
             setScheduledDays(scheduledDaysForUnit);
             
             const sortedIndicators = unitIndicators.sort((a, b) => a.startWeek - b.startWeek);
@@ -120,7 +125,7 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit, year, toast, selectedIndicatorId]);
+    }, [instituteId, unit.id, unit.period, unit.semester, unit.programId, year, toast, selectedIndicatorId]);
 
     useEffect(() => {
         fetchData();
@@ -151,7 +156,7 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
         const updatedAttendance = produce(attendance, draft => {
             if (!draft.records[studentId]) draft.records[studentId] = {};
             if (!draft.records[studentId][weekKey]) {
-                draft.records[studentId][weekKey] = Array(scheduledDays.length).fill('U'); 
+                draft.records[studentId][weekKey] = Array(scheduledDays.length || 1).fill('U'); 
             }
             draft.records[studentId][weekKey][dayIndex] = status as any;
         });
@@ -173,7 +178,7 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
             students.forEach(student => {
                 if (!draft.records[student.documentId]) draft.records[student.documentId] = {};
                 if (!draft.records[student.documentId][weekKey]) {
-                    draft.records[student.documentId][weekKey] = Array(scheduledDays.length).fill('U');
+                    draft.records[student.documentId][weekKey] = Array(scheduledDays.length || 1).fill('U');
                 }
                 draft.records[student.documentId][weekKey][dayIndex] = status as any;
             });
@@ -229,7 +234,7 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {Array.from({ length: unit.totalWeeks }, (_, i) => i + 1).map(w => (
+                                                {Array.from({ length: unit.totalWeeks || 18 }, (_, i) => i + 1).map(w => (
                                                     <SelectItem key={w} value={String(w)}>Semana {w}</SelectItem>
                                                 ))}
                                             </SelectContent>

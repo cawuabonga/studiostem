@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -696,6 +697,23 @@ export const getInstituteSchedulesForYear = async (instituteId: string, year: st
     });
 };
 
+export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
+    // Robustez: Verificamos tanto número como texto para el semestre
+    const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year));
+    const snap = await getDocs(q);
+    const days = new Set<string>();
+    
+    snap.docs.forEach(d => {
+        const data = d.data();
+        // Solo procesamos si el semestre coincide (como número o string)
+        if (data && data.blocks && (data.semester === semester || String(data.semester) === String(semester))) {
+            const blocks = Object.values(data.blocks as Record<string, ScheduleBlock>);
+            blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
+        }
+    });
+    return Array.from(days);
+};
+
 // --- Infraestructura y Activos ---
 
 export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
@@ -791,20 +809,6 @@ export const updateAchievementIndicator = async (instituteId: string, unitId: st
 
 export const deleteAchievementIndicator = async (instituteId: string, unitId: string, id: string) => {
     await deleteDoc(doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'achievementIndicators', id));
-};
-
-export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
-    const q = query(collection(db, 'institutes', instituteId, 'schedules'), where("year", "==", year), where("semester", "==", semester));
-    const snap = await getDocs(q);
-    const days = new Set<string>();
-    snap.docs.forEach(d => {
-        const data = d.data();
-        if (data && data.blocks) {
-            const blocks = Object.values(data.blocks as Record<string, ScheduleBlock>);
-            blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
-        }
-    });
-    return Array.from(days);
 };
 
 export const saveSingleAssignment = async (instituteId: string, year: string, programId: string, period: UnitPeriod, unitId: string, teacherId: string | null): Promise<void> => {
