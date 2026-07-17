@@ -722,7 +722,8 @@ export const getScheduledDaysForUnit = async (instituteId: string, unitId: strin
             blocks.filter(b => b.unitId === unitId).forEach(b => days.add(b.dayOfWeek));
         }
     });
-    return Array.from(days);
+    const order = ['Lunes', 'Martes', 'Miércoles', 'Miercoles', 'Jueves', 'Viernes', 'Sábado', 'Sabado', 'Domingo'];
+    return Array.from(days).sort((a, b) => order.indexOf(a) - order.indexOf(b));
 };
 
 // --- Infraestructura y Activos ---
@@ -792,7 +793,6 @@ export const getAcademicPeriods = async (instituteId: string, year: string): Pro
             return docSnap.data() as AcademicYearSettings;
         }
         
-        // Fallback to previous year if no data for requested year
         const lastYear = (parseInt(year) - 1).toString();
         const lastDocRef = doc(db, 'institutes', instituteId, 'academicYears', lastYear);
         const lastDocSnap = await getDoc(lastDocRef);

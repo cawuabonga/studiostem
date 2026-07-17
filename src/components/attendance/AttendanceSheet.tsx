@@ -44,7 +44,7 @@ const getStatusColor = (status: AttendanceStatus) => {
 }
 
 const dayNameToIndex: { [key: string]: number } = {
-    'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
+    'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Miercoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Sabado': 6, 'Domingo': 0
 };
 
 export function AttendanceSheet({ 
@@ -79,12 +79,23 @@ export function AttendanceSheet({
             const startOfFirstWeek = startOfWeek(periodStartDate, { weekStartsOn: 1 });
             const startOfTargetWeek = addDays(startOfFirstWeek, (weekNum - 1) * 7);
             
-            // Si el nombre del día es genérico (ej. "Día 1"), usamos el índice para offset (Día 1 = +0 días)
+            // Usamos el diccionario robusto para mapear el día a su índice offset
             const dayOffset = dayNameToIndex[dayName] ? dayNameToIndex[dayName] - 1 : dayIdx;
             
             const dateOfDay = addDays(startOfTargetWeek, dayOffset);
             return format(dateOfDay, 'dd/MM');
         } catch (e) { return null; }
+    }
+
+    const getDayLabel = (day: string) => {
+        if (day.toLowerCase().includes('lunes')) return 'LUN';
+        if (day.toLowerCase().includes('martes')) return 'MAR';
+        if (day.toLowerCase().includes('miércoles') || day.toLowerCase().includes('miercoles')) return 'MIÉ';
+        if (day.toLowerCase().includes('jueves')) return 'JUE';
+        if (day.toLowerCase().includes('viernes')) return 'VIE';
+        if (day.toLowerCase().includes('sábado') || day.toLowerCase().includes('sabado')) return 'SÁB';
+        if (day.toLowerCase().includes('domingo')) return 'DOM';
+        return day.substring(0, 3).toUpperCase();
     }
 
     return (
@@ -112,7 +123,7 @@ export function AttendanceSheet({
                                     scheduledDays.map((day, dIdx) => (
                                         <TableHead key={`${week}-${day}`} className="text-center p-1 min-w-[70px] border-r border-b bg-slate-50">
                                             <div className="flex flex-col items-center leading-tight">
-                                                <span className="text-[9px] uppercase font-black text-muted-foreground">{day.substring(0,3)}</span>
+                                                <span className="text-[9px] uppercase font-black text-muted-foreground">{getDayLabel(day)}</span>
                                                 <span className="text-[10px] font-mono font-bold text-primary">{getWeekDateForDay(week, day, dIdx)}</span>
                                                 <Button 
                                                     variant="ghost" 

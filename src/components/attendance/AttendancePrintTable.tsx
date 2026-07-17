@@ -18,7 +18,7 @@ interface AttendancePrintTableProps {
 }
 
 const dayNameToIndex: { [key: string]: number } = {
-    'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0
+    'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Miercoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Sabado': 6, 'Domingo': 0
 };
 
 export function AttendancePrintTable({ 
@@ -48,6 +48,17 @@ export function AttendancePrintTable({
         } catch (e) { return ''; }
     };
 
+    const getDayLabel = (day: string) => {
+        if (day.toLowerCase().includes('lunes')) return 'LUN';
+        if (day.toLowerCase().includes('martes')) return 'MAR';
+        if (day.toLowerCase().includes('miércoles') || day.toLowerCase().includes('miercoles')) return 'MIÉ';
+        if (day.toLowerCase().includes('jueves')) return 'JUE';
+        if (day.toLowerCase().includes('viernes')) return 'VIE';
+        if (day.toLowerCase().includes('sábado') || day.toLowerCase().includes('sabado')) return 'SÁB';
+        if (day.toLowerCase().includes('domingo')) return 'DOM';
+        return day.substring(0, 3).toUpperCase();
+    }
+
     return (
         <div className="w-full overflow-visible">
             <table className="w-full border-collapse border border-black text-[8pt]">
@@ -69,7 +80,7 @@ export function AttendancePrintTable({
                             scheduledDays.map((day, dIdx) => (
                                 <th key={`${week}-${day}`} className="border border-black text-center p-0.5 font-bold text-[6pt]">
                                     <div className="flex flex-col leading-tight">
-                                        <span>{day.substring(0,3)}</span>
+                                        <span>{getDayLabel(day)}</span>
                                         <span className="text-[5pt] font-normal">{getWeekDateForDay(week, day, dIdx)}</span>
                                     </div>
                                 </th>
