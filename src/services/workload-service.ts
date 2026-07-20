@@ -22,6 +22,7 @@ import type { NonTeachingAssignment } from '@/types';
 
 /**
  * Obtiene todas las asignaciones no lectivas de un docente para un año específico.
+ * Se eliminó el orderBy del servidor para evitar el error de índices faltantes.
  */
 export const getTeacherWorkload = async (
     instituteId: string, 
@@ -30,14 +31,20 @@ export const getTeacherWorkload = async (
 ): Promise<NonTeachingAssignment[]> => {
     try {
         const colRef = collection(db, 'institutes', instituteId, 'nonTeachingAssignments');
+        
+        // Consulta simplificada para evitar requerir índices compuestos manuales
         const q = query(
             colRef, 
             where('teacherId', '==', teacherId),
-            where('year', '==', year),
-            orderBy('period', 'asc')
+            where('year', '==', year)
         );
+
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
+        const assignments = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
+        
+        // Ordenamiento en el cliente (JavaScript) para mayor estabilidad
+        return assignments.sort((a, b) => a.period.localeCompare(b.period));
+        
     } catch (error) {
         console.error("Error al obtener carga no lectiva:", error);
         return [];
