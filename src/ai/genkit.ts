@@ -16,44 +16,46 @@ export const ai = genkit({
 });
 
 /**
- * Ayudante para obtener el modelo activo basado en la configuración guardada en Firestore.
- * Incluye logging mejorado para depuración y evita fallbacks automáticos a Google si se eligió Ollama.
+ * Estructura para manejo de fallos (Failover).
+ * Devuelve el modelo primario según configuración y un modelo de respaldo si existe.
  */
-export async function getActiveAIModel() {
-    console.log("[CEREBRO IA] Consultando configuración activa en Firestore...");
+export async function getAIModelsWithFailover() {
+    console.log("[CEREBRO IA] Recuperando orquestación de modelos...");
     
     try {
         const config = await getAIConfig();
-        
-        if (!config) {
-            console.warn("[CEREBRO IA] Sin configuración en DB. Usando Google Gemini como último recurso.");
-            return googleAI.model('gemini-2.0-flash');
+        const googleModel = googleAI.model('gemini-2.0-flash');
+        let ollamaModel = null;
+
+        if (config?.ollamaUrl && config.ollamaUrl.trim() !== '') {
+            ollamaModel = ollama.model({
+                name: config.ollamaModel || 'llama3',
+                address: config.ollamaUrl,
+            });
         }
 
-        console.log(`[CEREBRO IA] Proveedor activo detectado: ${config.activeProvider.toUpperCase()}`);
-
-        if (config.activeProvider === 'ollama') {
-            if (config.ollamaUrl && config.ollamaUrl.trim() !== '') {
-                console.log(`[CEREBRO IA] MODO LOCAL. Conectando a Ollama en: ${config.ollamaUrl}`);
-                return ollama.model({
-                    name: config.ollamaModel || 'llama3',
-                    address: config.ollamaUrl,
-                });
-            } else {
-                // Si el usuario eligió Ollama pero no puso URL, lanzamos un error explícito en lugar de saltar a Google
-                throw new Error("ERROR_CONFIG_OLLAMA: Has seleccionado Ollama como proveedor, pero la URL de ngrok está vacía en el panel de SuperAdmin.");
-            }
-        }
+        // Definimos el orden basado en la configuración del SuperAdmin
+        const primaryIsOllama = config?.activeProvider === 'ollama' && ollamaModel;
         
-        console.log("[CEREBRO IA] MODO NUBE. Usando Google Gemini.");
-        return googleAI.model('gemini-2.0-flash');
-        
-    } catch (error: any) {
-        console.error("[CEREBRO IA] Error crítico en selección de modelo:", error.message);
-        // Si es un error de configuración de Ollama, lo propagamos para que el usuario sepa qué arreglar
-        if (error.message.includes("ERROR_CONFIG_OLLAMA")) throw error;
-        
-        // Solo en caso de error de lectura de base de datos usamos Google como fallback de emergencia
-        return googleAI.model('gemini-2.0-flash');
+        return {
+            primary: primaryIsOllama ? ollamaModel : googleModel,
+            fallback: primaryIsOllama ? googleModel : ollamaModel,
+            config
+        };
+    } catch (error) {
+        console.error("[CEREBRO IA] Error al leer configuración, usando Google por defecto.");
+        return {
+            primary: googleAI.model('gemini-2.0-flash'),
+            fallback: null,
+            config: null
+        };
     }
+}
+
+/**
+ * Mantiene compatibilidad con flujos existentes devolviendo el modelo preferido.
+ */
+export async function getActiveAIModel() {
+    const { primary } = await getAIModelsWithFailover();
+    return primary;
 }

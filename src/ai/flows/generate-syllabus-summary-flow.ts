@@ -1,12 +1,9 @@
 'use server';
 /**
- * @fileOverview Flow para la generación de sumillas académicas.
- * 
- * - generateSyllabusSummary: Función que genera una sumilla profesional para una unidad didáctica.
- * - GenerateSyllabusSummaryInput: Interfaz para la entrada del flujo.
+ * @fileOverview Flow para la generación de sumillas académicas con Failover.
  */
 
-import {ai, getActiveAIModel} from '@/ai/genkit';
+import {ai, getAIModelsWithFailover} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateSyllabusSummaryInputSchema = z.object({
@@ -14,41 +11,31 @@ const GenerateSyllabusSummaryInputSchema = z.object({
 });
 export type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
 
-const generateSyllabusSummaryFlow = ai.defineFlow(
-  {
-    name: 'generateSyllabusSummaryFlow',
-    inputSchema: GenerateSyllabusSummaryInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({unitName}) => {
-    const model = await getActiveAIModel();
-    
-    console.log(`[IA FLOW] Iniciando generación para "${unitName}"...`);
-
-    const {text} = await ai.generate({
-      model,
-      prompt: `Eres un experto diseñador de currículos académicos. Genera una sumilla concisa y profesional para una unidad didáctica titulada "${unitName}". La sumilla debe describir la naturaleza, propósito y contenido principal de la unidad. El resultado debe ser únicamente el texto de la sumilla, sin títulos ni introducciones.`,
-    });
-    
-    console.log(`[IA FLOW] Generación completada con éxito.`);
-    return text;
-  }
-);
-
 /**
- * Función pública envuelta para ser usada como Server Action.
+ * Función pública con lógica de failover integrada para generación de sumillas.
  */
 export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
+  const { primary, fallback } = await getAIModelsWithFailover();
+  
+  const runGeneration = async (model: any) => {
+    const {text} = await ai.generate({
+      model,
+      prompt: `Eres un experto diseñador de currículos académicos. Genera una sumilla concisa y profesional para una unidad didáctica titulada "${input.unitName}". La sumilla debe describir la naturaleza, propósito y contenido principal de la unidad. El resultado debe ser únicamente el texto de la sumilla, sin títulos ni introducciones.`,
+    });
+    return text;
+  };
+
   try {
-    return await generateSyllabusSummaryFlow(input);
+    return await runGeneration(primary);
   } catch (error: any) {
-    console.error("[IA FLOW ERROR]", error);
-    
-    // Capturamos específicamente el error de cuota de Google
-    if (error.message?.includes('RESOURCE_EXHAUSTED') || error.message?.includes('429')) {
-      throw new Error("CUOTA_AGOTADA: El servicio de Google AI ha agotado sus créditos gratuitos. Por favor, asegúrate de haber guardado Ollama como proveedor activo en el panel de SuperAdmin.");
+    const msg = error.message || "";
+    const isQuota = msg.includes('RESOURCE_EXHAUSTED') || msg.includes('429');
+
+    if (isQuota && fallback) {
+        console.warn("[SYLLABUS IA] Cuota agotada, reintentando con OLLAMA...");
+        return await runGeneration(fallback);
     }
     
-    throw new Error(error.message || "Error desconocido al procesar la solicitud de IA.");
+    throw new Error(msg || "Error al procesar la solicitud de IA.");
   }
 }

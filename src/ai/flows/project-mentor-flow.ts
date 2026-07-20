@@ -6,7 +6,7 @@
  * - ProjectMentorInput: Interfaz para el contexto inyectado (objetivos, rúbricas, entrada).
  */
 
-import {ai, getActiveAIModel} from '@/ai/genkit';
+import {ai, getAIModelsWithFailover} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ProjectMentorInputSchema = z.object({
@@ -40,43 +40,34 @@ const projectMentorPrompt = ai.definePrompt({
       {{{userInput}}}`,
 });
 
-const projectMentorFlow = ai.defineFlow(
-  {
-    name: 'projectMentorFlow',
-    inputSchema: ProjectMentorInputSchema,
-    outputSchema: z.string(),
-  },
-  async (input) => {
-    const model = await getActiveAIModel();
-    console.log(`[MENTOR IA] Procesando consulta para: ${input.projectTitle}`);
-
-    const { text } = await projectMentorPrompt(input, { model });
-    
-    return text;
-  }
-);
-
 /**
- * Server Action wrapper con reporte de errores mejorado y detección de cuota agotada.
+ * Server Action wrapper con lógica de Failover Inteligente.
+ * Si el proveedor principal falla por cuota, intenta con el respaldo (Ollama).
  */
 export async function mentorProject(input: ProjectMentorInput): Promise<string> {
+  const { primary, fallback } = await getAIModelsWithFailover();
+  
   try {
-    return await projectMentorFlow(input);
+    console.log(`[MENTOR IA] Intento inicial con proveedor principal...`);
+    const { text } = await projectMentorPrompt(input, { model: primary });
+    return text;
   } catch (error: any) {
+    const errorMessage = error.message || "";
+    const isQuotaError = errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('429');
+
+    // SI FALLA GOOGLE POR CUOTA Y TENEMOS OLLAMA, SALTAMOS AUTOMÁTICAMENTE
+    if (isQuotaError && fallback) {
+        console.warn("[MENTOR IA] Cuota de Google agotada. Saltando a OLLAMA local...");
+        try {
+            const { text } = await projectMentorPrompt(input, { model: fallback });
+            return "*(Nota: Usando respaldo local por alta demanda)* \n\n" + text;
+        } catch (fallbackError: any) {
+            console.error("[MENTOR IA] Falló también el respaldo:", fallbackError.message);
+            throw new Error("SERVICIO_IA_INDISPONIBLE: Ni Google ni Ollama están respondiendo. Verifica tu conexión ngrok.");
+        }
+    }
+
     console.error("[MENTOR FLOW ERROR]", error);
-
-    const message = error.message || "";
-    
-    // Capturamos específicamente el error de cuota de Google
-    if (message.includes('RESOURCE_EXHAUSTED') || message.includes('429')) {
-      throw new Error("CUOTA_AGOTADA: El servicio de Google AI ha agotado sus créditos. Por favor, asegúrate de haber guardado Ollama como proveedor activo en el panel de SuperAdmin y que tu PC local esté encendida con ngrok.");
-    }
-
-    // Capturamos error de configuración de Ollama
-    if (message.includes('ERROR_CONFIG_OLLAMA')) {
-        throw new Error(message);
-    }
-    
-    throw new Error(`IA_SERVICE_ERROR: ${message || "Error desconocido en el servidor de IA."}`);
+    throw new Error(`IA_SERVICE_ERROR: ${errorMessage}`);
   }
 }
