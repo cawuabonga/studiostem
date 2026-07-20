@@ -1,6 +1,6 @@
 /**
- * @fileOverview Firmware para Control de Acceso STEM V2 (ESP32 + RFID)
- * Implementa la lógica de "Edge Validation" para acceso instantáneo.
+ * STEM V2 - SISTEMA DE CONTROL DE ACCESO IOT (VERSIÓN ONLINE OPTIMIZADA)
+ * Hardware: ESP32 + MFRC522 + Relé + Buzzer + LEDs
  */
 
 #include <SPI.h>
@@ -10,169 +10,156 @@
 #include <ArduinoJson.h>
 
 // --- CONFIGURACIÓN DE RED ---
-const char* ssid = "TU_WIFI_SSID";
-const char* password = "TU_WIFI_PASSWORD";
-const char* serverUrl = "https://tu-dominio-nextjs.vercel.app"; // URL de tu servidor Next.js
-const char* accessPointId = "PUERTA_PRINCIPAL"; // Debe coincidir con el ID en la plataforma
+const char* ssid = "GABRIEL";
+const char* password = "GABRIEL01";
 
-// --- PINES DE HARDWARE (ESP32) ---
-#define SS_PIN 5
-#define RST_PIN 22
-#define RELAY_PIN 2
-#define LED_GREEN 12
-#define LED_RED 13
-#define BUZZER_PIN 14
+// --- CONFIGURACIÓN DE API ---
+const char* serverUrl = "https://studio--stem-v2-4y6a0.us-central1.hosted.app/api/flow/processAccessAttemptFlow";
+const char* accessPointId = "00003";
 
-MFRC522 rfid(SS_PIN, RST_PIN);
+// --- MAPEADO DE PINES ---
+#define RST_PIN         22    // RFID Reset
+#define SS_PIN          5     // RFID SDA
+#define RELAY_PIN       2     // Señal de apertura (Relé)
+#define LED_GREEN       12    // LED Acceso Permitido
+#define LED_RED         13    // LED Acceso Denegado
+#define BUZZER          14    // Sonido
 
-// --- MEMORIA LOCAL (EDGE VALIDATION) ---
-String authorizedCards[250]; // Espacio para 250 usuarios autorizados
-int cardsCount = 0;
-unsigned long lastSyncTime = 0;
-const unsigned long syncInterval = 300000; // Sincronizar cada 5 minutos (300,000 ms)
+MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
   SPI.begin();
-  rfid.PCD_Init();
+  mfrc522.PCD_Init();
 
+  // Configuración de pines
   pinMode(RELAY_PIN, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(BUZZER, OUTPUT);
 
+  // Estado inicial
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(LED_GREEN, LOW);
   digitalWrite(LED_RED, LOW);
+  noTone(BUZZER);
 
-  connectToWiFi();
-  syncAuthorizedCards();
+  // Conexión Wi-Fi
+  connectWiFi();
+  
+  Serial.println(">>> Sistema STEM Online Listo. Esperando tarjeta...");
 }
 
 void loop() {
-  // Sincronización periódica en segundo plano
-  if (millis() - lastSyncTime > syncInterval) {
-    syncAuthorizedCards();
+  if (WiFi.status() != WL_CONNECTED) {
+    connectWiFi();
   }
 
-  // Detectar nueva tarjeta
-  if (!rfid.PICC_IsNewCardPresent()) return;
-  if (!rfid.PICC_ReadCardSerial()) return;
+  // Buscar nuevas tarjetas
+  if ( ! mfrc522.PICC_IsNewCardPresent()) return;
+  if ( ! mfrc522.PICC_ReadCardSerial()) return;
 
-  // Obtener UID de la tarjeta
-  String uid = "";
-  for (byte i = 0; i < rfid.uid.size; i++) {
-    uid += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
-    uid += String(rfid.uid.uidByte[i], HEX);
+  // Obtener el ID de la tarjeta
+  String rfidId = "";
+  for (byte i = 0; i < mfrc522.uid.size; i++) {
+    rfidId += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
+    rfidId += String(mfrc522.uid.uidByte[i], HEX);
   }
-  uid.toUpperCase();
-
-  Serial.print("Tarjeta detectada: ");
-  Serial.println(uid);
-
-  // VALIDACIÓN INSTANTÁNEA (En Memoria Local)
-  if (isAuthorizedLocal(uid)) {
-    grantAccess(uid);
-  } else {
-    denyAccess(uid);
-  }
-
-  rfid.PICC_HaltA();
-  rfid.PCD_StopCrypto1();
-}
-
-// Verifica si el UID está en la caché local del ESP32
-bool isAuthorizedLocal(String uid) {
-  for (int i = 0; i < cardsCount; i++) {
-    if (authorizedCards[i] == uid) return true;
-  }
-  return false;
-}
-
-// Acción de apertura inmediata
-void grantAccess(String uid) {
-  Serial.println("ACCESO CONCEDIDO (Local)");
-  digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(RELAY_PIN, HIGH);
-  tone(BUZZER_PIN, 2000, 100);
-  delay(2000); // Mantener abierto 2 segundos
-  digitalWrite(RELAY_PIN, LOW);
-  digitalWrite(LED_GREEN, LOW);
-
-  // Reportar log de forma asíncrona a la web
-  sendLogToServer(uid, "success");
-}
-
-// Acción de rechazo inmediato
-void denyAccess(String uid) {
-  Serial.println("ACCESO DENEGADO (Local)");
-  digitalWrite(LED_RED, HIGH);
-  tone(BUZZER_PIN, 500, 500);
-  delay(1000);
-  digitalWrite(LED_RED, LOW);
-
-  // Reportar log de forma asíncrona a la web
-  sendLogToServer(uid, "error");
-}
-
-// Descarga la lista de usuarios autorizados desde Next.js
-void syncAuthorizedCards() {
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  HTTPClient http;
-  String url = String(serverUrl) + "/api/access-point/sync?accessPointId=" + accessPointId;
+  rfidId.toUpperCase();
   
-  http.begin(url);
-  int httpCode = http.GET();
+  Serial.print("ID detectado: ");
+  Serial.println(rfidId);
 
-  if (httpCode == HTTP_CODE_OK) {
-    String payload = http.getString();
-    DynamicJsonDocument doc(8192); // Ajustar según cantidad de usuarios
-    DeserializationError error = deserializeJson(doc, payload);
+  // Sonido corto de lectura (feedback inmediato)
+  tone(BUZZER, 2000, 50);
 
-    if (!error) {
-      JsonArray cards = doc["authorizedCards"];
-      cardsCount = cards.size();
-      for (int i = 0; i < cardsCount && i < 250; i++) {
-        authorizedCards[i] = cards[i].as<String>();
-      }
-      lastSyncTime = millis();
-      Serial.print("Sincronización exitosa. Usuarios: ");
-      Serial.println(cardsCount);
-    }
-  }
-  http.end();
+  // Validar con el servidor
+  processAccess(rfidId);
+
+  mfrc522.PICC_HaltA();
 }
 
-// Registra el evento en la base de datos (después de abrir la puerta)
-void sendLogToServer(String uid, String status) {
-  if (WiFi.status() != WL_CONNECTED) return;
-
-  HTTPClient http;
-  String url = String(serverUrl) + "/api/flow/processAccessAttemptFlow";
-  
-  http.begin(url);
-  http.addHeader("Content-Type", "application/json");
-
-  StaticJsonDocument<200> doc;
-  doc["accessPointId"] = accessPointId;
-  doc["rfidCardId"] = uid;
-
-  String requestBody;
-  serializeJson(doc, requestBody);
-
-  int httpCode = http.POST(requestBody);
-  http.end();
-}
-
-void connectToWiFi() {
-  Serial.print("Conectando a WiFi...");
+void connectWiFi() {
+  Serial.print("Conectando a ");
+  Serial.println(ssid);
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nConexión Establecida.");
-  Serial.print("IP: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("\nWi-Fi Conectado");
+}
+
+void processAccess(String rfid) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+
+    StaticJsonDocument<200> doc;
+    doc["rfidCardId"] = rfid;
+    doc["accessPointId"] = accessPointId;
+    String requestBody;
+    serializeJson(doc, requestBody);
+
+    int httpResponseCode = http.POST(requestBody);
+
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println(response);
+
+      StaticJsonDocument<200> resDoc;
+      deserializeJson(resDoc, response);
+      const char* action = resDoc["action"]; // "open" o "deny"
+
+      if (String(action) == "open") {
+        grantAccess();
+      } else {
+        denyAccess();
+      }
+    } else {
+      Serial.print("Error en petición HTTP: ");
+      Serial.println(httpResponseCode);
+      errorFeedback();
+    }
+    http.end();
+  }
+}
+
+// --- EFECTOS DE HARDWARE OPTIMIZADOS PARA VOLUMEN ---
+
+void grantAccess() {
+  Serial.println(">>> ACCESO PERMITIDO");
+  digitalWrite(LED_GREEN, HIGH);
+  digitalWrite(RELAY_PIN, HIGH); 
+  
+  // Tono de éxito: 2.5kHz es muy audible para estos buzzers
+  tone(BUZZER, 2500); 
+  delay(300);
+  noTone(BUZZER);
+  
+  delay(2700); // Mantener 3 segundos el relé
+  digitalWrite(RELAY_PIN, LOW); 
+  digitalWrite(LED_GREEN, LOW);
+}
+
+void denyAccess() {
+  Serial.println(">>> ACCESO DENEGADO");
+  // Tono de error: Pulsos graves y fuertes
+  for (int i = 0; i < 3; i++) {
+    digitalWrite(LED_RED, HIGH);
+    tone(BUZZER, 800); // Tono más bajo para indicar error
+    delay(150);
+    digitalWrite(LED_RED, LOW);
+    noTone(BUZZER);
+    delay(100);
+  }
+}
+
+void errorFeedback() {
+  // Tono de sistema (Error de red)
+  digitalWrite(LED_RED, HIGH);
+  tone(BUZZER, 400, 1000); // Tono largo de advertencia
+  delay(1000);
+  digitalWrite(LED_RED, LOW);
 }
