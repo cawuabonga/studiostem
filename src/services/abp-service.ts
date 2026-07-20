@@ -3,6 +3,7 @@
 /**
  * @fileOverview Servicio especializado para la Metodología ABP (Aprendizaje Basado en Proyectos).
  * Maneja el diseño de retos, rúbricas y conformación de equipos de innovación.
+ * Importa la conexión 'db' desde el archivo principal para mantener la consistencia.
  */
 
 import { db } from '@/config/firebase';
@@ -58,7 +59,6 @@ export const createUnitProject = async (instituteId: string, unitId: string, dat
         const docRef = await addDoc(projectsCol, {
             ...data,
             createdAt: Timestamp.now(),
-            lastUpdate: Timestamp.now()
         });
         return docRef.id;
     } catch (error) {
@@ -73,10 +73,7 @@ export const createUnitProject = async (instituteId: string, unitId: string, dat
 export const updateUnitProject = async (instituteId: string, unitId: string, projectId: string, data: Partial<Project>): Promise<void> => {
     try {
         const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects', projectId);
-        await updateDoc(projectRef, {
-            ...data,
-            lastUpdate: Timestamp.now()
-        });
+        await updateDoc(projectRef, data);
     } catch (error) {
         console.error("Error al actualizar el proyecto ABP:", error);
         throw error;

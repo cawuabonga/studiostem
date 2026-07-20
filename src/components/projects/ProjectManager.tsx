@@ -8,13 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getUnitProjects, createUnitProject, updateUnitProject, deleteUnitProject, getProjectTeams } from '@/services/abp-service';
 import type { Unit, Project, ProjectTeam } from '@/types';
-import { Loader2, Save, Rocket, Plus, Trash2, CheckCircle2, Target, BookOpen, UserCheck, FileText, ArrowLeft, MoreVertical, Edit, Sparkles, LayoutGrid } from 'lucide-react';
+import { Loader2, Save, Rocket, Plus, Trash2, Target, BookOpen, UserCheck, FileText, ArrowLeft, MoreVertical, Edit, Sparkles, LayoutGrid } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Switch } from '../ui/switch';
 import { ProjectMentor } from './ProjectMentor';
@@ -152,8 +152,6 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
     };
 
     if (loading) return <div className="space-y-6"><Skeleton className="h-20 w-full" /><Skeleton className="h-96 w-full" /></div>;
-
-    // --- RENDERIZADO DE VISTAS ---
 
     if (view === 'create' || view === 'edit') {
         return (

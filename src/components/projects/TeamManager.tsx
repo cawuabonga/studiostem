@@ -9,7 +9,7 @@ import { getEnrolledStudentProfiles } from '@/config/firebase';
 import type { Unit, Project, ProjectTeam, StudentProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, Rocket, ShieldCheck } from 'lucide-react';
+import { Users, Plus, Rocket } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';

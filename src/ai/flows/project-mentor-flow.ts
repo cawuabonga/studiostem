@@ -18,6 +18,28 @@ const ProjectMentorInputSchema = z.object({
 });
 export type ProjectMentorInput = z.infer<typeof ProjectMentorInputSchema>;
 
+const projectMentorPrompt = ai.definePrompt({
+  name: 'projectMentorPrompt',
+  input: { schema: ProjectMentorInputSchema },
+  prompt: `Eres el "Mentor STEM", un asistente especializado en metodología ABP (Aprendizaje Basado en Proyectos).
+      Tu misión es guiar a los estudiantes en su reto académico sin darles la solución directamente.
+      
+      CONTEXTO DEL PROYECTO ACTUAL:
+      - Título: {{{projectTitle}}}
+      - Objetivo: {{{objective}}}
+      - Competencias: {{{competencies}}}
+      - Criterios de Evaluación (Rúbricas): {{{rubrics}}}
+
+      INSTRUCCIONES DE COMPORTAMIENTO:
+      1. Responde de forma motivadora y profesional.
+      2. Usa analogías técnicas si el proyecto es de ingeniería o fabricación.
+      3. Asegúrate de que tus sugerencias ayuden al alumno a cumplir con las rúbricas mencionadas arriba.
+      4. Si el alumno está atascado, sugiere pasos de investigación o experimentación física en el Fab Lab si aplica.
+      
+      CONSULTA DEL ALUMNO:
+      {{{userInput}}}`,
+});
+
 const projectMentorFlow = ai.defineFlow(
   {
     name: 'projectMentorFlow',
@@ -26,26 +48,11 @@ const projectMentorFlow = ai.defineFlow(
   },
   async (input) => {
     const model = await getActiveAIModel();
-    
-    console.log(`[MENTOR IA] Analizando consulta para el proyecto: ${input.projectTitle}`);
+    console.log(`[MENTOR IA] Procesando consulta para: ${input.projectTitle}`);
 
-    const {text} = await ai.generate({
+    const { text } = await ai.generate({
       model,
-      system: `Eres el "Mentor STEM", un asistente especializado en metodología ABP (Aprendizaje Basado en Proyectos).
-      Tu misión es guiar a los estudiantes en su reto académico sin darles la solución directamente.
-      
-      CONTEXTO DEL PROYECTO ACTUAL:
-      - Título: ${input.projectTitle}
-      - Objetivo: ${input.objective}
-      - Competencias: ${input.competencies}
-      - Criterios de Evaluación (Rúbricas): ${input.rubrics}
-
-      INSTRUCCIONES DE COMPORTAMIENTO:
-      1. Responde de forma motivadora y profesional.
-      2. Usa analogías técnicas si el proyecto es de ingeniería o fabricación.
-      3. Asegúrate de que tus sugerencias ayuden al alumno a cumplir con las rúbricas mencionadas arriba.
-      4. Si el alumno está atascado, sugiere pasos de investigación o experimentación física en el Fab Lab si aplica.`,
-      prompt: input.userInput,
+      prompt: projectMentorPrompt(input),
     });
     
     return text;
@@ -53,13 +60,15 @@ const projectMentorFlow = ai.defineFlow(
 );
 
 /**
- * Server Action wrapper.
+ * Server Action wrapper con reporte de errores mejorado.
  */
 export async function mentorProject(input: ProjectMentorInput): Promise<string> {
   try {
     return await projectMentorFlow(input);
   } catch (error: any) {
     console.error("[MENTOR FLOW ERROR]", error);
-    throw new Error("No se pudo conectar con el mentor de IA.");
+    // Devolvemos el error real para diagnóstico técnico en desarrollo
+    const details = error.message || "Error desconocido en el servidor de IA.";
+    throw new Error(`IA_SERVICE_ERROR: ${details}`);
   }
 }
