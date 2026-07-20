@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -80,7 +81,7 @@ const allNavItems: NavItem[] = [
 
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopyIcon, permission: 'teacher:unit:view' },
-    { href: '/dashboard/docente/carga-no-lectiva', label: 'Mi Carga No Lectiva', icon: ClipboardListIcon, permission: 'teacher:unit:view' },
+    { href: '/dashboard/docente/carga-no-lectiva', label: 'Mi Carga No Lectiva', icon: ClipboardListIcon, permission: 'teacher:workload:report' },
     { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPinIcon, permission: 'teacher:efsrt:supervise' },
 
     // Student & General Staff

@@ -460,6 +460,7 @@ export type Permission =
   | 'superadmin:observability:view'
   | 'teacher:unit:view'
   | 'teacher:efsrt:supervise'
+  | 'teacher:workload:report'
   | 'student:unit:view'
   | 'student:grades:view'
   | 'student:payments:manage'
@@ -539,6 +540,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
         permissions: [
             { id: 'teacher:unit:view', label: 'Ver sus Unidades Asignadas' },
             { id: 'teacher:efsrt:supervise', label: 'Supervisar Experiencias Formativas (EFSRT)' },
+            { id: 'teacher:workload:report', label: 'Reportar Horas No Lectivas' },
             { id: 'student:unit:view', label: 'Ver sus Unidades Matriculadas' },
             { id: 'student:grades:view', label: 'Ver sus Calificaciones' },
             { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
