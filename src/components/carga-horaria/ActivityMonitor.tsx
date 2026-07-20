@@ -42,8 +42,11 @@ export function ActivityMonitor() {
     const [teacherWorkload, setTeacherWorkload] = useState<NonTeachingAssignment[]>([]);
     const [loadingWorkload, setLoadingWorkload] = useState(false);
 
-    const isFullAdmin = hasPermission('academic:program:manage');
-    const coordinatorProgramId = user?.programId || (user as any)?.programId;
+    // LÓGICA DE FILTRADO POR PERFIL:
+    // Un administrador global es SuperAdmin o un Admin que NO tiene programa asignado.
+    // Un coordinador (o admin con programa) está restringido a su programa.
+    const userProgramId = user?.programId;
+    const isGlobalAdmin = user?.role === 'SuperAdmin' || (hasPermission('academic:program:manage') && !userProgramId);
 
     const fetchData = useCallback(async () => {
         if (!instituteId) return;
@@ -59,10 +62,13 @@ export function ActivityMonitor() {
                 .filter(r => r.name.toLowerCase() === 'docente' || r.name.toLowerCase() === 'coordinador')
                 .map(r => r.id);
 
-            // Filtrar personal que sean docentes/coordinadores y pertenezcan al programa (si no es full admin)
+            // Filtrar personal que sean docentes/coordinadores y pertenezcan al programa del usuario (si está restringido)
             const filteredStaff = fetchedStaff.filter(s => {
                 const hasRole = targetRoleIds.includes(s.roleId) || s.role === 'Teacher' || s.role === 'Coordinator';
-                const matchesProgram = isFullAdmin || s.programId === coordinatorProgramId;
+                
+                // Si no es admin global, forzamos que el programa del docente coincida con el del coordinador
+                const matchesProgram = isGlobalAdmin || s.programId === userProgramId;
+                
                 return hasRole && matchesProgram;
             });
 
@@ -74,7 +80,7 @@ export function ActivityMonitor() {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, isFullAdmin, coordinatorProgramId]);
+    }, [instituteId, isGlobalAdmin, userProgramId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -88,6 +94,7 @@ export function ActivityMonitor() {
         } catch (error) {
             console.error("Error loading teacher reports:", error);
         } finally {
+            setLoading(false);
             setLoadingWorkload(false);
         }
     };
@@ -107,10 +114,10 @@ export function ActivityMonitor() {
 
     return (
         <div className="space-y-6">
-            {/* Barra de Búsqueda */}
+            {/* Barra de Búsqueda y Contexto */}
             <Card className="border-primary/10 shadow-md rounded-2xl overflow-hidden">
-                <CardContent className="p-4">
-                    <div className="relative">
+                <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
+                    <div className="relative flex-1 w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input 
                             placeholder="Buscar docente por nombre o DNI..." 
@@ -119,6 +126,12 @@ export function ActivityMonitor() {
                             className="pl-11 h-12 border-none bg-muted/30 text-lg rounded-xl focus-visible:ring-primary/20"
                         />
                     </div>
+                    {!isGlobalAdmin && userProgramId && (
+                        <Badge variant="outline" className="h-12 px-4 rounded-xl border-primary/20 bg-primary/5 text-primary font-black uppercase text-[10px] tracking-widest">
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Filtrado por: {programs.find(p => p.id === userProgramId)?.name}
+                        </Badge>
+                    )}
                 </CardContent>
             </Card>
 
@@ -174,7 +187,9 @@ export function ActivityMonitor() {
                     <div className="col-span-full py-24 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
                         <Users className="h-16 w-16 mx-auto mb-4 opacity-10" />
                         <p className="font-bold uppercase tracking-widest">No se encontró personal docente</p>
-                        <p className="text-xs mt-2">Asegúrate de que los perfiles tengan asignado el rol correcto.</p>
+                        <p className="text-xs mt-2">
+                            {isGlobalAdmin ? "Intente con otro término de búsqueda." : "No hay docentes registrados en su programa de estudios."}
+                        </p>
                     </div>
                 )}
             </div>
@@ -305,4 +320,3 @@ export function ActivityMonitor() {
         </div>
     );
 }
-
