@@ -23,7 +23,8 @@ import {
     Download, 
     AlertCircle,
     CalendarDays,
-    Info
+    Info,
+    Send
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -185,7 +186,7 @@ export function NonTeachingWorkloadManager() {
                         </div>
 
                         <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl flex gap-3">
-                            <Info className="h-5 w-5 text-blue-600 shrink-0" />
+                            <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
                             <p className="text-[10px] text-blue-800 leading-tight">
                                 Este reporte será visible para tu Coordinador de Programa para la validación de cumplimiento de horas mensuales.
                             </p>
