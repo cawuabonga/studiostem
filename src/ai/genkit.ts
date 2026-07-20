@@ -13,46 +13,47 @@ export const ai = genkit({
     googleAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }),
     ollama(),
   ],
-  // Establecemos un modelo por defecto conservador
-  model: googleAI.model('gemini-2.0-flash'),
 });
 
 /**
  * Ayudante para obtener el modelo activo basado en la configuración guardada en Firestore.
- * Incluye logging mejorado para depuración.
+ * Incluye logging mejorado para depuración y evita fallbacks automáticos a Google si se eligió Ollama.
  */
 export async function getActiveAIModel() {
-    console.log("[CEREBRO IA] Consultando configuración activa...");
+    console.log("[CEREBRO IA] Consultando configuración activa en Firestore...");
     
     try {
         const config = await getAIConfig();
         
         if (!config) {
-            console.warn("[CEREBRO IA] No hay configuración en Firestore. Usando Google por defecto.");
+            console.warn("[CEREBRO IA] Sin configuración en DB. Usando Google Gemini como último recurso.");
             return googleAI.model('gemini-2.0-flash');
         }
 
-        console.log(`[CEREBRO IA] Proveedor configurado: ${config.activeProvider.toUpperCase()}`);
+        console.log(`[CEREBRO IA] Proveedor activo detectado: ${config.activeProvider.toUpperCase()}`);
 
         if (config.activeProvider === 'ollama') {
-            if (config.ollamaUrl) {
-                console.log(`[CEREBRO IA] MODO LOCAL. Conectando a Ollama: ${config.ollamaUrl}`);
+            if (config.ollamaUrl && config.ollamaUrl.trim() !== '') {
+                console.log(`[CEREBRO IA] MODO LOCAL. Conectando a Ollama en: ${config.ollamaUrl}`);
                 return ollama.model({
                     name: config.ollamaModel || 'llama3',
                     address: config.ollamaUrl,
                 });
             } else {
-                throw new Error("ERROR_CONFIG_OLLAMA: Has seleccionado Ollama pero la URL de ngrok está vacía.");
+                // Si el usuario eligió Ollama pero no puso URL, lanzamos un error explícito en lugar de saltar a Google
+                throw new Error("ERROR_CONFIG_OLLAMA: Has seleccionado Ollama como proveedor, pero la URL de ngrok está vacía en el panel de SuperAdmin.");
             }
         }
         
         console.log("[CEREBRO IA] MODO NUBE. Usando Google Gemini.");
+        return googleAI.model('gemini-2.0-flash');
+        
     } catch (error: any) {
-        console.error("[CEREBRO IA] Error crítico al seleccionar cerebro:", error.message);
-        // Si el error es de configuración manual del usuario, lo propagamos
+        console.error("[CEREBRO IA] Error crítico en selección de modelo:", error.message);
+        // Si es un error de configuración de Ollama, lo propagamos para que el usuario sepa qué arreglar
         if (error.message.includes("ERROR_CONFIG_OLLAMA")) throw error;
+        
+        // Solo en caso de error de lectura de base de datos usamos Google como fallback de emergencia
+        return googleAI.model('gemini-2.0-flash');
     }
-    
-    // Fallback final en caso de error inesperado
-    return googleAI.model('gemini-2.0-flash');
 }

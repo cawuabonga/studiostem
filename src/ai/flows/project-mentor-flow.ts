@@ -50,8 +50,6 @@ const projectMentorFlow = ai.defineFlow(
     const model = await getActiveAIModel();
     console.log(`[MENTOR IA] Procesando consulta para: ${input.projectTitle}`);
 
-    // CORRECCIÓN: Pasamos el modelo directamente al llamar al prompt definido.
-    // Llamar a projectMentorPrompt(input) sin opciones intentaba usar un modelo por defecto inexistente.
     const { text } = await projectMentorPrompt(input, { model });
     
     return text;
@@ -59,15 +57,26 @@ const projectMentorFlow = ai.defineFlow(
 );
 
 /**
- * Server Action wrapper con reporte de errores mejorado.
+ * Server Action wrapper con reporte de errores mejorado y detección de cuota agotada.
  */
 export async function mentorProject(input: ProjectMentorInput): Promise<string> {
   try {
     return await projectMentorFlow(input);
   } catch (error: any) {
     console.error("[MENTOR FLOW ERROR]", error);
-    // Devolvemos el error real para diagnóstico técnico en desarrollo
-    const details = error.message || "Error desconocido en el servidor de IA.";
-    throw new Error(`IA_SERVICE_ERROR: ${details}`);
+
+    const message = error.message || "";
+    
+    // Capturamos específicamente el error de cuota de Google
+    if (message.includes('RESOURCE_EXHAUSTED') || message.includes('429')) {
+      throw new Error("CUOTA_AGOTADA: El servicio de Google AI ha agotado sus créditos. Por favor, asegúrate de haber guardado Ollama como proveedor activo en el panel de SuperAdmin y que tu PC local esté encendida con ngrok.");
+    }
+
+    // Capturamos error de configuración de Ollama
+    if (message.includes('ERROR_CONFIG_OLLAMA')) {
+        throw new Error(message);
+    }
+    
+    throw new Error(`IA_SERVICE_ERROR: ${message || "Error desconocido en el servidor de IA."}`);
   }
 }
