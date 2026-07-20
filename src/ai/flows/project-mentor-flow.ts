@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM.
@@ -11,10 +10,10 @@ import {ai, getActiveAIModel} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ProjectMentorInputSchema = z.object({
-  projectTitle: z.string().describe('The title of the project.'),
-  objective: z.string().describe('Main goal of the project.'),
-  competencies: z.string().describe('Academic competencies involved.'),
-  rubrics: z.string().describe('The evaluation criteria/rubrics as text.'),
+  projectTitle: z.string().catch('Sin título').describe('The title of the project.'),
+  objective: z.string().catch('No definido').describe('Main goal of the project.'),
+  competencies: z.string().catch('No definidas').describe('Academic competencies involved.'),
+  rubrics: z.string().catch('No hay rúbricas').describe('The evaluation criteria/rubrics as text.'),
   userInput: z.string().describe('The student question or status update.'),
 });
 export type ProjectMentorInput = z.infer<typeof ProjectMentorInputSchema>;

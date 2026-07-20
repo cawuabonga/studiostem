@@ -41,16 +41,23 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
         setLoading(true);
 
         try {
+            // Sanitización de envío para evitar errores de validación en el servidor
             const response = await mentorProject({
-                projectTitle: project.title,
-                objective: project.objective,
-                competencies: project.competencies,
-                rubrics: project.rubrics.map(r => `${r.label}: ${r.description} (max ${r.maxPoints} pts)`).join(' | '),
+                projectTitle: project.title || 'Proyecto sin título',
+                objective: project.objective || 'Información no proporcionada por el docente.',
+                competencies: project.competencies || 'Información no proporcionada por el docente.',
+                rubrics: project.rubrics?.length > 0 
+                    ? project.rubrics.map(r => `${r.label}: ${r.description} (max ${r.maxPoints} pts)`).join(' | ')
+                    : 'Rúbricas no definidas aún.',
                 userInput: userMsg
             });
             setMessages(prev => [...prev, { role: 'bot', text: response }]);
-        } catch (error) {
-            setMessages(prev => [...prev, { role: 'bot', text: "Lo siento, mi motor neuronal está ocupado en el Fab Lab. Intenta de nuevo en un momento." }]);
+        } catch (error: any) {
+            console.error("[DEBUG] Chat Error:", error);
+            setMessages(prev => [...prev, { 
+                role: 'bot', 
+                text: "Lo siento, hubo un problema al procesar tu consulta. Asegúrate de que el docente haya completado todos los campos del proyecto (Objetivo y Competencias)." 
+            }]);
         } finally {
             setLoading(false);
         }

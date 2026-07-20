@@ -10,7 +10,7 @@ import {getAIConfig} from '@/config/firebase';
 
 export const ai = genkit({
   plugins: [
-    googleAI(),
+    googleAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }),
     ollama(),
   ],
 });
