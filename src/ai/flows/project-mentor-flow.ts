@@ -50,10 +50,9 @@ const projectMentorFlow = ai.defineFlow(
     const model = await getActiveAIModel();
     console.log(`[MENTOR IA] Procesando consulta para: ${input.projectTitle}`);
 
-    const { text } = await ai.generate({
-      model,
-      prompt: projectMentorPrompt(input),
-    });
+    // CORRECCIÓN: Pasamos el modelo directamente al llamar al prompt definido.
+    // Llamar a projectMentorPrompt(input) sin opciones intentaba usar un modelo por defecto inexistente.
+    const { text } = await projectMentorPrompt(input, { model });
     
     return text;
   }

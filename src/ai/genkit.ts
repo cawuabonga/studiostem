@@ -13,6 +13,8 @@ export const ai = genkit({
     googleAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }),
     ollama(),
   ],
+  // Establecemos un modelo por defecto para evitar errores si no se suministra uno explícitamente
+  model: googleAI.model('gemini-2.0-flash'),
 });
 
 /**
