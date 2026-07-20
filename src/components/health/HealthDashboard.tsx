@@ -102,7 +102,13 @@ export function HealthDashboard() {
             const student = await getStudentProfile(instituteId, searchTerm);
             if (student) {
                 setSelectedPatient({ profile: student, type: 'student' });
-                setMedicalData(student.medicalInfo || { allergies: [] });
+                setMedicalData(student.medicalInfo || { 
+                    allergies: [],
+                    chronicDiseases: '',
+                    permanentMedications: '',
+                    emergencyContactName: '',
+                    emergencyContactPhone: ''
+                });
                 const history = await getPatientConsultationHistory(instituteId, student.documentId);
                 setPatientHistory(history);
                 return;
@@ -111,7 +117,13 @@ export function HealthDashboard() {
             const staff = await getStaffProfileByDocumentId(instituteId, searchTerm);
             if (staff) {
                 setSelectedPatient({ profile: staff, type: 'staff' });
-                setMedicalData(staff.medicalInfo || { allergies: [] });
+                setMedicalData(staff.medicalInfo || { 
+                    allergies: [],
+                    chronicDiseases: '',
+                    permanentMedications: '',
+                    emergencyContactName: '',
+                    emergencyContactPhone: ''
+                });
                 const history = await getPatientConsultationHistory(instituteId, staff.documentId);
                 setPatientHistory(history);
                 return;
@@ -240,7 +252,7 @@ export function HealthDashboard() {
                                                 <AlertCircle className="h-4 w-4 text-amber-500 mb-1" />
                                                 <p className="text-[8px] font-black uppercase text-amber-400">Alergias</p>
                                                 <p className="text-[10px] font-bold text-amber-700 text-center leading-tight">
-                                                    {medicalFormData.allergies.length > 0 ? medicalFormData.allergies.join(', ') : 'Ninguna'}
+                                                    {medicalFormData.allergies && medicalFormData.allergies.length > 0 ? medicalFormData.allergies.join(', ') : 'Ninguna'}
                                                 </p>
                                             </div>
                                             <div className="p-3 rounded-2xl bg-blue-50 border border-blue-100 flex flex-col items-center justify-center">
@@ -337,7 +349,7 @@ export function HealthDashboard() {
                         <CardContent className="p-0">
                             <ScrollArea className="h-[600px]">
                                 <div className="p-4 space-y-3">
-                                    {recentGlobal.length > 0 ? recentGlobal.map(consult => (
+                                    {recentGlobal && recentGlobal.length > 0 ? recentGlobal.map(consult => (
                                         <div key={consult.id} className="p-4 bg-card rounded-2xl border hover:border-primary/20 transition-all shadow-sm">
                                             <div className="flex justify-between items-start mb-2">
                                                 <Badge variant="outline" className="text-[7px] font-black uppercase">{consult.patientRole}</Badge>
@@ -385,39 +397,39 @@ export function HealthDashboard() {
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 bg-muted/20 p-6 rounded-2xl border-2 border-dashed">
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase flex items-center gap-1"><Scale className="h-3 w-3" /> Peso (kg)</Label>
-                                <Input type="number" step="0.1" value={consultData.triage.weight} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, weight: parseFloat(e.target.value)}})} className="h-9 font-bold" />
+                                <Input type="number" step="0.1" value={consultData.triage.weight ?? 0} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, weight: parseFloat(e.target.value) || 0}})} className="h-9 font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase flex items-center gap-1">Talla (cm)</Label>
-                                <Input type="number" value={consultData.triage.height} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, height: parseInt(e.target.value)}})} className="h-9 font-bold" />
+                                <Input type="number" value={consultData.triage.height ?? 0} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, height: parseInt(e.target.value) || 0}})} className="h-9 font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase flex items-center gap-1"><Thermometer className="h-3 w-3" /> Temp (°C)</Label>
-                                <Input type="number" step="0.1" value={consultData.triage.temperature} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, temperature: parseFloat(e.target.value)}})} className="h-9 font-bold" />
+                                <Input type="number" step="0.1" value={consultData.triage.temperature ?? 0} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, temperature: parseFloat(e.target.value) || 0}})} className="h-9 font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase flex items-center gap-1">P.A.</Label>
-                                <Input placeholder="120/80" value={consultData.triage.bloodPressure} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, bloodPressure: e.target.value}})} className="h-9 font-bold" />
+                                <Input placeholder="120/80" value={consultData.triage.bloodPressure || ''} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, bloodPressure: e.target.value}})} className="h-9 font-bold" />
                             </div>
                             <div className="space-y-1">
                                 <Label className="text-[9px] font-black uppercase flex items-center gap-1">Pulso (bpm)</Label>
-                                <Input type="number" value={consultData.triage.heartRate} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, heartRate: parseInt(e.target.value)}})} className="h-9 font-bold" />
+                                <Input type="number" value={consultData.triage.heartRate ?? 0} onChange={e => setConsultData({...consultData, triage: {...consultData.triage, heartRate: parseInt(e.target.value) || 0}})} className="h-9 font-bold" />
                             </div>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="font-bold text-slate-700">Motivo de la Atención</Label>
-                                <Input value={consultData.reason} onChange={e => setConsultData({...consultData, reason: e.target.value})} placeholder="Ej: Dolor abdominal intenso, caída en taller..." className="h-11" />
+                                <Input value={consultData.reason || ''} onChange={e => setConsultData({...consultData, reason: e.target.value})} placeholder="Ej: Dolor abdominal intenso, caída en taller..." className="h-11" />
                             </div>
                             <div className="grid md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label className="font-bold text-slate-700">Diagnóstico Presuntivo</Label>
-                                    <Textarea rows={3} value={consultData.diagnosis} onChange={e => setConsultData({...consultData, diagnosis: e.target.value})} className="resize-none text-sm" />
+                                    <Textarea rows={3} value={consultData.diagnosis || ''} onChange={e => setConsultData({...consultData, diagnosis: e.target.value})} className="resize-none text-sm" />
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="font-bold text-slate-700">Tratamiento / Insumos Entregados</Label>
-                                    <Textarea rows={3} value={consultData.treatment} onChange={e => setConsultData({...consultData, treatment: e.target.value})} className="resize-none text-sm" placeholder="Ej: 01 Tableta Paracetamol 500mg..." />
+                                    <Textarea rows={3} value={consultData.treatment || ''} onChange={e => setConsultData({...consultData, treatment: e.target.value})} className="resize-none text-sm" placeholder="Ej: 01 Tableta Paracetamol 500mg..." />
                                 </div>
                             </div>
                         </div>
@@ -444,14 +456,14 @@ export function HealthDashboard() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label className="font-bold">Grupo Sanguíneo</Label>
-                                <Select value={medicalFormData.bloodType} onValueChange={v => setMedicalData({...medicalFormData, bloodType: v as BloodType})}>
+                                <Select value={medicalFormData.bloodType || ''} onValueChange={v => setMedicalData({...medicalFormData, bloodType: v as BloodType})}>
                                     <SelectTrigger><SelectValue placeholder="Elegir..." /></SelectTrigger>
                                     <SelectContent>{bloodTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label className="font-bold">Tipo de Seguro</Label>
-                                <Select value={medicalFormData.insuranceType} onValueChange={v => setMedicalData({...medicalFormData, insuranceType: v as InsuranceType})}>
+                                <Select value={medicalFormData.insuranceType || ''} onValueChange={v => setMedicalData({...medicalFormData, insuranceType: v as InsuranceType})}>
                                     <SelectTrigger><SelectValue placeholder="Elegir..." /></SelectTrigger>
                                     <SelectContent>{insuranceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                                 </Select>
@@ -459,18 +471,18 @@ export function HealthDashboard() {
                         </div>
                         <div className="space-y-2">
                             <Label className="font-bold text-red-600">Alergias Conocidas (Separe por comas)</Label>
-                            <Input placeholder="Ej: Penicilina, AINES, Mariscos..." value={medicalFormData.allergies.join(', ')} onChange={e => setMedicalData({...medicalFormData, allergies: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})} />
+                            <Input placeholder="Ej: Penicilina, AINES, Mariscos..." value={medicalFormData.allergies ? medicalFormData.allergies.join(', ') : ''} onChange={e => setMedicalData({...medicalFormData, allergies: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})} />
                         </div>
                         <div className="space-y-2">
                             <Label className="font-bold">Enfermedades Crónicas</Label>
-                            <Input value={medicalFormData.chronicDiseases} onChange={e => setMedicalData({...medicalFormData, chronicDiseases: e.target.value})} placeholder="Ej: Asma, Diabetes tipo 2..." />
+                            <Input value={medicalFormData.chronicDiseases || ''} onChange={e => setMedicalData({...medicalFormData, chronicDiseases: e.target.value})} placeholder="Ej: Asma, Diabetes tipo 2..." />
                         </div>
                         <Separator />
                         <div className="space-y-2">
                             <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Contacto de Emergencia</Label>
                             <div className="grid grid-cols-2 gap-2">
-                                <Input placeholder="Nombre" value={medicalFormData.emergencyContactName} onChange={e => setMedicalData({...medicalFormData, emergencyContactName: e.target.value})} />
-                                <Input placeholder="Teléfono" value={medicalFormData.emergencyContactPhone} onChange={e => setMedicalData({...medicalFormData, emergencyContactPhone: e.target.value})} />
+                                <Input placeholder="Nombre" value={medicalFormData.emergencyContactName || ''} onChange={e => setMedicalData({...medicalFormData, emergencyContactName: e.target.value})} />
+                                <Input placeholder="Teléfono" value={medicalFormData.emergencyContactPhone || ''} onChange={e => setMedicalData({...medicalFormData, emergencyContactPhone: e.target.value})} />
                             </div>
                         </div>
                     </div>
