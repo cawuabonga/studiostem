@@ -1,16 +1,16 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProjectTeams, saveProjectTeam, getEnrolledStudentProfiles, getUnitProject } from '@/config/firebase';
+import { getProjectTeams, saveProjectTeam } from '@/services/abp-service';
+import { getEnrolledStudentProfiles, getUnitProject } from '@/config/firebase';
 import type { Unit, Project, ProjectTeam, StudentProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, UserPlus, CheckCircle2, Shield, Trash2, MoreHorizontal, User, Rocket } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Users, Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
@@ -97,7 +97,7 @@ export function TeamManager({ unit }: TeamManagerProps) {
     if (!project) return (
         <Card className="border-2 border-dashed">
             <CardContent className="py-12 text-center text-muted-foreground">
-                <Rocket className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-20" />
                 <p>Primero debe configurar el Proyecto de Innovación para crear equipos.</p>
             </CardContent>
         </Card>
@@ -148,7 +148,6 @@ export function TeamManager({ unit }: TeamManagerProps) {
                 ))}
             </div>
 
-            {/* Dialog: Crear Equipo */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-xl rounded-2xl p-0 overflow-hidden">
                     <DialogHeader className="p-6 bg-primary text-primary-foreground shrink-0">

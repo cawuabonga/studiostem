@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,9 +12,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { getUnitProject, saveUnitProject } from '@/config/firebase';
-import type { Unit, Project, ProjectVisibility, RubricCriteria } from '@/types';
-import { Loader2, Save, Rocket, Globe, Shield, Plus, Trash2, CheckCircle2, MessageSquare, Info } from 'lucide-react';
+import { getUnitProject, saveUnitProject } from '@/services/abp-service';
+import type { Unit, Project } from '@/types';
+import { Loader2, Save, Rocket, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Switch } from '../ui/switch';
 import { ProjectMentor } from './ProjectMentor';
@@ -87,7 +87,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
         if (!instituteId || !user) return;
         setIsSaving(true);
         try {
-            const projectId = await saveUnitProject(instituteId, unit.id, {
+            await saveUnitProject(instituteId, unit.id, {
                 ...data,
                 unitId: unit.id,
                 instituteId,
@@ -117,7 +117,6 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Columna Principal: Configuración o Información */}
             <div className="lg:col-span-8 space-y-6">
                 {isTeacher ? (
                     <Card className="border-t-4 border-t-primary shadow-xl">
@@ -236,7 +235,6 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                 )}
             </div>
 
-            {/* Columna Lateral: Mentor IA */}
             <div className="lg:col-span-4">
                 <ProjectMentor unit={unit} project={project} />
             </div>
