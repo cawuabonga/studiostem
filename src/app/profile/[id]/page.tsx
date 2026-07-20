@@ -7,7 +7,7 @@ import type { StaffProfile, StudentProfile, Unit, Program, EFSRTAssignment, Matr
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Building, BookOpen, Briefcase, GraduationCap, Share2, Mail, MapPin, Globe, Linkedin, Github, CheckCircle2, Award, Calendar, ExternalLink, Printer, Star, UserCircle, Phone, Facebook, Instagram, Download, FileText, HeartPulse, Droplet, AlertCircle } from 'lucide-react';
+import { Building, BookOpen, Briefcase, GraduationCap, Share2, Mail, MapPin, Globe, Linkedin, Github, CheckCircle2, Award, Calendar, ExternalLink, Printer, Star, UserCircle, Phone, Facebook, Instagram, Download, FileText, HeartPulse, Droplet, AlertCircle, ShieldCheck, PhoneCall } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -254,7 +254,7 @@ export default function PublicProfilePage() {
                     )}
 
                     {/* Ficha Médica Preventiva (Public) */}
-                    {medicalInfo && (medicalInfo.bloodType || (medicalInfo.allergies && medicalInfo.allergies.length > 0)) && (
+                    {medicalInfo && (medicalInfo.bloodType || (medicalInfo.allergies && medicalInfo.allergies.length > 0) || medicalInfo.emergencyContactPhone) && (
                         <Card className="rounded-3xl border-none shadow-lg card-widget bg-red-50/30 border border-red-100/50">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-red-600 flex items-center gap-2">
@@ -262,15 +262,27 @@ export default function PublicProfilePage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {medicalInfo.bloodType && (
-                                    <div className="flex items-center gap-4 p-3 rounded-2xl bg-white border border-red-100 shadow-sm">
-                                        <div className="p-2.5 bg-red-50 rounded-xl text-red-600"><Droplet className="h-5 w-5" /></div>
-                                        <div>
-                                            <p className="text-[9px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Grupo Sanguíneo</p>
-                                            <p className="text-sm font-black text-red-700">{medicalInfo.bloodType}</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {medicalInfo.bloodType && (
+                                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-red-100 shadow-sm">
+                                            <div className="p-2 bg-red-50 rounded-lg text-red-600"><Droplet className="h-4 w-4" /></div>
+                                            <div>
+                                                <p className="text-[7px] font-black text-red-400 uppercase tracking-widest leading-none mb-1">Grupo</p>
+                                                <p className="text-xs font-black text-red-700">{medicalInfo.bloodType}</p>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
+                                    {medicalInfo.insuranceType && (
+                                        <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white border border-blue-100 shadow-sm">
+                                            <div className="p-2 bg-blue-50 rounded-lg text-blue-600"><ShieldCheck className="h-4 w-4" /></div>
+                                            <div>
+                                                <p className="text-[7px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Seguro</p>
+                                                <p className="text-xs font-black text-blue-700 uppercase">{medicalInfo.insuranceType}</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {medicalInfo.allergies && medicalInfo.allergies.length > 0 && (
                                     <div className="flex items-center gap-4 p-3 rounded-2xl bg-white border border-amber-100 shadow-sm">
                                         <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600"><AlertCircle className="h-5 w-5" /></div>
@@ -282,8 +294,23 @@ export default function PublicProfilePage() {
                                         </div>
                                     </div>
                                 )}
+
+                                {medicalInfo.emergencyContactPhone && (
+                                    <a 
+                                        href={`tel:${medicalInfo.emergencyContactPhone}`}
+                                        className="flex items-center gap-4 p-3 rounded-2xl bg-red-600 text-white shadow-xl shadow-red-600/20 hover:bg-red-700 transition-all group no-print"
+                                    >
+                                        <div className="p-2.5 bg-white/20 rounded-xl group-hover:scale-110 transition-transform"><PhoneCall className="h-5 w-5" /></div>
+                                        <div className="min-w-0">
+                                            <p className="text-[8px] font-black text-red-100 uppercase tracking-widest leading-none mb-1">Contacto Emergencia (Llamar)</p>
+                                            <p className="text-xs font-black truncate">{medicalInfo.emergencyContactName || 'Llamar ahora'}</p>
+                                            <p className="text-[10px] font-mono opacity-80">{medicalInfo.emergencyContactPhone}</p>
+                                        </div>
+                                    </a>
+                                )}
+                                
                                 <p className="text-[8px] text-center text-red-400/80 font-bold uppercase leading-tight italic">
-                                    Información preventia para primeros auxilios institucionales.
+                                    Información preventiva para primeros auxilios institucionales.
                                 </p>
                             </CardContent>
                         </Card>
