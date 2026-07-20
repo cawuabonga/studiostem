@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Flow para la generación de sumillas académicas con Reintento Automático.
+ * @fileOverview Flow para la generación de sumillas académicas con Orquestación Dual.
  */
 
 import {ai, getAIModelsWithFailover} from '@/ai/genkit';
@@ -12,7 +12,7 @@ const GenerateSyllabusSummaryInputSchema = z.object({
 export type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
 
 /**
- * Función pública con lógica de reintento secuencial para generación de sumillas.
+ * Función pública con lógica de reintento secuencial obligatorio entre Google y Ollama.
  */
 export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
   const { primary, fallback } = await getAIModelsWithFailover();
@@ -21,25 +21,26 @@ export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInpu
 
   let lastError = null;
 
-  // Intento 1
+  // Intento 1: Proveedor principal
   try {
     const { text } = await ai.generate({ model: primary, prompt: promptText });
     if (text) return text;
   } catch (error: any) {
     lastError = error;
-    console.warn(`[SYLLABUS IA] Falló Intento 1: ${error.message}`);
+    console.warn(`[SYLLABUS IA] Falló proveedor 1: ${error.message}`);
   }
 
-  // Intento 2 (Fallback)
+  // Intento 2: Proveedor de respaldo (Si está configurado)
   if (fallback) {
     try {
-      console.log(`[SYLLABUS IA] Reintentando con proveedor de respaldo...`);
+      console.log(`[SYLLABUS IA] Reintentando con motor de respaldo...`);
       const { text } = await ai.generate({ model: fallback, prompt: promptText });
       if (text) return text;
     } catch (error: any) {
         lastError = error;
+        console.error(`[SYLLABUS IA] Falló motor de respaldo: ${error.message}`);
     }
   }
 
-  throw new Error(lastError?.message || "Error al procesar la solicitud de IA.");
+  throw new Error(lastError?.message || "Error total en el sistema de IA.");
 }

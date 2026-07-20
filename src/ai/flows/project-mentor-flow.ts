@@ -1,9 +1,9 @@
 'use server';
 /**
- * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM.
+ * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM con Orquestación Dual.
  * 
- * - mentorProject: Función que guía al alumno basándose en el contexto dinámico del proyecto.
- * - ProjectMentorInput: Interfaz para el contexto inyectado (objetivos, rúbricas, entrada).
+ * Este módulo intenta obtener una respuesta de los proveedores disponibles de forma secuencial.
+ * Si el proveedor primario falla (ej. cuota agotada de Google), salta automáticamente al secundario (Ollama).
  */
 
 import {ai, getAIModelsWithFailover} from '@/ai/genkit';
@@ -41,39 +41,39 @@ const projectMentorPrompt = ai.definePrompt({
 });
 
 /**
- * Server Action wrapper con Lógica de Orquestación Dual.
- * Intenta secuencialmente los modelos disponibles (Google / Ollama) para garantizar alta disponibilidad.
+ * Server Action con Lógica de Resiliencia Total.
+ * Intenta los modelos disponibles sin importar la configuración activa si ocurre un error.
  */
 export async function mentorProject(input: ProjectMentorInput): Promise<string> {
   const { primary, fallback } = await getAIModelsWithFailover();
   
-  console.log(`[MENTOR IA] Iniciando consulta con orquestación dual...`);
   let lastError = null;
 
-  // INTENTO 1: Proveedor Preferido (Configurado por el SuperAdmin)
+  // INTENTO 1: Modelo Preferido
   try {
+    console.log(`[CEREBRO IA] Intentando con proveedor primario...`);
     const { text } = await projectMentorPrompt(input, { model: primary });
     if (text) return text;
   } catch (error: any) {
     lastError = error;
-    console.warn(`[MENTOR IA] Intento 1 falló (${error.message}). Probando respaldo...`);
+    console.warn(`[CEREBRO IA] Falló proveedor primario: ${error.message}`);
   }
 
-  // INTENTO 2: Proveedor de Respaldo (Si existe configuración de Ollama)
+  // INTENTO 2: Modelo de Respaldo (Si existe)
   if (fallback) {
     try {
-      console.log(`[MENTOR IA] Ejecutando respaldo local...`);
+      console.log(`[CEREBRO IA] Saltando a proveedor de respaldo automático...`);
       const { text } = await projectMentorPrompt(input, { model: fallback });
       if (text) {
-          return "*(Nota: Respuesta generada por el servidor local de respaldo)* \n\n" + text;
+        return "*(Nota: Respuesta generada por el motor de respaldo institucional)* \n\n" + text;
       }
     } catch (error: any) {
-      console.error(`[MENTOR IA] El respaldo también falló: ${error.message}`);
+      console.error(`[CEREBRO IA] El respaldo también falló: ${error.message}`);
       lastError = error;
     }
   }
 
-  // Si ambos fallan, devolvemos un error descriptivo
-  const finalError = lastError?.message || "Servicios de IA no disponibles.";
-  throw new Error(`IA_SERVICE_ERROR: ${finalError}`);
+  // Si llegamos aquí es que nada funcionó
+  const errorDetails = lastError?.message || "Servicios de IA no disponibles en este momento.";
+  throw new Error(`IA_SYSTEM_FAILURE: ${errorDetails}`);
 }
