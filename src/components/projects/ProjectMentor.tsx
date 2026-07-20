@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Sparkles, Send, Loader2, User, Bot, Rocket, Info } from 'lucide-react';
+import { MessageSquare, Sparkles, Send, Loader2, User, Bot, Rocket, Info, Cpu, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Unit, Project } from '@/types';
 import { Input } from '../ui/input';
 import { mentorProject } from '@/ai/flows/project-mentor-flow';
+import { Badge } from '../ui/badge';
 
 interface ProjectMentorProps {
     unit: Unit;
@@ -16,11 +17,11 @@ interface ProjectMentorProps {
 }
 
 export function ProjectMentor({ unit, project }: ProjectMentorProps) {
-    const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([]);
+    const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string, provider?: string }[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [activeProviderName, setActiveProviderName] = useState<string>('Detectando...');
 
-    // Reiniciar chat cuando el proyecto se publica o cambia
     useEffect(() => {
         setMessages([
             { 
@@ -41,22 +42,27 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
         setLoading(true);
 
         try {
-            // Sanitización de envío para evitar errores de validación en el servidor
             const response = await mentorProject({
                 projectTitle: project.title || 'Proyecto sin título',
-                objective: project.objective || 'Información no proporcionada por el docente.',
-                competencies: project.competencies || 'Información no proporcionada por el docente.',
+                objective: project.objective || 'Información no proporcionada.',
+                competencies: project.competencies || 'Información no proporcionada.',
                 rubrics: project.rubrics?.length > 0 
-                    ? project.rubrics.map(r => `${r.label}: ${r.description} (max ${r.maxPoints} pts)`).join(' | ')
-                    : 'Rúbricas no definidas aún.',
+                    ? project.rubrics.map(r => `${r.label}: ${r.description}`).join(' | ')
+                    : 'Rúbricas no definidas.',
                 userInput: userMsg
             });
-            setMessages(prev => [...prev, { role: 'bot', text: response }]);
+
+            setActiveProviderName(response.provider);
+            setMessages(prev => [...prev, { 
+                role: 'bot', 
+                text: response.text,
+                provider: response.provider 
+            }]);
         } catch (error: any) {
             console.error("[DEBUG] Chat Error:", error);
             setMessages(prev => [...prev, { 
                 role: 'bot', 
-                text: "Lo siento, hubo un problema al procesar tu consulta. Asegúrate de que el docente haya completado todos los campos del proyecto (Objetivo y Competencias)." 
+                text: "Error: El motor de IA configurado por el administrador no está respondiendo. Por favor, contacte a soporte técnico." 
             }]);
         } finally {
             setLoading(false);
@@ -66,13 +72,23 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
     return (
         <Card className="h-[700px] flex flex-col border-none shadow-2xl rounded-3xl overflow-hidden bg-gradient-to-b from-slate-50 to-white">
             <CardHeader className="bg-primary p-6 text-primary-foreground shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
-                        <Sparkles className="h-6 w-6 text-accent" />
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+                            <Sparkles className="h-6 w-6 text-accent" />
+                        </div>
+                        <div>
+                            <CardTitle className="text-xl font-black uppercase tracking-tight">Mentor STEM</CardTitle>
+                            <CardDescription className="text-primary-foreground/70 text-xs font-bold uppercase tracking-widest">Guía ABP Especializada</CardDescription>
+                        </div>
                     </div>
-                    <div>
-                        <CardTitle className="text-xl font-black uppercase tracking-tight">Mentor STEM</CardTitle>
-                        <CardDescription className="text-primary-foreground/70 text-xs font-bold uppercase tracking-widest">Guía Académica Especializada</CardDescription>
+                    {/* SEÑAL DE IA ACTIVA */}
+                    <div className="flex flex-col items-end gap-1">
+                        <Badge variant="outline" className="bg-white/10 border-white/20 text-white text-[9px] font-black uppercase tracking-widest px-3 py-1">
+                            {activeProviderName.includes('Ollama') ? <Cpu className="h-3 w-3 mr-1.5 text-orange-400" /> : <Globe className="h-3 w-3 mr-1.5 text-blue-400" />}
+                            Motor: {activeProviderName}
+                        </Badge>
+                        <span className="text-[8px] font-bold opacity-40 uppercase tracking-tighter">Respetando Config. SuperAdmin</span>
                     </div>
                 </div>
             </CardHeader>
@@ -84,11 +100,16 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
                                 <div className={cn("h-8 w-8 rounded-full flex items-center justify-center shrink-0 shadow-sm", m.role === 'user' ? "bg-primary text-white" : "bg-accent text-accent-foreground")}>
                                     {m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                                 </div>
-                                <div className={cn(
-                                    "p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed shadow-sm animate-in fade-in slide-in-from-bottom-2",
-                                    m.role === 'user' ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white border rounded-tl-none text-slate-700"
-                                )}>
-                                    {m.text}
+                                <div className="space-y-1 max-w-[85%]">
+                                    <div className={cn(
+                                        "p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-sm animate-in fade-in slide-in-from-bottom-2",
+                                        m.role === 'user' ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white border rounded-tl-none text-slate-700"
+                                    )}>
+                                        {m.text}
+                                    </div>
+                                    {m.provider && (
+                                        <p className="text-[8px] font-bold text-muted-foreground uppercase px-2">Generado por {m.provider}</p>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -117,7 +138,7 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
                     </div>
                     {project && (
                         <div className="mt-4 flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground tracking-widest justify-center">
-                            <Info className="h-3 w-3" /> Contexto Activo: {project.title}
+                            <Info className="h-3 w-3" /> Proyecto: {project.title}
                         </div>
                     )}
                 </div>

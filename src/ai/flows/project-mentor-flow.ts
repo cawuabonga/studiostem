@@ -1,22 +1,29 @@
 'use server';
 /**
- * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM con Orquestación Dual.
- * 
- * Este módulo intenta obtener una respuesta de los proveedores disponibles de forma secuencial.
- * Si el proveedor primario falla (ej. cuota agotada de Google), salta automáticamente al secundario (Ollama).
+ * @fileOverview Flow para el Mentor Inteligente de Proyectos STEM.
+ * Respeta estrictamente el proveedor de IA configurado por el SuperAdmin.
  */
 
-import {ai, getAIModelsWithFailover} from '@/ai/genkit';
+import {ai, getActiveAIConfig} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ProjectMentorInputSchema = z.object({
-  projectTitle: z.string().catch('Sin título').describe('The title of the project.'),
-  objective: z.string().catch('No definido').describe('Main goal of the project.'),
-  competencies: z.string().catch('No definidas').describe('Academic competencies involved.'),
-  rubrics: z.string().catch('No hay rúbricas').describe('The evaluation criteria/rubrics as text.'),
-  userInput: z.string().describe('The student question or status update.'),
+  projectTitle: z.string().catch('Sin título'),
+  objective: z.string().catch('No definido'),
+  competencies: z.string().catch('No definidas'),
+  rubrics: z.string().catch('No hay rúbricas'),
+  userInput: z.string(),
 });
 export type ProjectMentorInput = z.infer<typeof ProjectMentorInputSchema>;
+
+/**
+ * Esquema de salida que incluye el texto generado y el nombre del proveedor utilizado.
+ */
+const ProjectMentorOutputSchema = z.object({
+  text: z.string(),
+  provider: z.string(),
+});
+export type ProjectMentorOutput = z.infer<typeof ProjectMentorOutputSchema>;
 
 const projectMentorPrompt = ai.definePrompt({
   name: 'projectMentorPrompt',
@@ -41,39 +48,20 @@ const projectMentorPrompt = ai.definePrompt({
 });
 
 /**
- * Server Action con Lógica de Resiliencia Total.
- * Intenta los modelos disponibles sin importar la configuración activa si ocurre un error.
+ * Server Action que ejecuta la petición al modelo configurado.
  */
-export async function mentorProject(input: ProjectMentorInput): Promise<string> {
-  const { primary, fallback } = await getAIModelsWithFailover();
+export async function mentorProject(input: ProjectMentorInput): Promise<ProjectMentorOutput> {
+  const { model, providerName } = await getActiveAIConfig();
   
-  let lastError = null;
-
-  // INTENTO 1: Modelo Preferido
   try {
-    console.log(`[CEREBRO IA] Intentando con proveedor primario...`);
-    const { text } = await projectMentorPrompt(input, { model: primary });
-    if (text) return text;
+    const { text } = await projectMentorPrompt(input, { model });
+    return {
+        text: text || "No se pudo generar una respuesta.",
+        provider: providerName
+    };
   } catch (error: any) {
-    lastError = error;
-    console.warn(`[CEREBRO IA] Falló proveedor primario: ${error.message}`);
+    console.error("[MENTOR FLOW ERROR]", error);
+    // Lanza el error original para que el frontend sepa que ese motor falló (ej. cuota agotada)
+    throw new Error(`IA_SYSTEM_FAILURE: ${error.message}`);
   }
-
-  // INTENTO 2: Modelo de Respaldo (Si existe)
-  if (fallback) {
-    try {
-      console.log(`[CEREBRO IA] Saltando a proveedor de respaldo automático...`);
-      const { text } = await projectMentorPrompt(input, { model: fallback });
-      if (text) {
-        return "*(Nota: Respuesta generada por el motor de respaldo institucional)* \n\n" + text;
-      }
-    } catch (error: any) {
-      console.error(`[CEREBRO IA] El respaldo también falló: ${error.message}`);
-      lastError = error;
-    }
-  }
-
-  // Si llegamos aquí es que nada funcionó
-  const errorDetails = lastError?.message || "Servicios de IA no disponibles en este momento.";
-  throw new Error(`IA_SYSTEM_FAILURE: ${errorDetails}`);
 }

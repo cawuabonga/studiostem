@@ -1,9 +1,10 @@
 'use server';
 /**
- * @fileOverview Flow para la generación de sumillas académicas con Orquestación Dual.
+ * @fileOverview Flow para la generación de sumillas académicas.
+ * Respeta el proveedor seleccionado por el SuperAdmin sin fallbacks.
  */
 
-import {ai, getAIModelsWithFailover} from '@/ai/genkit';
+import {ai, getActiveAIConfig} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const GenerateSyllabusSummaryInputSchema = z.object({
@@ -12,35 +13,18 @@ const GenerateSyllabusSummaryInputSchema = z.object({
 export type GenerateSyllabusSummaryInput = z.infer<typeof GenerateSyllabusSummaryInputSchema>;
 
 /**
- * Función pública con lógica de reintento secuencial obligatorio entre Google y Ollama.
+ * Función pública que utiliza el motor de IA activo.
  */
 export async function generateSyllabusSummary(input: GenerateSyllabusSummaryInput): Promise<string> {
-  const { primary, fallback } = await getAIModelsWithFailover();
+  const { model } = await getActiveAIConfig();
   
   const promptText = `Eres un experto diseñador de currículos académicos. Genera una sumilla concisa y profesional para una unidad didáctica titulada "${input.unitName}". La sumilla debe describir la naturaleza, propósito y contenido principal de la unidad. El resultado debe ser únicamente el texto de la sumilla, sin títulos ni introducciones.`;
 
-  let lastError = null;
-
-  // Intento 1: Proveedor principal
   try {
-    const { text } = await ai.generate({ model: primary, prompt: promptText });
-    if (text) return text;
+    const { text } = await ai.generate({ model, prompt: promptText });
+    return text || "No se pudo generar la sumilla.";
   } catch (error: any) {
-    lastError = error;
-    console.warn(`[SYLLABUS IA] Falló proveedor 1: ${error.message}`);
+    console.error("[SYLLABUS IA ERROR]", error);
+    throw new Error(`Error en el motor de IA configurado: ${error.message}`);
   }
-
-  // Intento 2: Proveedor de respaldo (Si está configurado)
-  if (fallback) {
-    try {
-      console.log(`[SYLLABUS IA] Reintentando con motor de respaldo...`);
-      const { text } = await ai.generate({ model: fallback, prompt: promptText });
-      if (text) return text;
-    } catch (error: any) {
-        lastError = error;
-        console.error(`[SYLLABUS IA] Falló motor de respaldo: ${error.message}`);
-    }
-  }
-
-  throw new Error(lastError?.message || "Error total en el sistema de IA.");
 }
