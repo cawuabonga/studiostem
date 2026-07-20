@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Permission } from '@/types';
 
-// Using icons directly from lucide-react
 import { 
   Home as HomeIcon, 
   Users as UsersIcon, 
@@ -45,7 +44,8 @@ import {
   History as HistoryIcon,
   BarChart3 as BarChart3Icon,
   ClipboardList as ClipboardListIcon,
-  Files as FilesIcon
+  Files as FilesIcon,
+  Stethoscope as StethoscopeIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -74,11 +74,12 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/gestion-academica/monitor-actividades', label: 'Monitor de Actividades', icon: FilesIcon, permission: 'academic:workload:monitor' },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClockIcon, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCardIcon, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
+    { href: '/dashboard/gestion-administrativa/topico', label: 'Tópico y Salud', icon: StethoscopeIcon, permission: 'admin:health:manage' },
     { href: '/dashboard/gestion-administrativa/bolsa-laboral/monitor', label: 'Monitor de Empleos', icon: MonitorIcon, permission: 'admin:jobs:monitor' },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: FingerprintIcon, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: UsersIcon, permission: ['users:staff:manage', 'users:student:manage'] },
     
-    // Bolsa Laboral (Visible para Alumnos, Egresados y Empresas)
+    // Bolsa Laboral
     { href: '/dashboard/bolsa-laboral', label: 'Bolsa de Trabajo', icon: BriefcaseBusinessIcon, permission: ['student:jobs:view', 'graduate:jobs:view', 'company:jobs:manage'] },
 
     // Teacher
@@ -94,7 +95,6 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/solicitar-insumos', label: 'Solicitar Insumos', icon: PencilIcon, permission: 'user:supplies:request' },
     { href: '/dashboard/mis-pedidos', label: 'Mis Pedidos de Insumos', icon: PackageIcon, permission: 'user:supplies:request' },
 ];
-
 
 export function AppSidebarContents() {
   const { user, institute, hasPermission } = useAuth();

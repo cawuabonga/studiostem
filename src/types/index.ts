@@ -11,6 +11,45 @@ export interface SocialLinks {
     web?: string;
 }
 
+// --- Salud y Tópico ---
+
+export type BloodType = 'O+' | 'O-' | 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-';
+export type InsuranceType = 'SIS' | 'EsSalud' | 'Privado' | 'Ninguno';
+
+export interface MedicalInfo {
+    bloodType?: BloodType;
+    allergies: string[];
+    chronicDiseases?: string;
+    permanentMedications?: string;
+    insuranceType?: InsuranceType;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    lastUpdate?: Timestamp;
+}
+
+export interface MedicalConsultation {
+    id: string;
+    patientId: string; // DNI
+    patientName: string;
+    patientRole: string;
+    date: Timestamp;
+    reason: string;
+    triage: {
+        weight?: number; // kg
+        height?: number; // cm
+        temperature?: number; // °C
+        bloodPressure?: string; // 120/80
+        heartRate?: number; // bpm
+    };
+    diagnosis: string;
+    treatment: string;
+    medicationsDelivered?: string;
+    responsibleId: string; // UID del médico/enfermero
+    responsibleName: string;
+}
+
+// --- Fin Salud ---
+
 export interface AppUser {
   uid: string;
   email: string | null;
@@ -31,7 +70,8 @@ export interface AppUser {
   socialLinks?: SocialLinks;
   coverImageUrl?: string;
   cvUrl?: string; 
-  badges?: string[]; // IDs de insignias obtenidas
+  badges?: string[]; 
+  medicalInfo?: MedicalInfo;
 }
 
 export type StudentAcademicStatus = 'Cursando' | 'Egresado' | 'Titulado' | 'Retirado';
@@ -66,7 +106,8 @@ export interface StudentProfile {
   bio?: string;
   skills?: string[];
   socialLinks?: SocialLinks;
-  innovationPoints?: number; // Puntos para el ranking
+  innovationPoints?: number;
+  medicalInfo?: MedicalInfo;
 }
 
 export interface StaffProfile {
@@ -85,6 +126,7 @@ export interface StaffProfile {
   bio?: string;
   skills?: string[];
   socialLinks?: SocialLinks;
+  medicalInfo?: MedicalInfo;
 }
 
 export interface CompanyProfile {
@@ -106,7 +148,7 @@ export interface CompanyProfile {
     instituteId: string;
 }
 
-// --- ABP / PBL (Aprendizaje Basado en Proyectos) ---
+// --- ABP / PBL ---
 
 export interface RubricCriteria {
     id: string;
@@ -155,7 +197,7 @@ export interface ProjectEvidence {
     submittedAt: Timestamp;
     grade?: number;
     feedback?: string;
-    fabLabValidated?: boolean; // Validado por el encargado de FabLab
+    fabLabValidated?: boolean; 
 }
 
 // --- Fin ABP ---
@@ -387,7 +429,6 @@ export interface NonTeachingAssignment {
     assignedHours: number;
     year: string;
     period: UnitPeriod;
-    // New fields for FabLab and general evidence
     evidenceUrls?: string[];
     evidenceDescription?: string;
     lastUpdate?: Timestamp;
@@ -446,6 +487,7 @@ export type Permission =
   | 'admin:deliveries:view'
   | 'admin:companies:manage'
   | 'admin:jobs:monitor'
+  | 'admin:health:manage'
   | 'users:staff:manage'
   | 'users:student:manage'
   | 'planning:schedule:manage'
@@ -453,6 +495,7 @@ export type Permission =
   | 'planning:schedule:view:own'
   | 'user:supplies:request'
   | 'user:access:view:own'
+  | 'user:medical:view:own'
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
   | 'superadmin:design:manage'
@@ -501,6 +544,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:deliveries:view', label: 'Ver Entregas (PECOSAS)' },
             { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
             { id: 'admin:jobs:monitor', label: 'Monitorear Ofertas Laborales' },
+            { id: 'admin:health:manage', label: 'Gestionar Tópico y Salud Institucional' },
         ],
     },
     {
@@ -549,6 +593,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
             { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
+            { id: 'user:medical:view:own', label: 'Ver Mi Historial Médico' },
         ],
     },
      {
