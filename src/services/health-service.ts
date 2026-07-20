@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -93,6 +92,7 @@ export const registerConsultation = async (
 
 /**
  * Obtiene el historial de consultas de un paciente.
+ * Se ordena en el cliente para evitar requerir índices compuestos inmediatos.
  */
 export const getPatientConsultationHistory = async (
     instituteId: string,
@@ -100,13 +100,19 @@ export const getPatientConsultationHistory = async (
 ): Promise<MedicalConsultation[]> => {
     try {
         const colRef = collection(db, 'institutes', instituteId, 'medicalConsultations');
+        
+        // Consulta simplificada para evitar errores de índice
         const q = query(
             colRef,
-            where('patientId', '==', patientId),
-            orderBy('date', 'desc')
+            where('patientId', '==', patientId)
         );
+        
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalConsultation));
+        const consultations = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MedicalConsultation));
+        
+        // Ordenamiento en el cliente (fecha descendente)
+        return consultations.sort((a, b) => b.date.toMillis() - a.date.toMillis());
+        
     } catch (error) {
         console.error("Error al obtener historial de consultas:", error);
         return [];
