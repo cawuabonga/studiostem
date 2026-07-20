@@ -1,165 +1,195 @@
-/**
- * STEM V2 - SISTEMA DE CONTROL DE ACCESO IOT
- * Hardware: ESP32 + MFRC522 + Relé + Buzzer + LEDs
+/*
+ * STEM V2 - Control de Acceso con Validación en el Borde (Edge Validation)
+ * Hardware: ESP32 + RC522 RFID + Relé
  * 
- * Dependencias (Instalar desde el Gestor de Librerías):
- * - MFRC522 by GithubCommunity
- * - ArduinoJson by Benoit Blanchon
+ * Este código descarga la lista de usuarios autorizados periódicamente
+ * para permitir el acceso instantáneo sin depender de la latencia del servidor.
  */
 
-#include <SPI.h>
-#include <MFRC522.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include <SPI.h>
+#include <MFRC522.h>
 
 // --- CONFIGURACIÓN DE RED ---
-const char* ssid = "NOMBRE_DE_TU_WIFI";
-const char* password = "PASSWORD_DE_TU_WIFI";
+const char* ssid = "TU_SSID_WIFI";
+const char* password = "TU_PASSWORD_WIFI";
 
-// --- CONFIGURACIÓN DE API ---
-// Reemplaza con la URL de tu servidor (ej. https://tu-app.web.app)
-const char* serverUrl = "https://tu-app-url.com/api/flow/processAccessAttemptFlow";
-const char* accessPointId = "PUERTA_PRINCIPAL";
+// --- CONFIGURACIÓN DEL SERVIDOR ---
+// Reemplaza con tu URL de despliegue (ej: https://tu-app.vercel.app)
+const char* serverUrl = "https://tu-plataforma-stem.com";
+const char* accessPointId = "PUERTA_01"; // El ID registrado en el dashboard
 
-// --- MAPEADO DE PINES (Coincide con la guía de conexiones) ---
-#define RST_PIN         22    // RFID Reset
-#define SS_PIN          5     // RFID SDA
-#define RELAY_PIN       2     // Señal de apertura (Relé)
-#define LED_GREEN       12    // LED Acceso Permitido
-#define LED_RED         13    // LED Acceso Denegado
-#define BUZZER          14    // Sonido
+// --- CONFIGURACIÓN DE PINES (Ver docs/GUIA_CONEXIONES_ELECTRONICA.md) ---
+#define SS_PIN 5
+#define RST_PIN 22
+#define RELAY_PIN 2
+#define LED_GREEN 12
+#define LED_RED 13
+#define BUZZER_PIN 14
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+// --- MEMORIA LOCAL DE ACCESO ---
+const int MAX_CARDS = 250; // Capacidad para 250 tarjetas en RAM
+String authorizedCards[MAX_CARDS];
+int cardsCount = 0;
+
+unsigned long lastSyncTime = 0;
+const unsigned long syncInterval = 300000; // Sincronizar cada 5 minutos (300,000 ms)
 
 void setup() {
   Serial.begin(115200);
   SPI.begin();
-  mfrc522.PCD_Init();
+  rfid.PCD_Init();
 
-  // Configuración de pines
   pinMode(RELAY_PIN, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
-  pinMode(BUZZER, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
 
-  // Estado inicial (Todo apagado)
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(LED_GREEN, LOW);
   digitalWrite(LED_RED, LOW);
-  digitalWrite(BUZZER, LOW);
 
-  // Conexión Wi-Fi
-  connectWiFi();
-  
-  Serial.println(">>> Sistema STEM Listo. Esperando tarjeta...");
+  connectToWiFi();
+  syncAuthorizedCards();
 }
 
 void loop() {
-  // Reconectar Wi-Fi si se pierde
-  if (WiFi.status() != WL_CONNECTED) {
-    connectWiFi();
+  // 1. Sincronización periódica automática
+  if (millis() - lastSyncTime > syncInterval) {
+    syncAuthorizedCards();
   }
 
-  // Buscar nuevas tarjetas
-  if ( ! mfrc522.PICC_IsNewCardPresent()) return;
-  if ( ! mfrc522.PICC_ReadCardSerial()) return;
+  // 2. Detección de tarjeta física
+  if (!rfid.PICC_IsNewCardPresent()) return;
+  if (!rfid.PICC_ReadCardSerial()) return;
 
-  // Obtener el ID de la tarjeta como String
-  String rfidId = "";
-  for (byte i = 0; i < mfrc522.uid.size; i++) {
-    rfidId += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
-    rfidId += String(mfrc522.uid.uidByte[i], HEX);
+  String cardId = "";
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    cardId += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
+    cardId += String(rfid.uid.uidByte[i], HEX);
   }
-  rfidId.toUpperCase();
+  cardId.toUpperCase();
   
-  Serial.print("ID detectado: ");
-  Serial.println(rfidId);
+  Serial.print("Tarjeta detectada: ");
+  Serial.println(cardId);
 
-  // Enviar a la plataforma STEM
-  processAccess(rfidId);
+  // 3. VALIDACIÓN INSTANTÁNEA (Edge Validation)
+  // Buscamos en la lista descargada previamente
+  bool isAuthorized = false;
+  for (int i = 0; i < cardsCount; i++) {
+    if (authorizedCards[i] == cardId) {
+      isAuthorized = true;
+      break;
+    }
+  }
 
-  // Detener lectura
-  mfrc522.PICC_HaltA();
+  // 4. Ejecutar acción de hardware
+  if (isAuthorized) {
+    grantAccess(cardId);
+  } else {
+    denyAccess(cardId);
+  }
+
+  rfid.PICC_HaltA();
+  rfid.PCD_StopCrypto1();
 }
 
-void connectWiFi() {
-  Serial.print("Conectando a ");
-  Serial.println(ssid);
+// --- FUNCIONES DE HARDWARE ---
+
+void grantAccess(String cardId) {
+  Serial.println("ACCESO CONCEDIDO (Local)");
+  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(LED_GREEN, HIGH);
+  tone(BUZZER_PIN, 2000, 200);
+  delay(1500); // Puerta abierta 1.5 segundos
+  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(LED_GREEN, LOW);
+
+  // Reportar el log al servidor en segundo plano (no bloquea al usuario)
+  reportAccess(cardId);
+}
+
+void denyAccess(String cardId) {
+  Serial.println("ACCESO DENEGADO (Local)");
+  digitalWrite(LED_RED, HIGH);
+  tone(BUZZER_PIN, 500, 500);
+  delay(1000);
+  digitalWrite(LED_RED, LOW);
+  
+  // Reportar intento fallido para auditoría
+  reportAccess(cardId);
+}
+
+// --- COMUNICACIÓN CON LA NUBE ---
+
+void syncAuthorizedCards() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  // Llamamos al nuevo endpoint de sincronización
+  String url = String(serverUrl) + "/api/access-point/sync?accessPointId=" + accessPointId;
+  
+  Serial.println("Sincronizando lista de acceso...");
+  http.begin(url);
+  int httpCode = http.GET();
+
+  if (httpCode == HTTP_CODE_OK) {
+    String payload = http.getString();
+    
+    // Reservamos memoria para el JSON (AJUSTAR SEGÚN CANTIDAD DE ALUMNOS)
+    DynamicJsonDocument doc(16384); 
+    deserializeJson(doc, payload);
+
+    JsonArray cards = doc["authorizedCards"];
+    cardsCount = 0;
+    
+    for (String card : cards) {
+      if (cardsCount < MAX_CARDS) {
+        authorizedCards[cardsCount++] = card;
+      }
+    }
+    
+    lastSyncTime = millis();
+    Serial.print("Sincronización OK. Usuarios cargados: ");
+    Serial.println(cardsCount);
+  } else {
+    Serial.print("Fallo de sincronización. HTTP: ");
+    Serial.println(httpCode);
+  }
+  http.end();
+}
+
+void reportAccess(String cardId) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  // Usamos el flujo de procesamiento para registrar el log y cambiar estado E/S
+  HTTPClient http;
+  String url = String(serverUrl) + "/api/flow/processAccessAttemptFlow";
+  
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+
+  StaticJsonDocument<256> doc;
+  doc["accessPointId"] = accessPointId;
+  doc["rfidCardId"] = cardId;
+  
+  String requestBody;
+  serializeJson(doc, requestBody);
+  
+  int httpCode = http.POST(requestBody);
+  http.end();
+}
+
+void connectToWiFi() {
+  Serial.print("Conectando WiFi");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
-  Serial.println("\nWi-Fi Conectado");
-}
-
-void processAccess(String rfid) {
-  if (WiFi.status() == WL_CONNECTED) {
-    HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Content-Type", "application/json");
-
-    // Construir JSON de petición
-    StaticJsonDocument<200> doc;
-    doc["rfidCardId"] = rfid;
-    doc["accessPointId"] = accessPointId;
-    String requestBody;
-    serializeJson(doc, requestBody);
-
-    int httpResponseCode = http.POST(requestBody);
-
-    if (httpResponseCode > 0) {
-      String response = http.getString();
-      Serial.println(response);
-
-      // Parsear respuesta del servidor
-      StaticJsonDocument<200> resDoc;
-      deserializeJson(resDoc, response);
-      const char* action = resDoc["action"]; // "open" o "deny"
-
-      if (String(action) == "open") {
-        grantAccess();
-      } else {
-        denyAccess();
-      }
-    } else {
-      Serial.print("Error en petición HTTP: ");
-      Serial.println(httpResponseCode);
-      errorFeedback();
-    }
-    http.end();
-  }
-}
-
-// --- EFECTOS DE HARDWARE ---
-
-void grantAccess() {
-  Serial.println(">>> ACCESO PERMITIDO");
-  digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(BUZZER, HIGH);
-  digitalWrite(RELAY_PIN, HIGH); // Abre picaporte
-  delay(200);
-  digitalWrite(BUZZER, LOW);
-  delay(3000); // Mantiene abierto por 3 segundos
-  digitalWrite(RELAY_PIN, LOW); // Cierra picaporte
-  digitalWrite(LED_GREEN, LOW);
-}
-
-void denyAccess() {
-  Serial.println(">>> ACCESO DENEGADO");
-  for (int i = 0; i < 3; i++) {
-    digitalWrite(LED_RED, HIGH);
-    digitalWrite(BUZZER, HIGH);
-    delay(100);
-    digitalWrite(LED_RED, LOW);
-    digitalWrite(BUZZER, LOW);
-    delay(100);
-  }
-}
-
-void errorFeedback() {
-  digitalWrite(LED_RED, HIGH);
-  delay(1000);
-  digitalWrite(LED_RED, LOW);
+  Serial.println("\nConexión Establecida.");
 }
