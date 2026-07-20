@@ -1,27 +1,21 @@
-/*
- * STEM V2 - Control de Acceso con Validación en el Borde (Edge Validation)
- * Hardware: ESP32 + RC522 RFID + Relé
- * 
- * Este código descarga la lista de usuarios autorizados periódicamente
- * para permitir el acceso instantáneo sin depender de la latencia del servidor.
+/**
+ * @fileOverview Firmware para Control de Acceso STEM V2 (ESP32 + RFID)
+ * Implementa la lógica de "Edge Validation" para acceso instantáneo.
  */
 
+#include <SPI.h>
+#include <MFRC522.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
-#include <SPI.h>
-#include <MFRC522.h>
 
 // --- CONFIGURACIÓN DE RED ---
-const char* ssid = "TU_SSID_WIFI";
-const char* password = "TU_PASSWORD_WIFI";
+const char* ssid = "TU_WIFI_SSID";
+const char* password = "TU_WIFI_PASSWORD";
+const char* serverUrl = "https://tu-dominio-nextjs.vercel.app"; // URL de tu servidor Next.js
+const char* accessPointId = "PUERTA_PRINCIPAL"; // Debe coincidir con el ID en la plataforma
 
-// --- CONFIGURACIÓN DEL SERVIDOR ---
-// Reemplaza con tu URL de despliegue (ej: https://tu-app.vercel.app)
-const char* serverUrl = "https://tu-plataforma-stem.com";
-const char* accessPointId = "PUERTA_01"; // El ID registrado en el dashboard
-
-// --- CONFIGURACIÓN DE PINES (Ver docs/GUIA_CONEXIONES_ELECTRONICA.md) ---
+// --- PINES DE HARDWARE (ESP32) ---
 #define SS_PIN 5
 #define RST_PIN 22
 #define RELAY_PIN 2
@@ -31,11 +25,9 @@ const char* accessPointId = "PUERTA_01"; // El ID registrado en el dashboard
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
-// --- MEMORIA LOCAL DE ACCESO ---
-const int MAX_CARDS = 250; // Capacidad para 250 tarjetas en RAM
-String authorizedCards[MAX_CARDS];
+// --- MEMORIA LOCAL (EDGE VALIDATION) ---
+String authorizedCards[250]; // Espacio para 250 usuarios autorizados
 int cardsCount = 0;
-
 unsigned long lastSyncTime = 0;
 const unsigned long syncInterval = 300000; // Sincronizar cada 5 minutos (300,000 ms)
 
@@ -58,138 +50,129 @@ void setup() {
 }
 
 void loop() {
-  // 1. Sincronización periódica automática
+  // Sincronización periódica en segundo plano
   if (millis() - lastSyncTime > syncInterval) {
     syncAuthorizedCards();
   }
 
-  // 2. Detección de tarjeta física
+  // Detectar nueva tarjeta
   if (!rfid.PICC_IsNewCardPresent()) return;
   if (!rfid.PICC_ReadCardSerial()) return;
 
-  String cardId = "";
+  // Obtener UID de la tarjeta
+  String uid = "";
   for (byte i = 0; i < rfid.uid.size; i++) {
-    cardId += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
-    cardId += String(rfid.uid.uidByte[i], HEX);
+    uid += String(rfid.uid.uidByte[i] < 0x10 ? "0" : "");
+    uid += String(rfid.uid.uidByte[i], HEX);
   }
-  cardId.toUpperCase();
-  
+  uid.toUpperCase();
+
   Serial.print("Tarjeta detectada: ");
-  Serial.println(cardId);
+  Serial.println(uid);
 
-  // 3. VALIDACIÓN INSTANTÁNEA (Edge Validation)
-  // Buscamos en la lista descargada previamente
-  bool isAuthorized = false;
-  for (int i = 0; i < cardsCount; i++) {
-    if (authorizedCards[i] == cardId) {
-      isAuthorized = true;
-      break;
-    }
-  }
-
-  // 4. Ejecutar acción de hardware
-  if (isAuthorized) {
-    grantAccess(cardId);
+  // VALIDACIÓN INSTANTÁNEA (En Memoria Local)
+  if (isAuthorizedLocal(uid)) {
+    grantAccess(uid);
   } else {
-    denyAccess(cardId);
+    denyAccess(uid);
   }
 
   rfid.PICC_HaltA();
   rfid.PCD_StopCrypto1();
 }
 
-// --- FUNCIONES DE HARDWARE ---
+// Verifica si el UID está en la caché local del ESP32
+bool isAuthorizedLocal(String uid) {
+  for (int i = 0; i < cardsCount; i++) {
+    if (authorizedCards[i] == uid) return true;
+  }
+  return false;
+}
 
-void grantAccess(String cardId) {
+// Acción de apertura inmediata
+void grantAccess(String uid) {
   Serial.println("ACCESO CONCEDIDO (Local)");
-  digitalWrite(RELAY_PIN, HIGH);
   digitalWrite(LED_GREEN, HIGH);
-  tone(BUZZER_PIN, 2000, 200);
-  delay(1500); // Puerta abierta 1.5 segundos
+  digitalWrite(RELAY_PIN, HIGH);
+  tone(BUZZER_PIN, 2000, 100);
+  delay(2000); // Mantener abierto 2 segundos
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(LED_GREEN, LOW);
 
-  // Reportar el log al servidor en segundo plano (no bloquea al usuario)
-  reportAccess(cardId);
+  // Reportar log de forma asíncrona a la web
+  sendLogToServer(uid, "success");
 }
 
-void denyAccess(String cardId) {
+// Acción de rechazo inmediato
+void denyAccess(String uid) {
   Serial.println("ACCESO DENEGADO (Local)");
   digitalWrite(LED_RED, HIGH);
   tone(BUZZER_PIN, 500, 500);
   delay(1000);
   digitalWrite(LED_RED, LOW);
-  
-  // Reportar intento fallido para auditoría
-  reportAccess(cardId);
+
+  // Reportar log de forma asíncrona a la web
+  sendLogToServer(uid, "error");
 }
 
-// --- COMUNICACIÓN CON LA NUBE ---
-
+// Descarga la lista de usuarios autorizados desde Next.js
 void syncAuthorizedCards() {
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
-  // Llamamos al nuevo endpoint de sincronización
   String url = String(serverUrl) + "/api/access-point/sync?accessPointId=" + accessPointId;
   
-  Serial.println("Sincronizando lista de acceso...");
   http.begin(url);
   int httpCode = http.GET();
 
   if (httpCode == HTTP_CODE_OK) {
     String payload = http.getString();
-    
-    // Reservamos memoria para el JSON (AJUSTAR SEGÚN CANTIDAD DE ALUMNOS)
-    DynamicJsonDocument doc(16384); 
-    deserializeJson(doc, payload);
+    DynamicJsonDocument doc(8192); // Ajustar según cantidad de usuarios
+    DeserializationError error = deserializeJson(doc, payload);
 
-    JsonArray cards = doc["authorizedCards"];
-    cardsCount = 0;
-    
-    for (String card : cards) {
-      if (cardsCount < MAX_CARDS) {
-        authorizedCards[cardsCount++] = card;
+    if (!error) {
+      JsonArray cards = doc["authorizedCards"];
+      cardsCount = cards.size();
+      for (int i = 0; i < cardsCount && i < 250; i++) {
+        authorizedCards[i] = cards[i].as<String>();
       }
+      lastSyncTime = millis();
+      Serial.print("Sincronización exitosa. Usuarios: ");
+      Serial.println(cardsCount);
     }
-    
-    lastSyncTime = millis();
-    Serial.print("Sincronización OK. Usuarios cargados: ");
-    Serial.println(cardsCount);
-  } else {
-    Serial.print("Fallo de sincronización. HTTP: ");
-    Serial.println(httpCode);
   }
   http.end();
 }
 
-void reportAccess(String cardId) {
+// Registra el evento en la base de datos (después de abrir la puerta)
+void sendLogToServer(String uid, String status) {
   if (WiFi.status() != WL_CONNECTED) return;
 
-  // Usamos el flujo de procesamiento para registrar el log y cambiar estado E/S
   HTTPClient http;
   String url = String(serverUrl) + "/api/flow/processAccessAttemptFlow";
   
   http.begin(url);
   http.addHeader("Content-Type", "application/json");
 
-  StaticJsonDocument<256> doc;
+  StaticJsonDocument<200> doc;
   doc["accessPointId"] = accessPointId;
-  doc["rfidCardId"] = cardId;
-  
+  doc["rfidCardId"] = uid;
+
   String requestBody;
   serializeJson(doc, requestBody);
-  
+
   int httpCode = http.POST(requestBody);
   http.end();
 }
 
 void connectToWiFi() {
-  Serial.print("Conectando WiFi");
+  Serial.print("Conectando a WiFi...");
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
   }
   Serial.println("\nConexión Establecida.");
+  Serial.print("IP: ");
+  Serial.println(WiFi.localIP());
 }
