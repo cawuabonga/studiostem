@@ -29,7 +29,8 @@ import {
     CalendarCheck,
     Thermometer,
     Scale,
-    Droplet
+    Droplet,
+    ShieldCheck
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -131,7 +132,8 @@ export function HealthDashboard() {
             await updateMedicalInfo(instituteId, selectedPatient.profile.documentId, selectedPatient.type, medicalFormData);
             toast({ title: "Ficha Actualizada", description: "Los datos base de salud han sido guardados." });
             setIsEditOpen(false);
-            handleSearch(); // Refresh
+            // Refresh to get updated data
+            handleSearch();
         } catch (error) {
             toast({ title: "Error", variant: "destructive" });
         } finally { setIsSubmitting(false); }
@@ -141,9 +143,10 @@ export function HealthDashboard() {
         if (!instituteId || !selectedPatient || !user) return;
         setIsSubmitting(true);
         try {
+            const patientName = selectedPatient.profile.fullName || selectedPatient.profile.displayName;
             await registerConsultation(instituteId, {
                 patientId: selectedPatient.profile.documentId,
-                patientName: selectedPatient.profile.fullName || selectedPatient.profile.displayName,
+                patientName: patientName,
                 patientRole: selectedPatient.profile.role,
                 reason: consultData.reason,
                 triage: consultData.triage,
@@ -161,6 +164,11 @@ export function HealthDashboard() {
             toast({ title: "Error", variant: "destructive" });
         } finally { setIsSubmitting(false); }
     };
+
+    // Helper variables for patient identity
+    const currentPatient = selectedPatient?.profile;
+    const currentPatientName = currentPatient ? (currentPatient.fullName || currentPatient.displayName || 'Paciente') : '';
+    const currentPatientInitial = currentPatientName.charAt(0).toUpperCase() || 'P';
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
@@ -197,7 +205,7 @@ export function HealthDashboard() {
                 
                 {/* Columna Izquierda: Ficha y Acciones */}
                 <div className="lg:col-span-8 space-y-6">
-                    {selectedPatient ? (
+                    {selectedPatient && currentPatient ? (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
                             
                             {/* Card Perfil Paciente */}
@@ -206,19 +214,19 @@ export function HealthDashboard() {
                                     <div className="flex flex-col items-center gap-4 shrink-0">
                                         <div className="h-32 w-32 relative rounded-3xl overflow-hidden border-4 border-muted shadow-xl">
                                             <Image 
-                                                src={selectedPatient.profile.photoURL || `https://placehold.co/200x200.png?text=${selectedPatient.profile.fullName[0]}`} 
+                                                src={currentPatient.photoURL || `https://placehold.co/200x200.png?text=${currentPatientInitial}`} 
                                                 alt="Paciente" fill className="object-cover" 
                                             />
                                         </div>
-                                        <Badge className="font-black px-4">{selectedPatient.profile.role}</Badge>
+                                        <Badge className="font-black px-4">{currentPatient.role}</Badge>
                                     </div>
                                     <div className="flex-1 space-y-6">
                                         <div>
                                             <h2 className="text-3xl font-black tracking-tighter uppercase text-slate-800 leading-tight">
-                                                {selectedPatient.profile.fullName || selectedPatient.profile.displayName}
+                                                {currentPatientName}
                                             </h2>
                                             <p className="text-sm font-bold text-primary flex items-center gap-1.5 mt-1 uppercase">
-                                                <Activity className="h-4 w-4" /> DNI: {selectedPatient.profile.documentId} • Carrera: {selectedPatient.profile.programId}
+                                                <Activity className="h-4 w-4" /> DNI: {currentPatient.documentId} • Carrera: {currentPatient.programId || 'N/A'}
                                             </p>
                                         </div>
 
@@ -469,7 +477,7 @@ export function HealthDashboard() {
                     <DialogFooter>
                         <Button variant="ghost" onClick={() => setIsEditOpen(false)} className="font-bold">CANCELAR</Button>
                         <Button onClick={handleSaveMedicalInfo} disabled={isSubmitting} className="font-black">
-                             {isSubmitting ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : <Save className="mr-2 h-4 w-4" />}
+                             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                              GUARDAR FICHA
                         </Button>
                     </DialogFooter>
