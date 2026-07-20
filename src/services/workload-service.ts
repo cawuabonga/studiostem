@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * @fileOverview Servicio para la gestión de evidencias de Carga No Lectiva.
- * Permite a los docentes reportar actividades y subir informes de cumplimiento.
+ * @fileOverview Servicio modular para la gestión de Horas No Lectivas de los docentes.
+ * Permite listar actividades asignadas y subir evidencias (informes/fotos).
  */
 
-import { db, uploadFileAndGetURL } from '@/config/firebase';
+import { db, storage, uploadFileAndGetURL } from '@/config/firebase';
 import { 
     collection, 
     doc, 
@@ -15,14 +15,15 @@ import {
     query, 
     where, 
     Timestamp,
-    arrayUnion
+    arrayUnion,
+    orderBy
 } from 'firebase/firestore';
 import type { NonTeachingAssignment } from '@/types';
 
 /**
- * Recupera todas las asignaciones no lectivas de un docente para un periodo.
+ * Obtiene todas las asignaciones no lectivas de un docente para un año específico.
  */
-export const getTeacherNonTeachingAssignments = async (
+export const getTeacherWorkload = async (
     instituteId: string, 
     teacherId: string, 
     year: string
@@ -32,7 +33,8 @@ export const getTeacherNonTeachingAssignments = async (
         const q = query(
             colRef, 
             where('teacherId', '==', teacherId),
-            where('year', '==', year)
+            where('year', '==', year),
+            orderBy('period', 'asc')
         );
         const snapshot = await getDocs(q);
         return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as NonTeachingAssignment));
@@ -43,18 +45,20 @@ export const getTeacherNonTeachingAssignments = async (
 };
 
 /**
- * Sube una evidencia (informe/foto) y la vincula a la actividad.
+ * Sube un archivo de evidencia y actualiza el registro de la actividad.
  */
-export const uploadActivityEvidence = async (
+export const submitActivityReport = async (
     instituteId: string,
     assignmentId: string,
     file: File,
     description: string
 ): Promise<void> => {
     try {
+        // 1. Subir el archivo al Storage
         const path = `institutes/${instituteId}/workload/${assignmentId}/${Date.now()}_${file.name}`;
         const downloadURL = await uploadFileAndGetURL(file, path);
 
+        // 2. Actualizar el documento en Firestore
         const docRef = doc(db, 'institutes', instituteId, 'nonTeachingAssignments', assignmentId);
         
         await updateDoc(docRef, {
@@ -65,21 +69,5 @@ export const uploadActivityEvidence = async (
     } catch (error) {
         console.error("Error al subir evidencia de actividad:", error);
         throw error;
-    }
-};
-
-/**
- * Obtiene el detalle de una asignación específica.
- */
-export const getAssignmentDetail = async (
-    instituteId: string,
-    assignmentId: string
-): Promise<NonTeachingAssignment | null> => {
-    try {
-        const docRef = doc(db, 'institutes', instituteId, 'nonTeachingAssignments', assignmentId);
-        const snap = await getDoc(docRef);
-        return snap.exists() ? { id: snap.id, ...snap.data() } as NonTeachingAssignment : null;
-    } catch (error) {
-        return null;
     }
 };

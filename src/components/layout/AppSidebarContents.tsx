@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -43,7 +42,8 @@ import {
   BriefcaseBusiness as BriefcaseBusinessIcon,
   Monitor as MonitorIcon,
   History as HistoryIcon,
-  BarChart3 as BarChart3Icon
+  BarChart3 as BarChart3Icon,
+  ClipboardList as ClipboardListIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -80,6 +80,7 @@ const allNavItems: NavItem[] = [
 
     // Teacher
     { href: '/dashboard/docente', label: 'Mis Unidades Asignadas', icon: BookCopyIcon, permission: 'teacher:unit:view' },
+    { href: '/dashboard/docente/carga-no-lectiva', label: 'Mi Carga No Lectiva', icon: ClipboardListIcon, permission: 'teacher:unit:view' },
     { href: '/dashboard/docente/supervisiones', label: 'Supervisiones EFSRT', icon: MapPinIcon, permission: 'teacher:efsrt:supervise' },
 
     // Student & General Staff
