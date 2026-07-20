@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { getProjectTeams, saveProjectTeam } from '@/services/abp-service';
-import { getEnrolledStudentProfiles, getUnitProject } from '@/config/firebase';
+import { getProjectTeams, saveProjectTeam, getUnitProject } from '@/services/abp-service';
+import { getEnrolledStudentProfiles } from '@/config/firebase';
 import type { Unit, Project, ProjectTeam, StudentProfile } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +39,7 @@ export function TeamManager({ unit }: TeamManagerProps) {
         setLoading(true);
         try {
             const currentYear = new Date().getFullYear().toString();
+            // CORRECCIÓN: Ahora importa de abp-service
             const proj = await getUnitProject(instituteId, unit.id);
             if (!proj) {
                 setLoading(false);
