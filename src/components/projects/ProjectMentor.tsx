@@ -1,7 +1,6 @@
-
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,11 +16,21 @@ interface ProjectMentorProps {
 }
 
 export function ProjectMentor({ unit, project }: ProjectMentorProps) {
-    const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([
-        { role: 'bot', text: project ? `Hola, soy tu mentor para el proyecto "${project.title}". ¿En qué puedo ayudarte hoy?` : "El docente aún no ha definido los detalles del proyecto. ¡Pronto estaré disponible para guiarte!" }
-    ]);
+    const [messages, setMessages] = useState<{ role: 'user' | 'bot', text: string }[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Reiniciar chat cuando el proyecto se publica o cambia
+    useEffect(() => {
+        setMessages([
+            { 
+                role: 'bot', 
+                text: project 
+                    ? `Hola, soy tu mentor para el proyecto "${project.title}". ¿En qué puedo ayudarte hoy?` 
+                    : "El docente aún no ha definido los detalles del proyecto. ¡Pronto estaré disponible para guiarte!" 
+            }
+        ]);
+    }, [project]);
 
     const handleSend = async () => {
         if (!input.trim() || !project) return;
@@ -69,7 +78,7 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
                                     {m.role === 'user' ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
                                 </div>
                                 <div className={cn(
-                                    "p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed shadow-sm",
+                                    "p-4 rounded-2xl max-w-[85%] text-sm font-medium leading-relaxed shadow-sm animate-in fade-in slide-in-from-bottom-2",
                                     m.role === 'user' ? "bg-primary text-primary-foreground rounded-tr-none" : "bg-white border rounded-tl-none text-slate-700"
                                 )}>
                                     {m.text}
@@ -101,7 +110,7 @@ export function ProjectMentor({ unit, project }: ProjectMentorProps) {
                     </div>
                     {project && (
                         <div className="mt-4 flex items-center gap-2 text-[9px] font-black uppercase text-muted-foreground tracking-widest justify-center">
-                            <Info className="h-3 w-3" /> Contexto: {project.title}
+                            <Info className="h-3 w-3" /> Contexto Activo: {project.title}
                         </div>
                     )}
                 </div>

@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getUnitProject, saveUnitProject } from '@/services/abp-service';
 import type { Unit, Project } from '@/types';
-import { Loader2, Save, Rocket, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { Loader2, Save, Rocket, Plus, Trash2, CheckCircle2, Target, BookOpen, UserCheck, FileText } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Switch } from '../ui/switch';
 import { ProjectMentor } from './ProjectMentor';
@@ -97,7 +97,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
             toast({ title: "Proyecto Guardado", description: "La configuración ABP ha sido actualizada." });
             fetchProject();
         } catch (error) {
-            toast({ title: "Error", variant: "destructive" });
+            toast({ title: "Error", description: "Verifica que todos los campos estén llenos correctamente.", variant: "destructive" });
         } finally {
             setIsSaving(false);
         }
@@ -113,7 +113,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
         form.setValue('rubrics', current.filter(c => c.id !== id));
     };
 
-    if (loading) return <Skeleton className="h-96 w-full" />;
+    if (loading) return <div className="space-y-6"><Skeleton className="h-20 w-full" /><Skeleton className="h-96 w-full" /></div>;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -133,7 +133,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                                         <FormItem><FormLabel className="font-bold">Título del Proyecto</FormLabel><FormControl><Input placeholder="Ej: Sistema de Riego Automatizado IoT" {...field} /></FormControl><FormMessage /></FormItem>
                                     )} />
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <FormField control={form.control} name="visibility" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="font-bold">Visibilidad en Repositorio</FormLabel>
@@ -159,7 +159,27 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                                     </div>
 
                                     <FormField control={form.control} name="objective" render={({ field }) => (
-                                        <FormItem><FormLabel className="font-bold">Reto Real / Objetivo</FormLabel><FormControl><Textarea rows={3} placeholder="¿Qué problema del mundo real vamos a solucionar?" {...field} /></FormControl><FormMessage /></FormItem>
+                                        <FormItem>
+                                            <FormLabel className="font-bold flex items-center gap-2"><Target className="h-4 w-4" /> Reto Real / Objetivo</FormLabel>
+                                            <FormControl><Textarea rows={3} placeholder="¿Qué problema del mundo real vamos a solucionar?" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+
+                                    <FormField control={form.control} name="description" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="font-bold flex items-center gap-2"><FileText className="h-4 w-4" /> Descripción Detallada</FormLabel>
+                                            <FormControl><Textarea rows={4} placeholder="Explique el contexto del proyecto..." {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )} />
+
+                                    <FormField control={form.control} name="competencies" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="font-bold flex items-center gap-2"><UserCheck className="h-4 w-4" /> Competencias a Desarrollar</FormLabel>
+                                            <FormControl><Textarea rows={3} placeholder="Habilidades técnicas y blandas involucradas..." {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
                                     )} />
 
                                     <Separator />
