@@ -15,49 +15,90 @@ import {
     query, 
     orderBy, 
     Timestamp,
-    addDoc
+    addDoc,
+    updateDoc,
+    deleteDoc
 } from 'firebase/firestore';
 import type { Project, ProjectTeam } from '@/types';
 
 /**
- * Recupera el proyecto de innovación asociado a una unidad didáctica.
+ * Recupera todos los proyectos de innovación asociados a una unidad didáctica.
  */
-export const getUnitProject = async (instituteId: string, unitId: string): Promise<Project | null> => {
+export const getUnitProjects = async (instituteId: string, unitId: string): Promise<Project[]> => {
     try {
-        const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'data', 'project');
-        const docSnap = await getDoc(projectRef);
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as Project;
-        }
-        return null;
+        const projectsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects');
+        const q = query(projectsCol, orderBy('createdAt', 'desc'));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
     } catch (error) {
-        console.error("Error al obtener el proyecto ABP:", error);
+        console.error("Error al obtener los proyectos ABP:", error);
+        return [];
+    }
+};
+
+/**
+ * Obtiene un proyecto específico por su ID.
+ */
+export const getProjectById = async (instituteId: string, unitId: string, projectId: string): Promise<Project | null> => {
+    try {
+        const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects', projectId);
+        const docSnap = await getDoc(projectRef);
+        return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as Project : null;
+    } catch (error) {
+        return null;
+    }
+};
+
+/**
+ * Guarda un nuevo proyecto de innovación.
+ */
+export const createUnitProject = async (instituteId: string, unitId: string, data: Omit<Project, 'id' | 'createdAt'>): Promise<string> => {
+    try {
+        const projectsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects');
+        const docRef = await addDoc(projectsCol, {
+            ...data,
+            createdAt: Timestamp.now(),
+            lastUpdate: Timestamp.now()
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error("Error al crear el proyecto ABP:", error);
         throw error;
     }
 };
 
 /**
- * Guarda o actualiza el diseño del proyecto y sus rúbricas.
+ * Actualiza un proyecto existente.
  */
-export const saveUnitProject = async (instituteId: string, unitId: string, data: Partial<Project>): Promise<string> => {
+export const updateUnitProject = async (instituteId: string, unitId: string, projectId: string, data: Partial<Project>): Promise<void> => {
     try {
-        const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'data', 'project');
-        const payload = {
+        const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects', projectId);
+        await updateDoc(projectRef, {
             ...data,
             lastUpdate: Timestamp.now()
-        };
-        await setDoc(projectRef, payload, { merge: true });
-        return projectRef.id;
+        });
     } catch (error) {
-        console.error("Error al guardar el proyecto ABP:", error);
+        console.error("Error al actualizar el proyecto ABP:", error);
         throw error;
     }
 };
 
 /**
- * Obtiene los equipos de trabajo conformados para un proyecto específico.
+ * Elimina un proyecto de la unidad.
  */
-export const getProjectTeams = async (instituteId: string, unitId: string, projectId: string): Promise<ProjectTeam[]> => {
+export const deleteUnitProject = async (instituteId: string, unitId: string, projectId: string): Promise<void> => {
+    try {
+        const projectRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'projects', projectId);
+        await deleteDoc(projectRef);
+    } catch (error) {
+        throw error;
+    }
+};
+
+/**
+ * Obtiene los equipos de trabajo conformados para una unidad específica.
+ */
+export const getProjectTeams = async (instituteId: string, unitId: string): Promise<ProjectTeam[]> => {
     try {
         const teamsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'teams');
         const q = query(teamsCol, orderBy('name', 'asc'));
@@ -70,9 +111,9 @@ export const getProjectTeams = async (instituteId: string, unitId: string, proje
 };
 
 /**
- * Registra un nuevo equipo de proyecto o actualiza uno existente.
+ * Registra un nuevo equipo de proyecto.
  */
-export const saveProjectTeam = async (instituteId: string, unitId: string, projectId: string, teamData: Omit<ProjectTeam, 'id'>): Promise<void> => {
+export const saveProjectTeam = async (instituteId: string, unitId: string, teamData: Omit<ProjectTeam, 'id'>): Promise<void> => {
     try {
         const teamsCol = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'teams');
         await addDoc(teamsCol, {
