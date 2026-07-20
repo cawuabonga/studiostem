@@ -41,33 +41,39 @@ const projectMentorPrompt = ai.definePrompt({
 });
 
 /**
- * Server Action wrapper con lógica de Failover Inteligente.
- * Si el proveedor principal falla por cuota, intenta con el respaldo (Ollama).
+ * Server Action wrapper con Lógica de Orquestación Dual.
+ * Intenta secuencialmente los modelos disponibles (Google / Ollama) para garantizar alta disponibilidad.
  */
 export async function mentorProject(input: ProjectMentorInput): Promise<string> {
   const { primary, fallback } = await getAIModelsWithFailover();
   
+  console.log(`[MENTOR IA] Iniciando consulta con orquestación dual...`);
+  let lastError = null;
+
+  // INTENTO 1: Proveedor Preferido (Configurado por el SuperAdmin)
   try {
-    console.log(`[MENTOR IA] Intento inicial con proveedor principal...`);
     const { text } = await projectMentorPrompt(input, { model: primary });
-    return text;
+    if (text) return text;
   } catch (error: any) {
-    const errorMessage = error.message || "";
-    const isQuotaError = errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('429');
-
-    // SI FALLA GOOGLE POR CUOTA Y TENEMOS OLLAMA, SALTAMOS AUTOMÁTICAMENTE
-    if (isQuotaError && fallback) {
-        console.warn("[MENTOR IA] Cuota de Google agotada. Saltando a OLLAMA local...");
-        try {
-            const { text } = await projectMentorPrompt(input, { model: fallback });
-            return "*(Nota: Usando respaldo local por alta demanda)* \n\n" + text;
-        } catch (fallbackError: any) {
-            console.error("[MENTOR IA] Falló también el respaldo:", fallbackError.message);
-            throw new Error("SERVICIO_IA_INDISPONIBLE: Ni Google ni Ollama están respondiendo. Verifica tu conexión ngrok.");
-        }
-    }
-
-    console.error("[MENTOR FLOW ERROR]", error);
-    throw new Error(`IA_SERVICE_ERROR: ${errorMessage}`);
+    lastError = error;
+    console.warn(`[MENTOR IA] Intento 1 falló (${error.message}). Probando respaldo...`);
   }
+
+  // INTENTO 2: Proveedor de Respaldo (Si existe configuración de Ollama)
+  if (fallback) {
+    try {
+      console.log(`[MENTOR IA] Ejecutando respaldo local...`);
+      const { text } = await projectMentorPrompt(input, { model: fallback });
+      if (text) {
+          return "*(Nota: Respuesta generada por el servidor local de respaldo)* \n\n" + text;
+      }
+    } catch (error: any) {
+      console.error(`[MENTOR IA] El respaldo también falló: ${error.message}`);
+      lastError = error;
+    }
+  }
+
+  // Si ambos fallan, devolvemos un error descriptivo
+  const finalError = lastError?.message || "Servicios de IA no disponibles.";
+  throw new Error(`IA_SERVICE_ERROR: ${finalError}`);
 }
