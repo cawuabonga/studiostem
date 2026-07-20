@@ -1,8 +1,4 @@
-/**
- * STEM V2 - SISTEMA DE CONTROL DE ACCESO IOT (VERSIÓN ONLINE OPTIMIZADA)
- * Hardware: ESP32 + MFRC522 + Relé + Buzzer + LEDs
- */
-
+#include <Arduino.h>
 #include <SPI.h>
 #include <MFRC522.h>
 #include <WiFi.h>
@@ -29,25 +25,24 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
+  delay(1000);
+  
   SPI.begin();
   mfrc522.PCD_Init();
 
-  // Configuración de pines
   pinMode(RELAY_PIN, OUTPUT);
   pinMode(LED_GREEN, OUTPUT);
   pinMode(LED_RED, OUTPUT);
   pinMode(BUZZER, OUTPUT);
 
-  // Estado inicial
   digitalWrite(RELAY_PIN, LOW);
   digitalWrite(LED_GREEN, LOW);
   digitalWrite(LED_RED, LOW);
   noTone(BUZZER);
 
-  // Conexión Wi-Fi
   connectWiFi();
   
-  Serial.println(">>> Sistema STEM Online Listo. Esperando tarjeta...");
+  Serial.println(">>> Sistema STEM Online. Esperando tarjeta...");
 }
 
 void loop() {
@@ -55,11 +50,9 @@ void loop() {
     connectWiFi();
   }
 
-  // Buscar nuevas tarjetas
   if ( ! mfrc522.PICC_IsNewCardPresent()) return;
   if ( ! mfrc522.PICC_ReadCardSerial()) return;
 
-  // Obtener el ID de la tarjeta
   String rfidId = "";
   for (byte i = 0; i < mfrc522.uid.size; i++) {
     rfidId += String(mfrc522.uid.uidByte[i] < 0x10 ? "0" : "");
@@ -70,13 +63,10 @@ void loop() {
   Serial.print("ID detectado: ");
   Serial.println(rfidId);
 
-  // Sonido corto de lectura (feedback inmediato)
-  tone(BUZZER, 2000, 50);
-
-  // Validar con el servidor
   processAccess(rfidId);
 
   mfrc522.PICC_HaltA();
+  mfrc522.PCD_StopCrypto1();
 }
 
 void connectWiFi() {
@@ -110,7 +100,7 @@ void processAccess(String rfid) {
 
       StaticJsonDocument<200> resDoc;
       deserializeJson(resDoc, response);
-      const char* action = resDoc["action"]; // "open" o "deny"
+      const char* action = resDoc["action"];
 
       if (String(action) == "open") {
         grantAccess();
@@ -118,7 +108,7 @@ void processAccess(String rfid) {
         denyAccess();
       }
     } else {
-      Serial.print("Error en petición HTTP: ");
+      Serial.print("Error HTTP: ");
       Serial.println(httpResponseCode);
       errorFeedback();
     }
@@ -126,29 +116,23 @@ void processAccess(String rfid) {
   }
 }
 
-// --- EFECTOS DE HARDWARE OPTIMIZADOS PARA VOLUMEN ---
-
 void grantAccess() {
   Serial.println(">>> ACCESO PERMITIDO");
   digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(RELAY_PIN, HIGH); 
-  
-  // Tono de éxito: 2.5kHz es muy audible para estos buzzers
-  tone(BUZZER, 2500); 
+  tone(BUZZER, 2500); // Tono fuerte y claro de éxito
+  digitalWrite(RELAY_PIN, HIGH);
   delay(300);
   noTone(BUZZER);
-  
-  delay(2700); // Mantener 3 segundos el relé
-  digitalWrite(RELAY_PIN, LOW); 
+  delay(2700); 
+  digitalWrite(RELAY_PIN, LOW);
   digitalWrite(LED_GREEN, LOW);
 }
 
 void denyAccess() {
   Serial.println(">>> ACCESO DENEGADO");
-  // Tono de error: Pulsos graves y fuertes
   for (int i = 0; i < 3; i++) {
     digitalWrite(LED_RED, HIGH);
-    tone(BUZZER, 800); // Tono más bajo para indicar error
+    tone(BUZZER, 800); // Tono grave de error
     delay(150);
     digitalWrite(LED_RED, LOW);
     noTone(BUZZER);
@@ -157,9 +141,9 @@ void denyAccess() {
 }
 
 void errorFeedback() {
-  // Tono de sistema (Error de red)
   digitalWrite(LED_RED, HIGH);
-  tone(BUZZER, 400, 1000); // Tono largo de advertencia
+  tone(BUZZER, 400);
   delay(1000);
+  noTone(BUZZER);
   digitalWrite(LED_RED, LOW);
 }
