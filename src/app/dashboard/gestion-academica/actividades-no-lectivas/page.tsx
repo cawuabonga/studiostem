@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -12,11 +13,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, PlusCircle, Trash, Edit, Eye } from "lucide-react";
+import { Loader2, PlusCircle, Trash, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ActivityAssignmentDetails } from "@/components/carga-horaria/ActivityAssignmentDetails";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
 export default function NonTeachingActivitiesPage() {
@@ -27,12 +27,10 @@ export default function NonTeachingActivitiesPage() {
   const [activities, setActivities] = useState<NonTeachingActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentActivity, setCurrentActivity] = useState<Partial<NonTeachingActivity>>({});
-  const [selectedActivityForDetails, setSelectedActivityForDetails] = useState<NonTeachingActivity | null>(null);
 
-  const canManage = hasPermission('academic:program:manage'); // Reuse a suitable high-level permission
+  const canManage = hasPermission('academic:program:manage');
 
   useEffect(() => {
     if (!authLoading) {
@@ -61,12 +59,6 @@ export default function NonTeachingActivitiesPage() {
     setCurrentActivity(activity || { name: '', description: '', isActive: true });
     setIsFormDialogOpen(true);
   };
-  
-  const handleOpenDetailsDialog = (activity: NonTeachingActivity) => {
-    setSelectedActivityForDetails(activity);
-    setIsDetailsDialogOpen(true);
-  };
-
 
   const handleSave = async () => {
     if (!instituteId || !currentActivity.name || !currentActivity.description) {
@@ -112,9 +104,9 @@ export default function NonTeachingActivitiesPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Gestionar Actividades No Lectivas</CardTitle>
+            <CardTitle>Catálogo de Actividades No Lectivas</CardTitle>
             <CardDescription>
-              Crea el catálogo de actividades y consulta los docentes asignados por año.
+              Cree y administre el catálogo global de actividades (Investigación, Tutoría, etc.) para toda la institución.
             </CardDescription>
           </div>
           <Button onClick={() => handleOpenFormDialog()}>
@@ -152,10 +144,6 @@ export default function NonTeachingActivitiesPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button variant="outline" size="sm" onClick={() => handleOpenDetailsDialog(activity)} className="mr-2">
-                                            <Eye className="mr-2 h-4 w-4" />
-                                            Ver Asignaciones
-                                        </Button>
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenFormDialog(activity)}><Edit className="h-4 w-4" /></Button>
                                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(activity.id)}><Trash className="h-4 w-4" /></Button>
                                     </TableCell>
@@ -178,7 +166,7 @@ export default function NonTeachingActivitiesPage() {
               <DialogHeader>
                   <DialogTitle>{currentActivity.id ? 'Editar Actividad' : 'Nueva Actividad No Lectiva'}</DialogTitle>
                   <DialogDescription>
-                      Complete la información de la actividad.
+                      Complete la información de la actividad académica.
                   </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -204,19 +192,6 @@ export default function NonTeachingActivitiesPage() {
               </DialogFooter>
           </DialogContent>
       </Dialog>
-      
-      {selectedActivityForDetails && (
-         <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-            <DialogContent className="max-w-4xl">
-                 <DialogHeader>
-                    <DialogTitle>Asignaciones para: {selectedActivityForDetails.name}</DialogTitle>
-                    <DialogDescription>Listado de docentes que tienen o han tenido esta actividad asignada, filtrado por año.</DialogDescription>
-                 </DialogHeader>
-                 <ActivityAssignmentDetails activityId={selectedActivityForDetails.id} />
-            </DialogContent>
-         </Dialog>
-      )}
-
     </div>
   );
 }

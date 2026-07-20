@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { FileText, Download, Clock, CheckCircle2, ExternalLink, Eye } from 'lucide-react';
+import { FileText, Download, Clock, CheckCircle2, Info, Eye } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { ScrollArea } from '../ui/scroll-area';
@@ -27,7 +27,7 @@ const periods: (UnitPeriod | 'all')[] = ['all', 'MAR-JUL', 'AGO-DIC'];
 
 
 export function ActivityAssignmentDetails({ activityId }: ActivityAssignmentDetailsProps) {
-    const { instituteId } = useAuth();
+    const { user, instituteId, hasPermission } = useAuth();
     const [assignments, setAssignments] = useState<NonTeachingAssignment[]>([]);
     const [staffMap, setStaffMap] = useState<Map<string, StaffProfile>>(new Map());
     const [programMap, setProgramMap] = useState<Map<string, Program>>(new Map());
@@ -37,6 +37,9 @@ export function ActivityAssignmentDetails({ activityId }: ActivityAssignmentDeta
     
     // Evidence modal states
     const [viewingAssignment, setViewingAssignment] = useState<NonTeachingAssignment | null>(null);
+
+    const isFullAdmin = hasPermission('academic:program:manage');
+    const coordinatorProgramId = user?.programId || (user as any)?.programId;
 
     useEffect(() => {
         if (!instituteId || !activityId) return;
@@ -75,6 +78,10 @@ export function ActivityAssignmentDetails({ activityId }: ActivityAssignmentDeta
             const teacher = staffMap.get(assignment.teacherId);
             if (teacher) {
                 const programId = teacher.programId;
+                
+                // SEGURIDAD: Si es coordinador, solo ver su programa
+                if (!isFullAdmin && programId !== coordinatorProgramId) return;
+
                 if (!groupedByProgram[programId]) {
                     groupedByProgram[programId] = [];
                 }
@@ -88,7 +95,7 @@ export function ActivityAssignmentDetails({ activityId }: ActivityAssignmentDeta
             return programNameA.localeCompare(programNameB);
         });
 
-    }, [assignments, staffMap, programMap, selectedPeriod]);
+    }, [assignments, staffMap, programMap, selectedPeriod, isFullAdmin, coordinatorProgramId]);
 
     return (
         <div className="space-y-4">

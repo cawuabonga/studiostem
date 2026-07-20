@@ -431,6 +431,7 @@ export type Permission =
   | 'academic:assignment:manage'
   | 'academic:teacher:view'
   | 'academic:workload:view'
+  | 'academic:workload:monitor'
   | 'academic:enrollment:manage'
   | 'academic:periods:manage'
   | 'academic:load:view'
@@ -512,6 +513,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'academic:assignment:manage', label: 'Gestionar Asignaciones de Docentes' },
             { id: 'academic:teacher:view', label: 'Ver Lista de Docentes' },
             { id: 'academic:workload:view', label: 'Ver Carga Horaria' },
+            { id: 'academic:workload:monitor', label: 'Monitor de Actividades No Lectivas' },
             { id: 'academic:enrollment:manage', label: 'Gestionar Matrículas' },
             { id: 'academic:periods:manage', label: 'Gestionar Períodos Lectivos' },
             { id: 'academic:load:view', label: 'Ver Dashboard de Carga Académica' },

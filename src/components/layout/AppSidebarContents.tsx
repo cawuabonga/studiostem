@@ -44,7 +44,8 @@ import {
   Monitor as MonitorIcon,
   History as HistoryIcon,
   BarChart3 as BarChart3Icon,
-  ClipboardList as ClipboardListIcon
+  ClipboardList as ClipboardListIcon,
+  Files as FilesIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -70,6 +71,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/gestion-instituto', label: 'Gestión del Instituto', icon: LayoutDashboardIcon, permission: 'admin:institute:manage' },
     { href: '/dashboard/mesa-de-partes', label: 'Mesa de Partes', icon: InboxIcon, permission: 'academic:program:manage' },
     { href: '/dashboard/gestion-academica', label: 'Gestión Académica', icon: GraduationCapIcon, permission: ['academic:program:manage', 'academic:assignment:manage', 'academic:enrollment:manage', 'academic:workload:view', 'academic:efsrt:manage'] },
+    { href: '/dashboard/gestion-academica/monitor-actividades', label: 'Monitor de Actividades', icon: FilesIcon, permission: 'academic:workload:monitor' },
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClockIcon, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCardIcon, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
     { href: '/dashboard/gestion-administrativa/bolsa-laboral/monitor', label: 'Monitor de Empleos', icon: MonitorIcon, permission: 'admin:jobs:monitor' },
