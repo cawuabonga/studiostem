@@ -8,7 +8,7 @@ import type { NonTeachingActivity } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ActivityAssignmentDetails } from './ActivityAssignmentDetails';
 import { ClipboardList, ArrowRight, BookOpen } from 'lucide-react';
 
