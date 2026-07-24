@@ -45,7 +45,8 @@ import {
   BarChart3 as BarChart3Icon,
   ClipboardList as ClipboardListIcon,
   Files as FilesIcon,
-  Stethoscope as StethoscopeIcon
+  Stethoscope as StethoscopeIcon,
+  FileOutput as FileOutputIcon
 } from 'lucide-react';
 
 interface NavItem {
@@ -75,6 +76,7 @@ const allNavItems: NavItem[] = [
     { href: '/dashboard/planificacion', label: 'Planificación y Horarios', icon: CalendarClockIcon, permission: ['planning:schedule:manage', 'planning:environment:manage', 'planning:schedule:view:own'] },
     { href: '/dashboard/gestion-administrativa', label: 'Gestión Administrativa', icon: CreditCardIcon, permission: ['admin:fees:manage', 'admin:payments:validate', 'student:payments:manage', 'admin:supplies:manage', 'admin:deliveries:view', 'admin:companies:manage'] },
     { href: '/dashboard/gestion-administrativa/topico', label: 'Tópico y Salud', icon: StethoscopeIcon, permission: 'admin:health:manage' },
+    { href: '/dashboard/eda', label: 'Sistema EDA', icon: FileOutputIcon, permission: 'admin:eda:manage' },
     { href: '/dashboard/gestion-administrativa/bolsa-laboral/monitor', label: 'Monitor de Empleos', icon: MonitorIcon, permission: 'admin:jobs:monitor' },
     { href: '/dashboard/control-de-acceso', label: 'Control de Acceso', icon: FingerprintIcon, permission: 'admin:access-control:manage' },
     { href: '/dashboard/gestion-usuarios', label: 'Gestionar Usuarios', icon: UsersIcon, permission: ['users:staff:manage', 'users:student:manage'] },

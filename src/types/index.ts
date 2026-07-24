@@ -11,6 +11,49 @@ export interface SocialLinks {
     web?: string;
 }
 
+// --- EDA (Elaboración de Documentos Automáticos) ---
+
+export type KioskStatus = 'Online' | 'Offline' | 'Mantenimiento';
+export type DocumentCategory = 'Constancia' | 'Boleta' | 'Ficha' | 'Solicitud';
+export type EDARequirement = 'Gratuito' | 'Pago Validado';
+
+export interface Kiosk {
+    id: string;
+    kioskId: string; // Identificador técnico (ej: EDA-01)
+    name: string;
+    location: string;
+    status: KioskStatus;
+    lastHeartbeat?: Timestamp;
+    instituteId: string;
+}
+
+export interface DocumentTemplate {
+    id: string;
+    name: string;
+    category: DocumentCategory;
+    content: string; // Estructura HTML/Markdown de la plantilla
+    variables: string[]; // Listado de llaves (ej: {nombre}, {ciclo})
+    requirementType: EDARequirement;
+    requirementValue?: string; // Código de la tasa si requiere pago
+    isActive: boolean;
+    instituteId: string;
+    createdAt: Timestamp;
+}
+
+export interface DocumentGenerationLog {
+    id: string;
+    timestamp: Timestamp;
+    studentId: string;
+    studentName: string;
+    templateId: string;
+    templateName: string;
+    kioskId: string;
+    status: 'Exitoso' | 'Fallido';
+    instituteId: string;
+}
+
+// --- Fin EDA ---
+
 // --- Salud y Tópico ---
 
 export type BloodType = 'O+' | 'O-' | 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-';
@@ -488,6 +531,7 @@ export type Permission =
   | 'admin:companies:manage'
   | 'admin:jobs:monitor'
   | 'admin:health:manage'
+  | 'admin:eda:manage'
   | 'users:staff:manage'
   | 'users:student:manage'
   | 'planning:schedule:manage'
@@ -496,6 +540,7 @@ export type Permission =
   | 'user:supplies:request'
   | 'user:access:view:own'
   | 'user:medical:view:own'
+  | 'user:eda:use'
   | 'superadmin:institute:manage'
   | 'superadmin:users:manage'
   | 'superadmin:design:manage'
@@ -545,6 +590,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
             { id: 'admin:jobs:monitor', label: 'Monitorear Ofertas Laborales' },
             { id: 'admin:health:manage', label: 'Gestionar Tópico y Salud Institucional' },
+            { id: 'admin:eda:manage', label: 'Gestionar Sistema EDA (Documentos)' },
         ],
     },
     {
@@ -594,6 +640,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
             { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
             { id: 'user:medical:view:own', label: 'Ver Mi Historial Médico' },
+            { id: 'user:eda:use', label: 'Utilizar Kioscos EDA' },
         ],
     },
      {
