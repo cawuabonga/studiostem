@@ -35,7 +35,13 @@ import {
     Keyboard,
     UserCircle,
     FileText,
-    Paperclip
+    Paperclip,
+    Send,
+    ExternalLink,
+    XCircle,
+    Clock,
+    Globe,
+    ShieldCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -549,70 +555,89 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700 h-full overflow-hidden">
                         <div className="lg:col-span-8 overflow-y-auto custom-scrollbar">
                             <Card className="max-w-[210mm] mx-auto min-h-[297mm] border-none p-10 md:p-[20mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans shadow-2xl">
-                                {/* Encabezado */}
-                                <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
-                                    <div className="flex items-center gap-3">
-                                        {institute?.logoUrl && <img src={institute.logoUrl} alt="" className="w-12 h-12 object-contain" />}
-                                        <div className="text-left leading-tight">
-                                            <h1 className="text-[11pt] font-black uppercase">{institute?.name}</h1>
-                                            <p className="text-[7pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
-                                        </div>
+                                
+                                {/* MARCA DE AGUA INSTITUCIONAL */}
+                                {institute?.logoUrl && (
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.05] z-0">
+                                        <img 
+                                            src={institute.logoUrl} 
+                                            alt="" 
+                                            className="w-[450px] h-[450px] object-contain grayscale" 
+                                        />
                                     </div>
-                                    <div className="text-right text-[6pt] font-black text-gray-400 uppercase tracking-widest">EXP-ID: {pointId}-{student?.documentId}</div>
-                                </div>
+                                )}
 
-                                {/* Sumilla */}
-                                <div className="text-right mb-12">
-                                    <p className="text-[10pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
-                                        {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}
-                                    </p>
-                                </div>
+                                {/* Contenedor de Texto (Z-index para estar sobre marca de agua) */}
+                                <div className="relative z-10">
+                                    {/* Encabezado */}
+                                    <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
+                                        <div className="flex items-center gap-3">
+                                            {institute?.logoUrl && <img src={institute.logoUrl} alt="" className="w-12 h-12 object-contain" />}
+                                            <div className="text-left leading-tight">
+                                                <h1 className="text-[11pt] font-black uppercase">{institute?.name}</h1>
+                                                <p className="text-[7pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right text-[6pt] font-black text-gray-400 uppercase tracking-widest">EXP-ID: {pointId}-{student?.documentId}</div>
+                                    </div>
 
-                                {/* Destinatario - Bajado 2 líneas aprox */}
-                                <div className="mt-12 mb-8 space-y-1">
-                                    <p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
-                                    <p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">
-                                        {selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : coordinatorName}
-                                    </p>
-                                    <p className="font-bold text-[10pt] uppercase">{institute?.name}</p>
-                                </div>
+                                    {/* Sumilla */}
+                                    <div className="text-right mb-12">
+                                        <p className="text-[10pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
+                                            {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}
+                                        </p>
+                                    </div>
 
-                                {/* Identidad */}
-                                <div className="text-justify text-[10pt] leading-loose mb-6">
-                                    Yo, <span className="font-black underline">{student?.fullName}</span>, 
-                                    identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, 
-                                    estudiante del programa de estudios de <span className="font-bold">{studentProgramName}</span>, 
-                                    perteneciente al <span className="font-bold">{student?.currentSemester || 1}° Semestre</span>, 
-                                    turno <span className="font-bold">{student?.turno}</span>, 
-                                    con domicilio en <span className="font-bold">{student?.address || '---'}</span>, 
-                                    ante usted con el debido respeto me presento y expongo:
-                                </div>
+                                    {/* Destinatario - Bajado 2 líneas aprox */}
+                                    <div className="mt-12 mb-8 space-y-1">
+                                        <p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
+                                        <p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">
+                                            {selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : coordinatorName}
+                                        </p>
+                                        <p className="font-bold text-[10pt] uppercase">{institute?.name}</p>
+                                    </div>
 
-                                {/* Argumentación Dinámica - Sin caja, mismo formato que identidad */}
-                                <div className="text-justify leading-loose text-[10pt] min-h-[100px] whitespace-pre-wrap font-medium">
-                                    <div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} />
-                                </div>
+                                    {/* Identidad */}
+                                    <div className="text-justify text-[10pt] leading-loose mb-6">
+                                        Yo, <span className="font-black underline">{student?.fullName}</span>, 
+                                        identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, 
+                                        estudiante del programa de estudios de <span className="font-bold">{studentProgramName}</span>, 
+                                        perteneciente al <span className="font-bold">{student?.currentSemester || 1}° Semestre</span>, 
+                                        turno <span className="font-bold">{student?.turno}</span>, 
+                                        con domicilio en <span className="font-bold">{student?.address || '---'}</span>, 
+                                        ante usted con el debido respeto me presento y expongo:
+                                    </div>
 
-                                {/* Cierre con salto de linea - Pegado al cuerpo */}
-                                <div className="mt-4 mb-4 font-bold uppercase text-[10pt] leading-relaxed">
-                                    POR LO TANTO:<br/>
-                                    Espero acceda a mi solicitud por ser de justicia.
-                                </div>
+                                    {/* Argumentación Dinámica - Sin caja, mismo formato que identidad */}
+                                    <div className="text-justify leading-loose text-[10pt] min-h-[100px] whitespace-pre-wrap font-medium">
+                                        <div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} />
+                                    </div>
 
-                                {/* Adjuntos - En la posición baja anterior */}
-                                <div className="mt-32 mb-8 font-bold uppercase text-[9pt]">
-                                    ADJUNTO: DOCUMENTOS.
-                                </div>
+                                    {/* Cierre con salto de linea - Pegado al cuerpo */}
+                                    <div className="mt-4 mb-4 font-bold uppercase text-[10pt] leading-relaxed">
+                                        POR LO TANTO:<br/>
+                                        Espero acceda a mi solicitud por ser de justicia.
+                                    </div>
 
-                                <div className="text-right mt-8 italic text-[9pt] text-gray-700">
-                                    Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.
-                                </div>
+                                    {/* Adjuntos Condicionales */}
+                                    {formData['{adjuntos_detalle}']?.includes('ADJUNTO EL CERTIFICADO') ? (
+                                        <div className="mt-32 mb-8 font-bold uppercase text-[9pt]">
+                                            ADJUNTO: DOCUMENTOS.
+                                        </div>
+                                    ) : (
+                                        <div className="mt-32 mb-8" />
+                                    )}
 
-                                {/* Firma Mejorada */}
-                                <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center">
-                                    <p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p>
-                                    <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p>
-                                    <p className="text-[6.5pt] font-bold text-gray-400 uppercase tracking-tighter mt-1">{studentProgramName}</p>
+                                    <div className="text-right mt-8 italic text-[9pt] text-gray-700">
+                                        Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.
+                                    </div>
+
+                                    {/* Firma Mejorada */}
+                                    <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center">
+                                        <p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p>
+                                        <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p>
+                                        <p className="text-[6.5pt] font-bold text-gray-400 uppercase tracking-tighter mt-1">{studentProgramName}</p>
+                                    </div>
                                 </div>
                             </Card>
                         </div>
