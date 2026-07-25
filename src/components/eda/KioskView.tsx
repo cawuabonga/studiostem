@@ -272,20 +272,20 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
     // CABECERA DEL KIOSKO (USUARIO IDENTIFICADO)
     const KioskHeader = () => (
-        <header className="bg-primary p-6 md:p-8 text-primary-foreground flex justify-between items-center shadow-2xl shrink-0">
-            <div className="flex items-center gap-6">
-                <div className="h-20 w-20 relative rounded-2xl overflow-hidden border-4 border-white/20 shadow-xl bg-white/10">
+        <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0">
+            <div className="flex items-center gap-4">
+                <div className="h-14 w-14 relative rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-white/10">
                     <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || 'S'}`} alt="" fill className="object-cover" />
                 </div>
                 <div>
-                    <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight leading-none">{student?.fullName}</h2>
-                    <p className="text-sm md:text-lg font-bold text-white/70 uppercase tracking-widest mt-1">
+                    <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{student?.fullName}</h2>
+                    <p className="text-xs md:text-sm font-bold text-white/70 uppercase tracking-widest mt-1">
                         DNI: {student?.documentId} • {student?.programId}
                     </p>
                 </div>
             </div>
-            <Button variant="ghost" onClick={handleLogout} className="h-16 w-16 md:h-20 md:w-20 rounded-[2rem] bg-white/10 hover:bg-white/20 text-white border-2 border-white/20">
-                <LogOut className="h-8 w-8" />
+            <Button variant="ghost" onClick={handleLogout} className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/10 hover:bg-white/20 text-white border-2 border-white/20">
+                <LogOut className="h-6 w-6" />
             </Button>
         </header>
     );
@@ -294,35 +294,35 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-sans">
             <KioskHeader />
 
-            <main className="flex-1 overflow-y-auto p-6 md:p-12">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6">
                 
                 {/* VISTA: MENÚ PRINCIPAL */}
                 {step === 'menu' && (
-                    <div className="max-w-6xl mx-auto space-y-10 animate-in slide-in-from-bottom-8 duration-500">
-                        <div className="text-center space-y-2">
-                            <h3 className="text-4xl font-black uppercase tracking-tighter text-slate-800">¿Qué trámite desea realizar?</h3>
-                            <p className="text-xl text-slate-500 font-medium">Seleccione una categoría para ver los documentos disponibles.</p>
+                    <div className="max-w-6xl mx-auto space-y-6 animate-in slide-in-from-bottom-8 duration-500 h-full flex flex-col justify-center">
+                        <div className="text-center space-y-1">
+                            <h3 className="text-3xl font-black uppercase tracking-tighter text-slate-800">¿Qué trámite desea realizar?</h3>
+                            <p className="text-lg text-slate-500 font-medium">Seleccione una categoría para ver los documentos disponibles.</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {categories.map(cat => (
                                 <Card 
                                     key={cat} 
-                                    className="group cursor-pointer hover:border-primary hover:shadow-3xl transition-all duration-500 rounded-[3rem] border-none shadow-xl bg-white overflow-hidden"
+                                    className="group cursor-pointer hover:border-primary hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] border-none shadow-lg bg-white overflow-hidden"
                                     onClick={() => { setSelectedCategory(cat); setStep('category'); }}
                                 >
-                                    <div className="p-10 flex flex-col items-center text-center space-y-6">
-                                        <div className="p-6 bg-slate-50 text-primary rounded-[2rem] group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-500">
-                                            {cat === 'Solicitud' ? <FileStack className="h-14 w-14" /> : <Stamp className="h-14 w-14" />}
+                                    <div className="p-8 flex flex-col items-center text-center space-y-4">
+                                        <div className="p-5 bg-slate-50 text-primary rounded-[1.5rem] group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-500">
+                                            {cat === 'Solicitud' ? <FileStack className="h-10 w-10" /> : <Stamp className="h-10 w-10" />}
                                         </div>
                                         <div>
-                                            <h4 className="text-3xl font-black uppercase tracking-tight leading-none">{cat}S</h4>
-                                            <p className="text-sm font-bold text-slate-400 mt-2 uppercase tracking-widest">
-                                                {templates.filter(t => t.category === cat).length} Documentos Disponibles
+                                            <h4 className="text-2xl font-black uppercase tracking-tight leading-none">{cat}S</h4>
+                                            <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">
+                                                {templates.filter(t => t.category === cat).length} Documentos
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="bg-primary h-2 w-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
+                                    <div className="bg-primary h-1.5 w-full scale-x-0 group-hover:scale-x-100 transition-transform origin-center" />
                                 </Card>
                             ))}
                         </div>
@@ -331,62 +331,62 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
                 {/* VISTA: LISTA DE MODELOS POR CATEGORÍA */}
                 {step === 'category' && (
-                    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500">
-                        <Button variant="ghost" onClick={() => setStep('menu')} className="text-xl font-black uppercase h-14 px-8 rounded-2xl hover:bg-slate-200">
-                            <ArrowLeft className="mr-3 h-6 w-6" /> VOLVER AL MENÚ
+                    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500 h-full flex flex-col">
+                        <Button variant="ghost" onClick={() => setStep('menu')} className="text-lg font-black uppercase h-12 px-6 rounded-xl hover:bg-slate-200 self-start">
+                            <ArrowLeft className="mr-3 h-5 w-5" /> VOLVER
                         </Button>
 
-                        <div className="grid gap-6 md:grid-cols-2">
+                        <div className="grid gap-4 md:grid-cols-2">
                             {templates.filter(t => t.category === selectedCategory).map(temp => (
                                 <Card 
                                     key={temp.id} 
-                                    className="p-8 rounded-[2.5rem] border-none shadow-lg hover:shadow-2xl hover:scale-[1.02] transition-all cursor-pointer bg-white flex justify-between items-center group"
+                                    className="p-6 rounded-2xl border-none shadow-md hover:shadow-xl hover:scale-[1.01] transition-all cursor-pointer bg-white flex justify-between items-center group"
                                     onClick={() => handleSelectTemplate(temp)}
                                 >
-                                    <div className="flex items-center gap-6">
-                                        <div className="p-4 bg-primary/5 text-primary rounded-2xl group-hover:bg-primary group-hover:text-white transition-colors">
-                                            <FileText className="h-8 w-8" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-3 bg-primary/5 text-primary rounded-xl group-hover:bg-primary group-hover:text-white transition-colors">
+                                            <FileText className="h-6 w-6" />
                                         </div>
                                         <div>
-                                            <h4 className="text-2xl font-black uppercase tracking-tight text-slate-800">{temp.name}</h4>
-                                            <Badge variant={temp.requirementType === 'Gratuito' ? 'secondary' : 'outline'} className="mt-2 text-[10px] font-black uppercase tracking-widest border-primary/20">
+                                            <h4 className="text-xl font-black uppercase tracking-tight text-slate-800">{temp.name}</h4>
+                                            <Badge variant={temp.requirementType === 'Gratuito' ? 'secondary' : 'outline'} className="mt-1 text-[8px] font-black uppercase tracking-widest border-primary/20">
                                                 {temp.requirementType === 'Gratuito' ? 'GRATUITO' : `COSTO: ${temp.requirementValue}`}
                                             </Badge>
                                         </div>
                                     </div>
-                                    <ChevronRight className="h-10 w-10 text-slate-200 group-hover:text-primary transition-colors" />
+                                    <ChevronRight className="h-8 w-8 text-slate-200 group-hover:text-primary transition-colors" />
                                 </Card>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) */}
+                {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) - COMPACTADO PARA EVITAR SCROLL */}
                 {step === 'assistant' && selectedTemplate && (
-                    <div className="max-w-6xl mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
-                         <div className="text-center space-y-2">
-                            <h3 className="text-4xl font-black uppercase tracking-tighter text-slate-800">Complete su información</h3>
-                            <p className="text-xl text-slate-500 font-medium">Esta información se inyectará formalmente en su documento.</p>
+                    <div className="max-w-full mx-auto space-y-4 animate-in slide-in-from-bottom-8 duration-500 h-full flex flex-col">
+                         <div className="text-center space-y-1">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Complete su información</h3>
+                            <p className="text-base text-slate-500 font-medium">Llene los datos necesarios para su documento oficial.</p>
                         </div>
 
-                        <Card className="rounded-[3rem] border-none shadow-2xl bg-white overflow-hidden p-10 space-y-10">
+                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden p-6 space-y-6 flex-1 min-h-0">
                             {/* MODELO ESPECÍFICO: JUSTIFICACIÓN */}
                             {selectedTemplate.name.includes('Justificación') ? (
-                                <div className="space-y-10">
-                                    {/* PASO 1: MOTIVO */}
-                                    <div className="space-y-4">
-                                        <Label className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
-                                            <div className="h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center text-sm italic">1</div>
+                                <div className="space-y-6">
+                                    {/* PASO 1: MOTIVO - COMPACTO */}
+                                    <div className="space-y-3">
+                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">1</div>
                                             ¿Cuál es el motivo de su falta?
                                         </Label>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                             {['Salud', 'Personal', 'Trabajo', 'Familiar'].map(m => (
                                                 <Button 
                                                     key={m} 
                                                     variant={formData['{motivo_justificacion}'] === m ? 'default' : 'outline'}
                                                     className={cn(
-                                                        "h-20 text-lg font-black uppercase rounded-2xl border-2 transition-all",
-                                                        formData['{motivo_justificacion}'] === m ? "scale-105 shadow-xl" : "opacity-70"
+                                                        "h-12 text-sm font-black uppercase rounded-xl border-2 transition-all",
+                                                        formData['{motivo_justificacion}'] === m ? "scale-105 shadow-md" : "opacity-70"
                                                     )}
                                                     onClick={() => setFormData({...formData, '{motivo_justificacion}': m})}
                                                 >
@@ -396,14 +396,14 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         </div>
                                     </div>
 
-                                    {/* PASO 2: FECHAS (CALENDARIO MULTISELECT) */}
-                                    <div className="space-y-4">
-                                        <Label className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
-                                            <div className="h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center text-sm italic">2</div>
+                                    {/* PASO 2: FECHAS - COMPACTO */}
+                                    <div className="space-y-3">
+                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">2</div>
                                             Indique las fechas de inasistencia
                                         </Label>
-                                        <div className="flex flex-col md:flex-row gap-8 bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
-                                            <div className="bg-white p-4 rounded-3xl shadow-xl border shrink-0 mx-auto md:mx-0">
+                                        <div className="flex flex-col md:flex-row gap-4 bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-200">
+                                            <div className="bg-white p-2 rounded-2xl shadow-md border shrink-0 mx-auto md:mx-0">
                                                 <Calendar
                                                     mode="multiple"
                                                     selected={selectedDates}
@@ -422,63 +422,62 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                                     className="rounded-md"
                                                 />
                                             </div>
-                                            <div className="flex-1 flex flex-col justify-center space-y-4">
+                                            <div className="flex-1 flex flex-col justify-center space-y-2">
                                                 <div className="flex items-center gap-2">
-                                                    <CalendarDays className="h-5 w-5 text-primary" />
-                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Resumen de Días Seleccionados:</p>
+                                                    <CalendarDays className="h-4 w-4 text-primary" />
+                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Días Seleccionados:</p>
                                                 </div>
-                                                <div className="p-6 bg-white rounded-2xl border min-h-[120px] flex items-center justify-center text-center shadow-inner">
+                                                <div className="p-3 bg-white rounded-xl border min-h-[60px] flex items-center justify-center text-center shadow-inner">
                                                     {formData['{fechas_inasistencia}'] ? (
-                                                        <p className="text-base font-bold text-primary uppercase leading-relaxed">
+                                                        <p className="text-xs font-bold text-primary uppercase leading-tight">
                                                             {formData['{fechas_inasistencia}']}
                                                         </p>
                                                     ) : (
-                                                        <p className="text-sm text-slate-400 italic">Toque los días de su falta en el calendario...</p>
+                                                        <p className="text-xs text-slate-400 italic">Toque los días en el calendario...</p>
                                                     )}
                                                 </div>
-                                                <p className="text-[10px] text-muted-foreground italic text-center">Puede seleccionar varios días si es necesario.</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* PASO 3: ADJUNTOS */}
-                                    <div className="space-y-4">
-                                        <Label className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
-                                            <div className="h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center text-sm italic">3</div>
+                                    {/* PASO 3: ADJUNTOS - COMPACTO */}
+                                    <div className="space-y-3">
+                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">3</div>
                                             ¿Adjunta algún certificado físico?
                                         </Label>
-                                        <div className="flex gap-4">
+                                        <div className="flex gap-3">
                                             {[
-                                                {v: 'SI', label: 'SÍ, ADJUNTO DOCUMENTO', icon: CheckCircle2},
-                                                {v: 'NO', label: 'NO, SOLO DECLARACIÓN', icon: AlertTriangle}
+                                                {v: 'SI', label: 'SÍ, ADJUNTO', icon: CheckCircle2},
+                                                {v: 'NO', label: 'NO, DECLARACIÓN', icon: AlertTriangle}
                                             ].map(opt => (
                                                 <Button 
                                                     key={opt.v} 
                                                     variant={formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO') ? 'default' : 'outline'}
                                                     className={cn(
-                                                        "flex-1 h-20 text-sm font-black uppercase rounded-2xl border-2 gap-3 transition-all",
-                                                        (formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO')) ? "scale-105 shadow-xl" : "opacity-70"
+                                                        "flex-1 h-12 text-xs font-black uppercase rounded-xl border-2 gap-2 transition-all",
+                                                        (formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO')) ? "scale-105 shadow-md" : "opacity-70"
                                                     )}
                                                     onClick={() => setFormData({...formData, '{adjuntos_detalle}': opt.v === 'SI' ? 'POR LO CUAL ADJUNTO EL CERTIFICADO CORRESPONDIENTE' : 'SOLICITO SE CONSIDERE MI PALABRA BAJO DECLARACIÓN JURADA'})}
                                                 >
-                                                    <opt.icon className="h-6 w-6" /> {opt.label}
+                                                    <opt.icon className="h-4 w-4" /> {opt.label}
                                                 </Button>
                                             ))}
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="py-20 text-center text-slate-400">Este modelo requiere configuración de campos dinámicos en el panel de administrador.</div>
+                                <div className="py-12 text-center text-slate-400">Modelo en proceso de configuración.</div>
                             )}
 
-                            <div className="flex gap-4 pt-6">
-                                <Button variant="ghost" onClick={() => setStep('category')} className="h-20 flex-1 text-xl font-black rounded-3xl">CANCELAR</Button>
+                            <div className="flex gap-4 pt-4 border-t">
+                                <Button variant="ghost" onClick={() => setStep('category')} className="h-12 flex-1 text-sm font-black rounded-xl">CANCELAR</Button>
                                 <Button 
                                     disabled={!formData['{motivo_justificacion}'] || !formData['{fechas_inasistencia}'] || !formData['{adjuntos_detalle}']}
                                     onClick={handleFinalizeAssistant}
-                                    className="h-20 flex-[2] text-2xl font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/30"
+                                    className="h-12 flex-[2] text-sm font-black uppercase tracking-widest rounded-xl shadow-lg"
                                 >
-                                    Siguiente Paso <ChevronRight className="ml-3 h-8 w-8" />
+                                    Siguiente <ChevronRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </div>
                         </Card>
@@ -487,58 +486,58 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
                 {/* VISTA: VALIDACIÓN DE REQUISITOS (PAGO) */}
                 {step === 'validation' && (
-                    <div className="max-w-2xl mx-auto space-y-12 text-center animate-in zoom-in-95 duration-500">
-                        <div className="h-40 w-40 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto shadow-xl">
-                            <CreditCard className="h-20 w-20" />
+                    <div className="max-w-2xl mx-auto space-y-8 text-center animate-in zoom-in-95 duration-500 h-full flex flex-col justify-center">
+                        <div className="h-32 w-32 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                            <CreditCard className="h-16 w-16" />
                         </div>
                         <div className="space-y-4">
-                            <h3 className="text-4xl font-black uppercase tracking-tighter text-slate-800">Trámite no autorizado</h3>
-                            <div className="p-10 bg-white rounded-[3rem] shadow-xl border-2 border-red-200">
-                                <p className="text-2xl font-bold text-red-700 leading-tight">"{validationError}"</p>
+                            <h3 className="text-3xl font-black uppercase tracking-tighter text-slate-800">Trámite no autorizado</h3>
+                            <div className="p-8 bg-white rounded-[2rem] shadow-xl border-2 border-red-200">
+                                <p className="text-xl font-bold text-red-700 leading-tight">"{validationError}"</p>
                             </div>
                         </div>
-                        <div className="flex flex-col gap-4">
-                             <Button onClick={() => setStep('assistant')} variant="secondary" className="h-20 text-xl font-black rounded-3xl">REINTENTAR VALIDACIÓN</Button>
-                             <Button onClick={handleLogout} variant="ghost" className="h-16 font-bold text-slate-400 uppercase tracking-widest">FINALIZAR SESIÓN</Button>
+                        <div className="flex flex-col gap-3">
+                             <Button onClick={() => setStep('assistant')} variant="secondary" className="h-14 text-lg font-black rounded-xl">REINTENTAR VALIDACIÓN</Button>
+                             <Button onClick={handleLogout} variant="ghost" className="h-12 font-bold text-slate-400 uppercase tracking-widest">FINALIZAR SESIÓN</Button>
                         </div>
                     </div>
                 )}
 
                 {/* VISTA: PREVISUALIZACIÓN Y FIRMA FINAL */}
                 {step === 'preview' && selectedTemplate && (
-                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 animate-in fade-in duration-700">
-                        <div className="lg:col-span-8">
-                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-3xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans shadow-2xl shadow-slate-400/50">
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700 h-full overflow-hidden">
+                        <div className="lg:col-span-8 overflow-y-auto custom-scrollbar">
+                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] border-none p-10 md:p-[20mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans shadow-2xl">
                                 {/* Encabezado */}
-                                <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-10">
-                                    <div className="flex items-center gap-4">
-                                        {institute?.logoUrl && <img src={institute.logoUrl} alt="" className="w-[65px] h-[65px] object-contain" />}
+                                <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
+                                    <div className="flex items-center gap-3">
+                                        {institute?.logoUrl && <img src={institute.logoUrl} alt="" className="w-12 h-12 object-contain" />}
                                         <div className="text-left leading-tight">
-                                            <h1 className="text-[13pt] font-black uppercase">{institute?.name}</h1>
-                                            <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
+                                            <h1 className="text-[11pt] font-black uppercase">{institute?.name}</h1>
+                                            <p className="text-[7pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
                                         </div>
                                     </div>
-                                    <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">EXP-ID: {pointId}-{student?.documentId}</div>
+                                    <div className="text-right text-[6pt] font-black text-gray-400 uppercase tracking-widest">EXP-ID: {pointId}-{student?.documentId}</div>
                                 </div>
 
                                 {/* Sumilla */}
-                                <div className="text-right mb-12">
-                                    <p className="text-[11pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
+                                <div className="text-right mb-8">
+                                    <p className="text-[10pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
                                         {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}
                                     </p>
                                 </div>
 
                                 {/* Destinatario */}
-                                <div className="mb-10 space-y-1">
-                                    <p className="font-black text-[11pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
-                                    <p className="font-bold text-[11pt] uppercase underline decoration-2 underline-offset-4">
+                                <div className="mb-8 space-y-1">
+                                    <p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
+                                    <p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">
                                         {selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : (staff.find(s => s.programId === student?.programId && (s.role === 'Coordinator' || s.roleId === 'coordinator'))?.displayName || 'COORDINADOR ACADÉMICO')}
                                     </p>
-                                    <p className="font-bold text-[11pt] uppercase">{institute?.name}</p>
+                                    <p className="font-bold text-[10pt] uppercase">{institute?.name}</p>
                                 </div>
 
                                 {/* Identidad */}
-                                <div className="text-justify text-[11pt] leading-loose mb-8">
+                                <div className="text-justify text-[10pt] leading-loose mb-6">
                                     Yo, <span className="font-black underline">{student?.fullName}</span>, 
                                     identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, 
                                     estudiante del programa de estudios de <span className="font-bold">{student?.programId}</span>, 
@@ -549,7 +548,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 </div>
 
                                 {/* Argumentación Dinámica Inyectada */}
-                                <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-6 bg-slate-50/30">
+                                <div className="text-justify leading-relaxed text-[10pt] min-h-[250px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-4 bg-slate-50/30">
                                     {selectedTemplate.content
                                         .replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())
                                         .replace(/{fechas_inasistencia}/g, (formData['{fechas_inasistencia}'] || '').toUpperCase())
@@ -557,51 +556,51 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                     }
                                 </div>
 
-                                <div className="my-10 font-bold uppercase text-[11pt]">
+                                <div className="my-8 font-bold uppercase text-[10pt]">
                                     Por lo tanto:<br/>
                                     Espero acceda a mi solicitud por ser de justicia.
                                 </div>
 
-                                <div className="text-right mt-12 italic text-[10pt] text-gray-700">
+                                <div className="text-right mt-8 italic text-[9pt] text-gray-700">
                                     Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.
                                 </div>
 
-                                <div className="mt-24 pt-2 border-t border-black w-72 mx-auto text-center">
-                                    <p className="font-black uppercase text-[10pt] tracking-tight">{student?.fullName}</p>
-                                    <span className="text-[8pt] font-black text-gray-500 uppercase tracking-widest">DNI: {student?.documentId}</span>
+                                <div className="mt-16 pt-2 border-t border-black w-60 mx-auto text-center">
+                                    <p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p>
+                                    <span className="text-[7pt] font-black text-gray-500 uppercase tracking-widest">DNI: {student?.documentId}</span>
                                 </div>
                             </Card>
                         </div>
 
-                        <div className="lg:col-span-4 flex flex-col gap-6">
-                            <Card className="rounded-[2.5rem] border-none shadow-xl bg-primary text-primary-foreground p-8 space-y-6">
-                                <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center">
-                                    <Printer className="h-8 w-8 text-white" />
+                        <div className="lg:col-span-4 flex flex-col gap-4">
+                            <Card className="rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground p-6 space-y-4">
+                                <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                    <Printer className="h-6 w-6 text-white" />
                                 </div>
                                 <div>
-                                    <h4 className="text-2xl font-black uppercase tracking-tight">Confirmar Trámite</h4>
-                                    <p className="text-sm text-white/70 font-medium mt-2">Revise que su información sea correcta antes de imprimir. Se generará un cargo digital.</p>
+                                    <h4 className="text-xl font-black uppercase tracking-tight">Confirmar e Imprimir</h4>
+                                    <p className="text-xs text-white/70 font-medium mt-1">Revise su información. Al confirmar se generará un cargo oficial.</p>
                                 </div>
                                 <Button 
-                                    className="w-full h-24 text-2xl font-black uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/80 shadow-2xl rounded-[1.5rem] animate-pulse"
+                                    className="w-full h-16 text-xl font-black uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/80 shadow-xl rounded-xl animate-pulse"
                                     onClick={() => {
                                         window.print();
                                         handleLogout();
                                         toast({ title: "Documento Enviado", description: "Iniciando proceso de impresión." });
                                     }}
                                 >
-                                    IMPRIMIR AHORA
+                                    IMPRIMIR
                                 </Button>
                             </Card>
 
-                            <Button variant="ghost" onClick={() => setStep('assistant')} className="h-16 font-black uppercase rounded-2xl border-2 border-slate-200">
-                                <ArrowLeft className="mr-3 h-5 w-5" /> CORREGIR DATOS
+                            <Button variant="ghost" onClick={() => setStep('assistant')} className="h-12 font-black uppercase rounded-xl border-2 border-slate-200">
+                                <ArrowLeft className="mr-2 h-4 w-4" /> CORREGIR
                             </Button>
 
-                            <div className="p-6 bg-blue-50 border border-blue-100 rounded-[2rem] flex gap-4 items-start">
-                                <Info className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
-                                <p className="text-xs text-blue-800 leading-tight font-medium">
-                                    Al imprimir este documento, se guardará una copia digital en su expediente para que su Coordinador pueda revisarla y firmarla posteriormente.
+                            <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3 items-start">
+                                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-blue-800 leading-tight font-medium">
+                                    Su solicitud será archivada digitalmente en su expediente de forma automática tras la impresión.
                                 </p>
                             </div>
                         </div>
@@ -609,8 +608,8 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                 )}
             </main>
             
-            {/* PIE DE PÁGINA FIXO KIOSKO */}
-            <footer className="p-4 text-center bg-white border-t text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
+            {/* PIE DE PÁGINA FIXO KIOSKO - COMPACTO */}
+            <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0">
                 STEM V2 • POINT PRINT SYSTEM • {new Date().getFullYear()}
             </footer>
         </div>
