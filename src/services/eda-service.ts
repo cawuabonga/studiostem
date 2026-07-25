@@ -42,15 +42,28 @@ export const getPrintPoints = async (instituteId: string): Promise<PrintPoint[]>
 
 /**
  * Escucha en tiempo real un punto de impresión específico.
- * Utilizado por el Kiosko para detectar escaneos RFID.
+ * Se corrigió para buscar por el campo 'pointId' (ej: EDA-001) y no solo por el ID del documento.
  */
 export const listenToPrintPoint = (instituteId: string, pointId: string, callback: (point: PrintPoint | null) => void) => {
-    const docRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
-    return onSnapshot(docRef, (snap) => {
-        if (snap.exists()) {
-            callback({ id: snap.id, ...snap.data() } as PrintPoint);
+    const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
+    
+    // Consultamos por el identificador técnico que el usuario ingresa
+    const q = query(pointsCol, where('pointId', '==', pointId));
+    
+    return onSnapshot(q, (snap) => {
+        if (!snap.empty) {
+            const d = snap.docs[0];
+            callback({ id: d.id, ...d.data() } as PrintPoint);
         } else {
-            callback(null);
+            // Intento secundario: buscar directamente por ID de documento (por si acaso)
+            const docRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
+            getDoc(docRef).then(dSnap => {
+                if (dSnap.exists()) {
+                    callback({ id: dSnap.id, ...dSnap.data() } as PrintPoint);
+                } else {
+                    callback(null);
+                }
+            });
         }
     });
 };
@@ -95,11 +108,17 @@ export const savePrintPoint = async (
  * Cierra la sesión activa en un punto de impresión.
  */
 export const closeKioskSession = async (instituteId: string, pointId: string) => {
-    const pointRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
-    await updateDoc(pointRef, {
-        currentStudentId: null,
-        lastScanAt: null
-    });
+    const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
+    const q = query(pointsCol, where('pointId', '==', pointId));
+    const snap = await getDocs(q);
+    
+    if (!snap.empty) {
+        const pointRef = snap.docs[0].ref;
+        await updateDoc(pointRef, {
+            currentStudentId: null,
+            lastScanAt: null
+        });
+    }
 };
 
 /**
