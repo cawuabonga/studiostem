@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -58,6 +57,7 @@ import {
     ImageIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
