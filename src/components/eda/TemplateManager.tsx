@@ -57,7 +57,9 @@ import {
     Code, 
     CheckCircle2, 
     DollarSign,
-    ExternalLink
+    ExternalLink,
+    Eye,
+    Printer
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -108,6 +110,9 @@ export function TemplateManager() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
     const [deletingTemplate, setDeletingTemplate] = useState<DocumentTemplate | null>(null);
+    
+    // Preview state
+    const [previewingTemplate, setPreviewingTemplate] = useState<DocumentTemplate | null>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(templateSchema),
@@ -188,6 +193,25 @@ export function TemplateManager() {
         }
     };
 
+    const getPreviewHtml = (template: DocumentTemplate) => {
+        let content = template.content;
+        const dummyData: Record<string, string> = {
+            '{nombre_completo}': 'JUAN PÉREZ GARCÍA',
+            '{dni}': '76543210',
+            '{carrera}': 'ENFERMERÍA TÉCNICA',
+            '{ciclo_actual}': 'V SEMESTRE',
+            '{turno}': 'MAÑANA',
+            '{fecha_hoy}': new Date().toLocaleDateString('es-PE'),
+            '{instituto_nombre}': 'INSTITUTO SUPERIOR TECNOLÓGICO STEM',
+        };
+
+        Object.entries(dummyData).forEach(([key, val]) => {
+            content = content.replaceAll(key, `<span class="bg-yellow-100 font-bold px-1 rounded border border-yellow-200 text-yellow-800">${val}</span>`);
+        });
+
+        return content;
+    };
+
     const requirementType = form.watch('requirementType');
 
     return (
@@ -240,6 +264,9 @@ export function TemplateManager() {
                                 </div>
                             </CardContent>
                             <CardFooter className="border-t bg-muted/20 p-4 flex gap-2">
+                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 text-primary" onClick={() => setPreviewingTemplate(template)}>
+                                    <Eye className="h-5 w-5" />
+                                </Button>
                                 <Button variant="ghost" className="flex-1 font-bold h-10 rounded-xl" onClick={() => handleOpenDialog(template)}>
                                     <Edit className="h-4 w-4 mr-2" /> Editar
                                 </Button>
@@ -258,6 +285,7 @@ export function TemplateManager() {
                 )}
             </div>
 
+            {/* Dialog: Registro/Edición */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
@@ -361,6 +389,55 @@ export function TemplateManager() {
                             </DialogFooter>
                         </form>
                     </Form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Previsualización */}
+            <Dialog open={!!previewingTemplate} onOpenChange={(open) => !open && setPreviewingTemplate(null)}>
+                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                    <DialogHeader className="p-6 bg-slate-100 border-b shrink-0">
+                        <div className="flex justify-between items-center pr-8">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 bg-primary/10 rounded-xl text-primary shadow-sm">
+                                    <Eye className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-lg font-black uppercase tracking-tight">Simulación de Documento</DialogTitle>
+                                    <DialogDescription className="text-xs font-bold">Vista previa de: {previewingTemplate?.name}</DialogDescription>
+                                </div>
+                            </div>
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 font-bold text-[9px] uppercase">DATO SIMULADO</Badge>
+                        </div>
+                    </DialogHeader>
+
+                    <ScrollArea className="flex-1 bg-slate-50">
+                        <div className="p-12">
+                            {/* Papel A4 Simulado */}
+                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden">
+                                {/* Filigrana Simbolica */}
+                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
+                                    <FileText className="w-[400px] h-[400px]" />
+                                </div>
+
+                                <div className="relative z-10 font-serif text-black prose prose-slate max-w-none">
+                                    {previewingTemplate && (
+                                        <div 
+                                            className="document-render-preview text-[12pt] leading-relaxed text-justify whitespace-pre-wrap"
+                                            dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewingTemplate) }} 
+                                        />
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+                    </ScrollArea>
+
+                    <DialogFooter className="p-6 bg-white border-t flex gap-3 shrink-0">
+                        <div className="flex-1 flex items-center gap-2 text-[10px] text-muted-foreground italic font-medium">
+                            <Info className="h-4 w-4" />
+                            Los campos resaltados en amarillo son variables dinámicas que se llenarán automáticamente.
+                        </div>
+                        <Button variant="ghost" onClick={() => setPreviewingTemplate(null)} className="font-bold rounded-xl h-10 px-8">CERRAR VISOR</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
 
