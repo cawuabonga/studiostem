@@ -7,27 +7,38 @@ service cloud.firestore {
     
     // Verifica si el usuario tiene el rol de 'SuperAdmin' en su documento de usuario global.
     function isSuperAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
     }
     
     // Verifica si el usuario está autenticado y ya tiene un instituto asignado en su perfil.
-    // Optimizado: Se eliminó exists() para reducir el conteo de llamadas en operaciones batch.
     function isAssociatedWithInstitute() {
       return request.auth != null && 
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId != null;
     }
+
+    // Verifica si el usuario pertenece específicamente a un instituto.
+    function belongsToInstitute(instId) {
+        return request.auth != null && 
+               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instId;
+    }
     
-    // --- Regla de Acceso General para Desarrollo ---
-    // Permite lectura y escritura a cualquier usuario que ya pertenezca a un instituto o que sea SuperAdmin.
+    // --- Regla de Acceso General ---
+    // Se aplica a todas las colecciones por defecto si el usuario está asociado a un instituto o es SuperAdmin.
     match /{path=**} {
       allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
     }
     
-    // --- EXCEPCIONES A LA REGLA GENERAL ---
+    // --- EXCEPCIONES Y REGLAS ESPECÍFICAS ---
 
     // Gestión del documento de usuario propio:
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Reglas para colecciones dentro de institutos para mayor seguridad y precisión:
+    match /institutes/{instituteId}/{document=**} {
+      allow read, write: if isSuperAdmin() || belongsToInstitute(instituteId);
     }
 
     // Proceso de Vinculación de Perfil (Staff):
@@ -68,11 +79,6 @@ service cloud.firestore {
     }
     match /institutes/{instituteId}/albums/{albumId}/{allPhotos=**} {
       allow read: if true;
-    }
-
-    // Denegación por defecto:
-    match /{document=**} {
-      allow read, write: if false;
     }
   }
 }
