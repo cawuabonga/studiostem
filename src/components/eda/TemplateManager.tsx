@@ -1,15 +1,17 @@
+
 'use client';
 
 /**
  * @fileOverview Gestor de Plantillas EDA rediseñado.
  * Utiliza un enfoque de catálogo por categorías y modelos predefinidos.
  * Incluye el modelo maestro de "Justificación de Inasistencias" con estructura rígida.
+ * Se ha automatizado el destinatario para detectar al Coordinador de Carrera.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDocumentTemplates, saveDocumentTemplate } from '@/services/eda-service';
 import { getPaymentConcepts } from '@/config/firebase';
-import type { DocumentTemplate, PaymentConcept, DocumentCategory } from '@/types';
+import type { DocumentTemplate, PaymentConcept, DocumentCategory, AddresseeType } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -55,16 +57,15 @@ import {
     ArrowLeft, 
     Eye, 
     Save, 
-    CheckCircle2, 
     ChevronRight,
     FileStack,
-    GraduationCap,
     Stamp,
-    Layout,
-    CheckCircle,
     PlusCircle,
     Info,
-    Trash2
+    Trash2,
+    UserCheck,
+    Building2,
+    CheckCircle2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -79,11 +80,21 @@ import * as z from 'zod';
 const solicitudSchema = z.object({
   name: z.string().min(5, 'El nombre debe ser descriptivo.'),
   sumilla: z.string().min(5, 'La sumilla es obligatoria.'),
-  addresseeRole: z.string().min(3, 'Especifique el cargo del destinatario.'),
+  addresseeType: z.enum(['Director', 'Coordinator'] as const),
+  addresseeRole: z.string().optional(),
+  directorName: z.string().optional(),
   content: z.string().min(20, 'El cuerpo de la solicitud es requerido.'),
   requirementType: z.enum(['Gratuito', 'Pago Validado']),
   requirementValue: z.string().optional(),
   isActive: z.boolean().default(true),
+}).refine(data => {
+    if (data.addresseeType === 'Director' && (!data.directorName || data.directorName.length < 3)) {
+        return false;
+    }
+    return true;
+}, {
+    message: "Debe ingresar el nombre del Director institucional.",
+    path: ["directorName"]
 });
 
 type SolicitudFormValues = z.infer<typeof solicitudSchema>;
@@ -109,9 +120,11 @@ export function TemplateManager() {
         defaultValues: {
             isActive: true,
             requirementType: 'Gratuito',
+            addresseeType: 'Coordinator',
             name: '',
             sumilla: '',
             addresseeRole: '',
+            directorName: '',
             content: '',
             requirementValue: ''
         }
@@ -146,7 +159,9 @@ export function TemplateManager() {
         form.reset({
             name: template.name,
             sumilla: template.sumilla || '',
+            addresseeType: template.addresseeType || 'Coordinator',
             addresseeRole: template.addresseeRole || '',
+            directorName: template.directorName || '',
             content: template.content,
             requirementType: template.requirementType,
             requirementValue: template.requirementValue || '',
@@ -159,11 +174,17 @@ export function TemplateManager() {
         if (!instituteId || !activeTemplate) return;
         setIsSubmitting(true);
         try {
+            // Establecemos el rol automáticamente si es para el coordinador
+            const finalRole = data.addresseeType === 'Coordinator' 
+                ? 'Coordinador del Programa de Estudios' 
+                : 'Director General';
+
             await saveDocumentTemplate(instituteId, { 
                 ...data,
+                addresseeRole: finalRole,
                 category: activeTemplate.category,
                 layoutType: 'structured_solicitud',
-                variables: ['{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', '{turno}', '{direccion}', '{fecha_hoy}'],
+                variables: ['{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', '{turno}', '{direccion}', '{fecha_hoy}', '{nombre_coordinador}'],
                 instituteId 
             }, activeTemplate.id.startsWith('new_') ? undefined : activeTemplate.id);
 
@@ -177,7 +198,7 @@ export function TemplateManager() {
         }
     };
 
-    // Datos simulados para previsualización
+    // Datos simulados para previsualización dinámica
     const dummyData = {
         name: 'ALEXANDER GUSTAVO PÉREZ RIVAS',
         dni: '76543210',
@@ -186,6 +207,7 @@ export function TemplateManager() {
         turno: 'MAÑANA',
         address: 'AV. LAS PALMERAS 456, DISTRITO DE CASTILLA',
         date: new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }),
+        coordinator: 'ING. CARLOS MENDOZA SOLANO' // Simulación de detección automática
     };
 
     if (loading) return <Skeleton className="h-64 w-full rounded-3xl" />;
@@ -242,7 +264,6 @@ export function TemplateManager() {
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {/* Modelo Maestro: Justificación de Inasistencias */}
                     {selectedCategory === 'Solicitud' && (
                         <Card className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white border-2">
                             <CardHeader className="p-6">
@@ -269,7 +290,7 @@ export function TemplateManager() {
                                             category: 'Solicitud',
                                             layoutType: 'structured_solicitud',
                                             sumilla: 'SOLICITO: Justificación de inasistencias.',
-                                            addresseeRole: 'Coordinador del Programa de Estudios',
+                                            addresseeType: 'Coordinator',
                                             content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas durante los días...',
                                             requirementType: 'Gratuito',
                                             isActive: true,
@@ -285,7 +306,6 @@ export function TemplateManager() {
                         </Card>
                     )}
 
-                    {/* Placeholder para otros modelos */}
                     <div className="border-2 border-dashed rounded-3xl flex flex-col items-center justify-center p-8 text-center opacity-30">
                         <PlusCircle className="h-10 w-10 mb-4" />
                         <p className="text-xs font-black uppercase tracking-widest">Próximos Modelos</p>
@@ -298,6 +318,8 @@ export function TemplateManager() {
 
     // --- VISTA 3: EDITOR ESPECÍFICO ---
     if (view === 'editor' && activeTemplate) {
+        const addresseeType = form.watch('addresseeType');
+
         return (
             <Form {...form}>
                 <div className="space-y-6 animate-in zoom-in-95 duration-500">
@@ -308,7 +330,7 @@ export function TemplateManager() {
                             </Button>
                             <div>
                                 <h2 className="text-xl font-black uppercase tracking-tight text-primary">{form.watch('name') || activeTemplate.name}</h2>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Editor de Estructura Institucional</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Editor de Estructura Dinámica</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -329,7 +351,7 @@ export function TemplateManager() {
                                     <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Cuerpo del Documento</CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-8">
-                                    <form className="space-y-8">
+                                    <div className="space-y-8">
                                         <div className="grid md:grid-cols-2 gap-6">
                                             <FormField control={form.control} name="sumilla" render={({ field }) => (
                                                 <FormItem>
@@ -338,24 +360,52 @@ export function TemplateManager() {
                                                     <FormMessage />
                                                 </FormItem>
                                             )}/>
-                                            <FormField control={form.control} name="addresseeRole" render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="font-black text-[10px] uppercase text-slate-500">II. Dirigido a</FormLabel>
-                                                    <FormControl><Input {...field} className="h-12 uppercase rounded-xl border-primary/10" /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}/>
+                                            
+                                            <div className="space-y-4">
+                                                <FormField control={form.control} name="addresseeType" render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel className="font-black text-[10px] uppercase text-slate-500">II. Destinatario (Dirigido a)</FormLabel>
+                                                        <Select onValueChange={field.onChange} value={field.value}>
+                                                            <FormControl><SelectTrigger className="h-12 rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                                            <SelectContent>
+                                                                <SelectItem value="Director">Director General (Manual)</SelectItem>
+                                                                <SelectItem value="Coordinator">Coordinador de Carrera (Automático)</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </FormItem>
+                                                )}/>
+                                                
+                                                {addresseeType === 'Director' && (
+                                                    <FormField control={form.control} name="directorName" render={({ field }) => (
+                                                        <FormItem className="animate-in slide-in-from-top-2">
+                                                            <FormControl><Input {...field} placeholder="Nombre completo del Director..." className="h-11 rounded-xl border-orange-200" /></FormControl>
+                                                            <FormDescription className="text-[10px]">Indique el nombre de la máxima autoridad.</FormDescription>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}/>
+                                                )}
+
+                                                {addresseeType === 'Coordinator' && (
+                                                    <div className="p-3 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl animate-in fade-in">
+                                                        <p className="text-[9px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
+                                                            <UserCheck className="h-3 w-3" /> Detección de Coordinador
+                                                        </p>
+                                                        <p className="text-[10px] text-blue-600 mt-1 font-medium">
+                                                            El sistema identificará al coordinador del programa del estudiante al momento del escaneo e inyectará su nombre automáticamente.
+                                                        </p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         <FormField control={form.control} name="content" render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel className="font-black text-[10px] uppercase text-slate-500">III. Argumentación (Contenido)</FormLabel>
                                                 <FormControl><Textarea rows={12} {...field} className="resize-none leading-relaxed font-medium text-base bg-slate-50 rounded-2xl p-6" /></FormControl>
-                                                <FormDescription className="text-[10px]">Escriba solo los párrafos centrales. El sistema añadirá automáticamente la despedida reglamentaria.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
-                                    </form>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -391,8 +441,14 @@ export function TemplateManager() {
                             <div className="p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl flex gap-4 items-start">
                                 <Info className="h-5 w-5 text-blue-600 shrink-0 mt-1" />
                                 <div className="text-[11px] text-blue-800 leading-relaxed font-medium">
-                                    <p className="font-black uppercase mb-1">Estructura Automática:</p>
-                                    Este modelo inyecta automáticamente los datos del alumno (DNI, Carrera, etc.) y la firma oficial al final del documento.
+                                    <p className="font-black uppercase mb-1">Estructura Dinámica:</p>
+                                    Este modelo inyecta dinámicamente:
+                                    <ul className="list-disc ml-4 mt-1 space-y-1">
+                                        <li>Logo institucional actualizado.</li>
+                                        <li>Ficha técnica del estudiante.</li>
+                                        <li><strong>Autoridad responsable detectada.</strong></li>
+                                        <li>Firma y pie de página.</li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -404,9 +460,9 @@ export function TemplateManager() {
                             <DialogHeader className="p-6 bg-slate-100 border-b shrink-0 flex flex-row items-center justify-between pr-10">
                                 <div className="flex items-center gap-4">
                                     <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Eye className="h-5 w-5" /></div>
-                                    <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización de Impresión</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de papel A4 oficial con datos de prueba.</DialogDescription></div>
+                                    <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización Dinámica</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de papel A4 oficial con detección automática.</DialogDescription></div>
                                 </div>
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Documento Estructurado</Badge>
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Documento Inteligente</Badge>
                             </DialogHeader>
 
                             <ScrollArea className="flex-1 bg-slate-50">
@@ -421,7 +477,7 @@ export function TemplateManager() {
                                                     <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Validez Digital Verificada</div>
+                                            <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Detección Dinámica Activa</div>
                                         </div>
 
                                         {/* Sumilla */}
@@ -431,9 +487,12 @@ export function TemplateManager() {
                                             </p>
                                         </div>
 
-                                        {/* Destinatario */}
+                                        {/* Destinatario Dinámico */}
                                         <div className="mb-10 space-y-1">
-                                            <p className="font-black text-[11pt] uppercase">SEÑOR {form.watch('addresseeRole')}:</p>
+                                            <p className="font-black text-[11pt] uppercase">SEÑOR {addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
+                                            <p className="font-bold text-[11pt] uppercase underline decoration-2 underline-offset-4">
+                                                {addresseeType === 'Director' ? form.watch('directorName') : dummyData.coordinator}
+                                            </p>
                                             <p className="font-bold text-[11pt] uppercase">{institute?.name}</p>
                                         </div>
 
@@ -448,7 +507,7 @@ export function TemplateManager() {
                                             ante usted con el debido respeto me presento y expongo:
                                         </div>
 
-                                        <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4">
+                                        <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-6">
                                             {form.watch('content')}
                                         </div>
 

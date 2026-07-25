@@ -17,6 +17,7 @@ export type PrintPointStatus = 'Online' | 'Offline' | 'Mantenimiento';
 export type DocumentCategory = 'Constancia' | 'Boleta' | 'Ficha' | 'Solicitud';
 export type EDARequirement = 'Gratuito' | 'Pago Validado';
 export type EDALayoutType = 'structured_solicitud' | 'raw_html';
+export type AddresseeType = 'Director' | 'Coordinator';
 
 export interface PrintPoint {
     id: string;
@@ -42,7 +43,9 @@ export interface DocumentTemplate {
     // Campos para diseño estructurado
     layoutType: EDALayoutType;
     sumilla?: string;
+    addresseeType?: AddresseeType;
     addresseeRole?: string; // 'Director General', 'Coordinador Académico', etc.
+    directorName?: string; // Nombre del director si addresseeType === 'Director'
 }
 
 export interface DocumentGenerationLog {
