@@ -3,7 +3,7 @@
 
 /**
  * @fileOverview Servicio especializado para el sistema EDA (Elaboración de Documentos Automáticos).
- * Maneja la gestión de kioscos de impresión, plantillas de documentos y logs de generación.
+ * Maneja la gestión de puntos de impresión, plantillas de documentos y logs de generación.
  */
 
 import { db } from '@/config/firebase';
@@ -22,48 +22,48 @@ import {
     addDoc,
     limit
 } from 'firebase/firestore';
-import type { Kiosk, DocumentTemplate, DocumentGenerationLog } from '@/types';
+import type { PrintPoint, DocumentTemplate, DocumentGenerationLog } from '@/types';
 
 /**
- * Recupera todos los kioscos (puntos de impresión) de un instituto.
+ * Recupera todos los puntos de impresión (point print) de un instituto.
  */
-export const getKiosks = async (instituteId: string): Promise<Kiosk[]> => {
+export const getPrintPoints = async (instituteId: string): Promise<PrintPoint[]> => {
     try {
-        const kiosksCol = collection(db, 'institutes', instituteId, 'edaKiosks');
-        const q = query(kiosksCol, orderBy('name', 'asc'));
+        const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
+        const q = query(pointsCol, orderBy('name', 'asc'));
         const snapshot = await getDocs(q);
-        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Kiosk));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PrintPoint));
     } catch (error) {
-        console.error("Error al obtener kioscos EDA:", error);
+        console.error("Error al obtener puntos de impresión EDA:", error);
         return [];
     }
 };
 
 /**
- * Registra o actualiza un kiosco.
+ * Registra o actualiza un punto de impresión.
  */
-export const saveKiosk = async (instituteId: string, kioskData: Omit<Kiosk, 'id'>, id?: string): Promise<void> => {
+export const savePrintPoint = async (instituteId: string, pointData: Omit<PrintPoint, 'id'>, id?: string): Promise<void> => {
     try {
-        const kiosksCol = collection(db, 'institutes', instituteId, 'edaKiosks');
-        const kioskRef = id ? doc(kiosksCol, id) : doc(kiosksCol);
-        await setDoc(kioskRef, {
-            ...kioskData,
+        const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
+        const pointRef = id ? doc(pointsCol, id) : doc(pointsCol);
+        await setDoc(pointRef, {
+            ...pointData,
             instituteId,
             lastHeartbeat: Timestamp.now()
         }, { merge: true });
     } catch (error) {
-        console.error("Error al guardar kiosco EDA:", error);
+        console.error("Error al guardar punto de impresión EDA:", error);
         throw error;
     }
 };
 
 /**
- * Elimina un kiosco.
+ * Elimina un punto de impresión.
  */
-export const deleteKiosk = async (instituteId: string, id: string): Promise<void> => {
+export const deletePrintPoint = async (instituteId: string, id: string): Promise<void> => {
     try {
-        const kioskRef = doc(db, 'institutes', instituteId, 'edaKiosks', id);
-        await deleteDoc(kioskRef);
+        const pointRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', id);
+        await deleteDoc(pointRef);
     } catch (error) {
         throw error;
     }
@@ -103,7 +103,7 @@ export const saveDocumentTemplate = async (instituteId: string, data: Omit<Docum
 };
 
 /**
- * Registra un log de generación de documento desde un kiosco.
+ * Registra un log de generación de documento desde un punto de impresión.
  */
 export const registerGenerationLog = async (instituteId: string, log: Omit<DocumentGenerationLog, 'id' | 'timestamp'>): Promise<void> => {
     try {

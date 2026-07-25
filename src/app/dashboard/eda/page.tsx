@@ -8,9 +8,9 @@ import Link from 'next/link';
 
 const edaModules = [
     {
-        title: "Kioscos de Impresión",
-        description: "Gestione los puntos físicos (terminales) y su estado de conexión.",
-        href: "/dashboard/eda/kioscos",
+        title: "Puntos de Impresión",
+        description: "Gestione las terminales físicas (Point Print) y su estado de conexión.",
+        href: "/dashboard/eda/puntos-impresion",
         icon: Printer,
         color: "text-blue-500",
         bg: "bg-blue-50"
@@ -49,7 +49,7 @@ export default function EDAMainPage() {
                         <div>
                             <CardTitle className="text-3xl font-black tracking-tighter uppercase">Sistema EDA</CardTitle>
                             <CardDescription className="text-primary-foreground/80 text-lg font-medium">
-                                Elaboración de Documentos Automáticos via Kioscos IoT.
+                                Elaboración de Documentos Automáticos via Puntos de Impresión (Point Print).
                             </CardDescription>
                         </div>
                     </div>
@@ -88,7 +88,7 @@ export default function EDAMainPage() {
                 <div>
                     <h4 className="font-black text-blue-800 uppercase text-sm">¿Cómo funciona EDA?</h4>
                     <p className="text-xs text-blue-700 font-medium leading-relaxed mt-1">
-                        El sistema EDA permite que los alumnos identifiquen su identidad en terminales físicos usando su carnet RFID. 
+                        El sistema EDA permite que los alumnos identifiquen su identidad en los **Point Print** usando su carnet RFID. 
                         Una vez identificados, pueden seleccionar documentos oficiales que el sistema rellena automáticamente con datos de 
                         programas, ciclos y notas, permitiendo una impresión instantánea sin intervención humana.
                     </p>

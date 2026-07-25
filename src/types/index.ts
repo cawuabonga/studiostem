@@ -13,16 +13,16 @@ export interface SocialLinks {
 
 // --- EDA (Elaboración de Documentos Automáticos) ---
 
-export type KioskStatus = 'Online' | 'Offline' | 'Mantenimiento';
+export type PrintPointStatus = 'Online' | 'Offline' | 'Mantenimiento';
 export type DocumentCategory = 'Constancia' | 'Boleta' | 'Ficha' | 'Solicitud';
 export type EDARequirement = 'Gratuito' | 'Pago Validado';
 
-export interface Kiosk {
+export interface PrintPoint {
     id: string;
-    kioskId: string; // Identificador técnico (ej: EDA-01)
+    pointId: string; // Identificador técnico (ej: EDA-01)
     name: string;
     location: string;
-    status: KioskStatus;
+    status: PrintPointStatus;
     lastHeartbeat?: Timestamp;
     instituteId: string;
 }
@@ -47,7 +47,7 @@ export interface DocumentGenerationLog {
     studentName: string;
     templateId: string;
     templateName: string;
-    kioskId: string;
+    printPointId: string;
     status: 'Exitoso' | 'Fallido';
     instituteId: string;
 }
@@ -640,7 +640,7 @@ export const PERMISSIONS_CONFIG: { category: string; description: string; permis
             { id: 'user:supplies:request', label: 'Solicitar Insumos' },
             { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
             { id: 'user:medical:view:own', label: 'Ver Mi Historial Médico' },
-            { id: 'user:eda:use', label: 'Utilizar Kioscos EDA' },
+            { id: 'user:eda:use', label: 'Utilizar Puntos de Impresión EDA' },
         ],
     },
      {
