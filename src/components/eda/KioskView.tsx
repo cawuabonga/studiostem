@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -6,6 +7,7 @@
  * Sincronizado dinámicamente con el color primario del instituto.
  * Soporta imágenes de fondo personalizadas por cada terminal.
  * Incluye modo de entrada manual para facilitar pruebas sin hardware RFID.
+ * Integra monitor de hardware para el estado de la impresora.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -41,7 +43,9 @@ import {
     XCircle,
     Clock,
     Globe,
-    ShieldCheck
+    ShieldCheck,
+    TriangleAlert,
+    Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -215,6 +219,22 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
             .replace(/{motivo_justificacion}/g, `<span class="font-black underline">${(formData['{motivo_justificacion}'] || '').toUpperCase()}</span>`)
             .replace(/{fechas_inasistencia}/g, `<span class="font-black underline">${(formData['{fechas_inasistencia}'] || '').toUpperCase()}</span>`)
             .replace(/{adjuntos_detalle}/g, `<span class="font-black underline">${(formData['{adjuntos_detalle}'] || '').toUpperCase()}</span>`);
+    };
+
+    // --- LÓGICA DE MONITOR DE IMPRESORA ---
+    const getPrinterStatusColor = () => {
+        if (!point?.printerStatus || point.printerStatus === 'Offline') return 'bg-red-100 text-red-700 border-red-200';
+        if (point.paperStatus === 'Empty' || point.paperStatus === 'Jam') return 'bg-amber-100 text-amber-700 border-amber-200';
+        if (point.tonerLevel !== undefined && point.tonerLevel < 10) return 'bg-amber-100 text-amber-700 border-amber-200';
+        return 'bg-green-100 text-green-700 border-green-200';
+    };
+
+    const getPrinterStatusLabel = () => {
+        if (!point?.printerStatus || point.printerStatus === 'Offline') return 'Desconectada';
+        if (point.paperStatus === 'Empty') return 'Sin Papel';
+        if (point.paperStatus === 'Jam') return 'Papel Atascado';
+        if (point.printerStatus === 'Printing') return 'Imprimiendo...';
+        return 'Lista para imprimir';
     };
 
     // --- LÓGICA DE BRANDING ---
@@ -414,7 +434,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     </div>
                 )}
 
-                {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) - COMPACTADO PARA EVITAR SCROLL */}
+                {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) */}
                 {step === 'assistant' && selectedTemplate && (
                     <div className="max-w-full mx-auto space-y-4 animate-in slide-in-from-bottom-8 duration-500 h-full flex flex-col overflow-hidden">
                          <div className="text-center space-y-0.5">
@@ -426,7 +446,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             {/* MODELO ESPECÍFICO: JUSTIFICACIÓN */}
                             {selectedTemplate.name.includes('Justificación') ? (
                                 <div className="space-y-6 flex-1 flex flex-col min-h-0">
-                                    {/* PASO 1: MOTIVO (Fila Superior) */}
+                                    {/* PASO 1: MOTIVO */}
                                     <div className="space-y-2 shrink-0">
                                         <Label className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                             <div className="h-6 w-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px] italic font-black">1</div>
@@ -483,7 +503,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         {/* COLUMNA DERECHA: RESUMEN + PASO 3 + ACCIONES */}
                                         <div className="lg:col-span-7 flex flex-col space-y-4">
                                             
-                                            {/* Resumen de días (Solo si hay selección) */}
+                                            {/* Resumen de días */}
                                             <div className="space-y-2 flex-1 flex flex-col min-h-0">
                                                 <div className="flex items-center gap-2">
                                                     <CalendarDays className="h-4 w-4 text-primary" />
@@ -528,7 +548,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                                 </div>
                                             </div>
 
-                                            {/* BOTONES DE ACCIÓN (Integrados en la columna derecha) */}
+                                            {/* BOTONES DE ACCIÓN */}
                                             <div className="pt-4 border-t flex gap-3">
                                                 <Button variant="ghost" onClick={() => setStep('category')} className="h-12 flex-1 text-xs font-black uppercase rounded-xl border-2">CANCELAR</Button>
                                                 <Button 
@@ -585,7 +605,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                     </div>
                                 )}
 
-                                {/* Contenedor de Texto (Z-index para estar sobre marca de agua) */}
+                                {/* Contenedor de Texto */}
                                 <div className="relative z-10">
                                     {/* Encabezado */}
                                     <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
@@ -606,7 +626,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         </p>
                                     </div>
 
-                                    {/* Destinatario - Bajado 2 líneas aprox */}
+                                    {/* Destinatario */}
                                     <div className="mt-12 mb-8 space-y-1">
                                         <p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
                                         <p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">
@@ -626,12 +646,12 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         ante usted con el debido respeto me presento y expongo:
                                     </div>
 
-                                    {/* Argumentación Dinámica - Sin caja, mismo formato que identidad */}
+                                    {/* Argumentación Dinámica */}
                                     <div className="text-justify leading-loose text-[10pt] min-h-[100px] whitespace-pre-wrap font-medium">
                                         <div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} />
                                     </div>
 
-                                    {/* Cierre con salto de linea - Pegado al cuerpo */}
+                                    {/* Cierre */}
                                     <div className="mt-4 mb-4 font-bold uppercase text-[10pt] leading-relaxed">
                                         POR LO TANTO:<br/>
                                         Espero acceda a mi solicitud por ser de justicia.
@@ -650,7 +670,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.
                                     </div>
 
-                                    {/* Firma Mejorada */}
+                                    {/* Firma */}
                                     <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center">
                                         <p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p>
                                         <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p>
@@ -661,6 +681,23 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                         </div>
 
                         <div className="lg:col-span-4 flex flex-col gap-4 no-print">
+                            {/* MONITOR DE IMPRESORA */}
+                            <Card className={cn("rounded-2xl border-2 p-4 animate-in fade-in zoom-in-95 duration-500", getPrinterStatusColor())}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <Printer className="h-4 w-4" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Estado Impresora</span>
+                                    </div>
+                                    {point?.tonerLevel !== undefined && (
+                                        <span className="text-[9px] font-bold">Tóner: {point.tonerLevel}%</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs font-bold uppercase">{getPrinterStatusLabel()}</p>
+                                    <Activity className={cn("h-4 w-4", point?.printerStatus === 'Printing' && "animate-spin")} />
+                                </div>
+                            </Card>
+
                             <Card className="rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground p-6 space-y-4">
                                 <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
                                     <Printer className="h-6 w-6 text-white" />
@@ -672,12 +709,17 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 <Button 
                                     className="w-full h-16 text-xl font-black uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/80 shadow-xl rounded-xl animate-pulse"
                                     onClick={() => {
+                                        if (!point?.printerStatus || point.printerStatus === 'Offline') {
+                                            toast({ title: "Error de Hardware", description: "La impresora no responde. Contacte a soporte.", variant: "destructive" });
+                                            return;
+                                        }
                                         window.print();
                                         handleLogout();
                                         toast({ title: "Documento Enviado", description: "Iniciando proceso de impresión." });
                                     }}
+                                    disabled={!point?.printerStatus || point.printerStatus === 'Offline'}
                                 >
-                                    IMPRIMIR
+                                    {(!point?.printerStatus || point.printerStatus === 'Offline') ? 'IMPRESORA OFF' : 'IMPRIMIR'}
                                 </Button>
                             </Card>
 
@@ -696,7 +738,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                 )}
             </main>
             
-            {/* PIE DE PÁGINA FIXO KIOSKO - COMPACTO */}
+            {/* PIE DE PÁGINA FIXO KIOSKO */}
             <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0 no-print">
                 STEM V2 • POINT PRINT SYSTEM • {new Date().getFullYear()}
             </footer>

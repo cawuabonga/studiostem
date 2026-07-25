@@ -14,6 +14,8 @@ export interface SocialLinks {
 // --- EDA (Elaboración de Documentos Automáticos) ---
 
 export type PrintPointStatus = 'Online' | 'Offline' | 'Mantenimiento';
+export type PrinterStatus = 'Online' | 'Offline' | 'Error' | 'Printing' | 'Warmup';
+export type PaperStatus = 'OK' | 'Low' | 'Empty' | 'Jam';
 export type DocumentCategory = 'Constancia' | 'Boleta' | 'Ficha' | 'Solicitud';
 export type EDARequirement = 'Gratuito' | 'Pago Validado';
 export type EDALayoutType = 'structured_solicitud' | 'raw_html';
@@ -31,6 +33,11 @@ export interface PrintPoint {
     // Sesión activa para el Kiosko
     currentStudentId?: string | null;
     lastScanAt?: Timestamp | null;
+    // Estado del Hardware de Impresión
+    printerName?: string;
+    printerStatus?: PrinterStatus;
+    paperStatus?: PaperStatus;
+    tonerLevel?: number; // 0-100
 }
 
 export interface DocumentTemplate {
