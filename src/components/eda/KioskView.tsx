@@ -83,9 +83,10 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
 
-    // 1. Escuchar el Punto de Impresión
+    // 1. Escuchar el Punto de Impresión (Sincronización de Hardware)
     useEffect(() => {
         if (!instituteId || !pointId) return;
+        console.log(`[KIOSK] Iniciando escucha de hardware para terminal: ${pointId}`);
         const unsub = listenToPrintPoint(instituteId, pointId, (p) => {
             setPoint(p);
             if (p?.currentStudentId) {

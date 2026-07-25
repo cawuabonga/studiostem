@@ -21,7 +21,8 @@ import {
     Timestamp,
     addDoc,
     limit,
-    onSnapshot
+    onSnapshot,
+    collectionGroup
 } from 'firebase/firestore';
 import type { PrintPoint, DocumentTemplate, DocumentGenerationLog } from '@/types';
 
@@ -42,22 +43,21 @@ export const getPrintPoints = async (instituteId: string): Promise<PrintPoint[]>
 
 /**
  * Escucha en tiempo real un punto de impresión específico.
- * Se corrigió para buscar por el campo 'pointId' (ej: EDA-001) y no solo por el ID del documento.
+ * Se optimizó para usar un Collection Group query que permite encontrar el terminal
+ * independientemente del instituto, facilitando la detección de telemetría de hardware.
  */
 export const listenToPrintPoint = (instituteId: string, pointId: string, callback: (point: PrintPoint | null) => void) => {
-    const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
-    
-    // Consultamos por el identificador técnico que el usuario ingresa
-    const q = query(pointsCol, where('pointId', '==', pointId));
+    // Escuchamos globalmente por el Hard-ID técnico para máxima compatibilidad con el hardware
+    const q = query(collectionGroup(db, 'edaPrintPoints'), where('pointId', '==', pointId));
     
     return onSnapshot(q, (snap) => {
         if (!snap.empty) {
             const d = snap.docs[0];
             callback({ id: d.id, ...d.data() } as PrintPoint);
         } else {
-            // Intento secundario: buscar directamente por ID de documento (por si acaso)
+            // Intento secundario: buscar directamente en el instituto asignado
             const docRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
-            getDoc(docRef).then(dSnap => {
+            onSnapshot(docRef, (dSnap) => {
                 if (dSnap.exists()) {
                     callback({ id: dSnap.id, ...dSnap.data() } as PrintPoint);
                 } else {
