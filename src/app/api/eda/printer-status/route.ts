@@ -38,7 +38,6 @@ export async function POST(req: NextRequest) {
         const instituteId = pointRef.parent.parent?.id;
 
         // 2. Actualizar telemetría de hardware
-        // Nota: Actualizamos campos específicos de 'printer' para no sobreescribir el 'status' del terminal
         const updatePayload = {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
@@ -54,7 +53,7 @@ export async function POST(req: NextRequest) {
         // Devolvemos la ruta del documento para que el usuario pueda verificarlo en la consola de Firebase
         return NextResponse.json({ 
             success: true, 
-            message: 'Telemetría sincronizada',
+            message: 'Telemetría sincronizada correctamente',
             debug: {
                 pointId: pointId,
                 documentId: pointDoc.id,

@@ -5,13 +5,13 @@ Este documento explica cómo conectar el estado de la impresora física de tu PC
 
 ## 1. El Puente de Comunicación (Python Script)
 
-Necesitas ejecutar un pequeño script en la computadora a la que está conectada la impresora. Este script leerá el estado de Windows y lo enviará a tu servidor Next.js.
+Necesitas ejecutar este script en la computadora a la que está conectada la impresora.
 
 ### Requisitos:
 1. Instalar Python 3.
 2. Instalar librerías: `pip install pywin32 requests`
 
-### Script `printer_monitor.py`:
+### Script `printer_monitor.py` (Versión Pro con Debug):
 
 ```python
 import win32print
@@ -22,26 +22,21 @@ import json
 # ============================================================
 # CONFIGURACIÓN
 # ============================================================
-POINT_ID = "EDA-001" # Debe coincidir con el Hard-ID en el panel de admin
+POINT_ID = "EDA-001" 
 
-# IMPORTANTE: La URL DEBE comenzar con https://
-SERVER_URL = "https://tu-dominio-aqui.com/api/eda/printer-status"
+# IMPORTANTE: Usa tu dominio oficial de producción para persistencia
+SERVER_URL = "https://studiostem--stem-v2-4y6a0.us-east4.hosted.app/api/eda/printer-status"
 
-PRINTER_NAME = "" # Deja vacío para usar la impresora predeterminada de Windows
+CHECK_INTERVAL = 5
+TONER_LEVEL = 85
 
 def get_printer_status():
     try:
-        # 0. Obtener la impresora
-        if not PRINTER_NAME:
-            p_handle = win32print.OpenPrinter(win32print.GetDefaultPrinter())
-        else:
-            p_handle = win32print.OpenPrinter(PRINTER_NAME)
-        
-        # 1. Obtener info de nivel 2 (estado de spooler)
+        p_name = win32print.GetDefaultPrinter()
+        p_handle = win32print.OpenPrinter(p_name)
         info = win32print.GetPrinter(p_handle, 2)
         status_code = info['Status']
         
-        # Mapeo de códigos de Windows a STEM
         status = "Online"
         paper = "OK"
         
@@ -52,42 +47,53 @@ def get_printer_status():
         if status_code & win32print.PRINTER_STATUS_PRINTING: status = "Printing"
         
         win32print.ClosePrinter(p_handle)
-        return status, paper
+        return status, paper, p_name
     except Exception as e:
-        return "Offline", "OK"
+        return "Offline", "OK", "No Printer"
 
 def sync_to_cloud():
-    print(f"Iniciando monitor para {POINT_ID}...")
-    print(f"Enviando datos a: {SERVER_URL}")
+    print("="*60)
+    print("STEM POINT PRINT - MONITOR ACTIVO")
+    print("="*60)
+    
+    last_state = None
     
     while True:
-        status, paper = get_printer_status()
+        status, paper, p_name = get_printer_status()
+        current_state = f"{status}-{paper}-{p_name}"
         
-        payload = {
-            "pointId": POINT_ID,
-            "status": status,
-            "paper": paper,
-            "toner": 85, # Simulado
-            "printerName": "Impresora Local"
-        }
-        
-        try:
-            r = requests.post(SERVER_URL, json=payload, timeout=5)
-            print(f"[{time.strftime('%H:%M:%S')}] Sync: {status} | Paper: {paper} | HTTP: {r.status_code}")
-        except Exception as e:
-            print(f"Error conectando con el servidor STEM: {e}")
+        if current_state != last_state:
+            payload = {
+                "pointId": POINT_ID,
+                "status": status,
+                "paper": paper,
+                "toner": TONER_LEVEL,
+                "printerName": p_name
+            }
             
-        time.sleep(10) # Sincronizar cada 10 segundos
+            try:
+                r = requests.post(SERVER_URL, json=payload, timeout=5)
+                data = r.json()
+                
+                print(f"[{time.strftime('%H:%M:%S')}] CAMBIO DETECTADO")
+                print(f" > Estado: {status} | Papel: {paper}")
+                print(f" > HTTP: {r.status_code}")
+                
+                if r.status_code == 200:
+                    # ESTO TE DIRÁ EXACTAMENTE DÓNDE SE GUARDÓ EN FIREBASE
+                    print(f" > Guardado en: {data['debug']['fullPath']}")
+                else:
+                    print(f" > Error: {data.get('message', 'Desconocido')}")
+                
+                last_state = current_state
+            except Exception as e:
+                print(f"Error de red: {e}")
+            
+        time.sleep(CHECK_INTERVAL)
 
 if __name__ == "__main__":
     sync_to_cloud()
 ```
 
-## 2. Solución de Problemas Comunes
-
-*   **Error "No scheme supplied"**: Asegúrate de que la variable `SERVER_URL` comience con `https://`.
-*   **Error 404**: Verifica que el `POINT_ID` en el script sea idéntico al registrado en el panel de administración de la web.
-*   **HTTP 200 pero no hay cambios**: Verifica que el índice de Firestore (Collection Group) para `pointId` esté habilitado en la consola de Firebase.
-
-## 3. Visualización en el Kiosko
-Una vez que el script esté corriendo con el código `HTTP: 200`, el componente `KioskView` en la web detectará los cambios en segundos y mostrará un mensaje de advertencia si la impresora se apaga o se queda sin papel, bloqueando el botón de impresión para evitar cargos fallidos.
+## 2. Verificación
+Una vez que el script diga `Guardado en: institutes/...`, ve a esa ruta exacta en tu consola de Firebase para confirmar que los datos están ahí.
