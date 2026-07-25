@@ -161,23 +161,24 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         return (
             <div 
                 className="h-screen flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-1000 relative overflow-hidden"
-                style={{ backgroundColor: primaryColor || '#f8fafc' }}
+                style={{ backgroundColor: primaryColor || '#1e3a8a' }}
             >
-                {/* FONDO PERSONALIZADO O PATRÓN TECH */}
+                {/* FONDO PERSONALIZADO - Se elimina el patrón aleatorio del puente */}
                 {point?.backgroundImageUrl ? (
                     <Image 
                         src={point.backgroundImageUrl} 
                         alt="Background" 
                         fill 
-                        className="object-cover opacity-40 mix-blend-overlay"
+                        className="object-cover opacity-60"
                         priority
                     />
                 ) : (
-                    <div className="absolute inset-0 opacity-10 bg-[url('https://picsum.photos/seed/tech-pattern/800/800')] bg-repeat" />
+                    // Si no hay imagen, usamos un gradiente limpio basado en el color primario
+                    <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/40" />
                 )}
 
-                {/* Capa de degradado institucional */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                {/* Capa de gradiente superior para asegurar legibilidad */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
                 <div className="max-w-2xl space-y-12 relative z-10">
                     <div className="space-y-4">
