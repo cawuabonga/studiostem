@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -34,7 +35,8 @@ import {
     FormField, 
     FormItem, 
     FormLabel, 
-    FormMessage 
+    FormMessage,
+    FormDescription
 } from '@/components/ui/form';
 import { 
     Select, 
@@ -52,12 +54,14 @@ import {
     Monitor, 
     Circle, 
     MapPin,
-    Printer
+    Printer,
+    ImageIcon
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -74,6 +78,7 @@ const pointSchema = z.object({
   name: z.string().min(3, 'El nombre amigable debe tener al menos 3 caracteres.'),
   location: z.string().min(3, 'La ubicación física es requerida.'),
   status: z.enum(['Online', 'Offline', 'Mantenimiento'] as const),
+  backgroundImage: z.instanceof(FileList).optional(),
 });
 
 type FormValues = z.infer<typeof pointSchema>;
@@ -115,6 +120,7 @@ export function PrintPointManager() {
             name: point?.name || '',
             location: point?.location || '',
             status: point?.status || 'Offline',
+            backgroundImage: undefined
         });
         setIsDialogOpen(true);
     };
@@ -123,7 +129,10 @@ export function PrintPointManager() {
         if (!instituteId) return;
         setIsSubmitting(true);
         try {
-            await savePrintPoint(instituteId, { ...data, instituteId }, editingPoint?.id);
+            const { backgroundImage, ...rest } = data;
+            const imageFile = backgroundImage?.[0];
+            
+            await savePrintPoint(instituteId, { ...rest, instituteId }, editingPoint?.id, imageFile);
             toast({ title: editingPoint ? "Punto Actualizado" : "Punto Registrado" });
             setIsDialogOpen(false);
             fetchData();
@@ -176,6 +185,7 @@ export function PrintPointManager() {
                                 <TableRow>
                                     <TableHead className="font-black text-[10px] uppercase pl-8 py-4">Identidad y Estado</TableHead>
                                     <TableHead className="font-black text-[10px] uppercase">Ubicación Física</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase text-center">Fondo Kiosko</TableHead>
                                     <TableHead className="font-black text-[10px] uppercase">Última Actividad</TableHead>
                                     <TableHead className="text-right font-black text-[10px] uppercase pr-8">Acciones</TableHead>
                                 </TableRow>
@@ -209,6 +219,15 @@ export function PrintPointManager() {
                                                 <MapPin className="h-3.5 w-3.5 text-primary" />
                                                 {point.location}
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            {point.backgroundImageUrl ? (
+                                                <div className="relative h-8 w-14 mx-auto rounded-md overflow-hidden border shadow-inner">
+                                                    <Image src={point.backgroundImageUrl} alt="Fondo" fill className="object-cover" />
+                                                </div>
+                                            ) : (
+                                                <Badge variant="secondary" className="text-[8px] font-black uppercase">Color Base</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
@@ -249,33 +268,61 @@ export function PrintPointManager() {
                         <DialogTitle className="text-2xl font-black uppercase tracking-tight leading-none">
                             {editingPoint ? 'Editar Point Print' : 'Nuevo Point Print'}
                         </DialogTitle>
-                        <DialogDescription className="text-primary-foreground/80 font-medium">Configure los parámetros técnicos del terminal.</DialogDescription>
+                        <DialogDescription className="text-primary-foreground/80 font-medium">Configure los parámetros técnicos y estéticos del terminal.</DialogDescription>
                     </DialogHeader>
                     
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="p-8 space-y-6">
-                            <FormField control={form.control} name="name" render={({ field }) => (
-                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Nombre del Punto</FormLabel><FormControl><Input placeholder="Ej: Pasillo Principal" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
-                            )}/>
-                            <FormField control={form.control} name="pointId" render={({ field }) => (
-                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Identificador (Hard-ID)</FormLabel><FormControl><Input placeholder="Ej: EDA-01" {...field} className="h-11 rounded-xl font-mono uppercase" /></FormControl><FormMessage /></FormItem>
-                            )}/>
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField control={form.control} name="name" render={({ field }) => (
+                                    <FormItem className="col-span-2"><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Nombre del Punto</FormLabel><FormControl><Input placeholder="Ej: Pasillo Principal" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="pointId" render={({ field }) => (
+                                    <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Hard-ID</FormLabel><FormControl><Input placeholder="Ej: EDA-01" {...field} className="h-11 rounded-xl font-mono uppercase" /></FormControl><FormMessage /></FormItem>
+                                )}/>
+                                <FormField control={form.control} name="status" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Estado</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Online">Operativo</SelectItem>
+                                                <SelectItem value="Offline">Fuera de línea</SelectItem>
+                                                <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )}/>
+                            </div>
+                            
                             <FormField control={form.control} name="location" render={({ field }) => (
                                 <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Ubicación Física</FormLabel><FormControl><Input placeholder="Ej: Biblioteca - 2do Piso" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
                             )}/>
-                            <FormField control={form.control} name="status" render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Estado Inicial</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Online">Operativo (Online)</SelectItem>
-                                            <SelectItem value="Offline">Fuera de línea (Offline)</SelectItem>
-                                            <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </FormItem>
-                            )}/>
+
+                            <Separator />
+
+                            <div className="space-y-4">
+                                <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <ImageIcon className="h-4 w-4" /> Imagen de Fondo (Kiosko)
+                                </FormLabel>
+                                {editingPoint?.backgroundImageUrl && (
+                                    <div className="relative h-24 w-full rounded-xl overflow-hidden border-2 border-dashed border-primary/10">
+                                        <Image src={editingPoint.backgroundImageUrl} alt="Actual" fill className="object-cover opacity-60" />
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                                            <Badge variant="secondary" className="font-black text-[8px]">FONDO ACTUAL</Badge>
+                                        </div>
+                                    </div>
+                                )}
+                                <FormField control={form.control} name="backgroundImage" render={({ field }) => (
+                                    <FormItem>
+                                        <FormControl>
+                                            <Input type="file" accept="image/*" {...form.register('backgroundImage')} className="h-10 text-xs bg-muted/50 rounded-xl" />
+                                        </FormControl>
+                                        <FormDescription className="text-[9px]">Sube una imagen (HD 1920x1080 recomendado) para personalizar la pantalla de espera de este terminal.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                            </div>
 
                             <DialogFooter className="pt-4 flex gap-2">
                                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold rounded-xl flex-1 h-12">CANCELAR</Button>

@@ -6,7 +6,7 @@
  * Maneja la gestión de puntos de impresión, plantillas de documentos y logs de generación.
  */
 
-import { db } from '@/config/firebase';
+import { db, uploadFileAndGetURL } from '@/config/firebase';
 import { 
     collection, 
     doc, 
@@ -57,16 +57,34 @@ export const listenToPrintPoint = (instituteId: string, pointId: string, callbac
 
 /**
  * Registra o actualiza un punto de impresión.
+ * Soporta la carga opcional de una imagen de fondo.
  */
-export const savePrintPoint = async (instituteId: string, pointData: Omit<PrintPoint, 'id'>, id?: string): Promise<void> => {
+export const savePrintPoint = async (
+    instituteId: string, 
+    pointData: Omit<PrintPoint, 'id' | 'backgroundImageUrl'>, 
+    id?: string,
+    imageFile?: File
+): Promise<void> => {
     try {
         const pointsCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
         const pointRef = id ? doc(pointsCol, id) : doc(pointsCol);
-        await setDoc(pointRef, {
+        
+        let backgroundImageUrl = '';
+        if (imageFile) {
+            backgroundImageUrl = await uploadFileAndGetURL(imageFile, `institutes/${instituteId}/eda/points/${pointRef.id}/bg`);
+        }
+
+        const payload: any = {
             ...pointData,
             instituteId,
             lastHeartbeat: Timestamp.now()
-        }, { merge: true });
+        };
+
+        if (backgroundImageUrl) {
+            payload.backgroundImageUrl = backgroundImageUrl;
+        }
+
+        await setDoc(pointRef, payload, { merge: true });
     } catch (error) {
         console.error("Error al guardar punto de impresión EDA:", error);
         throw error;

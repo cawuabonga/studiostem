@@ -1,9 +1,11 @@
+
 'use client';
 
 /**
  * @fileOverview Componente Maestro del Kiosko EDA (Point Print).
  * Interfaz táctil de alta fidelidad optimizada para trámites físicos.
  * Sincronizado dinámicamente con el color primario del instituto.
+ * Soporta imágenes de fondo personalizadas por cada terminal.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -158,15 +160,28 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     if (step === 'idle') {
         return (
             <div 
-                className="h-screen flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-1000 relative"
+                className="h-screen flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-1000 relative overflow-hidden"
                 style={{ backgroundColor: primaryColor || '#f8fafc' }}
             >
-                {/* Capa de textura sutil para el fondo */}
-                <div className="absolute inset-0 opacity-10 bg-[url('https://picsum.photos/seed/tech-pattern/800/800')] bg-repeat" />
+                {/* FONDO PERSONALIZADO O PATRÓN TECH */}
+                {point?.backgroundImageUrl ? (
+                    <Image 
+                        src={point.backgroundImageUrl} 
+                        alt="Background" 
+                        fill 
+                        className="object-cover opacity-40 mix-blend-overlay"
+                        priority
+                    />
+                ) : (
+                    <div className="absolute inset-0 opacity-10 bg-[url('https://picsum.photos/seed/tech-pattern/800/800')] bg-repeat" />
+                )}
+
+                {/* Capa de degradado institucional */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
 
                 <div className="max-w-2xl space-y-12 relative z-10">
                     <div className="space-y-4">
-                        <div className="relative h-48 w-48 mx-auto bg-white p-6 rounded-[3rem] shadow-2xl border-4 border-white/20">
+                        <div className="relative h-48 w-48 mx-auto bg-white p-6 rounded-[3rem] shadow-2xl border-4 border-white/20 animate-in zoom-in duration-700">
                             {institute?.logoUrl ? (
                                 <Image src={institute.logoUrl} alt="Logo" fill className="object-contain p-4" />
                             ) : (
@@ -189,7 +204,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     </div>
 
                     <div className="pt-12">
-                        <Badge variant="outline" className="bg-black/20 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-xs backdrop-blur-md">
+                        <Badge variant="outline" className="bg-black/40 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-xs backdrop-blur-md">
                             Terminal: {point?.name || 'Local'} • {pointId}
                         </Badge>
                     </div>
