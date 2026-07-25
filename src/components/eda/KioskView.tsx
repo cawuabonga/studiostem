@@ -1,9 +1,9 @@
-
 'use client';
 
 /**
  * @fileOverview Componente Maestro del Kiosko EDA (Point Print).
  * Interfaz táctil de alta fidelidad optimizada para trámites físicos.
+ * Sincronizado dinámicamente con el color primario del instituto.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -143,32 +143,43 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         setIsValidating(false);
     };
 
-    // --- RENDERIZADO DE ESTADOS ---
+    // --- LÓGICA DE BRANDING ---
+    const primaryColor = institute?.primaryColor ? `hsl(${institute.primaryColor})` : undefined;
 
     if (loading && step === 'idle') {
-        return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" /></div>;
+        return (
+            <div className="h-screen flex items-center justify-center bg-slate-50">
+                <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
+            </div>
+        );
     }
 
     // PANTALLA DE ESPERA (REPOSO)
     if (step === 'idle') {
         return (
-            <div className="h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-8 text-center animate-in fade-in duration-1000">
-                <div className="max-w-2xl space-y-12">
+            <div 
+                className="h-screen flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-1000 relative"
+                style={{ backgroundColor: primaryColor || '#f8fafc' }}
+            >
+                {/* Capa de textura sutil para el fondo */}
+                <div className="absolute inset-0 opacity-10 bg-[url('https://picsum.photos/seed/tech-pattern/800/800')] bg-repeat" />
+
+                <div className="max-w-2xl space-y-12 relative z-10">
                     <div className="space-y-4">
-                        <div className="relative h-48 w-48 mx-auto bg-white p-6 rounded-[3rem] shadow-2xl border-4 border-primary/10">
+                        <div className="relative h-48 w-48 mx-auto bg-white p-6 rounded-[3rem] shadow-2xl border-4 border-white/20">
                             {institute?.logoUrl ? (
                                 <Image src={institute.logoUrl} alt="Logo" fill className="object-contain p-4" />
                             ) : (
                                 <Fingerprint className="h-full w-full text-primary/20" />
                             )}
                         </div>
-                        <h1 className="text-5xl font-black uppercase tracking-tighter text-slate-800 leading-none">
+                        <h1 className="text-5xl font-black uppercase tracking-tighter text-white drop-shadow-2xl leading-none">
                             {institute?.name || 'CENTRO DE TRÁMITES'}
                         </h1>
                     </div>
 
-                    <div className="bg-white/80 backdrop-blur-xl p-10 rounded-[3.5rem] shadow-2xl border-2 border-white/50 space-y-6">
-                        <div className="h-20 w-20 mx-auto bg-primary rounded-full flex items-center justify-center animate-pulse shadow-xl shadow-primary/20">
+                    <div className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3.5rem] shadow-3xl border-2 border-white/50 space-y-6 animate-pulse">
+                        <div className="h-20 w-20 mx-auto bg-primary rounded-full flex items-center justify-center shadow-xl shadow-primary/20">
                             <Fingerprint className="h-10 w-10 text-white" />
                         </div>
                         <div className="space-y-2">
@@ -178,7 +189,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     </div>
 
                     <div className="pt-12">
-                        <Badge variant="outline" className="bg-white h-10 px-6 rounded-full border-slate-200 text-slate-400 font-bold uppercase tracking-widest text-xs">
+                        <Badge variant="outline" className="bg-black/20 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-xs backdrop-blur-md">
                             Terminal: {point?.name || 'Local'} • {pointId}
                         </Badge>
                     </div>
