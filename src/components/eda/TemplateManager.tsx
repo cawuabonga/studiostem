@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -77,6 +78,8 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const CATEGORIES: DocumentCategory[] = ['Constancia', 'Boleta', 'Ficha', 'Solicitud'];
 const REQUIREMENTS: EDARequirement[] = ['Gratuito', 'Pago Validado'];
@@ -195,13 +198,25 @@ export function TemplateManager() {
 
     const handleConfirmDelete = async () => {
         if (!instituteId || !templateToDelete) return;
+        
+        setIsSubmitting(true);
+        const targetId = templateToDelete.id;
+
         try {
-            await deleteDocumentTemplate(instituteId, templateToDelete.id);
+            await deleteDocumentTemplate(instituteId, targetId);
             toast({ title: "Diseño Eliminado", description: "La plantilla ha sido borrada permanentemente." });
             setTemplateToDelete(null);
             fetchData();
-        } catch (error) {
-            toast({ title: "Error al eliminar", variant: "destructive" });
+        } catch (error: any) {
+            const permissionError = new FirestorePermissionError({
+                path: `institutes/${instituteId}/edaTemplates/${targetId}`,
+                operation: 'delete',
+            } satisfies SecurityRuleContext);
+
+            errorEmitter.emit('permission-error', permissionError);
+            toast({ title: "Error al eliminar", description: "No tienes permisos suficientes o el documento no existe.", variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -543,7 +558,9 @@ export function TemplateManager() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl font-bold h-11" onClick={() => setTemplateToDelete(null)}>CANCELAR</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">ELIMINAR PERMANENTE</AlertDialogAction>
+                        <AlertDialogAction onClick={handleConfirmDelete} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">
+                            {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'ELIMINAR PERMANENTE'}
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
