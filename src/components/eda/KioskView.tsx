@@ -589,14 +589,19 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 </div>
 
                                 {/* Argumentación Dinámica - Sin caja, mismo formato que identidad */}
-                                <div className="text-justify leading-loose text-[10pt] min-h-[250px] whitespace-pre-wrap font-medium">
+                                <div className="text-justify leading-loose text-[10pt] min-h-[100px] whitespace-pre-wrap font-medium">
                                     <div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} />
                                 </div>
 
-                                {/* Cierre con salto de linea */}
-                                <div className="mt-10 mb-8 font-bold uppercase text-[10pt] leading-relaxed">
+                                {/* Cierre con salto de linea - Pegado al cuerpo */}
+                                <div className="mt-4 mb-4 font-bold uppercase text-[10pt] leading-relaxed">
                                     POR LO TANTO:<br/>
                                     Espero acceda a mi solicitud por ser de justicia.
+                                </div>
+
+                                {/* Adjuntos - En la posición baja anterior */}
+                                <div className="mt-32 mb-8 font-bold uppercase text-[9pt]">
+                                    ADJUNTO: DOCUMENTOS.
                                 </div>
 
                                 <div className="text-right mt-8 italic text-[9pt] text-gray-700">
