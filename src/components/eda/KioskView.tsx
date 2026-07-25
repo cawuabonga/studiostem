@@ -6,15 +6,17 @@
  * Interfaz táctil de alta fidelidad optimizada para trámites físicos.
  * Sincronizado dinámicamente con el color primario del instituto.
  * Soporta imágenes de fondo personalizadas por cada terminal.
+ * Incluye modo de entrada manual para facilitar pruebas sin hardware RFID.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { listenToPrintPoint, closeKioskSession, getDocumentTemplates } from '@/services/eda-service';
-import { getStudentProfile, getInstitute, getStaffProfiles, getPaymentConcepts, getStudentPaymentsByStatus } from '@/config/firebase';
-import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile, PaymentConcept, Payment } from '@/types';
+import { getStudentProfile, getInstitute, getStaffProfiles, getStudentPaymentsByStatus } from '@/config/firebase';
+import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
     Fingerprint, 
     Loader2, 
@@ -27,15 +29,16 @@ import {
     Printer, 
     Info,
     CalendarDays,
-    HeartPulse,
-    Search,
     Stamp,
-    CreditCard
+    CreditCard,
+    Keyboard,
+    UserCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 interface KioskViewProps {
     pointId: string;
@@ -45,6 +48,7 @@ interface KioskViewProps {
 type KioskStep = 'idle' | 'menu' | 'category' | 'assistant' | 'validation' | 'preview';
 
 export function KioskView({ pointId, instituteId }: KioskViewProps) {
+    const { toast } = useToast();
     const [point, setPoint] = useState<PrintPoint | null>(null);
     const [student, setStudent] = useState<StudentProfile | null>(null);
     const [institute, setInstitute] = useState<Institute | null>(null);
@@ -56,6 +60,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [selectedTemplate, setSelectedTemplate] = useState<DocumentTemplate | null>(null);
     const [loading, setLoading] = useState(true);
+    const [manualDni, setManualDni] = useState('');
 
     // Form flow state
     const [formData, setFormData] = useState<Record<string, string>>({});
@@ -95,13 +100,41 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const loadStudentSession = async (sId: string) => {
         setLoading(true);
         const profile = await getStudentProfile(instituteId, sId);
-        setStudent(profile);
-        setStep('menu');
+        if (profile) {
+            setStudent(profile);
+            setStep('menu');
+        }
         setLoading(false);
+    };
+
+    const handleManualLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualDni || !instituteId) return;
+        setLoading(true);
+        try {
+            const profile = await getStudentProfile(instituteId, manualDni);
+            if (profile) {
+                setStudent(profile);
+                setStep('menu');
+                setManualDni('');
+            } else {
+                toast({ 
+                    title: "No encontrado", 
+                    description: "No existe un estudiante con ese DNI.", 
+                    variant: "destructive" 
+                });
+            }
+        } catch (e) {
+            toast({ title: "Error", description: "Ocurrió un error en la búsqueda.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLogout = async () => {
         await closeKioskSession(instituteId, pointId);
+        setStep('idle');
+        setStudent(null);
     };
 
     const categories = useMemo(() => {
@@ -163,7 +196,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                 className="h-screen flex flex-col items-center justify-center p-8 text-center animate-in fade-in duration-1000 relative overflow-hidden"
                 style={{ backgroundColor: primaryColor || '#1e3a8a' }}
             >
-                {/* FONDO PERSONALIZADO - Se elimina el patrón aleatorio del puente */}
+                {/* FONDO PERSONALIZADO */}
                 {point?.backgroundImageUrl ? (
                     <Image 
                         src={point.backgroundImageUrl} 
@@ -173,11 +206,9 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                         priority
                     />
                 ) : (
-                    // Si no hay imagen, usamos un gradiente limpio basado en el color primario
                     <div className="absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/40" />
                 )}
 
-                {/* Capa de gradiente superior para asegurar legibilidad */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
                 <div className="max-w-2xl space-y-12 relative z-10">
@@ -194,19 +225,40 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                         </h1>
                     </div>
 
-                    <div className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3.5rem] shadow-3xl border-2 border-white/50 space-y-6 animate-pulse">
+                    <div className="bg-white/95 backdrop-blur-2xl p-10 rounded-[3.5rem] shadow-3xl border-2 border-white/50 space-y-6">
                         <div className="h-20 w-20 mx-auto bg-primary rounded-full flex items-center justify-center shadow-xl shadow-primary/20">
                             <Fingerprint className="h-10 w-10 text-white" />
                         </div>
                         <div className="space-y-2">
                             <h2 className="text-3xl font-black uppercase tracking-tight text-primary">Identifíquese</h2>
-                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID por el lector para iniciar.</p>
+                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID o ingrese su DNI debajo.</p>
                         </div>
                     </div>
 
-                    <div className="pt-12">
-                        <Badge variant="outline" className="bg-black/40 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-xs backdrop-blur-md">
-                            Terminal: {point?.name || 'Local'} • {pointId}
+                    {/* MODO MANUAL (PARA PRUEBAS) */}
+                    <form onSubmit={handleManualLogin} className="pt-4 w-full max-w-xs mx-auto space-y-3">
+                        <div className="relative">
+                            <Keyboard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+                            <Input 
+                                placeholder="DNI para pruebas..." 
+                                value={manualDni}
+                                onChange={e => setManualDni(e.target.value)}
+                                className="bg-black/20 border-white/30 text-white placeholder:text-white/40 text-center h-14 rounded-2xl text-xl font-bold tracking-widest focus-visible:ring-white/20"
+                            />
+                        </div>
+                        <Button 
+                            type="submit" 
+                            variant="secondary" 
+                            className="w-full font-black uppercase text-xs tracking-widest h-14 rounded-2xl shadow-xl hover:scale-105 transition-transform"
+                            disabled={!manualDni || loading}
+                        >
+                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "INICIAR SESIÓN MANUAL"}
+                        </Button>
+                    </form>
+
+                    <div className="pt-8">
+                        <Badge variant="outline" className="bg-black/40 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-[10px] backdrop-blur-md">
+                            Terminal: {point?.name || 'Local'} • Hard-ID: {pointId}
                         </Badge>
                     </div>
                 </div>
@@ -219,7 +271,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         <header className="bg-primary p-6 md:p-8 text-primary-foreground flex justify-between items-center shadow-2xl shrink-0">
             <div className="flex items-center gap-6">
                 <div className="h-20 w-20 relative rounded-2xl overflow-hidden border-4 border-white/20 shadow-xl bg-white/10">
-                    <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName[0]}`} alt="" fill className="object-cover" />
+                    <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || 'S'}`} alt="" fill className="object-cover" />
                 </div>
                 <div>
                     <h2 className="text-2xl md:text-3xl font-black uppercase tracking-tight leading-none">{student?.fullName}</h2>
@@ -437,7 +489,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 {/* Sumilla */}
                                 <div className="text-right mb-12">
                                     <p className="text-[11pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
-                                        {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, formData['{motivo_justificacion}'].toUpperCase())}
+                                        {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}
                                     </p>
                                 </div>
 
@@ -464,9 +516,9 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 {/* Argumentación Dinámica Inyectada */}
                                 <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-6 bg-slate-50/30">
                                     {selectedTemplate.content
-                                        .replace(/{motivo_justificacion}/g, formData['{motivo_justificacion}'].toUpperCase())
-                                        .replace(/{fechas_inasistencia}/g, formData['{fechas_inasistencia}'].toUpperCase())
-                                        .replace(/{adjuntos_detalle}/g, formData['{adjuntos_detalle}'])
+                                        .replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())
+                                        .replace(/{fechas_inasistencia}/g, (formData['{fechas_inasistencia}'] || '').toUpperCase())
+                                        .replace(/{adjuntos_detalle}/g, formData['{adjuntos_detalle}'] || '')
                                     }
                                 </div>
 
@@ -512,7 +564,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             </Button>
 
                             <div className="p-6 bg-blue-50 border border-blue-100 rounded-[2rem] flex gap-4 items-start">
-                                <Info className="h-6 w-6 text-blue-600 shrink-0" />
+                                <Info className="h-6 w-6 text-blue-600 shrink-0 mt-0.5" />
                                 <p className="text-xs text-blue-800 leading-tight font-medium">
                                     Al imprimir este documento, se guardará una copia digital en su expediente para que su Coordinador pueda revisarla y firmarla posteriormente.
                                 </p>
