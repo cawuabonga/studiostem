@@ -1,10 +1,10 @@
+
 'use client';
 
 import React from 'react';
 import { TemplateManager } from '@/components/eda/TemplateManager';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, FileStack } from 'lucide-react';
-import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 export default function TemplatesPage() {
@@ -29,9 +29,9 @@ export default function TemplatesPage() {
                             <FileStack className="h-8 w-8 text-accent" />
                         </div>
                         <div>
-                            <CardTitle className="text-3xl font-black uppercase tracking-tight">Diseño de Plantillas</CardTitle>
+                            <CardTitle className="text-3xl font-black uppercase tracking-tight">Diseño de Plantillas Oficiales</CardTitle>
                             <CardDescription className="text-primary-foreground/80 text-lg font-medium">
-                                Configure la estructura y variables de los documentos oficiales autogenerados.
+                                Configure los modelos de documentos autorizados para la impresión en terminales EDA.
                             </CardDescription>
                         </div>
                     </div>

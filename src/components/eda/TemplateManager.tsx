@@ -1,13 +1,16 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { getDocumentTemplates, saveDocumentTemplate, deleteDocumentTemplate } from '@/services/eda-service';
+/**
+ * @fileOverview Gestor de Plantillas EDA rediseñado.
+ * Utiliza un enfoque de catálogo por categorías y modelos predefinidos.
+ * Incluye el modelo maestro de "Justificación de Inasistencias" con estructura rígida.
+ */
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { getDocumentTemplates, saveDocumentTemplate } from '@/services/eda-service';
 import { getPaymentConcepts } from '@/config/firebase';
-import type { DocumentTemplate, DocumentCategory, EDARequirement, PaymentConcept, EDALayoutType } from '@/types';
+import type { DocumentTemplate, PaymentConcept, DocumentCategory } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -49,73 +52,60 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
     Loader2, 
-    PlusCircle, 
-    Trash2, 
-    Edit, 
     FileText, 
-    Info, 
-    Code, 
-    DollarSign,
-    Eye,
+    ArrowLeft, 
+    Eye, 
+    Save, 
+    CheckCircle2, 
+    ChevronRight,
+    FileStack,
+    GraduationCap,
+    Stamp,
     Layout,
-    Save,
-    CheckCircle2,
-    Clock,
-    UserCircle
+    CheckCircle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 
-const CATEGORIES: DocumentCategory[] = ['Constancia', 'Boleta', 'Ficha', 'Solicitud'];
-const REQUIREMENTS: EDARequirement[] = ['Gratuito', 'Pago Validado'];
-
-const templateSchema = z.object({
+// --- Esquema de Validación para el Editor de Solicitudes ---
+const solicitudSchema = z.object({
   name: z.string().min(5, 'El nombre debe ser descriptivo.'),
-  category: z.enum(CATEGORIES as [string, ...string[]]),
-  layoutType: z.enum(['structured_solicitud', 'raw_html'] as const),
-  sumilla: z.string().min(10, 'La sumilla es obligatoria para solicitudes.'),
-  addresseeRole: z.string().min(3, 'Especifique a quién va dirigido el documento.'),
+  sumilla: z.string().min(5, 'La sumilla es obligatoria.'),
+  addresseeRole: z.string().min(3, 'Especifique el cargo del destinatario.'),
   content: z.string().min(20, 'El cuerpo de la solicitud es requerido.'),
-  requirementType: z.enum(REQUIREMENTS as [string, ...string[]]),
+  requirementType: z.enum(['Gratuito', 'Pago Validado']),
   requirementValue: z.string().optional(),
   isActive: z.boolean().default(true),
 });
 
-type FormValues = z.infer<typeof templateSchema>;
+type SolicitudFormValues = z.infer<typeof solicitudSchema>;
+
+// --- Tipos de Vista ---
+type ViewState = 'categories' | 'models' | 'editor';
 
 export function TemplateManager() {
     const { instituteId, institute } = useAuth();
     const { toast } = useToast();
+    
+    const [view, setView] = useState<ViewState>('categories');
+    const [selectedCategory, setSelectedCategory] = useState<DocumentCategory | null>(null);
+    const [loading, setLoading] = useState(true);
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
     const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [activeTemplate, setActiveTemplate] = useState<DocumentTemplate | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
-    const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
-    const [previewingTemplate, setPreviewingTemplate] = useState<DocumentTemplate | null>(null);
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(templateSchema),
-        defaultValues: { 
-            isActive: true, 
-            requirementType: 'Gratuito', 
-            layoutType: 'structured_solicitud',
-            addresseeRole: 'Coordinador de Programa de Estudios',
-            sumilla: 'SOLICITO: Justificación de inasistencias por salud.'
+    const form = useForm<SolicitudFormValues>({
+        resolver: zodResolver(solicitudSchema),
+        defaultValues: {
+            isActive: true,
+            requirementType: 'Gratuito'
         }
     });
 
@@ -130,7 +120,6 @@ export function TemplateManager() {
             setTemplates(templatesData);
             setConcepts(conceptsData);
         } catch (error) {
-            console.error("Error al cargar plantillas:", error);
             toast({ title: "Error", description: "No se pudieron cargar las plantillas.", variant: "destructive" });
         } finally {
             setLoading(false);
@@ -139,67 +128,41 @@ export function TemplateManager() {
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handleOpenDialog = (template?: DocumentTemplate) => {
-        if (template) {
-            setEditingTemplate(template);
-            form.reset({
-                name: template.name,
-                category: template.category,
-                layoutType: template.layoutType,
-                sumilla: template.sumilla || '',
-                addresseeRole: template.addresseeRole || '',
-                content: template.content,
-                requirementType: template.requirementType,
-                requirementValue: template.requirementValue || '',
-                isActive: template.isActive ?? true,
-            });
-        } else {
-            setEditingTemplate(null);
-            form.reset({
-                name: '',
-                category: 'Solicitud',
-                layoutType: 'structured_solicitud',
-                sumilla: 'SOLICITO: Justificación de inasistencias.',
-                addresseeRole: 'Coordinador de Programa de Estudios',
-                content: 'Por medio de la presente, solicito a su despacho la justificación de mis inasistencias ocurridas durante los días...',
-                requirementType: 'Gratuito',
-                requirementValue: '',
-                isActive: true,
-            });
-        }
-        setIsDialogOpen(true);
+    const handleSelectCategory = (cat: DocumentCategory) => {
+        setSelectedCategory(cat);
+        setView('models');
     };
 
-    const onSubmit = async (data: FormValues) => {
-        if (!instituteId) return;
+    const handleOpenEditor = (template: DocumentTemplate) => {
+        setActiveTemplate(template);
+        form.reset({
+            name: template.name,
+            sumilla: template.sumilla || '',
+            addresseeRole: template.addresseeRole || '',
+            content: template.content,
+            requirementType: template.requirementType,
+            requirementValue: template.requirementValue || '',
+            isActive: template.isActive ?? true,
+        });
+        setView('editor');
+    };
+
+    const onSubmit = async (data: SolicitudFormValues) => {
+        if (!instituteId || !activeTemplate) return;
         setIsSubmitting(true);
         try {
             await saveDocumentTemplate(instituteId, { 
-                ...data, 
-                variables: ['{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', '{turno}', '{direccion}', '{fecha_hoy}', '{hora_hoy}'],
+                ...data,
+                category: activeTemplate.category,
+                layoutType: 'structured_solicitud',
+                variables: ['{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', '{turno}', '{direccion}', '{fecha_hoy}'],
                 instituteId 
-            }, editingTemplate?.id);
+            }, activeTemplate.id);
 
-            toast({ title: editingTemplate ? "Diseño Actualizado" : "Diseño Guardado" });
-            setIsDialogOpen(false);
+            toast({ title: "Cambios Guardados", description: "La plantilla oficial ha sido actualizada." });
             fetchData();
         } catch (error) {
             toast({ title: "Error al guardar", variant: "destructive" });
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleConfirmDelete = async () => {
-        if (!instituteId || !templateToDelete) return;
-        setIsSubmitting(true);
-        try {
-            await deleteDocumentTemplate(instituteId, templateToDelete.id);
-            toast({ title: "Diseño Eliminado", description: "La plantilla ha sido borrada." });
-            setTemplateToDelete(null);
-            fetchData();
-        } catch (error) {
-            toast({ title: "Error al eliminar", variant: "destructive" });
         } finally {
             setIsSubmitting(false);
         }
@@ -214,258 +177,301 @@ export function TemplateManager() {
         turno: 'MAÑANA',
         address: 'AV. LAS PALMERAS 456, DISTRITO DE CASTILLA',
         date: new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }),
-        time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
     };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-end">
-                <Button onClick={() => handleOpenDialog()} className="font-black rounded-xl h-12 px-8 shadow-xl shadow-primary/20">
-                    <PlusCircle className="mr-2 h-5 w-5" /> NUEVO DISEÑO EDA
-                </Button>
-            </div>
+    if (loading) return <Skeleton className="h-64 w-full rounded-3xl" />;
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {loading ? (
-                    [...Array(3)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-3xl" />)
-                ) : templates.length > 0 ? (
-                    templates.map(template => (
-                        <Card key={template.id} className={cn(
-                            "group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white",
-                            !template.isActive && "opacity-60 grayscale-[0.5]"
-                        )}>
-                            <CardHeader className="pb-2">
+    // --- VISTA 1: CATEGORÍAS PRINCIPALES ---
+    if (view === 'categories') {
+        return (
+            <div className="grid gap-6 md:grid-cols-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <Card 
+                    className="group cursor-pointer hover:border-primary hover:shadow-2xl transition-all duration-500 rounded-[2.5rem] overflow-hidden border-primary/5 bg-white"
+                    onClick={() => handleSelectCategory('Solicitud')}
+                >
+                    <CardHeader className="p-8">
+                        <div className="p-4 w-fit rounded-2xl bg-blue-50 text-blue-600 mb-6 transition-transform group-hover:scale-110">
+                            <FileStack className="h-10 w-10" />
+                        </div>
+                        <CardTitle className="text-2xl font-black uppercase tracking-tight">SOLICITUDES</CardTitle>
+                        <CardDescription className="text-sm font-medium leading-relaxed">
+                            Modelos estructurados para trámites de alumnos: Justificaciones, Permisos, Retiros.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardFooter className="px-8 pb-8 pt-0 flex items-center gap-2 text-xs font-black uppercase text-primary tracking-widest">
+                        EXPLORAR CATEGORÍA <ChevronRight className="h-4 w-4" />
+                    </CardFooter>
+                </Card>
+
+                {['Constancia', 'Ficha'].map((cat) => (
+                    <Card key={cat} className="opacity-50 grayscale border-dashed cursor-not-allowed rounded-[2.5rem]">
+                        <CardHeader className="p-8">
+                            <div className="p-4 w-fit rounded-2xl bg-slate-100 text-slate-400 mb-6">
+                                <Stamp className="h-10 w-10" />
+                            </div>
+                            <CardTitle className="text-2xl font-black uppercase tracking-tight text-slate-400">{cat.toUpperCase()}S</CardTitle>
+                            <CardDescription>Módulo en desarrollo para la próxima actualización.</CardDescription>
+                        </CardHeader>
+                    </Card>
+                ))}
+            </div>
+        );
+    }
+
+    // --- VISTA 2: MODELOS DENTRO DE UNA CATEGORÍA ---
+    if (view === 'models') {
+        const filteredTemplates = templates.filter(t => t.category === selectedCategory);
+
+        return (
+            <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" onClick={() => setView('categories')} className="font-bold hover:bg-primary/10">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> VOLVER A CATEGORÍAS
+                    </Button>
+                    <Separator orientation="vertical" className="h-8" />
+                    <h3 className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                        <FileStack className="h-5 w-5" /> MODELOS DE {selectedCategory?.toUpperCase()}
+                    </h3>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Modelo Maestro: Justificación de Inasistencias */}
+                    {selectedCategory === 'Solicitud' && (
+                        <Card className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white border-2">
+                            <CardHeader className="p-6">
                                 <div className="flex justify-between items-start mb-4">
-                                    <Badge variant="secondary" className="font-black text-[9px] uppercase tracking-widest">
-                                        {template.category}
-                                    </Badge>
-                                    <div className="flex items-center gap-2">
-                                        {template.layoutType === 'structured_solicitud' && <Badge className="bg-blue-50 text-blue-700 border-none text-[8px] font-black uppercase">ESTRUCTURADO</Badge>}
-                                        <Badge variant={template.isActive ? 'default' : 'outline'} className="text-[8px] font-black uppercase">
-                                            {template.isActive ? 'ACTIVA' : 'BORRADOR'}
-                                        </Badge>
-                                    </div>
+                                    <Badge className="bg-primary text-white uppercase font-black text-[9px] px-3">Modelo Oficial</Badge>
+                                    <Badge variant="outline" className="text-[9px] font-black uppercase">Estructurado</Badge>
                                 </div>
-                                <CardTitle className="text-xl font-black uppercase tracking-tight line-clamp-2 min-h-[3rem] leading-tight">
-                                    {template.name}
+                                <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight">
+                                    Justificación de Inasistencias
                                 </CardTitle>
-                                <CardDescription className="text-xs font-bold text-primary italic mt-2">
-                                    {template.sumilla}
+                                <CardDescription className="text-xs font-medium mt-2">
+                                    Documento formal para justificar faltas por motivos de salud o fuerza mayor.
                                 </CardDescription>
                             </CardHeader>
-                            <CardFooter className="border-t bg-muted/20 p-4 flex gap-2 mt-auto">
-                                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-primary/10 text-primary" onClick={() => setPreviewingTemplate(template)}>
-                                    <Eye className="h-5 w-5" />
-                                </Button>
-                                <Button variant="ghost" className="flex-1 font-bold h-10 rounded-xl" onClick={() => handleOpenDialog(template)}>
-                                    <Edit className="h-4 w-4 mr-2" /> Editar
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => setTemplateToDelete(template)}>
-                                    <Trash2 className="h-4 w-4" />
+                            <CardFooter className="p-6 pt-0 mt-auto flex gap-2">
+                                <Button 
+                                    className="w-full font-black uppercase text-xs h-10 shadow-lg"
+                                    onClick={() => {
+                                        // Buscar si ya existe en la DB o crear localmente el objeto para el editor
+                                        const existing = templates.find(t => t.name.includes('Justificación'));
+                                        if (existing) handleOpenEditor(existing);
+                                        else handleOpenEditor({
+                                            id: 'new_justificacion',
+                                            name: 'Solicitud de Justificación de Inasistencias',
+                                            category: 'Solicitud',
+                                            layoutType: 'structured_solicitud',
+                                            sumilla: 'SOLICITO: Justificación de inasistencias.',
+                                            addresseeRole: 'Coordinador del Programa de Estudios',
+                                            content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas durante los días...',
+                                            requirementType: 'Gratuito',
+                                            isActive: true,
+                                            variables: [],
+                                            createdAt: null as any,
+                                            instituteId: instituteId!
+                                        });
+                                    }}
+                                >
+                                    GESTIONAR DISEÑO <ChevronRight className="h-4 w-4 ml-1" />
                                 </Button>
                             </CardFooter>
                         </Card>
-                    ))
-                ) : (
-                    <div className="col-span-full py-24 text-center text-muted-foreground border-2 border-dashed rounded-[3rem] bg-muted/5">
-                        <FileText className="h-16 w-16 mx-auto mb-4 opacity-10" />
-                        <p className="text-xl font-black uppercase tracking-widest">Sin diseños oficiales</p>
-                        <p className="text-sm mt-2">Cree su primer documento para el sistema EDA.</p>
+                    )}
+
+                    {/* Placeholder para otros modelos */}
+                    <div className="border-2 border-dashed rounded-3xl flex flex-col items-center justify-center p-8 text-center opacity-30">
+                        <PlusCircle className="h-10 w-10 mb-4" />
+                        <p className="text-xs font-black uppercase tracking-widest">Próximos Modelos</p>
+                        <p className="text-[10px] mt-1">Solicitud de Examen, Retiro, etc.</p>
                     </div>
-                )}
+                </div>
             </div>
+        );
+    }
 
-            {/* Dialog: Registro/Edición */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
-                    <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
-                        <div className="flex items-center gap-4">
-                            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
-                                <Layout className="h-6 w-6 text-accent" />
-                            </div>
-                            <div>
-                                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
-                                    Editor de Solicitudes EDA
-                                </DialogTitle>
-                                <DialogDescription className="text-primary-foreground/80 font-medium">Configure los parámetros fijos y el cuerpo de la solicitud.</DialogDescription>
-                            </div>
+    // --- VISTA 3: EDITOR ESPECÍFICO ---
+    if (view === 'editor' && activeTemplate) {
+        return (
+            <div className="space-y-6 animate-in zoom-in-95 duration-500">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border shadow-sm sticky top-0 z-20">
+                    <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => setView('models')} className="rounded-full">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                        <div>
+                            <h2 className="text-xl font-black uppercase tracking-tight text-primary">{activeTemplate.name}</h2>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Editor de Estructura Institucional</p>
                         </div>
-                    </DialogHeader>
-                    
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col">
-                            <ScrollArea className="flex-1">
-                                <div className="p-8 space-y-8">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <FormField control={form.control} name="name" render={({ field }) => (
-                                            <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Nombre Interno del Diseño</FormLabel><FormControl><Input placeholder="Ej: Solicitud de Justificación v2" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="category" render={({ field }) => (
-                                            <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Categoría de Documento</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></FormItem>
-                                        )}/>
-                                    </div>
+                    </div>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <Button variant="outline" onClick={() => setIsPreviewOpen(true)} className="font-bold rounded-xl border-2">
+                            <Eye className="mr-2 h-4 w-4" /> PREVISUALIZAR A4
+                        </Button>
+                        <Button onClick={form.handleSubmit(onSubmit)} disabled={isSubmitting} className="font-black rounded-xl px-8 shadow-xl shadow-primary/20">
+                            {isSubmitting ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="mr-2 h-4 w-4" />}
+                            GUARDAR CAMBIOS
+                        </Button>
+                    </div>
+                </div>
 
-                                    <div className="p-6 bg-primary/5 rounded-3xl border-2 border-dashed border-primary/20 space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <div className="lg:col-span-8">
+                        <Card className="rounded-[2rem] shadow-lg border-none overflow-hidden">
+                            <CardHeader className="bg-slate-50 border-b p-8">
+                                <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Cuerpo del Documento</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                                <Form {...form}>
+                                    <form className="space-y-8">
+                                        <div className="grid md:grid-cols-2 gap-6">
                                             <FormField control={form.control} name="sumilla" render={({ field }) => (
-                                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">I. Sumilla (Asunto)</FormLabel><FormControl><Input placeholder="SOLICITO: ..." {...field} className="h-11 rounded-xl font-bold border-primary/10" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem>
+                                                    <FormLabel className="font-black text-[10px] uppercase text-slate-500">I. Sumilla (Asunto)</FormLabel>
+                                                    <FormControl><Input {...field} className="h-12 font-bold uppercase rounded-xl border-primary/10" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
                                             )}/>
                                             <FormField control={form.control} name="addresseeRole" render={({ field }) => (
-                                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">II. Dirigido a (Cargo Destino)</FormLabel><FormControl><Input placeholder="Ej: Director General / Coordinador Académico" {...field} className="h-11 rounded-xl uppercase border-primary/10" /></FormControl><FormMessage /></FormItem>
+                                                <FormItem>
+                                                    <FormLabel className="font-black text-[10px] uppercase text-slate-500">II. Dirigido a</FormLabel>
+                                                    <FormControl><Input {...field} className="h-12 uppercase rounded-xl border-primary/10" /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
                                             )}/>
                                         </div>
 
                                         <FormField control={form.control} name="content" render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">III. Cuerpo de la Solicitud (Argumentación)</FormLabel>
-                                                <FormControl><Textarea rows={8} placeholder="Escriba aquí los párrafos centrales..." {...field} className="resize-none leading-relaxed font-medium bg-white rounded-2xl" /></FormControl>
-                                                <FormDescription className="text-[10px]">Los datos del alumno (DNI, Carrera, etc.) se inyectan automáticamente en el encabezado.</FormDescription>
+                                                <FormLabel className="font-black text-[10px] uppercase text-slate-500">III. Argumentación (Contenido)</FormLabel>
+                                                <FormControl><Textarea rows={12} {...field} className="resize-none leading-relaxed font-medium text-base bg-slate-50 rounded-2xl p-6" /></FormControl>
+                                                <FormDescription className="text-[10px]">Escriba solo los párrafos centrales. El sistema añadirá automáticamente la despedida reglamentaria.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}/>
-                                    </div>
+                                    </form>
+                                </Form>
+                            </CardContent>
+                        </Card>
+                    </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <div className="space-y-4">
-                                            <h4 className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-2"><DollarSign className="h-4 w-4" /> Requisitos de Emisión</h4>
-                                            <FormField control={form.control} name="requirementType" render={({ field }) => (
-                                                <FormItem><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-11"><SelectValue /></SelectTrigger></FormControl><SelectContent>{REQUIREMENTS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select></FormItem>
-                                            )}/>
-                                            {form.watch('requirementType') === 'Pago Validado' && (
-                                                <FormField control={form.control} name="requirementValue" render={({ field }) => (
-                                                    <FormItem className="animate-in zoom-in-95"><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-11"><SelectValue placeholder="Vincular Tasa..." /></SelectTrigger></FormControl><SelectContent>{concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name} (S/ {c.amount})</SelectItem>)}</SelectContent></Select></FormItem>
-                                                )}/>
-                                            )}
-                                        </div>
-                                        <FormField control={form.control} name="isActive" render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-2xl border p-4 bg-muted/20">
-                                                <div className="space-y-0.5"><FormLabel className="text-xs font-bold">Documento Activo</FormLabel><p className="text-[10px] text-muted-foreground">Si está desactivado no aparecerá en el Point Print.</p></div>
-                                                <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                                            </FormItem>
-                                        )}/>
-                                    </div>
-                                </div>
-                            </ScrollArea>
+                    <div className="lg:col-span-4 space-y-6">
+                        <Card className="rounded-3xl shadow-md border-none bg-primary/5">
+                            <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest">Requisitos de Emisión</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <FormField control={form.control} name="requirementType" render={({ field }) => (
+                                    <FormItem>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger className="bg-white"><SelectValue /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="Gratuito">Gratuito</SelectItem>
+                                                <SelectItem value="Pago Validado">Requiere Pago</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+                                )}/>
+                                {form.watch('requirementType') === 'Pago Validado' && (
+                                    <FormField control={form.control} name="requirementValue" render={({ field }) => (
+                                        <FormItem className="animate-in zoom-in-95">
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger className="bg-white"><SelectValue placeholder="Vincular Tasa..." /></SelectTrigger></FormControl>
+                                                <SelectContent>{concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}/>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                            <DialogFooter className="p-8 bg-muted/50 border-t shrink-0 flex gap-3">
-                                <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold rounded-xl h-12 flex-1">CANCELAR</Button>
-                                <Button type="submit" disabled={isSubmitting} className="font-black rounded-xl h-12 flex-[2] shadow-xl shadow-primary/20">
-                                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <Save className="h-5 w-5 mr-2" />}
-                                    {editingTemplate ? 'GUARDAR CAMBIOS' : 'PUBLICAR DISEÑO OFICIAL'}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Dialog: Previsualización Institucional */}
-            <Dialog open={!!previewingTemplate} onOpenChange={open => !open && setPreviewingTemplate(null)}>
-                <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
-                    <DialogHeader className="p-6 bg-slate-100 border-b shrink-0 flex flex-row items-center justify-between pr-10">
-                        <div className="flex items-center gap-4">
-                            <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Eye className="h-5 w-5" /></div>
-                            <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización de Impresión</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de papel A4 oficial con datos de prueba.</DialogDescription></div>
+                        <div className="p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl flex gap-4 items-start">
+                            <Info className="h-5 w-5 text-blue-600 shrink-0 mt-1" />
+                            <div className="text-[11px] text-blue-800 leading-relaxed font-medium">
+                                <p className="font-black uppercase mb-1">Estructura Automática:</p>
+                                Este modelo inyecta automáticamente los datos del alumno (DNI, Carrera, etc.) y la firma oficial al final del documento.
+                            </div>
                         </div>
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Dato de Prueba</Badge>
-                    </DialogHeader>
+                    </div>
+                </div>
 
-                    <ScrollArea className="flex-1 bg-slate-50">
-                        <div className="p-12">
-                            {/* Papel A4 Simulado */}
-                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans">
-                                
-                                {/* 1. Encabezado */}
-                                <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-10">
-                                    <div className="flex items-center gap-4">
-                                        {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" className="w-[65px] h-[65px] object-contain" />}
-                                        <div className="text-left">
-                                            <h1 className="text-[13pt] font-black uppercase leading-tight">{institute?.name}</h1>
-                                            <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
+                {/* Dialog: Previsualización Institucional */}
+                <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
+                    <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                        <DialogHeader className="p-6 bg-slate-100 border-b shrink-0 flex flex-row items-center justify-between pr-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Eye className="h-5 w-5" /></div>
+                                <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización de Impresión</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de papel A4 oficial con datos de prueba.</DialogDescription></div>
+                            </div>
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Documento Estructurado</Badge>
+                        </DialogHeader>
+
+                        <ScrollArea className="flex-1 bg-slate-50">
+                            <div className="p-12">
+                                <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans">
+                                    {/* Encabezado */}
+                                    <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-10">
+                                        <div className="flex items-center gap-4">
+                                            {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" className="w-[65px] h-[65px] object-contain" />}
+                                            <div className="text-left">
+                                                <h1 className="text-[13pt] font-black uppercase leading-tight">{institute?.name}</h1>
+                                                <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
+                                            </div>
                                         </div>
+                                        <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Validez Digital Verificada</div>
                                     </div>
-                                    <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Documento con Validez Digital</div>
-                                </div>
 
-                                {/* 2. Sumilla */}
-                                <div className="text-right mb-12">
-                                    <p className="text-[11pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
-                                        {previewingTemplate?.sumilla || 'SOLICITO: ---'}
-                                    </p>
-                                </div>
+                                    {/* Sumilla */}
+                                    <div className="text-right mb-12">
+                                        <p className="text-[11pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
+                                            {form.watch('sumilla')}
+                                        </p>
+                                    </div>
 
-                                {/* 3. Destinatario */}
-                                <div className="mb-10 space-y-1">
-                                    <p className="font-black text-[11pt] uppercase">SEÑOR {previewingTemplate?.addresseeRole || '---'}:</p>
-                                    <p className="font-bold text-[11pt] uppercase">{institute?.name || '---'}</p>
-                                </div>
+                                    {/* Destinatario */}
+                                    <div className="mb-10 space-y-1">
+                                        <p className="font-black text-[11pt] uppercase">SEÑOR {form.watch('addresseeRole')}:</p>
+                                        <p className="font-bold text-[11pt] uppercase">{institute?.name}</p>
+                                    </div>
 
-                                {/* 4. Identificación del Alumno */}
-                                <div className="text-justify text-[11pt] leading-loose mb-8">
-                                    Yo, <span className="font-black underline bg-yellow-50">{dummyData.name}</span>, 
-                                    identificado con DNI N° <span className="font-mono font-bold bg-yellow-50">{dummyData.dni}</span>, 
-                                    estudiante del programa de estudios de <span className="font-bold bg-yellow-50">{dummyData.program}</span>, 
-                                    perteneciente al <span className="font-bold bg-yellow-50">{dummyData.semester}</span>, 
-                                    turno <span className="font-bold bg-yellow-50">{dummyData.turno}</span>, 
-                                    con domicilio en <span className="font-bold bg-yellow-50">{dummyData.address}</span>, 
-                                    ante usted con el debido respeto me presento y expongo:
-                                </div>
+                                    {/* Cuerpo con Datos */}
+                                    <div className="text-justify text-[11pt] leading-loose mb-8">
+                                        Yo, <span className="font-black underline bg-yellow-50">{dummyData.name}</span>, 
+                                        identificado con DNI N° <span className="font-mono font-bold bg-yellow-50">{dummyData.dni}</span>, 
+                                        estudiante del programa de estudios de <span className="font-bold bg-yellow-50">{dummyData.program}</span>, 
+                                        perteneciente al <span className="font-bold bg-yellow-50">{dummyData.semester}</span>, 
+                                        turno <span className="font-bold bg-yellow-50">{dummyData.turno}</span>, 
+                                        con domicilio en <span className="font-bold bg-yellow-50">{dummyData.address}</span>, 
+                                        ante usted con el debido respeto me presento y expongo:
+                                    </div>
 
-                                {/* 5. Cuerpo */}
-                                <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4">
-                                    {previewingTemplate?.content}
-                                </div>
+                                    <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4">
+                                        {form.watch('content')}
+                                    </div>
 
-                                {/* 6. Despedida Fija */}
-                                <div className="my-10 font-bold uppercase text-[11pt]">
-                                    Por lo tanto:<br/>
-                                    Espero acceda a mi solicitud por ser de justicia.
-                                </div>
+                                    <div className="my-10 font-bold uppercase text-[11pt]">
+                                        Por lo tanto:<br/>
+                                        Espero acceda a mi solicitud por ser de justicia.
+                                    </div>
 
-                                {/* 7. Lugar y Fecha */}
-                                <div className="text-right mt-12 italic text-[10pt] text-gray-700">
-                                    Dado en la sede institucional, a los <span className="bg-yellow-50 font-bold">{dummyData.date}</span>.
-                                    <br/>Hora de emisión: <span className="bg-yellow-50 font-mono text-[9pt]">{dummyData.time}</span>
-                                </div>
+                                    <div className="text-right mt-12 italic text-[10pt] text-gray-700">
+                                        Dado en la sede institucional, a los <span className="bg-yellow-50 font-bold">{dummyData.date}</span>.
+                                    </div>
 
-                                {/* 8. Firma */}
-                                <div className="mt-24 pt-2 border-t border-black w-72 mx-auto text-center">
-                                    <p className="font-black uppercase text-[10pt] tracking-tight">{dummyData.name}</p>
-                                    <span className="text-[8pt] font-black text-gray-500 uppercase tracking-widest">DNI: {dummyData.dni}</span>
-                                </div>
+                                    <div className="mt-24 pt-2 border-t border-black w-72 mx-auto text-center">
+                                        <p className="font-black uppercase text-[10pt] tracking-tight">{dummyData.name}</p>
+                                        <span className="text-[8pt] font-black text-gray-500 uppercase tracking-widest">DNI: {dummyData.dni}</span>
+                                    </div>
+                                </Card>
+                            </div>
+                        </ScrollArea>
 
-                                {/* 9. Footer */}
-                                <div className="absolute bottom-10 left-10 right-10 text-center text-[7.5pt] text-gray-400 border-t border-gray-100 pt-4 italic">
-                                    Este documento es generado automáticamente por el sistema EDA (Elaboración de Documentos Automáticos) 
-                                    y tiene validez legal bajo la certificación tecnológica de {institute?.name}.
-                                </div>
-                            </Card>
-                        </div>
-                    </ScrollArea>
+                        <DialogFooter className="p-6 bg-white border-t shrink-0">
+                            <Button variant="ghost" onClick={() => setIsPreviewOpen(false)} className="font-bold rounded-xl h-11 px-8">CERRAR VISOR</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        );
+    }
 
-                    <DialogFooter className="p-6 bg-white border-t shrink-0">
-                        <Button variant="ghost" onClick={() => setPreviewingTemplate(null)} className="font-bold rounded-xl h-11 px-8">CERRAR VISOR</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            <AlertDialog open={!!templateToDelete} onOpenChange={open => !open && setTemplateToDelete(null)}>
-                <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-black uppercase text-primary">¿Eliminar este diseño?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium text-slate-600">
-                            Esta acción es irreversible y el documento dejará de estar disponible en los terminales táctiles Point Print.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl font-bold h-11">CANCELAR</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmDelete} disabled={isSubmitting} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">
-                            {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : 'ELIMINAR PERMANENTE'}
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </div>
-    );
+    return null;
 }
-
