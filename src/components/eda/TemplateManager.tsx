@@ -58,7 +58,7 @@ import {
     CheckCircle2, 
     DollarSign,
     ExternalLink
-} from 'lucide-center';
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -73,12 +73,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { LucideIcon } from 'lucide-react';
 
 const CATEGORIES: DocumentCategory[] = ['Constancia', 'Boleta', 'Ficha', 'Solicitud'];
 const REQUIREMENTS: EDARequirement[] = ['Gratuito', 'Pago Validado'];
 
-// Variables disponibles que el sistema puede rellenar automáticamente
 const AVAILABLE_VARIABLES = [
     { key: '{nombre_completo}', label: 'Nombre Completo del Alumno' },
     { key: '{dni}', label: 'Número de DNI/ID' },
@@ -157,7 +155,6 @@ export function TemplateManager() {
         if (!instituteId) return;
         setIsSubmitting(true);
         try {
-            // Extraer variables presentes en el contenido
             const detectedVariables = AVAILABLE_VARIABLES
                 .filter(v => data.content.includes(v.key))
                 .map(v => v.key);
@@ -261,7 +258,6 @@ export function TemplateManager() {
                 )}
             </div>
 
-            {/* Dialog: Editor de Plantilla */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
