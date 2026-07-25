@@ -50,7 +50,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
     Loader2, 
     PlusCircle, 
-    Trash, 
+    Trash2, 
     Edit, 
     FileText, 
     Info, 
@@ -120,7 +120,7 @@ export function TemplateManager() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
-    const [deletingTemplate, setDeletingTemplate] = useState<DocumentTemplate | null>(null);
+    const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
     const [previewingTemplate, setPreviewingTemplate] = useState<DocumentTemplate | null>(null);
 
     const form = useForm<FormValues>({
@@ -193,16 +193,15 @@ export function TemplateManager() {
         }
     };
 
-    const handleDelete = async () => {
-        if (!instituteId || !deletingTemplate) return;
+    const handleConfirmDelete = async () => {
+        if (!instituteId || !templateToDelete) return;
         try {
-            await deleteDocumentTemplate(instituteId, deletingTemplate.id);
-            toast({ title: "Diseño Eliminado" });
+            await deleteDocumentTemplate(instituteId, templateToDelete.id);
+            toast({ title: "Diseño Eliminado", description: "La plantilla ha sido borrada permanentemente." });
+            setTemplateToDelete(null);
             fetchData();
         } catch (error) {
             toast({ title: "Error al eliminar", variant: "destructive" });
-        } finally {
-            setDeletingTemplate(null);
         }
     };
 
@@ -281,8 +280,8 @@ export function TemplateManager() {
                                 <Button variant="ghost" className="flex-1 font-bold h-10 rounded-xl" onClick={() => handleOpenDialog(template)}>
                                     <Edit className="h-4 w-4 mr-2" /> Editar
                                 </Button>
-                                <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => setDeletingTemplate(template)}>
-                                    <Trash className="h-4 w-4" />
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:bg-destructive/10 rounded-xl" onClick={() => setTemplateToDelete(template)}>
+                                    <Trash2 className="h-4 w-4" />
                                 </Button>
                             </CardFooter>
                         </Card>
@@ -297,7 +296,7 @@ export function TemplateManager() {
             </div>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
@@ -532,15 +531,19 @@ export function TemplateManager() {
                 </DialogContent>
             </Dialog>
 
-            <AlertDialog open={!!deletingTemplate} onOpenChange={(open) => !open && setDeletingTemplate(null)}>
+            {/* AlertDialog para confirmar eliminación */}
+            <AlertDialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
                 <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="text-xl font-black uppercase text-primary">¿Eliminar Diseño?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium text-slate-600">Esta acción es irreversible y el documento dejará de estar disponible en los terminales Point Print.</AlertDialogDescription>
+                        <AlertDialogDescription className="font-medium text-slate-600">
+                            Esta acción es irreversible y el documento dejará de estar disponible en los terminales Point Print. 
+                            Se borrará permanentemente la plantilla: <strong>{templateToDelete?.name}</strong>.
+                        </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-xl font-bold h-11">CANCELAR</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">ELIMINAR PERMANENTE</AlertDialogAction>
+                        <AlertDialogCancel className="rounded-xl font-bold h-11" onClick={() => setTemplateToDelete(null)}>CANCELAR</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">ELIMINAR PERMANENTE</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
