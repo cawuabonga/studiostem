@@ -193,6 +193,24 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         return programs.find(p => p.id === student.programId)?.name || student.programId;
     }, [student, programs]);
 
+    // Resolver Coordinador del programa del alumno
+    const coordinatorName = useMemo(() => {
+        if (!student || !staff.length) return 'COORDINADOR ACADÉMICO';
+        const coord = staff.find(s => 
+            s.programId === student.programId && 
+            (s.role === 'Coordinator' || s.roleId === 'coordinator')
+        );
+        return coord?.displayName || 'COORDINADOR ACADÉMICO';
+    }, [student, staff]);
+
+    // Helper para inyectar resaltado en el cuerpo del documento
+    const getFormattedContent = (text: string) => {
+        return text
+            .replace(/{motivo_justificacion}/g, `<span class="font-black underline">${(formData['{motivo_justificacion}'] || '').toUpperCase()}</span>`)
+            .replace(/{fechas_inasistencia}/g, `<span class="font-black underline">${(formData['{fechas_inasistencia}'] || '').toUpperCase()}</span>`)
+            .replace(/{adjuntos_detalle}/g, `<span class="font-black underline">${(formData['{adjuntos_detalle}'] || '').toUpperCase()}</span>`);
+    };
+
     // --- LÓGICA DE BRANDING ---
     const primaryColor = institute?.primaryColor ? `hsl(${institute.primaryColor})` : undefined;
 
@@ -544,17 +562,17 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 </div>
 
                                 {/* Sumilla */}
-                                <div className="text-right mb-8">
+                                <div className="text-right mb-12">
                                     <p className="text-[10pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
                                         {selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}
                                     </p>
                                 </div>
 
-                                {/* Destinatario */}
-                                <div className="mb-8 space-y-1">
+                                {/* Destinatario - Bajado 2 líneas aprox */}
+                                <div className="mt-12 mb-8 space-y-1">
                                     <p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
                                     <p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">
-                                        {selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : (staff.find(s => s.programId === student?.programId && (s.role === 'Coordinator' || s.roleId === 'coordinator'))?.displayName || 'COORDINADOR ACADÉMICO')}
+                                        {selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : coordinatorName}
                                     </p>
                                     <p className="font-bold text-[10pt] uppercase">{institute?.name}</p>
                                 </div>
@@ -570,17 +588,14 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                     ante usted con el debido respeto me presento y expongo:
                                 </div>
 
-                                {/* Argumentación Dinámica Inyectada */}
-                                <div className="text-justify leading-relaxed text-[10pt] min-h-[250px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-4 bg-slate-50/30">
-                                    {selectedTemplate.content
-                                        .replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())
-                                        .replace(/{fechas_inasistencia}/g, (formData['{fechas_inasistencia}'] || '').toUpperCase())
-                                        .replace(/{adjuntos_detalle}/g, formData['{adjuntos_detalle}'] || '')
-                                    }
+                                {/* Argumentación Dinámica - Sin caja, mismo formato que identidad */}
+                                <div className="text-justify leading-loose text-[10pt] min-h-[250px] whitespace-pre-wrap font-medium">
+                                    <div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} />
                                 </div>
 
-                                <div className="my-8 font-bold uppercase text-[10pt]">
-                                    Por lo tanto:<br/>
+                                {/* Cierre con salto de linea */}
+                                <div className="mt-10 mb-8 font-bold uppercase text-[10pt] leading-relaxed">
+                                    POR LO TANTO:<br/>
                                     Espero acceda a mi solicitud por ser de justicia.
                                 </div>
 
@@ -588,9 +603,11 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                     Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.
                                 </div>
 
-                                <div className="mt-16 pt-2 border-t border-black w-60 mx-auto text-center">
+                                {/* Firma Mejorada */}
+                                <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center">
                                     <p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p>
-                                    <span className="text-[7pt] font-black text-gray-500 uppercase tracking-widest">DNI: {student?.documentId}</span>
+                                    <p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p>
+                                    <p className="text-[6.5pt] font-bold text-gray-400 uppercase tracking-tighter mt-1">{studentProgramName}</p>
                                 </div>
                             </Card>
                         </div>
@@ -621,7 +638,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             </Button>
 
                             <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3 items-start">
-                                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                                <span className="h-5 w-5 text-blue-600 shrink-0 mt-0.5"><Info className="h-full w-full" /></span>
                                 <p className="text-[10px] text-blue-800 leading-tight font-medium">
                                     Su solicitud será archivada digitalmente en su expediente de forma automática tras la impresión.
                                 </p>
