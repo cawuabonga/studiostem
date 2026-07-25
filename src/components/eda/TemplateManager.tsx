@@ -5,13 +5,13 @@
  * @fileOverview Gestor de Plantillas EDA rediseñado.
  * Utiliza un enfoque de catálogo por categorías y modelos predefinidos.
  * Incluye el modelo maestro de "Justificación de Inasistencias" con estructura rígida.
- * Se ha automatizado el destinatario para detectar al Coordinador de Carrera.
+ * Se ha automatizado el destinatario y dinamizado la argumentación con variables de alumno.
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDocumentTemplates, saveDocumentTemplate } from '@/services/eda-service';
 import { getPaymentConcepts } from '@/config/firebase';
-import type { DocumentTemplate, PaymentConcept, DocumentCategory, AddresseeType } from '@/types';
+import type { DocumentTemplate, PaymentConcept, DocumentCategory } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -53,7 +53,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
     Loader2, 
-    FileText, 
     ArrowLeft, 
     Eye, 
     Save, 
@@ -64,8 +63,10 @@ import {
     Info,
     Trash2,
     UserCheck,
-    Building2,
-    CheckCircle2
+    Sparkles,
+    CalendarDays,
+    Paperclip,
+    FileText
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -75,6 +76,24 @@ import { cn } from '@/lib/utils';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { 
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+// --- Variables Dinámicas que el Alumno completará en el Punto de Impresión ---
+const STUDENT_INPUT_VARIABLES = [
+    { id: '{motivo_justificacion}', label: 'Motivo', icon: Info, desc: 'Razón de la falta (Salud, Personal, etc.)' },
+    { id: '{fechas_inasistencia}', label: 'Fechas', icon: CalendarDays, desc: 'Día(s) que solicita justificar' },
+    { id: '{adjuntos_detalle}', label: 'Cita de Adjuntos', icon: Paperclip, desc: 'Indica si presenta certificados o no' },
+];
 
 // --- Esquema de Validación para el Editor de Solicitudes ---
 const solicitudSchema = z.object({
@@ -114,6 +133,7 @@ export function TemplateManager() {
     const [activeTemplate, setActiveTemplate] = useState<DocumentTemplate | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [templateToDelete, setTemplateToDelete] = useState<DocumentTemplate | null>(null);
 
     const form = useForm<SolicitudFormValues>({
         resolver: zodResolver(solicitudSchema),
@@ -174,7 +194,6 @@ export function TemplateManager() {
         if (!instituteId || !activeTemplate) return;
         setIsSubmitting(true);
         try {
-            // Establecemos el rol automáticamente si es para el coordinador
             const finalRole = data.addresseeType === 'Coordinator' 
                 ? 'Coordinador del Programa de Estudios' 
                 : 'Director General';
@@ -184,7 +203,11 @@ export function TemplateManager() {
                 addresseeRole: finalRole,
                 category: activeTemplate.category,
                 layoutType: 'structured_solicitud',
-                variables: ['{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', '{turno}', '{direccion}', '{fecha_hoy}', '{nombre_coordinador}'],
+                variables: [
+                    '{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', 
+                    '{turno}', '{direccion}', '{fecha_hoy}', '{nombre_coordinador}',
+                    '{motivo_justificacion}', '{fechas_inasistencia}', '{adjuntos_detalle}'
+                ],
                 instituteId 
             }, activeTemplate.id.startsWith('new_') ? undefined : activeTemplate.id);
 
@@ -198,6 +221,11 @@ export function TemplateManager() {
         }
     };
 
+    const insertVariable = (variable: string) => {
+        const currentContent = form.getValues('content');
+        form.setValue('content', currentContent + ' ' + variable + ' ', { shouldValidate: true });
+    };
+
     // Datos simulados para previsualización dinámica
     const dummyData = {
         name: 'ALEXANDER GUSTAVO PÉREZ RIVAS',
@@ -207,7 +235,11 @@ export function TemplateManager() {
         turno: 'MAÑANA',
         address: 'AV. LAS PALMERAS 456, DISTRITO DE CASTILLA',
         date: new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }),
-        coordinator: 'ING. CARLOS MENDOZA SOLANO' // Simulación de detección automática
+        coordinator: 'ING. CARLOS MENDOZA SOLANO',
+        // Valores dinámicos del alumno
+        motivo: 'PROBLEMAS DE SALUD AGUDOS (GASTRITIS EROSIVA)',
+        fechas: 'LOS DÍAS 12 Y 13 DE MAYO DEL PRESENTE AÑO',
+        adjuntos: 'POR LO CUAL ADJUNTO EL CERTIFICADO MÉDICO Y RECETAS CORRESPONDIENTES'
     };
 
     if (loading) return <Skeleton className="h-64 w-full rounded-3xl" />;
@@ -275,7 +307,7 @@ export function TemplateManager() {
                                     Justificación de Inasistencias
                                 </CardTitle>
                                 <CardDescription className="text-xs font-medium mt-2">
-                                    Documento formal para justificar faltas por motivos de salud o fuerza mayor.
+                                    Solicitud formal para justificar faltas mediante selección de motivos y fechas.
                                 </CardDescription>
                             </CardHeader>
                             <CardFooter className="p-6 pt-0 mt-auto flex gap-2">
@@ -289,9 +321,9 @@ export function TemplateManager() {
                                             name: 'Solicitud de Justificación de Inasistencias',
                                             category: 'Solicitud',
                                             layoutType: 'structured_solicitud',
-                                            sumilla: 'SOLICITO: Justificación de inasistencias.',
+                                            sumilla: 'SOLICITO: Justificación de inasistencias por {motivo_justificacion}.',
                                             addresseeType: 'Coordinator',
-                                            content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas durante los días...',
+                                            content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas {fechas_inasistencia}, debido a {motivo_justificacion}. {adjuntos_detalle}.',
                                             requirementType: 'Gratuito',
                                             isActive: true,
                                             variables: [],
@@ -348,7 +380,10 @@ export function TemplateManager() {
                         <div className="lg:col-span-8">
                             <Card className="rounded-[2rem] shadow-lg border-none overflow-hidden">
                                 <CardHeader className="bg-slate-50 border-b p-8">
-                                    <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Cuerpo del Documento</CardTitle>
+                                    <div className="flex justify-between items-center">
+                                        <CardTitle className="text-sm font-black uppercase tracking-[0.2em] text-primary">Cuerpo del Documento</CardTitle>
+                                        <Badge variant="outline" className="bg-blue-50 text-blue-700 uppercase font-black text-[9px] h-6 px-3">Estructura EDA Activa</Badge>
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="p-8">
                                     <div className="space-y-8">
@@ -379,32 +414,51 @@ export function TemplateManager() {
                                                     <FormField control={form.control} name="directorName" render={({ field }) => (
                                                         <FormItem className="animate-in slide-in-from-top-2">
                                                             <FormControl><Input {...field} placeholder="Nombre completo del Director..." className="h-11 rounded-xl border-orange-200" /></FormControl>
-                                                            <FormDescription className="text-[10px]">Indique el nombre de la máxima autoridad.</FormDescription>
                                                             <FormMessage />
                                                         </FormItem>
                                                     )}/>
                                                 )}
-
-                                                {addresseeType === 'Coordinator' && (
-                                                    <div className="p-3 bg-blue-50 border-2 border-dashed border-blue-200 rounded-xl animate-in fade-in">
-                                                        <p className="text-[9px] font-black text-blue-700 uppercase tracking-widest flex items-center gap-2">
-                                                            <UserCheck className="h-3 w-3" /> Detección de Coordinador
-                                                        </p>
-                                                        <p className="text-[10px] text-blue-600 mt-1 font-medium">
-                                                            El sistema identificará al coordinador del programa del estudiante al momento del escaneo e inyectará su nombre automáticamente.
-                                                        </p>
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
 
-                                        <FormField control={form.control} name="content" render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel className="font-black text-[10px] uppercase text-slate-500">III. Argumentación (Contenido)</FormLabel>
-                                                <FormControl><Textarea rows={12} {...field} className="resize-none leading-relaxed font-medium text-base bg-slate-50 rounded-2xl p-6" /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}/>
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                                                <Label className="font-black text-[10px] uppercase text-slate-500">III. Argumentación (Contenido Dinámico)</Label>
+                                                <div className="flex gap-1.5 flex-wrap">
+                                                    {STUDENT_INPUT_VARIABLES.map(v => (
+                                                        <Button 
+                                                            key={v.id} 
+                                                            type="button" 
+                                                            variant="secondary" 
+                                                            size="sm" 
+                                                            className="h-8 text-[9px] font-black uppercase bg-primary/5 text-primary border-primary/10 hover:bg-primary/10"
+                                                            onClick={() => insertVariable(v.id)}
+                                                        >
+                                                            <v.icon className="h-3 w-3 mr-1" /> INSERTAR {v.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            <FormField control={form.control} name="content" render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl>
+                                                        <Textarea 
+                                                            rows={12} 
+                                                            {...field} 
+                                                            className="resize-none leading-relaxed font-medium text-base bg-slate-50 rounded-2xl p-8 border-2 border-dashed border-primary/10 focus-visible:ring-primary/20" 
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}/>
+                                            <div className="p-4 bg-muted/30 rounded-xl flex gap-3 items-center">
+                                                <Sparkles className="h-4 w-4 text-primary" />
+                                                <p className="text-[10px] font-medium text-muted-foreground">
+                                                    Los marcadores en <code className="text-primary font-bold">{"{llaves}"}</code> se convertirán en campos interactivos que el alumno llenará en la pantalla táctil del Point Print.
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
@@ -412,7 +466,7 @@ export function TemplateManager() {
 
                         <div className="lg:col-span-4 space-y-6">
                             <Card className="rounded-3xl shadow-md border-none bg-primary/5">
-                                <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest">Requisitos de Emisión</CardTitle></CardHeader>
+                                <CardHeader><CardTitle className="text-xs font-black uppercase tracking-widest">Reglas de Trámite</CardTitle></CardHeader>
                                 <CardContent className="space-y-4">
                                     <FormField control={form.control} name="requirementType" render={({ field }) => (
                                         <FormItem>
@@ -438,19 +492,20 @@ export function TemplateManager() {
                                 </CardContent>
                             </Card>
 
-                            <div className="p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl flex gap-4 items-start">
-                                <Info className="h-5 w-5 text-blue-600 shrink-0 mt-1" />
-                                <div className="text-[11px] text-blue-800 leading-relaxed font-medium">
-                                    <p className="font-black uppercase mb-1">Estructura Dinámica:</p>
-                                    Este modelo inyecta dinámicamente:
-                                    <ul className="list-disc ml-4 mt-1 space-y-1">
-                                        <li>Logo institucional actualizado.</li>
-                                        <li>Ficha técnica del estudiante.</li>
-                                        <li><strong>Autoridad responsable detectada.</strong></li>
-                                        <li>Firma y pie de página.</li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <Card className="rounded-3xl border-none shadow-md bg-blue-50">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-[10px] font-black uppercase text-blue-700 tracking-widest flex items-center gap-2">
+                                        <Info className="h-4 w-4" /> Ayuda al Administrador
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-[11px] text-blue-800 leading-relaxed font-medium space-y-3">
+                                    <p>Para la <strong>Justificación de Inasistencias</strong>, es vital que el alumno indique las fechas exactas.</p>
+                                    <div className="p-3 bg-white/50 rounded-lg">
+                                        <p className="font-bold mb-1">Ejemplo de redacción:</p>
+                                        <p className="italic">"...me presento para solicitar la justificación de mis inasistencias ocurridas {"{fechas_inasistencia}"} por motivo de {"{motivo_justificacion}"}, {"{adjuntos_detalle}"}..."</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
                     </div>
 
@@ -460,9 +515,9 @@ export function TemplateManager() {
                             <DialogHeader className="p-6 bg-slate-100 border-b shrink-0 flex flex-row items-center justify-between pr-10">
                                 <div className="flex items-center gap-4">
                                     <div className="p-2.5 bg-primary/10 rounded-xl text-primary"><Eye className="h-5 w-5" /></div>
-                                    <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización Dinámica</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de papel A4 oficial con detección automática.</DialogDescription></div>
+                                    <div><DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Previsualización A4 Real</DialogTitle><DialogDescription className="text-xs font-bold">Simulación de salida física del terminal EDA.</DialogDescription></div>
                                 </div>
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Documento Inteligente</Badge>
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 uppercase font-black text-[9px]">Documento Dinámico</Badge>
                             </DialogHeader>
 
                             <ScrollArea className="flex-1 bg-slate-50">
@@ -477,17 +532,19 @@ export function TemplateManager() {
                                                     <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Secretaría Académica • EDA System</p>
                                                 </div>
                                             </div>
-                                            <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Detección Dinámica Activa</div>
+                                            <div className="text-right text-[7pt] font-black text-gray-400 uppercase tracking-widest">Código Único: EDA-76543</div>
                                         </div>
 
                                         {/* Sumilla */}
                                         <div className="text-right mb-12">
                                             <p className="text-[11pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">
-                                                {form.watch('sumilla')}
+                                                {form.watch('sumilla')
+                                                    .replace(/{motivo_justificacion}/g, dummyData.motivo)
+                                                }
                                             </p>
                                         </div>
 
-                                        {/* Destinatario Dinámico */}
+                                        {/* Destinatario */}
                                         <div className="mb-10 space-y-1">
                                             <p className="font-black text-[11pt] uppercase">SEÑOR {addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p>
                                             <p className="font-bold text-[11pt] uppercase underline decoration-2 underline-offset-4">
@@ -496,7 +553,7 @@ export function TemplateManager() {
                                             <p className="font-bold text-[11pt] uppercase">{institute?.name}</p>
                                         </div>
 
-                                        {/* Cuerpo con Datos */}
+                                        {/* Cuerpo con Datos Inyectados */}
                                         <div className="text-justify text-[11pt] leading-loose mb-8">
                                             Yo, <span className="font-black underline bg-yellow-50">{dummyData.name}</span>, 
                                             identificado con DNI N° <span className="font-mono font-bold bg-yellow-50">{dummyData.dni}</span>, 
@@ -507,8 +564,13 @@ export function TemplateManager() {
                                             ante usted con el debido respeto me presento y expongo:
                                         </div>
 
+                                        {/* Argumentación Dinámica */}
                                         <div className="text-justify leading-relaxed text-[11pt] min-h-[300px] whitespace-pre-wrap font-medium py-4 border-l-2 border-slate-100 pl-6">
-                                            {form.watch('content')}
+                                            {form.watch('content')
+                                                .replace(/{motivo_justificacion}/g, `<span class="font-black underline bg-yellow-50">${dummyData.motivo}</span>`)
+                                                .replace(/{fechas_inasistencia}/g, `<span class="font-black underline bg-yellow-50">${dummyData.fechas}</span>`)
+                                                .replace(/{adjuntos_detalle}/g, `<span class="font-black underline bg-yellow-50">${dummyData.adjuntos}</span>`)
+                                            }
                                         </div>
 
                                         <div className="my-10 font-bold uppercase text-[11pt]">
