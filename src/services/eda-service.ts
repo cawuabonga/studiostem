@@ -20,7 +20,8 @@ import {
     orderBy, 
     Timestamp,
     addDoc,
-    limit
+    limit,
+    onSnapshot
 } from 'firebase/firestore';
 import type { PrintPoint, DocumentTemplate, DocumentGenerationLog } from '@/types';
 
@@ -37,6 +38,21 @@ export const getPrintPoints = async (instituteId: string): Promise<PrintPoint[]>
         console.error("Error al obtener puntos de impresión EDA:", error);
         return [];
     }
+};
+
+/**
+ * Escucha en tiempo real un punto de impresión específico.
+ * Utilizado por el Kiosko para detectar escaneos RFID.
+ */
+export const listenToPrintPoint = (instituteId: string, pointId: string, callback: (point: PrintPoint | null) => void) => {
+    const docRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
+    return onSnapshot(docRef, (snap) => {
+        if (snap.exists()) {
+            callback({ id: snap.id, ...snap.data() } as PrintPoint);
+        } else {
+            callback(null);
+        }
+    });
 };
 
 /**
@@ -58,6 +74,17 @@ export const savePrintPoint = async (instituteId: string, pointData: Omit<PrintP
 };
 
 /**
+ * Cierra la sesión activa en un punto de impresión.
+ */
+export const closeKioskSession = async (instituteId: string, pointId: string) => {
+    const pointRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
+    await updateDoc(pointRef, {
+        currentStudentId: null,
+        lastScanAt: null
+    });
+};
+
+/**
  * Elimina un punto de impresión.
  */
 export const deletePrintPoint = async (instituteId: string, id: string): Promise<void> => {
@@ -75,7 +102,7 @@ export const deletePrintPoint = async (instituteId: string, id: string): Promise
 export const getDocumentTemplates = async (instituteId: string): Promise<DocumentTemplate[]> => {
     try {
         const templatesCol = collection(db, 'institutes', instituteId, 'edaTemplates');
-        const q = query(templatesCol, orderBy('createdAt', 'desc'));
+        const q = query(templatesCol, where('isActive', '==', true), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(q);
         return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DocumentTemplate));
     } catch (error) {
@@ -86,7 +113,6 @@ export const getDocumentTemplates = async (instituteId: string): Promise<Documen
 
 /**
  * Guarda o actualiza una plantilla de documento.
- * Corregido: createdAt solo se asigna en la creación para evitar errores de Firestore.
  */
 export const saveDocumentTemplate = async (instituteId: string, data: Omit<DocumentTemplate, 'id' | 'createdAt'>, id?: string): Promise<void> => {
     try {
@@ -98,7 +124,6 @@ export const saveDocumentTemplate = async (instituteId: string, data: Omit<Docum
             instituteId,
         };
 
-        // Solo añadimos la fecha de creación si es un documento nuevo
         if (!id) {
             payload.createdAt = Timestamp.now();
         }

@@ -27,6 +27,9 @@ export interface PrintPoint {
     status: PrintPointStatus;
     lastHeartbeat?: Timestamp;
     instituteId: string;
+    // Sesión activa para el Kiosko
+    currentStudentId?: string | null;
+    lastScanAt?: Timestamp | null;
 }
 
 export interface DocumentTemplate {
