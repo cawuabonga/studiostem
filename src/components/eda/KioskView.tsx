@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
 import { 
     Fingerprint, 
     Loader2, 
@@ -65,6 +66,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
     // Form flow state
     const [formData, setFormData] = useState<Record<string, string>>({});
+    const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -146,6 +148,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const handleSelectTemplate = (template: DocumentTemplate) => {
         setSelectedTemplate(template);
         setFormData({});
+        setSelectedDates([]);
         setStep('assistant');
     };
 
@@ -360,7 +363,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
                 {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) */}
                 {step === 'assistant' && selectedTemplate && (
-                    <div className="max-w-3xl mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
+                    <div className="max-w-6xl mx-auto space-y-8 animate-in slide-in-from-bottom-8 duration-500">
                          <div className="text-center space-y-2">
                             <h3 className="text-4xl font-black uppercase tracking-tighter text-slate-800">Complete su información</h3>
                             <p className="text-xl text-slate-500 font-medium">Esta información se inyectará formalmente en su documento.</p>
@@ -393,18 +396,49 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         </div>
                                     </div>
 
-                                    {/* PASO 2: FECHAS */}
+                                    {/* PASO 2: FECHAS (CALENDARIO MULTISELECT) */}
                                     <div className="space-y-4">
                                         <Label className="text-xl font-black uppercase tracking-widest text-primary flex items-center gap-3">
                                             <div className="h-10 w-10 bg-primary text-white rounded-full flex items-center justify-center text-sm italic">2</div>
                                             Indique las fechas de inasistencia
                                         </Label>
-                                        <Input 
-                                            placeholder="Ej: Lunes 12 y Martes 13 de Mayo" 
-                                            value={formData['{fechas_inasistencia}'] || ''}
-                                            onChange={e => setFormData({...formData, '{fechas_inasistencia}': e.target.value})}
-                                            className="h-16 text-xl font-bold rounded-2xl border-2 border-slate-200 focus-visible:ring-primary/20"
-                                        />
+                                        <div className="flex flex-col md:flex-row gap-8 bg-slate-50 p-6 rounded-[2.5rem] border-2 border-dashed border-slate-200">
+                                            <div className="bg-white p-4 rounded-3xl shadow-xl border shrink-0 mx-auto md:mx-0">
+                                                <Calendar
+                                                    mode="multiple"
+                                                    selected={selectedDates}
+                                                    onSelect={(dates) => {
+                                                        setSelectedDates(dates);
+                                                        if (dates && dates.length > 0) {
+                                                            const formatted = dates
+                                                                .sort((a, b) => a.getTime() - b.getTime())
+                                                                .map(d => format(d, "EEEE dd 'de' MMMM", { locale: es }))
+                                                                .join(', ');
+                                                            setFormData(prev => ({...prev, '{fechas_inasistencia}': formatted}));
+                                                        } else {
+                                                            setFormData(prev => ({...prev, '{fechas_inasistencia}': ''}));
+                                                        }
+                                                    }}
+                                                    className="rounded-md"
+                                                />
+                                            </div>
+                                            <div className="flex-1 flex flex-col justify-center space-y-4">
+                                                <div className="flex items-center gap-2">
+                                                    <CalendarDays className="h-5 w-5 text-primary" />
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Resumen de Días Seleccionados:</p>
+                                                </div>
+                                                <div className="p-6 bg-white rounded-2xl border min-h-[120px] flex items-center justify-center text-center shadow-inner">
+                                                    {formData['{fechas_inasistencia}'] ? (
+                                                        <p className="text-base font-bold text-primary uppercase leading-relaxed">
+                                                            {formData['{fechas_inasistencia}']}
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-sm text-slate-400 italic">Toque los días de su falta en el calendario...</p>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground italic text-center">Puede seleccionar varios días si es necesario.</p>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* PASO 3: ADJUNTOS */}
@@ -420,10 +454,10 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                             ].map(opt => (
                                                 <Button 
                                                     key={opt.v} 
-                                                    variant={formData['{adjuntos_detalle}'] === opt.v ? 'default' : 'outline'}
+                                                    variant={formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO') ? 'default' : 'outline'}
                                                     className={cn(
                                                         "flex-1 h-20 text-sm font-black uppercase rounded-2xl border-2 gap-3 transition-all",
-                                                        formData['{adjuntos_detalle}'] === opt.v ? "scale-105 shadow-xl" : "opacity-70"
+                                                        (formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO')) ? "scale-105 shadow-xl" : "opacity-70"
                                                     )}
                                                     onClick={() => setFormData({...formData, '{adjuntos_detalle}': opt.v === 'SI' ? 'POR LO CUAL ADJUNTO EL CERTIFICADO CORRESPONDIENTE' : 'SOLICITO SE CONSIDERE MI PALABRA BAJO DECLARACIÓN JURADA'})}
                                                 >
@@ -440,7 +474,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             <div className="flex gap-4 pt-6">
                                 <Button variant="ghost" onClick={() => setStep('category')} className="h-20 flex-1 text-xl font-black rounded-3xl">CANCELAR</Button>
                                 <Button 
-                                    disabled={Object.keys(formData).length < 3}
+                                    disabled={!formData['{motivo_justificacion}'] || !formData['{fechas_inasistencia}'] || !formData['{adjuntos_detalle}']}
                                     onClick={handleFinalizeAssistant}
                                     className="h-20 flex-[2] text-2xl font-black uppercase tracking-widest rounded-3xl shadow-2xl shadow-primary/30"
                                 >
