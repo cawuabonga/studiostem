@@ -86,16 +86,24 @@ export const getDocumentTemplates = async (instituteId: string): Promise<Documen
 
 /**
  * Guarda o actualiza una plantilla de documento.
+ * Corregido: createdAt solo se asigna en la creación para evitar errores de Firestore.
  */
 export const saveDocumentTemplate = async (instituteId: string, data: Omit<DocumentTemplate, 'id' | 'createdAt'>, id?: string): Promise<void> => {
     try {
         const templatesCol = collection(db, 'institutes', instituteId, 'edaTemplates');
         const templateRef = id ? doc(templatesCol, id) : doc(templatesCol);
-        await setDoc(templateRef, {
+        
+        const payload: any = {
             ...data,
             instituteId,
-            createdAt: id ? undefined : Timestamp.now()
-        }, { merge: true });
+        };
+
+        // Solo añadimos la fecha de creación si es un documento nuevo
+        if (!id) {
+            payload.createdAt = Timestamp.now();
+        }
+
+        await setDoc(templateRef, payload, { merge: true });
     } catch (error) {
         console.error("Error al guardar plantilla EDA:", error);
         throw error;
