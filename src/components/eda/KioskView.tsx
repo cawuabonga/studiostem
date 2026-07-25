@@ -307,7 +307,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
     // CABECERA DEL KIOSKO (USUARIO IDENTIFICADO)
     const KioskHeader = () => (
-        <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0">
+        <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0 no-print">
             <div className="flex items-center gap-4">
                 <div className="h-14 w-14 relative rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-white/10">
                     <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || 'S'}`} alt="" fill className="object-cover" />
@@ -326,10 +326,28 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     );
 
     return (
-        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-sans">
+        <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-sans print:bg-white print:h-auto print:overflow-visible">
+            <style jsx global>{`
+                @media print {
+                    @page { margin: 0; size: auto; }
+                    body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .no-print { display: none !important; }
+                    .print-full-page { 
+                        position: absolute; 
+                        top: 0; 
+                        left: 0; 
+                        width: 100%; 
+                        margin: 0; 
+                        padding: 0; 
+                        z-index: 9999;
+                    }
+                    .kiosk-main-container { padding: 0 !important; }
+                }
+            `}</style>
+            
             <KioskHeader />
 
-            <main className="flex-1 overflow-hidden p-4 md:p-6">
+            <main className="flex-1 overflow-hidden p-4 md:p-6 kiosk-main-container print:overflow-visible print:p-0">
                 
                 {/* VISTA: MENÚ PRINCIPAL */}
                 {step === 'menu' && (
@@ -552,9 +570,9 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
                 {/* VISTA: PREVISUALIZACIÓN Y FIRMA FINAL */}
                 {step === 'preview' && selectedTemplate && (
-                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700 h-full overflow-hidden">
-                        <div className="lg:col-span-8 overflow-y-auto custom-scrollbar">
-                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] border-none p-10 md:p-[20mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans shadow-2xl">
+                    <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in duration-700 h-full overflow-hidden print:block print:overflow-visible">
+                        <div className="lg:col-span-8 overflow-y-auto custom-scrollbar print:overflow-visible print:block print:w-full print:p-0 print-full-page">
+                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] border-none p-10 md:p-[20mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed font-sans shadow-2xl print:shadow-none print:p-[15mm] print:max-w-none">
                                 
                                 {/* MARCA DE AGUA INSTITUCIONAL */}
                                 {institute?.logoUrl && (
@@ -642,7 +660,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             </Card>
                         </div>
 
-                        <div className="lg:col-span-4 flex flex-col gap-4">
+                        <div className="lg:col-span-4 flex flex-col gap-4 no-print">
                             <Card className="rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground p-6 space-y-4">
                                 <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
                                     <Printer className="h-6 w-6 text-white" />
@@ -679,7 +697,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
             </main>
             
             {/* PIE DE PÁGINA FIXO KIOSKO - COMPACTO */}
-            <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0">
+            <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0 no-print">
                 STEM V2 • POINT PRINT SYSTEM • {new Date().getFullYear()}
             </footer>
         </div>
