@@ -16,6 +16,7 @@ export interface SocialLinks {
 export type PrintPointStatus = 'Online' | 'Offline' | 'Mantenimiento';
 export type DocumentCategory = 'Constancia' | 'Boleta' | 'Ficha' | 'Solicitud';
 export type EDARequirement = 'Gratuito' | 'Pago Validado';
+export type EDALayoutType = 'structured_solicitud' | 'raw_html';
 
 export interface PrintPoint {
     id: string;
@@ -31,13 +32,17 @@ export interface DocumentTemplate {
     id: string;
     name: string;
     category: DocumentCategory;
-    content: string; // Estructura HTML/Markdown de la plantilla
+    content: string; // Estructura HTML/Markdown de la plantilla o Cuerpo en estructurados
     variables: string[]; // Listado de llaves (ej: {nombre}, {ciclo})
     requirementType: EDARequirement;
     requirementValue?: string; // Código de la tasa si requiere pago
     isActive: boolean;
     instituteId: string;
     createdAt: Timestamp;
+    // Campos para diseño estructurado
+    layoutType: EDALayoutType;
+    sumilla?: string;
+    addresseeRole?: string; // 'Director General', 'Coordinador Académico', etc.
 }
 
 export interface DocumentGenerationLog {

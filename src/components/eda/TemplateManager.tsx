@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { getDocumentTemplates, saveDocumentTemplate, deleteDocumentTemplate } from '@/services/eda-service';
 import { getPaymentConcepts } from '@/config/firebase';
-import type { DocumentTemplate, DocumentCategory, EDARequirement, PaymentConcept } from '@/types';
+import type { DocumentTemplate, DocumentCategory, EDARequirement, PaymentConcept, EDALayoutType } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -59,7 +60,11 @@ import {
     DollarSign,
     ExternalLink,
     Eye,
-    Printer
+    Printer,
+    Layout,
+    UserCheck,
+    MapPin,
+    CalendarDays
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -79,6 +84,10 @@ import {
 
 const CATEGORIES: DocumentCategory[] = ['Constancia', 'Boleta', 'Ficha', 'Solicitud'];
 const REQUIREMENTS: EDARequirement[] = ['Gratuito', 'Pago Validado'];
+const LAYOUTS: { value: EDALayoutType, label: string }[] = [
+    { value: 'structured_solicitud', label: 'Solicitud Formal (Estructurada)' },
+    { value: 'raw_html', label: 'Diseño Libre (HTML/Texto)' },
+];
 
 const AVAILABLE_VARIABLES = [
     { key: '{nombre_completo}', label: 'Nombre Completo del Alumno' },
@@ -86,14 +95,19 @@ const AVAILABLE_VARIABLES = [
     { key: '{carrera}', label: 'Programa de Estudios' },
     { key: '{ciclo_actual}', label: 'Ciclo / Semestre' },
     { key: '{turno}', label: 'Turno' },
+    { key: '{direccion}', label: 'Dirección del Alumno' },
     { key: '{fecha_hoy}', label: 'Fecha de Emisión' },
+    { key: '{hora_hoy}', label: 'Hora de Emisión' },
     { key: '{instituto_nombre}', label: 'Nombre del Instituto' },
 ];
 
 const templateSchema = z.object({
   name: z.string().min(5, 'El nombre debe ser descriptivo.'),
   category: z.enum(CATEGORIES as [string, ...string[]]),
-  content: z.string().min(20, 'El contenido de la plantilla es requerido.'),
+  layoutType: z.enum(['structured_solicitud', 'raw_html'] as const),
+  sumilla: z.string().optional(),
+  addresseeRole: z.string().optional(),
+  content: z.string().min(20, 'El contenido o cuerpo del documento es requerido.'),
   requirementType: z.enum(REQUIREMENTS as [string, ...string[]]),
   requirementValue: z.string().optional(),
   isActive: z.boolean().default(true),
@@ -102,7 +116,7 @@ const templateSchema = z.object({
 type FormValues = z.infer<typeof templateSchema>;
 
 export function TemplateManager() {
-    const { instituteId } = useAuth();
+    const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
     const [concepts, setConcepts] = useState<PaymentConcept[]>([]);
@@ -112,12 +126,11 @@ export function TemplateManager() {
     const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
     const [deletingTemplate, setDeletingTemplate] = useState<DocumentTemplate | null>(null);
     
-    // Preview state
     const [previewingTemplate, setPreviewingTemplate] = useState<DocumentTemplate | null>(null);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(templateSchema),
-        defaultValues: { isActive: true, requirementType: 'Gratuito' }
+        defaultValues: { isActive: true, requirementType: 'Gratuito', layoutType: 'structured_solicitud' }
     });
 
     const fetchData = useCallback(async () => {
@@ -143,7 +156,10 @@ export function TemplateManager() {
         setEditingTemplate(template || null);
         form.reset({
             name: template?.name || '',
-            category: template?.category || 'Constancia',
+            category: template?.category || 'Solicitud',
+            layoutType: template?.layoutType || 'structured_solicitud',
+            sumilla: template?.sumilla || 'SOLICITO: Justificación de inasistencias.',
+            addresseeRole: template?.addresseeRole || 'Coordinador Académico',
             content: template?.content || '',
             requirementType: template?.requirementType || 'Gratuito',
             requirementValue: template?.requirementValue || '',
@@ -162,7 +178,7 @@ export function TemplateManager() {
         setIsSubmitting(true);
         try {
             const detectedVariables = AVAILABLE_VARIABLES
-                .filter(v => data.content.includes(v.key))
+                .filter(v => data.content.includes(v.key) || (data.sumilla?.includes(v.key)))
                 .map(v => v.key);
 
             await saveDocumentTemplate(instituteId, { 
@@ -171,7 +187,7 @@ export function TemplateManager() {
                 instituteId 
             }, editingTemplate?.id);
 
-            toast({ title: editingTemplate ? "Plantilla Actualizada" : "Plantilla Guardada" });
+            toast({ title: editingTemplate ? "Diseño Actualizado" : "Diseño Guardado" });
             setIsDialogOpen(false);
             fetchData();
         } catch (error) {
@@ -185,7 +201,7 @@ export function TemplateManager() {
         if (!instituteId || !deletingTemplate) return;
         try {
             await deleteDocumentTemplate(instituteId, deletingTemplate.id);
-            toast({ title: "Plantilla Eliminada" });
+            toast({ title: "Diseño Eliminado" });
             fetchData();
         } catch (error) {
             toast({ title: "Error al eliminar", variant: "destructive" });
@@ -194,32 +210,35 @@ export function TemplateManager() {
         }
     };
 
-    const getPreviewHtml = (template: DocumentTemplate) => {
-        let content = template.content;
-        const dummyData: Record<string, string> = {
-            '{nombre_completo}': 'JUAN PÉREZ GARCÍA',
-            '{dni}': '76543210',
-            '{carrera}': 'ENFERMERÍA TÉCNICA',
-            '{ciclo_actual}': 'V SEMESTRE',
-            '{turno}': 'MAÑANA',
-            '{fecha_hoy}': new Date().toLocaleDateString('es-PE'),
-            '{instituto_nombre}': 'INSTITUTO SUPERIOR TECNOLÓGICO STEM',
-        };
+    const layoutType = form.watch('layoutType');
+    const requirementType = form.watch('requirementType');
 
-        Object.entries(dummyData).forEach(([key, val]) => {
-            content = content.replaceAll(key, `<span class="bg-yellow-100 font-bold px-1 rounded border border-yellow-200 text-yellow-800">${val}</span>`);
-        });
-
-        return content;
+    // Mapeo de datos para la previsualización
+    const dummyData: Record<string, string> = {
+        '{nombre_completo}': 'ALEXANDER GUSTAVO PÉREZ RIVAS',
+        '{dni}': '76543210',
+        '{carrera}': 'ENFERMERÍA TÉCNICA',
+        '{ciclo_actual}': 'V SEMESTRE',
+        '{turno}': 'MAÑANA',
+        '{direccion}': 'Av. Principal 456, Urb. Los Jardines',
+        '{fecha_hoy}': new Date().toLocaleDateString('es-PE', { day: 'numeric', month: 'long', year: 'numeric' }),
+        '{hora_hoy}': new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
+        '{instituto_nombre}': institute?.name || 'INSTITUTO SUPERIOR TECNOLÓGICO STEM',
     };
 
-    const requirementType = form.watch('requirementType');
+    const getProcessedText = (text: string) => {
+        let processed = text;
+        Object.entries(dummyData).forEach(([key, val]) => {
+            processed = processed.replaceAll(key, `<span class="bg-yellow-100 font-bold px-0.5 border-b border-yellow-400 text-yellow-900">${val}</span>`);
+        });
+        return processed;
+    };
 
     return (
         <div className="space-y-6">
             <div className="flex justify-end">
-                <Button onClick={() => handleOpenDialog()} className="font-black rounded-xl h-11 px-6 shadow-lg">
-                    <PlusCircle className="mr-2 h-4 w-4" /> NUEVO DISEÑO DE DOCUMENTO
+                <Button onClick={() => handleOpenDialog()} className="font-black rounded-xl h-12 px-8 shadow-xl shadow-primary/20">
+                    <PlusCircle className="mr-2 h-5 w-5" /> NUEVO DISEÑO EDA
                 </Button>
             </div>
 
@@ -238,13 +257,9 @@ export function TemplateManager() {
                                         {template.category}
                                     </Badge>
                                     <div className="flex items-center gap-2">
-                                        {template.requirementType === 'Pago Validado' && (
-                                            <Badge className="bg-amber-100 text-amber-700 border-none text-[8px] font-black uppercase">
-                                                REQUIERE PAGO
-                                            </Badge>
-                                        )}
+                                        {template.layoutType === 'structured_solicitud' && <Badge className="bg-blue-50 text-blue-700 border-none text-[8px] font-black uppercase">ESTRUCTURADO</Badge>}
                                         <Badge variant={template.isActive ? 'default' : 'outline'} className="text-[8px] font-black uppercase">
-                                            {template.isActive ? 'ACTIVA' : 'INACTIVA'}
+                                            {template.isActive ? 'ACTIVA' : 'BORRADOR'}
                                         </Badge>
                                     </div>
                                 </div>
@@ -280,50 +295,87 @@ export function TemplateManager() {
                 ) : (
                     <div className="col-span-full py-24 text-center text-muted-foreground border-2 border-dashed rounded-[3rem] bg-muted/5">
                         <FileText className="h-16 w-16 mx-auto mb-4 opacity-10" />
-                        <p className="text-xl font-black uppercase tracking-widest">Sin plantillas diseñadas</p>
-                        <p className="text-sm mt-2">Cree su primer documento oficial para impresión automática.</p>
+                        <p className="text-xl font-black uppercase tracking-widest">Sin diseños oficiales</p>
+                        <p className="text-sm mt-2">Cree su primer documento para el sistema EDA.</p>
                     </div>
                 )}
             </div>
 
-            {/* Dialog: Registro/Edición */}
+            {/* Dialog: Registro/Edición con Enfoque Estructurado */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
-                        <DialogTitle className="text-2xl font-black uppercase tracking-tight">
-                            {editingTemplate ? 'Editar Diseño' : 'Nueva Plantilla de Documento'}
-                        </DialogTitle>
-                        <DialogDescription className="text-primary-foreground/80 font-medium">Use llaves como {`{nombre}`} para que el sistema rellene los datos automáticamente.</DialogDescription>
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-white/10 backdrop-blur-md rounded-2xl">
+                                <Layout className="h-6 w-6 text-accent" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-2xl font-black uppercase tracking-tight">
+                                    Configurador de Documento Oficial
+                                </DialogTitle>
+                                <DialogDescription className="text-primary-foreground/80 font-medium">Defina la lógica estructural para la generación automática.</DialogDescription>
+                            </div>
+                        </div>
                     </DialogHeader>
                     
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                            <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row">
-                                <div className="flex-1 p-8 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <FormField control={form.control} name="name" render={({ field }) => (
-                                            <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Nombre del Documento</FormLabel><FormControl><Input placeholder="Ej: Constancia de Estudios Gratuita" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="category" render={({ field }) => (
-                                            <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Categoría</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></FormItem>
-                                        )}/>
-                                    </div>
+                            <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+                                <ScrollArea className="flex-1">
+                                    <div className="p-8 space-y-8">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <FormField control={form.control} name="name" render={({ field }) => (
+                                                <FormItem className="md:col-span-1"><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Nombre del Diseño</FormLabel><FormControl><Input placeholder="Ej: Solicitud Justificación v1" {...field} className="h-11 rounded-xl" /></FormControl><FormMessage /></FormItem>
+                                            )}/>
+                                            <FormField control={form.control} name="category" render={({ field }) => (
+                                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Categoría</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></FormItem>
+                                            )}/>
+                                            <FormField control={form.control} name="layoutType" render={({ field }) => (
+                                                <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Estructura</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger className="h-11 rounded-xl"><SelectValue /></SelectTrigger></FormControl><SelectContent>{LAYOUTS.map(l => <SelectItem key={l.value} value={l.value}>{l.label}</SelectItem>)}</SelectContent></Select></FormItem>
+                                            )}/>
+                                        </div>
 
-                                    <FormField control={form.control} name="content" render={({ field }) => (
-                                        <FormItem className="flex-1 flex flex-col">
-                                            <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Cuerpo del Documento (HTML / Texto)</FormLabel>
-                                            <div className="flex-1 min-h-[300px] border rounded-2xl overflow-hidden bg-muted/10">
-                                                <FormControl><Textarea {...field} className="h-full border-none focus-visible:ring-0 font-mono text-sm leading-relaxed p-6 resize-none" placeholder="Escriba aquí el contenido oficial..." /></FormControl>
+                                        <Separator />
+
+                                        {layoutType === 'structured_solicitud' ? (
+                                            <div className="space-y-6 animate-in slide-in-from-left-4 duration-500">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    <FormField control={form.control} name="sumilla" render={({ field }) => (
+                                                        <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">I. Sumilla (Asunto)</FormLabel><FormControl><Input placeholder="Ej: SOLICITO: Justificación de inasistencias" {...field} className="h-11 rounded-xl font-bold" /></FormControl><FormMessage /></FormItem>
+                                                    )}/>
+                                                    <FormField control={form.control} name="addresseeRole" render={({ field }) => (
+                                                        <FormItem><FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">II. Dirigido a (Cargo)</FormLabel><FormControl><Input placeholder="Ej: Director General / Coordinador" {...field} className="h-11 rounded-xl uppercase" /></FormControl><FormDescription className="text-[9px]">Aparecerá en el encabezado de destino.</FormDescription><FormMessage /></FormItem>
+                                                    )}/>
+                                                </div>
+
+                                                <FormField control={form.control} name="content" render={({ field }) => (
+                                                    <FormItem className="space-y-3">
+                                                        <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">III. Cuerpo de la Solicitud (Argumento)</FormLabel>
+                                                        <div className="min-h-[250px] border-2 border-dashed rounded-2xl overflow-hidden bg-muted/5">
+                                                            <FormControl><Textarea {...field} className="h-full border-none focus-visible:ring-0 font-medium text-sm leading-relaxed p-6 resize-none" placeholder="Escriba aquí los párrafos principales del cuerpo del documento..." /></FormControl>
+                                                        </div>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}/>
                                             </div>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                </div>
+                                        ) : (
+                                            <FormField control={form.control} name="content" render={({ field }) => (
+                                                <FormItem className="animate-in slide-in-from-right-4 duration-500">
+                                                    <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary">Contenido Libre (HTML/Texto)</FormLabel>
+                                                    <div className="min-h-[400px] border rounded-2xl overflow-hidden">
+                                                        <FormControl><Textarea {...field} className="h-full border-none focus-visible:ring-0 font-mono text-xs leading-relaxed p-6 resize-none" placeholder="Diseñe su documento desde cero..." /></FormControl>
+                                                    </div>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}/>
+                                        )}
+                                    </div>
+                                </ScrollArea>
 
                                 <aside className="w-full lg:w-[320px] bg-muted/30 border-l p-8 space-y-8 shrink-0 overflow-y-auto">
                                     <div className="space-y-4">
                                         <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
-                                            <Code className="h-4 w-4" /> Inyectar Datos
+                                            <Code className="h-4 w-4" /> Insertar Datos
                                         </h4>
                                         <div className="space-y-2">
                                             {AVAILABLE_VARIABLES.map(v => (
@@ -331,10 +383,10 @@ export function TemplateManager() {
                                                     key={v.key} 
                                                     type="button" 
                                                     onClick={() => insertVariable(v.key)}
-                                                    className="w-full text-left p-2 rounded-xl bg-white border border-primary/5 hover:border-primary hover:shadow-md transition-all text-[10px] flex justify-between items-center group"
+                                                    className="w-full text-left p-2.5 rounded-xl bg-white border border-primary/5 hover:border-primary hover:shadow-md transition-all text-[10px] flex justify-between items-center group"
                                                 >
-                                                    <span className="font-bold text-slate-600">{v.label}</span>
-                                                    <code className="text-primary font-black group-hover:scale-110 transition-transform">{v.key}</code>
+                                                    <span className="font-bold text-slate-600 truncate mr-2">{v.label}</span>
+                                                    <code className="text-primary font-black group-hover:scale-110 transition-transform shrink-0">{v.key}</code>
                                                 </button>
                                             ))}
                                         </div>
@@ -344,11 +396,11 @@ export function TemplateManager() {
 
                                     <div className="space-y-6">
                                         <h4 className="text-[10px] font-black uppercase text-primary tracking-[0.2em] flex items-center gap-2">
-                                            <DollarSign className="h-4 w-4" /> Config. Emisión
+                                            <DollarSign className="h-4 w-4" /> Requisitos
                                         </h4>
                                         <FormField control={form.control} name="requirementType" render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel className="text-xs font-bold">Tipo de Requisito</FormLabel>
+                                                <FormLabel className="text-xs font-bold">Tipo de Emisión</FormLabel>
                                                 <Select onValueChange={field.onChange} value={field.value}>
                                                     <FormControl><SelectTrigger className="h-10 bg-white"><SelectValue /></SelectTrigger></FormControl>
                                                     <SelectContent>{REQUIREMENTS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
@@ -358,15 +410,14 @@ export function TemplateManager() {
 
                                         {requirementType === 'Pago Validado' && (
                                             <FormField control={form.control} name="requirementValue" render={({ field }) => (
-                                                <FormItem className="animate-in slide-in-from-top-2 duration-300">
-                                                    <FormLabel className="text-xs font-bold text-amber-600">Tasa Vinculada</FormLabel>
+                                                <FormItem className="animate-in zoom-in-95">
+                                                    <FormLabel className="text-xs font-bold text-amber-600">Vincular Tasa</FormLabel>
                                                     <Select onValueChange={field.onChange} value={field.value}>
-                                                        <FormControl><SelectTrigger className="h-10 bg-white border-amber-200"><SelectValue placeholder="Elegir concepto..." /></SelectTrigger></FormControl>
+                                                        <FormControl><SelectTrigger className="h-10 bg-white border-amber-200"><SelectValue placeholder="Concepto..." /></SelectTrigger></FormControl>
                                                         <SelectContent>
                                                             {concepts.map(c => <SelectItem key={c.id} value={c.name}>{c.name} (S/ {c.amount})</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
-                                                    <FormDescription className="text-[9px]">El Point Print solo imprimirá si el alumno tiene un pago de este tipo validado.</FormDescription>
                                                 </FormItem>
                                             )}/>
                                         )}
@@ -385,7 +436,7 @@ export function TemplateManager() {
                                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold rounded-xl h-12 flex-1">CANCELAR</Button>
                                 <Button type="submit" disabled={isSubmitting} className="font-black rounded-xl h-12 flex-[2] shadow-xl shadow-primary/20">
                                     {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
-                                    {editingTemplate ? 'GUARDAR DISEÑO' : 'CREAR PLANTILLA OFICIAL'}
+                                    {editingTemplate ? 'GUARDAR DISEÑO' : 'PUBLICAR DISEÑO'}
                                 </Button>
                             </DialogFooter>
                         </form>
@@ -393,18 +444,18 @@ export function TemplateManager() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Previsualización */}
+            {/* Dialog: Previsualización Formal */}
             <Dialog open={!!previewingTemplate} onOpenChange={(open) => !open && setPreviewingTemplate(null)}>
-                <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+                <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-6 bg-slate-100 border-b shrink-0">
                         <div className="flex justify-between items-center pr-8">
                             <div className="flex items-center gap-4">
-                                <div className="p-2.5 bg-primary/10 rounded-xl text-primary shadow-sm">
+                                <div className="p-2.5 bg-primary/10 rounded-xl text-primary">
                                     <Eye className="h-5 w-5" />
                                 </div>
                                 <div>
-                                    <DialogTitle className="text-lg font-black uppercase tracking-tight">Simulación de Documento</DialogTitle>
-                                    <DialogDescription className="text-xs font-bold">Vista previa de: {previewingTemplate?.name}</DialogDescription>
+                                    <DialogTitle className="text-lg font-black uppercase tracking-tight text-primary">Vista Previa Institucional</DialogTitle>
+                                    <DialogDescription className="text-xs font-bold">Simulación de impresión para: {previewingTemplate?.name}</DialogDescription>
                                 </div>
                             </div>
                             <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 font-bold text-[9px] uppercase">DATO SIMULADO</Badge>
@@ -413,20 +464,85 @@ export function TemplateManager() {
 
                     <ScrollArea className="flex-1 bg-slate-50">
                         <div className="p-12">
-                            {/* Papel A4 Simulado */}
-                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden">
-                                {/* Filigrana Simbolica */}
-                                <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none select-none">
-                                    <FileText className="w-[400px] h-[400px]" />
+                            {/* Papel A4 Formal */}
+                            <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed">
+                                
+                                <style jsx>{`
+                                    .solicitud-wrapper { font-family: 'Lato', sans-serif; }
+                                    .solicitud-sumilla { text-align: right; font-weight: 800; margin-bottom: 40px; font-size: 11pt; text-transform: uppercase; }
+                                    .solicitud-header { margin-bottom: 40px; }
+                                    .solicitud-header h4 { font-weight: 900; font-size: 11pt; text-transform: uppercase; margin: 0; }
+                                    .solicitud-header p { margin: 2px 0; font-weight: 700; font-size: 10pt; }
+                                    .solicitud-intro { text-align: justify; margin-bottom: 30px; line-height: 1.8; font-size: 11pt; }
+                                    .solicitud-body { text-align: justify; line-height: 1.8; font-size: 11pt; min-height: 200px; }
+                                    .solicitud-closing { margin: 40px 0; font-weight: 700; font-size: 11pt; }
+                                    .solicitud-footer-data { text-align: right; margin-top: 60px; font-style: italic; font-size: 10pt; }
+                                    .solicitud-signature { margin-top: 100px; display: flex; flex-direction: column; items-center: center; border-top: 1px solid black; width: 300px; margin-left: auto; margin-right: auto; padding-top: 10px; text-align: center; }
+                                    .solicitud-signature p { margin: 0; font-weight: 800; font-size: 10pt; text-transform: uppercase; }
+                                    .inst-footer { position: absolute; bottom: 25mm; left: 25mm; right: 25mm; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
+                                `}</style>
+
+                                {/* Encabezado Institucional */}
+                                <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
+                                    <div className="flex items-center gap-4">
+                                        {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" className="w-[60px] h-[60px] object-contain" />}
+                                        <div className="text-left">
+                                            <h1 className="text-[12pt] font-black uppercase leading-tight">{institute?.name}</h1>
+                                            <p className="text-[8pt] text-gray-500 uppercase tracking-widest font-bold">Unidad de Secretaría Académica</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right text-[8pt] font-bold text-gray-400 uppercase tracking-tighter">
+                                        Generado por Sistema EDA • STEM V2.1
+                                    </div>
                                 </div>
 
-                                <div className="relative z-10 font-serif text-black prose prose-slate max-w-none">
-                                    {previewingTemplate && (
+                                <div className="solicitud-wrapper">
+                                    {previewingTemplate?.layoutType === 'structured_solicitud' ? (
+                                        <>
+                                            <div className="solicitud-sumilla" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.sumilla || '') }} />
+                                            
+                                            <div className="solicitud-header">
+                                                <h4>SEÑOR {previewingTemplate.addresseeRole || '---'}:</h4>
+                                                <p>{dummyData['{instituto_nombre}']}</p>
+                                            </div>
+
+                                            <div className="solicitud-intro">
+                                                Yo, <span className="font-black" dangerouslySetInnerHTML={{ __html: dummyData['{nombre_completo}'] }} />, 
+                                                identificado con DNI N° <span className="font-mono font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{dni}'] }} />, 
+                                                estudiante del programa de estudios de <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{carrera}'] }} />, 
+                                                perteneciente al <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{ciclo_actual}'] }} />, 
+                                                turno <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{turno}'] }} />, 
+                                                con domicilio en <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{direccion}'] }} />, ante usted con el debido respeto me presento y expongo:
+                                            </div>
+
+                                            <div className="solicitud-body" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.content) }} />
+
+                                            <div className="solicitud-closing uppercase">
+                                                Por lo tanto:<br/>
+                                                Espero acceda a mi solicitud por ser de justicia.
+                                            </div>
+
+                                            <div className="solicitud-footer-data">
+                                                Dado en la sede institucional, a los <span dangerouslySetInnerHTML={{ __html: dummyData['{fecha_hoy}'] }} />
+                                                <br/>Hora de emisión: <span dangerouslySetInnerHTML={{ __html: dummyData['{hora_hoy}'] }} />
+                                            </div>
+
+                                            <div className="solicitud-signature">
+                                                <p dangerouslySetInnerHTML={{ __html: dummyData['{nombre_completo}'] }} /></p>
+                                                <span className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">DNI: <span dangerouslySetInnerHTML={{ __html: dummyData['{dni}'] }} /></span>
+                                            </div>
+                                        </>
+                                    ) : (
                                         <div 
-                                            className="document-render-preview text-[12pt] leading-relaxed text-justify whitespace-pre-wrap"
-                                            dangerouslySetInnerHTML={{ __html: getPreviewHtml(previewingTemplate) }} 
+                                            className="text-[11pt] text-justify whitespace-pre-wrap leading-relaxed"
+                                            dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate?.content || '') }} 
                                         />
                                     )}
+                                </div>
+
+                                <div className="inst-footer">
+                                    <p className="font-bold uppercase tracking-widest">{institute?.name}</p>
+                                    <p className="italic">Este documento tiene validez oficial bajo la normativa de acreditación tecnológica modular.</p>
                                 </div>
                             </Card>
                         </div>
@@ -435,7 +551,7 @@ export function TemplateManager() {
                     <DialogFooter className="p-6 bg-white border-t flex gap-3 shrink-0">
                         <div className="flex-1 flex items-center gap-2 text-[10px] text-muted-foreground italic font-medium">
                             <Info className="h-4 w-4" />
-                            Los campos resaltados en amarillo son variables dinámicas que se llenarán automáticamente.
+                            El diseño estructurado inyecta automáticamente los datos del carnet RFID para mayor rapidez.
                         </div>
                         <Button variant="ghost" onClick={() => setPreviewingTemplate(null)} className="font-bold rounded-xl h-10 px-8">CERRAR VISOR</Button>
                     </DialogFooter>
@@ -445,8 +561,8 @@ export function TemplateManager() {
             <AlertDialog open={!!deletingTemplate} onOpenChange={(open) => !open && setDeletingTemplate(null)}>
                 <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="text-xl font-black uppercase text-primary">¿Eliminar Plantilla?</AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium text-slate-600">Esta acción es irreversible y el documento <strong>{deletingTemplate?.name}</strong> dejará de estar disponible en todos los puntos de impresión.</AlertDialogDescription>
+                        <AlertDialogTitle className="text-xl font-black uppercase text-primary">¿Eliminar Diseño?</AlertDialogTitle>
+                        <AlertDialogDescription className="font-medium text-slate-600">Esta acción es irreversible y el documento dejará de estar disponible en los terminales Point Print.</AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl font-bold h-11">CANCELAR</AlertDialogCancel>
