@@ -1,7 +1,7 @@
 
 # Guía de Monitoreo de Hardware para Point Print (EDA)
 
-Este documento explica cómo conectar el estado de la impresora física de tu PC con la plataforma STEM V2.
+Este documento explica cómo conectar el estado de la impresora física con la plataforma STEM V2.
 
 ## 1. El Puente de Comunicación (Python Script)
 
@@ -11,7 +11,7 @@ Necesitas ejecutar este script en la computadora a la que está conectada la imp
 1. Instalar Python 3.
 2. Instalar librerías: `pip install pywin32 requests`
 
-### Script `printer_monitor.py` (Versión Final con Depuración):
+### Script `printer_monitor.py` (Versión Robusta con Depuración de Ruta):
 
 ```python
 import win32print
@@ -78,15 +78,15 @@ def sync_to_cloud():
                 print(f" > Estado: {status} | Papel: {paper}")
                 print(f" > HTTP: {r.status_code}")
                 
-                if r.status_code == 200:
+                try:
                     data = r.json()
-                    print(f" > Guardado en: {data['debug']['fullPath']}")
-                else:
-                    try:
-                        err_data = r.json()
-                        print(f" > Error: {err_data.get('message', 'Desconocido')}")
-                    except:
-                        print(f" > Error de servidor (500)")
+                    if r.status_code == 200:
+                        print(f" > Guardado en: {data['debug']['fullPath']}")
+                    else:
+                        print(f" > Error: {data.get('message', 'Fallo desconocido')}")
+                except Exception as json_err:
+                    print(f" > Error parseando respuesta: {json_err}")
+                    print(f" > Respuesta Raw: {r.text}")
                 
                 last_state = current_state
             except Exception as e:
@@ -99,4 +99,4 @@ if __name__ == "__main__":
 ```
 
 ## 2. Verificación
-Cuando el script diga `HTTP: 200` y muestre `Guardado en: institutes/...`, ve a esa ruta exacta en tu consola de Firebase para confirmar que los datos están ahí. La pantalla del Kiosko se actualizará sola en ese instante.
+Cuando el script diga `HTTP: 200` y muestre `Guardado en: institutes/...`, ve a esa ruta exacta en tu consola de Firebase para confirmar que los datos están ahí. La pantalla del Kiosko se actualizará sola en ese instante si está escuchando ese mismo ID.

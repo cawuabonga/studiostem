@@ -4,9 +4,8 @@ import { db } from '@/config/firebase';
 import { getDocs, query, where, collectionGroup, updateDoc, Timestamp } from 'firebase/firestore';
 
 /**
- * @fileOverview API Endpoint para que un script externo (PC) o hardware (ESP32) 
- * reporte el estado en tiempo real de la impresora conectada al terminal EDA.
- * Corregido: Error de Timestamp.now() y mejor depuración.
+ * @fileOverview API Endpoint para telemetría de hardware EDA.
+ * Corregido: Respuesta JSON forzada y logs detallados.
  */
 
 export async function POST(req: NextRequest) {
@@ -14,20 +13,21 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { pointId, status, paper, toner, printerName } = body;
 
+        console.log(`[HARDWARE] Recibida señal de terminal: ${pointId}`);
+
         if (!pointId) {
-            return NextResponse.json({ error: 'Faltan parámetros obligatorios: pointId' }, { status: 400 });
+            return NextResponse.json({ error: 'Faltan parámetros: pointId' }, { status: 400 });
         }
 
-        // 1. Localizar el documento del punto de impresión en todo el sistema
+        // 1. Localizar el documento
         const q = query(collectionGroup(db, 'edaPrintPoints'), where('pointId', '==', pointId));
         const snap = await getDocs(q);
 
         if (snap.empty) {
-            const errorMsg = `No se encontró un terminal con Hard-ID: ${pointId}.`;
-            console.error(`[HARDWARE ERROR] ${errorMsg}`);
+            console.error(`[HARDWARE ERROR] No existe terminal con pointId: ${pointId}`);
             return NextResponse.json({ 
                 error: 'Not Found', 
-                message: errorMsg
+                message: `No se encontró configuración para el Hard-ID: ${pointId}`
             }, { status: 404 });
         }
 
@@ -35,8 +35,7 @@ export async function POST(req: NextRequest) {
         const pointRef = pointDoc.ref;
         const instituteId = pointRef.parent.parent?.id;
 
-        // 2. Actualizar telemetría de hardware
-        // Corregido: Timestamp.now() con paréntesis para evitar el error "Expected type 'mr'"
+        // 2. Actualizar datos
         const updatePayload = {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
@@ -47,23 +46,30 @@ export async function POST(req: NextRequest) {
 
         await updateDoc(pointRef, updatePayload);
 
-        console.log(`[HARDWARE SUCCESS] Telemetría actualizada para ${pointId}`);
+        console.log(`[HARDWARE SUCCESS] ${pointId} actualizado en ${pointRef.path}`);
 
-        return NextResponse.json({ 
+        // Devolvemos un objeto plano y simple para evitar errores de serialización
+        return new Response(JSON.stringify({ 
             success: true, 
-            message: 'Telemetría sincronizada correctamente',
+            message: 'OK',
             debug: {
                 pointId: pointId,
                 fullPath: pointRef.path,
-                instituteId: instituteId
+                instituteId: instituteId || 'unknown'
             }
-        }, { status: 200 });
+        }), { 
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
 
     } catch (error: any) {
-        console.error("[PRINTER API CRITICAL ERROR]", error);
-        return NextResponse.json({ 
-            error: 'Internal Server Error', 
+        console.error("[PRINTER API ERROR]", error);
+        return new Response(JSON.stringify({ 
+            error: 'Server Error', 
             message: error.message 
-        }, { status: 500 });
+        }), { 
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 }
