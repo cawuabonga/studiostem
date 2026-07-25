@@ -1,11 +1,11 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/config/firebase';
-import { getDocs, query, where, collectionGroup, updateDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, query, where, collectionGroup, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 /**
  * @fileOverview API Endpoint para telemetría de hardware EDA.
- * Corregido: Respuesta JSON forzada y logs detallados.
+ * Corregido: Uso de serverTimestamp para evitar errores de tipo 'mr'.
  */
 
 export async function POST(req: NextRequest) {
@@ -13,18 +13,15 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { pointId, status, paper, toner, printerName } = body;
 
-        console.log(`[HARDWARE] Recibida señal de terminal: ${pointId}`);
-
         if (!pointId) {
             return NextResponse.json({ error: 'Faltan parámetros: pointId' }, { status: 400 });
         }
 
-        // 1. Localizar el documento
+        // 1. Localizar el documento mediante el Hard-ID (pointId)
         const q = query(collectionGroup(db, 'edaPrintPoints'), where('pointId', '==', pointId));
         const snap = await getDocs(q);
 
         if (snap.empty) {
-            console.error(`[HARDWARE ERROR] No existe terminal con pointId: ${pointId}`);
             return NextResponse.json({ 
                 error: 'Not Found', 
                 message: `No se encontró configuración para el Hard-ID: ${pointId}`
@@ -35,41 +32,33 @@ export async function POST(req: NextRequest) {
         const pointRef = pointDoc.ref;
         const instituteId = pointRef.parent.parent?.id;
 
-        // 2. Actualizar datos
+        // 2. Actualizar datos usando serverTimestamp para evitar el error 'function'
         const updatePayload = {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
             tonerLevel: toner !== undefined ? Number(toner) : 85,
             printerName: printerName || 'Impresora Local',
-            lastHeartbeat: Timestamp.now()
+            lastHeartbeat: serverTimestamp()
         };
 
         await updateDoc(pointRef, updatePayload);
 
-        console.log(`[HARDWARE SUCCESS] ${pointId} actualizado en ${pointRef.path}`);
-
-        // Devolvemos un objeto plano y simple para evitar errores de serialización
-        return new Response(JSON.stringify({ 
+        // Respuesta detallada para el script de Python
+        return NextResponse.json({ 
             success: true, 
-            message: 'OK',
+            message: 'Telemetría actualizada correctamente',
             debug: {
                 pointId: pointId,
                 fullPath: pointRef.path,
                 instituteId: instituteId || 'unknown'
             }
-        }), { 
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
         });
 
     } catch (error: any) {
         console.error("[PRINTER API ERROR]", error);
-        return new Response(JSON.stringify({ 
+        return NextResponse.json({ 
             error: 'Server Error', 
             message: error.message 
-        }), { 
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        }, { status: 500 });
     }
 }

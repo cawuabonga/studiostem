@@ -41,9 +41,7 @@ import {
     Clock,
     Globe,
     ShieldCheck,
-    TriangleAlert,
-    Activity,
-    HardDrive
+    Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -51,6 +49,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '../ui/scroll-area';
+import { Timestamp } from 'firebase/firestore';
 
 interface KioskViewProps {
     pointId: string;
@@ -254,15 +253,6 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                         <Badge variant="outline" className="bg-black/40 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-[10px] backdrop-blur-md">
                             Terminal: {point?.name || 'Local'} • ID: {pointId}
                         </Badge>
-                        {/* PANEL DE DEPURACIÓN EN REPOSO */}
-                        <div className="flex gap-2 opacity-40">
-                             <div className="flex items-center gap-1.5 text-[8px] font-mono text-white">
-                                <HardDrive className="h-2 w-2" /> {point ? 'VINCULADO' : 'BUSCANDO...'}
-                             </div>
-                             {point && (
-                                 <div className="text-[8px] font-mono text-white uppercase">URI: {point.id}</div>
-                             )}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -412,3 +402,4 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         </div>
     );
 }
+
