@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -45,8 +44,8 @@ import {
     Edit, 
     Monitor, 
     Circle, 
-    MapPin, 
-    Fingerprint 
+    MapPin,
+    Printer
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
@@ -274,7 +273,7 @@ export function PrintPointManager() {
                             <DialogFooter className="pt-4 flex gap-2">
                                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold rounded-xl flex-1 h-12">CANCELAR</Button>
                                 <Button type="submit" disabled={isSubmitting} className="font-black rounded-xl flex-1 h-12 shadow-xl shadow-primary/20">
-                                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <Save className="h-5 w-5 mr-2" />}
+                                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <SaveIcon className="h-5 w-5 mr-2" />}
                                     {editingPoint ? 'GUARDAR CAMBIOS' : 'REGISTRAR PUNTO'}
                                 </Button>
                             </DialogFooter>
@@ -289,7 +288,7 @@ export function PrintPointManager() {
                         <AlertDialogTitle className="text-xl font-black uppercase text-primary">¿Eliminar Punto de Impresión?</AlertDialogTitle>
                         <AlertDialogDescription className="font-medium text-slate-600">Esta acción es irreversible y el dispositivo con ID <strong>{deletingPoint?.pointId}</strong> dejará de tener acceso al servidor EDA.</AlertDialogDescription>
                     </AlertDialogHeader>
-                    <AlertDialogFooter className="p-4 bg-muted/20 -mx-6 -mb-6 mt-4">
+                    <AlertDialogFooter>
                         <AlertDialogCancel className="rounded-xl font-bold h-11">CANCELAR</AlertDialogCancel>
                         <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 rounded-xl font-black h-11">ELIMINAR PERMANENTE</AlertDialogAction>
                     </AlertDialogFooter>
@@ -300,7 +299,7 @@ export function PrintPointManager() {
 }
 
 // Helpers
-function Save(props: any) {
+function SaveIcon(props: any) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" >
       <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v13a2 2 0 0 1-2 2z" />
