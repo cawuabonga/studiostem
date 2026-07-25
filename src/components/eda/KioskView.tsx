@@ -10,8 +10,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { listenToPrintPoint, closeKioskSession, getDocumentTemplates } from '@/services/eda-service';
-import { getStudentProfile, getInstitute, getStaffProfiles, getStudentPaymentsByStatus } from '@/config/firebase';
-import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile } from '@/types';
+import { getStudentProfile, getInstitute, getStaffProfiles, getStudentPaymentsByStatus, getPrograms } from '@/config/firebase';
+import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile, Program } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +42,7 @@ import Image from 'next/image';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface KioskViewProps {
     pointId: string;
@@ -57,6 +58,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const [institute, setInstitute] = useState<Institute | null>(null);
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
     const [staff, setStaff] = useState<StaffProfile[]>([]);
+    const [programs, setPrograms] = useState<Program[]>([]);
     
     // UI state
     const [step, setStep] = useState<KioskStep>('idle');
@@ -92,11 +94,13 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         Promise.all([
             getInstitute(instituteId),
             getDocumentTemplates(instituteId),
-            getStaffProfiles(instituteId)
-        ]).then(([inst, temps, staffList]) => {
+            getStaffProfiles(instituteId),
+            getPrograms(instituteId)
+        ]).then(([inst, temps, staffList, progs]) => {
             setInstitute(inst);
             setTemplates(temps);
             setStaff(staffList);
+            setPrograms(progs);
             setLoading(false);
         });
     }, [instituteId]);
@@ -182,6 +186,12 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         setStep('preview');
         setIsValidating(false);
     };
+
+    // Resolver nombre del programa del estudiante
+    const studentProgramName = useMemo(() => {
+        if (!student || !programs.length) return student?.programId || '';
+        return programs.find(p => p.id === student.programId)?.name || student.programId;
+    }, [student, programs]);
 
     // --- LÓGICA DE BRANDING ---
     const primaryColor = institute?.primaryColor ? `hsl(${institute.primaryColor})` : undefined;
@@ -281,7 +291,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                 <div>
                     <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{student?.fullName}</h2>
                     <p className="text-xs md:text-sm font-bold text-white/70 uppercase tracking-widest mt-1">
-                        DNI: {student?.documentId} • {student?.programId}
+                        DNI: {student?.documentId} • {studentProgramName}
                     </p>
                 </div>
             </div>
@@ -553,7 +563,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 <div className="text-justify text-[10pt] leading-loose mb-6">
                                     Yo, <span className="font-black underline">{student?.fullName}</span>, 
                                     identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, 
-                                    estudiante del programa de estudios de <span className="font-bold">{student?.programId}</span>, 
+                                    estudiante del programa de estudios de <span className="font-bold">{studentProgramName}</span>, 
                                     perteneciente al <span className="font-bold">{student?.currentSemester || 1}° Semestre</span>, 
                                     turno <span className="font-bold">{student?.turno}</span>, 
                                     con domicilio en <span className="font-bold">{student?.address || '---'}</span>, 
