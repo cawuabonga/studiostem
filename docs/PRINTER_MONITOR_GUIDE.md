@@ -11,7 +11,7 @@ Necesitas ejecutar este script en la computadora a la que está conectada la imp
 1. Instalar Python 3.
 2. Instalar librerías: `pip install pywin32 requests`
 
-### Script `printer_monitor.py` (Versión Pro con Debug):
+### Script `printer_monitor.py` (Versión Final con Depuración):
 
 ```python
 import win32print
@@ -24,7 +24,7 @@ import json
 # ============================================================
 POINT_ID = "EDA-001" 
 
-# IMPORTANTE: Usa tu dominio oficial de producción para persistencia
+# IMPORTANTE: Usa tu dominio oficial de producción
 SERVER_URL = "https://studiostem--stem-v2-4y6a0.us-east4.hosted.app/api/eda/printer-status"
 
 CHECK_INTERVAL = 5
@@ -73,17 +73,20 @@ def sync_to_cloud():
             
             try:
                 r = requests.post(SERVER_URL, json=payload, timeout=5)
-                data = r.json()
                 
                 print(f"[{time.strftime('%H:%M:%S')}] CAMBIO DETECTADO")
                 print(f" > Estado: {status} | Papel: {paper}")
                 print(f" > HTTP: {r.status_code}")
                 
                 if r.status_code == 200:
-                    # ESTO TE DIRÁ EXACTAMENTE DÓNDE SE GUARDÓ EN FIREBASE
+                    data = r.json()
                     print(f" > Guardado en: {data['debug']['fullPath']}")
                 else:
-                    print(f" > Error: {data.get('message', 'Desconocido')}")
+                    try:
+                        err_data = r.json()
+                        print(f" > Error: {err_data.get('message', 'Desconocido')}")
+                    except:
+                        print(f" > Error de servidor (500)")
                 
                 last_state = current_state
             except Exception as e:
@@ -96,4 +99,4 @@ if __name__ == "__main__":
 ```
 
 ## 2. Verificación
-Una vez que el script diga `Guardado en: institutes/...`, ve a esa ruta exacta en tu consola de Firebase para confirmar que los datos están ahí.
+Cuando el script diga `HTTP: 200` y muestre `Guardado en: institutes/...`, ve a esa ruta exacta en tu consola de Firebase para confirmar que los datos están ahí. La pantalla del Kiosko se actualizará sola en ese instante.

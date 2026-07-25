@@ -6,7 +6,7 @@ import { getDocs, query, where, collectionGroup, updateDoc, Timestamp } from 'fi
 /**
  * @fileOverview API Endpoint para que un script externo (PC) o hardware (ESP32) 
  * reporte el estado en tiempo real de la impresora conectada al terminal EDA.
- * Mejorado para devolver la ruta del documento y facilitar la auditoría.
+ * Corregido: Error de Timestamp.now() y mejor depuración.
  */
 
 export async function POST(req: NextRequest) {
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Localizar el documento del punto de impresión en todo el sistema
-        // Buscamos por el Hard-ID técnico
         const q = query(collectionGroup(db, 'edaPrintPoints'), where('pointId', '==', pointId));
         const snap = await getDocs(q);
 
@@ -28,8 +27,7 @@ export async function POST(req: NextRequest) {
             console.error(`[HARDWARE ERROR] ${errorMsg}`);
             return NextResponse.json({ 
                 error: 'Not Found', 
-                message: errorMsg,
-                hint: 'Asegúrese de que el Hard-ID en el panel administrativo coincida exactamente con el del script.'
+                message: errorMsg
             }, { status: 404 });
         }
 
@@ -38,6 +36,7 @@ export async function POST(req: NextRequest) {
         const instituteId = pointRef.parent.parent?.id;
 
         // 2. Actualizar telemetría de hardware
+        // Corregido: Timestamp.now() con paréntesis para evitar el error "Expected type 'mr'"
         const updatePayload = {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
@@ -48,15 +47,13 @@ export async function POST(req: NextRequest) {
 
         await updateDoc(pointRef, updatePayload);
 
-        console.log(`[HARDWARE SUCCESS] Telemetría actualizada para ${pointId} en instituto ${instituteId}`);
+        console.log(`[HARDWARE SUCCESS] Telemetría actualizada para ${pointId}`);
 
-        // Devolvemos la ruta del documento para que el usuario pueda verificarlo en la consola de Firebase
         return NextResponse.json({ 
             success: true, 
             message: 'Telemetría sincronizada correctamente',
             debug: {
                 pointId: pointId,
-                documentId: pointDoc.id,
                 fullPath: pointRef.path,
                 instituteId: instituteId
             }
