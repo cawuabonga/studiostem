@@ -2,83 +2,9 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- Funciones de Ayuda ---
-    
-    // Verifica si el usuario tiene el rol de 'SuperAdmin' en su documento de usuario global.
-    function isSuperAdmin() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SuperAdmin';
-    }
-    
-    // Verifica si el usuario está autenticado y ya tiene un instituto asignado en su perfil.
-    function isAssociatedWithInstitute() {
-      return request.auth != null && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId != null;
-    }
-
-    // Verifica si el usuario pertenece específicamente a un instituto.
-    function belongsToInstitute(instId) {
-        return request.auth != null && 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instId;
-    }
-    
-    // --- Regla de Acceso General ---
-    // Se aplica a todas las colecciones por defecto si el usuario está asociado a un instituto o es SuperAdmin.
-    match /{path=**} {
-      allow read, write: if isAssociatedWithInstitute() || isSuperAdmin();
-    }
-    
-    // --- EXCEPCIONES Y REGLAS ESPECÍFICAS ---
-
-    // Gestión del documento de usuario propio:
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Reglas para colecciones dentro de institutos para mayor seguridad y precisión:
-    match /institutes/{instituteId}/{document=**} {
-      allow read, write: if isSuperAdmin() || belongsToInstitute(instituteId);
-    }
-
-    // Proceso de Vinculación de Perfil (Staff):
-    match /institutes/{instituteId}/staffProfiles/{staffId} {
-      allow get: if request.auth != null;
-      allow update: if request.auth != null && (
-        !('linkedUserUid' in resource.data) || 
-        resource.data.linkedUserUid == null || 
-        resource.data.linkedUserUid == ""
-      );
-    }
-
-    // Proceso de Vinculación de Perfil (Estudiantes):
-    match /institutes/{instituteId}/studentProfiles/{studentId} {
-      allow get: if request.auth != null;
-      allow update: if request.auth != null && (
-        !('linkedUserUid' in resource.data) || 
-        resource.data.linkedUserUid == null || 
-        resource.data.linkedUserUid == ""
-      );
-    }
-
-    // Configuración Global del Sistema:
-    match /config/{document=**} {
-        allow read: if true;
-        allow write: if isSuperAdmin();
-    }
-
-    // Acceso Público (Colecciones de consulta para la web y otros):
-    match /institutes/{instituteId} {
-      allow read: if true;
-    }
-    match /institutes/{instituteId}/news/{newsId} {
-      allow read: if true;
-    }
-    match /institutes/{instituteId}/programs/{programId} {
-      allow read: if true;
-    }
-    match /institutes/{instituteId}/albums/{albumId}/{allPhotos=**} {
-      allow read: if true;
+    // Reglas abiertas para desarrollo según lo solicitado por el usuario
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
