@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -63,7 +62,8 @@ import {
     Stamp,
     Layout,
     CheckCircle,
-    PlusCircle
+    PlusCircle,
+    Info
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
