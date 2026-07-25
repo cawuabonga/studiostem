@@ -11,7 +11,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { listenToPrintPoint, closeKioskSession, getDocumentTemplates } from '@/services/eda-service';
+import { listenToPrintPoint, closeKioskSession, getDocumentTemplates, registerGenerationLog } from '@/services/eda-service';
 import { getStudentProfile, getInstitute, getStaffProfiles, getStudentPaymentsByStatus, getPrograms } from '@/config/firebase';
 import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile, Program } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -290,7 +290,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                         </div>
                         <div className="space-y-2">
                             <h2 className="text-3xl font-black uppercase tracking-tight text-primary">Identifíquese</h2>
-                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID o ingrese su DNI debajo.</p>
+                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID or ingrese su DNI debajo.</p>
                         </div>
                     </div>
 
@@ -713,6 +713,18 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                             toast({ title: "Error de Hardware", description: "La impresora no responde. Contacte a soporte.", variant: "destructive" });
                                             return;
                                         }
+
+                                        // REGISTRO DE LOG EDA
+                                        registerGenerationLog(instituteId, {
+                                            studentId: student!.documentId,
+                                            studentName: student!.fullName,
+                                            templateId: selectedTemplate!.id,
+                                            templateName: selectedTemplate!.name,
+                                            printPointId: pointId,
+                                            status: 'Exitoso',
+                                            instituteId
+                                        });
+
                                         window.print();
                                         handleLogout();
                                         toast({ title: "Documento Enviado", description: "Iniciando proceso de impresión." });
