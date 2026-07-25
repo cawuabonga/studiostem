@@ -476,30 +476,21 @@
           "order": "DESCENDING"
         }
       ]
-    }
-  ],
-  "fieldOverrides": [
+    },
     {
       "collectionGroup": "edaPrintPoints",
-      "fieldPath": "pointId",
-      "indexes": [
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
         {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION"
+          "fieldPath": "pointId",
+          "order": "ASCENDING"
         },
         {
-          "order": "DESCENDING",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "arrayConfig": "CONTAINS",
-          "queryScope": "COLLECTION"
-        },
-        {
-          "order": "ASCENDING",
-          "queryScope": "COLLECTION_GROUP"
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     }
-  ]
+  ],
+  "fieldOverrides": []
 }
