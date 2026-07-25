@@ -58,9 +58,10 @@ import {
     CheckCircle2, 
     DollarSign,
     ExternalLink
-} from 'lucide-react';
+} from 'lucide-center';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import {
     AlertDialog,
@@ -72,6 +73,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LucideIcon } from 'lucide-react';
 
 const CATEGORIES: DocumentCategory[] = ['Constancia', 'Boleta', 'Ficha', 'Solicitud'];
 const REQUIREMENTS: EDARequirement[] = ['Gratuito', 'Pago Validado'];
