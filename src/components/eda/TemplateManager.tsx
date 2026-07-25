@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -60,11 +59,8 @@ import {
     DollarSign,
     ExternalLink,
     Eye,
-    Printer,
     Layout,
-    UserCheck,
-    MapPin,
-    CalendarDays
+    Save
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -125,7 +121,6 @@ export function TemplateManager() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState<DocumentTemplate | null>(null);
     const [deletingTemplate, setDeletingTemplate] = useState<DocumentTemplate | null>(null);
-    
     const [previewingTemplate, setPreviewingTemplate] = useState<DocumentTemplate | null>(null);
 
     const form = useForm<FormValues>({
@@ -144,6 +139,7 @@ export function TemplateManager() {
             setTemplates(templatesData);
             setConcepts(conceptsData);
         } catch (error) {
+            console.error("Error al cargar plantillas:", error);
             toast({ title: "Error", description: "No se pudieron cargar las plantillas.", variant: "destructive" });
         } finally {
             setLoading(false);
@@ -213,7 +209,6 @@ export function TemplateManager() {
     const layoutType = form.watch('layoutType');
     const requirementType = form.watch('requirementType');
 
-    // Mapeo de datos para la previsualización
     const dummyData: Record<string, string> = {
         '{nombre_completo}': 'ALEXANDER GUSTAVO PÉREZ RIVAS',
         '{dni}': '76543210',
@@ -301,7 +296,6 @@ export function TemplateManager() {
                 )}
             </div>
 
-            {/* Dialog: Registro/Edición con Enfoque Estructurado */}
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-8 bg-primary text-primary-foreground shrink-0">
@@ -435,7 +429,7 @@ export function TemplateManager() {
                             <DialogFooter className="p-8 bg-muted/50 border-t flex gap-3 shrink-0">
                                 <Button type="button" variant="ghost" onClick={() => setIsDialogOpen(false)} className="font-bold rounded-xl h-12 flex-1">CANCELAR</Button>
                                 <Button type="submit" disabled={isSubmitting} className="font-black rounded-xl h-12 flex-[2] shadow-xl shadow-primary/20">
-                                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <CheckCircle2 className="h-5 w-5 mr-2" />}
+                                    {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <Save className="h-5 w-5 mr-2" />}
                                     {editingTemplate ? 'GUARDAR DISEÑO' : 'PUBLICAR DISEÑO'}
                                 </Button>
                             </DialogFooter>
@@ -444,7 +438,6 @@ export function TemplateManager() {
                 </DialogContent>
             </Dialog>
 
-            {/* Dialog: Previsualización Formal */}
             <Dialog open={!!previewingTemplate} onOpenChange={(open) => !open && setPreviewingTemplate(null)}>
                 <DialogContent className="max-w-5xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
                     <DialogHeader className="p-6 bg-slate-100 border-b shrink-0">
@@ -464,25 +457,7 @@ export function TemplateManager() {
 
                     <ScrollArea className="flex-1 bg-slate-50">
                         <div className="p-12">
-                            {/* Papel A4 Formal */}
                             <Card className="max-w-[210mm] mx-auto min-h-[297mm] shadow-2xl border-none p-[25mm] bg-white rounded-none relative overflow-hidden text-black leading-relaxed">
-                                
-                                <style jsx>{`
-                                    .solicitud-wrapper { font-family: 'Lato', sans-serif; }
-                                    .solicitud-sumilla { text-align: right; font-weight: 800; margin-bottom: 40px; font-size: 11pt; text-transform: uppercase; }
-                                    .solicitud-header { margin-bottom: 40px; }
-                                    .solicitud-header h4 { font-weight: 900; font-size: 11pt; text-transform: uppercase; margin: 0; }
-                                    .solicitud-header p { margin: 2px 0; font-weight: 700; font-size: 10pt; }
-                                    .solicitud-intro { text-align: justify; margin-bottom: 30px; line-height: 1.8; font-size: 11pt; }
-                                    .solicitud-body { text-align: justify; line-height: 1.8; font-size: 11pt; min-height: 200px; }
-                                    .solicitud-closing { margin: 40px 0; font-weight: 700; font-size: 11pt; }
-                                    .solicitud-footer-data { text-align: right; margin-top: 60px; font-style: italic; font-size: 10pt; }
-                                    .solicitud-signature { margin-top: 100px; display: flex; flex-direction: column; items-center: center; border-top: 1px solid black; width: 300px; margin-left: auto; margin-right: auto; padding-top: 10px; text-align: center; }
-                                    .solicitud-signature p { margin: 0; font-weight: 800; font-size: 10pt; text-transform: uppercase; }
-                                    .inst-footer { position: absolute; bottom: 25mm; left: 25mm; right: 25mm; text-align: center; font-size: 8pt; color: #666; border-top: 1px solid #eee; padding-top: 10px; }
-                                `}</style>
-
-                                {/* Encabezado Institucional */}
                                 <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-8">
                                     <div className="flex items-center gap-4">
                                         {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" className="w-[60px] h-[60px] object-contain" />}
@@ -498,15 +473,15 @@ export function TemplateManager() {
 
                                 <div className="solicitud-wrapper">
                                     {previewingTemplate?.layoutType === 'structured_solicitud' ? (
-                                        <>
-                                            <div className="solicitud-sumilla" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.sumilla || '') }} />
+                                        <div className="space-y-4">
+                                            <div className="text-right font-black uppercase mb-8 text-[11pt]" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.sumilla || '') }} />
                                             
-                                            <div className="solicitud-header">
-                                                <h4>SEÑOR {previewingTemplate.addresseeRole || '---'}:</h4>
-                                                <p>{dummyData['{instituto_nombre}']}</p>
+                                            <div className="mb-8">
+                                                <h4 className="font-black uppercase text-[11pt]">SEÑOR {previewingTemplate.addresseeRole || '---'}:</h4>
+                                                <p className="font-bold">{dummyData['{instituto_nombre}']}</p>
                                             </div>
 
-                                            <div className="solicitud-intro">
+                                            <div className="text-justify text-[11pt] leading-loose mb-6">
                                                 Yo, <span className="font-black" dangerouslySetInnerHTML={{ __html: dummyData['{nombre_completo}'] }} />, 
                                                 identificado con DNI N° <span className="font-mono font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{dni}'] }} />, 
                                                 estudiante del programa de estudios de <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{carrera}'] }} />, 
@@ -515,23 +490,23 @@ export function TemplateManager() {
                                                 con domicilio en <span className="font-bold" dangerouslySetInnerHTML={{ __html: dummyData['{direccion}'] }} />, ante usted con el debido respeto me presento y expongo:
                                             </div>
 
-                                            <div className="solicitud-body" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.content) }} />
+                                            <div className="text-justify leading-loose text-[11pt] min-h-[200px]" dangerouslySetInnerHTML={{ __html: getProcessedText(previewingTemplate.content) }} />
 
-                                            <div className="solicitud-closing uppercase">
+                                            <div className="my-8 font-bold uppercase text-[11pt]">
                                                 Por lo tanto:<br/>
                                                 Espero acceda a mi solicitud por ser de justicia.
                                             </div>
 
-                                            <div className="solicitud-footer-data">
+                                            <div className="text-right mt-12 italic text-[10pt]">
                                                 Dado en la sede institucional, a los <span dangerouslySetInnerHTML={{ __html: dummyData['{fecha_hoy}'] }} />
                                                 <br/>Hora de emisión: <span dangerouslySetInnerHTML={{ __html: dummyData['{hora_hoy}'] }} />
                                             </div>
 
-                                            <div className="solicitud-signature">
-                                                <p dangerouslySetInnerHTML={{ __html: dummyData['{nombre_completo}'] }} /></p>
+                                            <div className="mt-20 pt-2 border-t border-black w-64 mx-auto text-center">
+                                                <p className="font-black uppercase text-[10pt]" dangerouslySetInnerHTML={{ __html: dummyData['{nombre_completo}'] }} />
                                                 <span className="text-[8pt] font-bold text-gray-500 uppercase tracking-widest">DNI: <span dangerouslySetInnerHTML={{ __html: dummyData['{dni}'] }} /></span>
                                             </div>
-                                        </>
+                                        </div>
                                     ) : (
                                         <div 
                                             className="text-[11pt] text-justify whitespace-pre-wrap leading-relaxed"
@@ -540,9 +515,8 @@ export function TemplateManager() {
                                     )}
                                 </div>
 
-                                <div className="inst-footer">
-                                    <p className="font-bold uppercase tracking-widest">{institute?.name}</p>
-                                    <p className="italic">Este documento tiene validez oficial bajo la normativa de acreditación tecnológica modular.</p>
+                                <div className="absolute bottom-8 left-8 right-8 text-center text-[8pt] text-gray-400 border-t border-gray-100 pt-4 italic">
+                                    Este documento tiene validez oficial bajo la normativa de acreditación tecnológica modular.
                                 </div>
                             </Card>
                         </div>
