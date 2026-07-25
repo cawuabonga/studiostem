@@ -19,10 +19,15 @@ import requests
 import time
 import json
 
+# ============================================================
 # CONFIGURACIÓN
+# ============================================================
 POINT_ID = "EDA-001" # Debe coincidir con el Hard-ID en el panel de admin
-SERVER_URL = "https://tu-dominio.com/api/eda/printer-status"
-PRINTER_NAME = "EPSON L3150" # Nombre exacto en Windows o deja en blanco para default
+
+# IMPORTANTE: La URL DEBE comenzar con https://
+SERVER_URL = "https://tu-dominio-aqui.com/api/eda/printer-status"
+
+PRINTER_NAME = "" # Deja vacío para usar la impresora predeterminada de Windows
 
 def get_printer_status():
     try:
@@ -52,6 +57,9 @@ def get_printer_status():
         return "Offline", "OK"
 
 def sync_to_cloud():
+    print(f"Iniciando monitor para {POINT_ID}...")
+    print(f"Enviando datos a: {SERVER_URL}")
+    
     while True:
         status, paper = get_printer_status()
         
@@ -59,28 +67,27 @@ def sync_to_cloud():
             "pointId": POINT_ID,
             "status": status,
             "paper": paper,
-            "toner": 85, # Simulado si la impresora no da el dato
-            "printerName": PRINTER_NAME or "Default"
+            "toner": 85, # Simulado
+            "printerName": "Impresora Local"
         }
         
         try:
             r = requests.post(SERVER_URL, json=payload, timeout=5)
-            print(f"[{time.strftime('%H:%M:%S')}] Sync: {status} | Paper: {paper} | Server: {r.status_code}")
-        except:
-            print("Error conectando con el servidor STEM")
+            print(f"[{time.strftime('%H:%M:%S')}] Sync: {status} | Paper: {paper} | HTTP: {r.status_code}")
+        except Exception as e:
+            print(f"Error conectando con el servidor STEM: {e}")
             
         time.sleep(10) # Sincronizar cada 10 segundos
 
 if __name__ == "__main__":
-    print(f"Iniciando monitor para {POINT_ID}...")
     sync_to_cloud()
 ```
 
-## 2. Integración con ESP32 (Hardware)
+## 2. Solución de Problemas Comunes
 
-Si prefieres usar el ESP32 para detectar el papel físicamente:
-1. Conecta un sensor IR al pin GPIO.
-2. En el código del ESP32, envía la misma petición JSON a la URL de la API.
+*   **Error "No scheme supplied"**: Asegúrate de que la variable `SERVER_URL` comience con `https://`.
+*   **Error 404**: Verifica que el `POINT_ID` en el script sea idéntico al registrado en el panel de administración de la web.
+*   **HTTP 200 pero no hay cambios**: Verifica que el índice de Firestore (Collection Group) para `pointId` esté habilitado en la consola de Firebase.
 
 ## 3. Visualización en el Kiosko
-Una vez que el script esté corriendo, el componente `KioskView` en la web detectará los cambios en segundos y mostrará un mensaje de advertencia si la impresora se apaga o se queda sin papel, bloqueando el botón de impresión para evitar cargos fallidos.
+Una vez que el script esté corriendo con el código `HTTP: 200`, el componente `KioskView` en la web detectará los cambios en segundos y mostrará un mensaje de advertencia si la impresora se apaga o se queda sin papel, bloqueando el botón de impresión para evitar cargos fallidos.
