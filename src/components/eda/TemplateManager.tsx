@@ -62,7 +62,8 @@ import {
     GraduationCap,
     Stamp,
     Layout,
-    CheckCircle
+    CheckCircle,
+    PlusCircle
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
