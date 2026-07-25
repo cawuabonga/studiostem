@@ -34,7 +34,8 @@ import {
     CreditCard,
     Keyboard,
     UserCircle,
-    FileText
+    FileText,
+    Paperclip
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -294,7 +295,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-sans">
             <KioskHeader />
 
-            <main className="flex-1 overflow-y-auto p-4 md:p-6">
+            <main className="flex-1 overflow-hidden p-4 md:p-6">
                 
                 {/* VISTA: MENÚ PRINCIPAL */}
                 {step === 'menu' && (
@@ -363,30 +364,30 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
                 {/* VISTA: ASISTENTE DE TRÁMITE (PASO A PASO) - COMPACTADO PARA EVITAR SCROLL */}
                 {step === 'assistant' && selectedTemplate && (
-                    <div className="max-w-full mx-auto space-y-4 animate-in slide-in-from-bottom-8 duration-500 h-full flex flex-col">
-                         <div className="text-center space-y-1">
-                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Complete su información</h3>
-                            <p className="text-base text-slate-500 font-medium">Llene los datos necesarios para su documento oficial.</p>
+                    <div className="max-w-full mx-auto space-y-4 animate-in slide-in-from-bottom-8 duration-500 h-full flex flex-col overflow-hidden">
+                         <div className="text-center space-y-0.5">
+                            <h3 className="text-2xl font-black uppercase tracking-tighter text-slate-800">Asistente de Documentación</h3>
+                            <p className="text-xs text-slate-500 font-medium">Complete los pasos para generar su solicitud oficial.</p>
                         </div>
 
-                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden p-6 space-y-6 flex-1 min-h-0">
+                        <Card className="rounded-[2.5rem] border-none shadow-xl bg-white overflow-hidden p-6 flex-1 min-h-0 flex flex-col">
                             {/* MODELO ESPECÍFICO: JUSTIFICACIÓN */}
                             {selectedTemplate.name.includes('Justificación') ? (
-                                <div className="space-y-6">
-                                    {/* PASO 1: MOTIVO - COMPACTO */}
-                                    <div className="space-y-3">
-                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">1</div>
+                                <div className="space-y-6 flex-1 flex flex-col min-h-0">
+                                    {/* PASO 1: MOTIVO (Fila Superior) */}
+                                    <div className="space-y-2 shrink-0">
+                                        <Label className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                            <div className="h-6 w-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px] italic font-black">1</div>
                                             ¿Cuál es el motivo de su falta?
                                         </Label>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                                             {['Salud', 'Personal', 'Trabajo', 'Familiar'].map(m => (
                                                 <Button 
                                                     key={m} 
                                                     variant={formData['{motivo_justificacion}'] === m ? 'default' : 'outline'}
                                                     className={cn(
-                                                        "h-12 text-sm font-black uppercase rounded-xl border-2 transition-all",
-                                                        formData['{motivo_justificacion}'] === m ? "scale-105 shadow-md" : "opacity-70"
+                                                        "h-10 text-xs font-black uppercase rounded-xl border-2 transition-all",
+                                                        formData['{motivo_justificacion}'] === m ? "scale-105 shadow-md" : "opacity-60"
                                                     )}
                                                     onClick={() => setFormData({...formData, '{motivo_justificacion}': m})}
                                                 >
@@ -396,90 +397,102 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         </div>
                                     </div>
 
-                                    {/* PASO 2: FECHAS - COMPACTO */}
-                                    <div className="space-y-3">
-                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">2</div>
-                                            Indique las fechas de inasistencia
-                                        </Label>
-                                        <div className="flex flex-col md:flex-row gap-4 bg-slate-50 p-4 rounded-2xl border-2 border-dashed border-slate-200">
-                                            <div className="bg-white p-2 rounded-2xl shadow-md border shrink-0 mx-auto md:mx-0">
-                                                <Calendar
-                                                    mode="multiple"
-                                                    selected={selectedDates}
-                                                    onSelect={(dates) => {
-                                                        setSelectedDates(dates);
-                                                        if (dates && dates.length > 0) {
-                                                            const formatted = dates
-                                                                .sort((a, b) => a.getTime() - b.getTime())
-                                                                .map(d => format(d, "EEEE dd 'de' MMMM", { locale: es }))
-                                                                .join(', ');
-                                                            setFormData(prev => ({...prev, '{fechas_inasistencia}': formatted}));
-                                                        } else {
-                                                            setFormData(prev => ({...prev, '{fechas_inasistencia}': ''}));
-                                                        }
-                                                    }}
-                                                    className="rounded-md"
-                                                />
-                                            </div>
-                                            <div className="flex-1 flex flex-col justify-center space-y-2">
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarDays className="h-4 w-4 text-primary" />
-                                                    <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Días Seleccionados:</p>
-                                                </div>
-                                                <div className="p-3 bg-white rounded-xl border min-h-[60px] flex items-center justify-center text-center shadow-inner">
-                                                    {formData['{fechas_inasistencia}'] ? (
-                                                        <p className="text-xs font-bold text-primary uppercase leading-tight">
-                                                            {formData['{fechas_inasistencia}']}
-                                                        </p>
-                                                    ) : (
-                                                        <p className="text-xs text-slate-400 italic">Toque los días en el calendario...</p>
-                                                    )}
+                                    {/* GRID PRINCIPAL: PASO 2 (Calendario) + PASO 3 (Adjuntos) + BOTONES */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
+                                        
+                                        {/* COLUMNA IZQUIERDA: CALENDARIO */}
+                                        <div className="lg:col-span-5 flex flex-col space-y-2 min-h-0">
+                                            <Label className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                <div className="h-6 w-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px] italic font-black">2</div>
+                                                Seleccione las fechas
+                                            </Label>
+                                            <div className="bg-slate-50 p-2 rounded-2xl border-2 border-dashed border-slate-200 flex-1 flex items-center justify-center min-h-0 overflow-hidden">
+                                                <div className="bg-white p-2 rounded-xl shadow-md border scale-90 md:scale-100 origin-center">
+                                                    <Calendar
+                                                        mode="multiple"
+                                                        selected={selectedDates}
+                                                        onSelect={(dates) => {
+                                                            setSelectedDates(dates);
+                                                            if (dates && dates.length > 0) {
+                                                                const formatted = dates
+                                                                    .sort((a, b) => a.getTime() - b.getTime())
+                                                                    .map(d => format(d, "EEEE dd 'de' MMMM", { locale: es }))
+                                                                    .join(', ');
+                                                                setFormData(prev => ({...prev, '{fechas_inasistencia}': formatted}));
+                                                            } else {
+                                                                setFormData(prev => ({...prev, '{fechas_inasistencia}': ''}));
+                                                            }
+                                                        }}
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* PASO 3: ADJUNTOS - COMPACTO */}
-                                    <div className="space-y-3">
-                                        <Label className="text-base font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                            <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic">3</div>
-                                            ¿Adjunta algún certificado físico?
-                                        </Label>
-                                        <div className="flex gap-3">
-                                            {[
-                                                {v: 'SI', label: 'SÍ, ADJUNTO', icon: CheckCircle2},
-                                                {v: 'NO', label: 'NO, DECLARACIÓN', icon: AlertTriangle}
-                                            ].map(opt => (
-                                                <Button 
-                                                    key={opt.v} 
-                                                    variant={formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO') ? 'default' : 'outline'}
-                                                    className={cn(
-                                                        "flex-1 h-12 text-xs font-black uppercase rounded-xl border-2 gap-2 transition-all",
-                                                        (formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO')) ? "scale-105 shadow-md" : "opacity-70"
+                                        {/* COLUMNA DERECHA: RESUMEN + PASO 3 + ACCIONES */}
+                                        <div className="lg:col-span-7 flex flex-col space-y-4">
+                                            
+                                            {/* Resumen de días (Solo si hay selección) */}
+                                            <div className="space-y-2 flex-1 flex flex-col min-h-0">
+                                                <div className="flex items-center gap-2">
+                                                    <CalendarDays className="h-4 w-4 text-primary" />
+                                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Días Marcados:</p>
+                                                </div>
+                                                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex-1 min-h-[60px] flex items-center justify-center text-center shadow-inner overflow-hidden">
+                                                    {formData['{fechas_inasistencia}'] ? (
+                                                        <ScrollArea className="h-full w-full">
+                                                            <p className="text-[11px] font-bold text-primary uppercase leading-tight p-2">
+                                                                {formData['{fechas_inasistencia}']}
+                                                            </p>
+                                                        </ScrollArea>
+                                                    ) : (
+                                                        <p className="text-xs text-slate-400 italic">Toque los días en el calendario a la izquierda...</p>
                                                     )}
-                                                    onClick={() => setFormData({...formData, '{adjuntos_detalle}': opt.v === 'SI' ? 'POR LO CUAL ADJUNTO EL CERTIFICADO CORRESPONDIENTE' : 'SOLICITO SE CONSIDERE MI PALABRA BAJO DECLARACIÓN JURADA'})}
+                                                </div>
+                                            </div>
+
+                                            {/* PASO 3: ADJUNTOS */}
+                                            <div className="space-y-2 shrink-0">
+                                                <Label className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                    <div className="h-6 w-6 bg-primary text-white rounded-full flex items-center justify-center text-[10px] italic font-black">3</div>
+                                                    ¿Presenta algún certificado físico?
+                                                </Label>
+                                                <div className="flex gap-2">
+                                                    {[
+                                                        {v: 'SI', label: 'SÍ, ADJUNTO', icon: CheckCircle2},
+                                                        {v: 'NO', label: 'NO, DECLARACIÓN', icon: AlertTriangle}
+                                                    ].map(opt => (
+                                                        <Button 
+                                                            key={opt.v} 
+                                                            variant={formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO') ? 'default' : 'outline'}
+                                                            className={cn(
+                                                                "flex-1 h-11 text-[10px] font-black uppercase rounded-xl border-2 gap-2 transition-all",
+                                                                (formData['{adjuntos_detalle}'] && formData['{adjuntos_detalle}'].includes(opt.v === 'SI' ? 'POR LO CUAL' : 'SOLICITO')) ? "bg-primary text-white scale-[1.02]" : "opacity-60"
+                                                            )}
+                                                            onClick={() => setFormData({...formData, '{adjuntos_detalle}': opt.v === 'SI' ? 'POR LO CUAL ADJUNTO EL CERTIFICADO CORRESPONDIENTE' : 'SOLICITO SE CONSIDERE MI PALABRA BAJO DECLARACIÓN JURADA'})}
+                                                        >
+                                                            <opt.icon className="h-3.5 w-3.5" /> {opt.label}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* BOTONES DE ACCIÓN (Integrados en la columna derecha) */}
+                                            <div className="pt-4 border-t flex gap-3">
+                                                <Button variant="ghost" onClick={() => setStep('category')} className="h-12 flex-1 text-xs font-black uppercase rounded-xl border-2">CANCELAR</Button>
+                                                <Button 
+                                                    disabled={!formData['{motivo_justificacion}'] || !formData['{fechas_inasistencia}'] || !formData['{adjuntos_detalle}']}
+                                                    onClick={handleFinalizeAssistant}
+                                                    className="h-12 flex-[2] text-xs font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20"
                                                 >
-                                                    <opt.icon className="h-4 w-4" /> {opt.label}
+                                                    GENERAR DOCUMENTO <ChevronRight className="ml-2 h-4 w-4" />
                                                 </Button>
-                                            ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="py-12 text-center text-slate-400">Modelo en proceso de configuración.</div>
                             )}
-
-                            <div className="flex gap-4 pt-4 border-t">
-                                <Button variant="ghost" onClick={() => setStep('category')} className="h-12 flex-1 text-sm font-black rounded-xl">CANCELAR</Button>
-                                <Button 
-                                    disabled={!formData['{motivo_justificacion}'] || !formData['{fechas_inasistencia}'] || !formData['{adjuntos_detalle}']}
-                                    onClick={handleFinalizeAssistant}
-                                    className="h-12 flex-[2] text-sm font-black uppercase tracking-widest rounded-xl shadow-lg"
-                                >
-                                    Siguiente <ChevronRight className="ml-2 h-5 w-5" />
-                                </Button>
-                            </div>
                         </Card>
                     </div>
                 )}
