@@ -1,7 +1,7 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { db } from '@/config/firebase';
-import { collection, getDocs, query, where, collectionGroup, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { getDocs, query, where, collectionGroup, updateDoc, Timestamp } from 'firebase/firestore';
 
 /**
  * @fileOverview API Endpoint para que un script externo (PC) o hardware (ESP32) 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Falta pointId' }, { status: 400 });
         }
 
-        // 1. Localizar el documento del punto de impresión en todo el sistema (Uso de Index Global)
+        // 1. Localizar el documento del punto de impresión en todo el sistema (Uso de Index Global de Campo Único)
         const q = query(collectionGroup(db, 'edaPrintPoints'), where('pointId', '==', pointId));
         const snap = await getDocs(q);
 
@@ -31,7 +31,6 @@ export async function POST(req: NextRequest) {
         const pointRef = snap.docs[0].ref;
 
         // 2. Actualizar telemetría de hardware
-        // Usamos campos específicos para que el Kiosko reaccione en tiempo real
         await updateDoc(pointRef, {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
