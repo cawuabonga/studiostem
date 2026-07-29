@@ -19,9 +19,7 @@ import {
 
 export async function POST(req: NextRequest) {
     try {
-        // =====================================================
-        // 1. RECIBIR DATOS DEL AGENTE PYTHON
-        // =====================================================
+        // 1. Recibir datos
         const body = await req.json();
         const {
             pointId,
@@ -33,9 +31,7 @@ export async function POST(req: NextRequest) {
 
         console.log('[PRINTER API] Datos recibidos para punto:', pointId);
 
-        // =====================================================
-        // 2. VALIDAR POINT ID
-        // =====================================================
+        // 2. Validar Point ID
         if (!pointId) {
             return NextResponse.json(
                 { error: 'Faltan parámetros: pointId' },
@@ -43,9 +39,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // =====================================================
-        // 3. BUSCAR EL PUNTO EDA (Usando Collection Group)
-        // =====================================================
+        // 3. Buscar el punto EDA usando la instancia db exportada
+        // El error 'Expected type Firestore' suele ocurrir aquí si db se interpreta mal
         const q = query(
             collectionGroup(db, 'edaPrintPoints'),
             where('pointId', '==', pointId)
@@ -53,9 +48,6 @@ export async function POST(req: NextRequest) {
 
         const snap = await getDocs(q);
 
-        // =====================================================
-        // 4. VALIDAR SI EXISTE EL PUNTO
-        // =====================================================
         if (snap.empty) {
             console.error(`[PRINTER API] No se encontró el punto: ${pointId}`);
             return NextResponse.json(
@@ -67,28 +59,19 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // =====================================================
-        // 5. OBTENER REFERENCIA Y DATOS
-        // =====================================================
+        // 4. Obtener referencia y actualizar
         const pointDoc = snap.docs[0];
         const pointRef = pointDoc.ref;
-        const instituteId = pointRef.parent.parent?.id;
 
-        // =====================================================
-        // 6. PREPARAR DATOS DE TELEMETRÍA
-        // =====================================================
+        // CRÍTICO: serverTimestamp() DEBE ser llamado con paréntesis
         const updatePayload = {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
             tonerLevel: toner !== undefined ? Number(toner) : 85,
             printerName: printerName || 'Impresora Local',
-            // CRÍTICO: Debe ser la llamada a la función serverTimestamp()
-            lastHeartbeat: serverTimestamp()
+            lastHeartbeat: serverTimestamp() 
         };
 
-        // =====================================================
-        // 7. ACTUALIZAR FIRESTORE
-        // =====================================================
         await updateDoc(pointRef, updatePayload);
 
         console.log(`[PRINTER API] Éxito: ${pointId} actualizado.`);
@@ -98,8 +81,7 @@ export async function POST(req: NextRequest) {
             message: 'Telemetría actualizada correctamente',
             debug: {
                 pointId,
-                fullPath: pointRef.path,
-                instituteId: instituteId || 'unknown'
+                fullPath: pointRef.path
             }
         });
 
