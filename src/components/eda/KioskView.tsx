@@ -261,7 +261,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
     return (
         <div className="h-screen flex flex-col bg-slate-50 overflow-hidden font-sans print:bg-white print:h-auto print:overflow-visible">
-            <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0 no-print">
+            <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0 print:hidden">
                 <div className="flex items-center gap-4">
                     <div className="h-14 w-14 relative rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-white/10">
                         <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || 'S'}`} alt="" fill className="object-cover" />
@@ -383,7 +383,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                 </div>
                             </Card>
                         </div>
-                        <div className="lg:col-span-4 flex flex-col gap-4 no-print">
+                        <div className="lg:col-span-4 flex flex-col gap-4 print:hidden">
                             <Card className={cn("rounded-2xl border-2 p-4 animate-in fade-in zoom-in-95 duration-500", getPrinterStatusColor())}>
                                 <div className="flex items-center justify-between mb-2"><div className="flex items-center gap-2"><Printer className="h-4 w-4" /><span className="text-[10px] font-black uppercase tracking-widest">Estado Impresora</span></div>{point?.tonerLevel !== undefined && <span className="text-[9px] font-bold">Tóner: {point.tonerLevel}%</span>}</div>
                                 <div className="flex items-center justify-between"><p className="text-xs font-bold uppercase">{!point?.printerStatus || point.printerStatus === 'Offline' ? 'Desconectada' : point.paperStatus === 'Empty' ? 'Sin Papel' : 'Lista'}</p><Activity className={cn("h-4 w-4", point?.printerStatus === 'Printing' && "animate-spin")} /></div>
@@ -398,8 +398,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     </div>
                 )}
             </main>
-            <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0 no-print">STEM V2 • POINT PRINT SYSTEM • {new Date().getFullYear()}</footer>
+            <footer className="p-2 text-center bg-white border-t text-[8px] font-black uppercase tracking-[0.3em] text-slate-300 shrink-0 print:hidden">STEM V2 • POINT PRINT SYSTEM • {new Date().getFullYear()}</footer>
         </div>
     );
 }
-
