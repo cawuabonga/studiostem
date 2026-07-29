@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
             paperStatus: paper || 'OK',
             tonerLevel: toner !== undefined ? Number(toner) : 85,
             printerName: printerName || 'Impresora Local',
-            // Usamos serverTimestamp() del SDK de firestore/client
+            // CRÍTICO: Debe ser la llamada a la función serverTimestamp()
             lastHeartbeat: serverTimestamp()
         };
 
