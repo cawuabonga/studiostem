@@ -6,7 +6,7 @@ import {
     where,
     collectionGroup,
     updateDoc,
-    Timestamp
+    serverTimestamp
 } from 'firebase/firestore';
 
 /**
@@ -137,10 +137,10 @@ export async function POST(req: NextRequest) {
                 'Impresora Local',
 
             // IMPORTANTE:
-            // Usamos Timestamp.now()
-            // igual que la API del ESP32.
+            // Usamos serverTimestamp() para evitar errores
+            // de tipo "it was: a function" en el servidor.
             lastHeartbeat:
-                Timestamp.now()
+                serverTimestamp()
         };
 
 
