@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { db } from '@/config/firebase';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
+    getFirestore, 
     collectionGroup, 
     query, 
     where, 
@@ -10,18 +11,24 @@ import {
 } from 'firebase/firestore';
 
 /**
- * API Endpoint para telemetría de hardware EDA.
- * 
- * Ejecuta la lógica directamente en el servidor para evitar conflictos 
- * con las directivas 'use client' de los servicios compartidos.
+ * CONFIGURACIÓN DE FIREBASE (Servidor)
+ * Se inicializa localmente para evitar conflictos con las directivas 'use client'
+ * de los archivos de configuración compartidos y asegurar la integridad de los tipos.
  */
+const firebaseConfig = {
+  apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
+  authDomain: "stem-v2-4y6a0.firebaseapp.com",
+  projectId: "stem-v2-4y6a0",
+  storageBucket: "stem-v2-4y6a0.firebasestorage.app",
+  messagingSenderId: "865497414457",
+  appId: "1:865497414457:web:0ab4345df399f13bfc86e8",
+  measurementId: "G-5FP9BYXHPF"
+};
 
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { pointId, status, paper, toner, printerName } = body;
-
-        console.log('[PRINTER API] Procesando telemetría para:', pointId);
 
         if (!pointId) {
             return NextResponse.json(
@@ -29,6 +36,12 @@ export async function POST(req: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Inicialización segura DENTRO del handler para evitar errores de tipo en Next.js 15
+        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+        const db = getFirestore(app);
+
+        console.log('[PRINTER API] Procesando actualización para:', pointId);
 
         // 1. Localizar el punto de impresión en todo el ecosistema (SaaS)
         const q = query(
@@ -50,7 +63,7 @@ export async function POST(req: NextRequest) {
 
         const pointRef = snap.docs[0].ref;
 
-        // 2. Ejecutar la actualización directamente desde el servidor
+        // 2. Ejecutar la actualización directamente
         await updateDoc(pointRef, {
             printerStatus: status || 'Online',
             paperStatus: paper || 'OK',
@@ -77,7 +90,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
             {
                 error: 'Server Error',
-                message: error?.message || 'Error desconocido al actualizar telemetría'
+                message: error?.message || 'Error desconocido'
             },
             { status: 500 }
         );
