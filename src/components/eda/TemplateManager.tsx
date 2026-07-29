@@ -66,7 +66,8 @@ import {
     Sparkles,
     CalendarDays,
     Paperclip,
-    FileText
+    FileText,
+    GraduationCap
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -93,6 +94,8 @@ const STUDENT_INPUT_VARIABLES = [
     { id: '{motivo_justificacion}', label: 'Motivo', icon: Info, desc: 'Razón de la falta (Salud, Personal, etc.)' },
     { id: '{fechas_inasistencia}', label: 'Fechas', icon: CalendarDays, desc: 'Día(s) que solicita justificar' },
     { id: '{adjuntos_detalle}', label: 'Cita de Adjuntos', icon: Paperclip, desc: 'Indica si presenta certificados o no' },
+    { id: '{fines_tramite}', label: 'Fines del Trámite', icon: FileText, desc: 'Para qué requiere el documento' },
+    { id: '{ciclo_referencia}', label: 'Ciclo Referencia', icon: GraduationCap, desc: 'Semestre al que hace referencia' },
 ];
 
 // --- Esquema de Validación para el Editor de Solicitudes ---
@@ -206,7 +209,8 @@ export function TemplateManager() {
                 variables: [
                     '{nombre_completo}', '{dni}', '{carrera}', '{ciclo_actual}', 
                     '{turno}', '{direccion}', '{fecha_hoy}', '{nombre_coordinador}',
-                    '{motivo_justificacion}', '{fechas_inasistencia}', '{adjuntos_detalle}'
+                    '{motivo_justificacion}', '{fechas_inasistencia}', '{adjuntos_detalle}',
+                    '{fines_tramite}', '{ciclo_referencia}'
                 ],
                 instituteId 
             }, activeTemplate.id.startsWith('new_') ? undefined : activeTemplate.id);
@@ -239,7 +243,8 @@ export function TemplateManager() {
         // Valores dinámicos del alumno
         motivo: 'PROBLEMAS DE SALUD AGUDOS (GASTRITIS EROSIVA)',
         fechas: 'LOS DÍAS 12 Y 13 DE MAYO DEL PRESENTE AÑO',
-        adjuntos: 'POR LO CUAL ADJUNTO EL CERTIFICADO MÉDICO Y RECETAS CORRESPONDIENTES'
+        adjuntos: 'POR LO CUAL ADJUNTO EL CERTIFICADO MÉDICO Y RECETAS CORRESPONDIENTES',
+        fines: 'FINES ACADÉMICOS Y DE TRÁMITE DE BECA'
     };
 
     if (loading) return <Skeleton className="h-64 w-full rounded-3xl" />;
@@ -297,45 +302,89 @@ export function TemplateManager() {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {selectedCategory === 'Solicitud' && (
-                        <Card className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white border-2">
-                            <CardHeader className="p-6">
-                                <div className="flex justify-between items-start mb-4">
-                                    <Badge className="bg-primary text-white uppercase font-black text-[9px] px-3">Modelo Oficial</Badge>
-                                    <Badge variant="outline" className="text-[9px] font-black uppercase">Estructurado</Badge>
-                                </div>
-                                <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight">
-                                    Justificación de Inasistencias
-                                </CardTitle>
-                                <CardDescription className="text-xs font-medium mt-2">
-                                    Solicitud formal para justificar faltas mediante selección de motivos y fechas.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardFooter className="p-6 pt-0 mt-auto flex gap-2">
-                                <Button 
-                                    className="w-full font-black uppercase text-xs h-10 shadow-lg"
-                                    onClick={() => {
-                                        const existing = templates.find(t => t.name.includes('Justificación'));
-                                        if (existing) handleOpenEditor(existing);
-                                        else handleOpenEditor({
-                                            id: 'new_justificacion',
-                                            name: 'Solicitud de Justificación de Inasistencias',
-                                            category: 'Solicitud',
-                                            layoutType: 'structured_solicitud',
-                                            sumilla: 'SOLICITO: Justificación de inasistencias por {motivo_justificacion}.',
-                                            addresseeType: 'Coordinator',
-                                            content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas {fechas_inasistencia}, debido a {motivo_justificacion}. {adjuntos_detalle}.',
-                                            requirementType: 'Gratuito',
-                                            isActive: true,
-                                            variables: [],
-                                            createdAt: null as any,
-                                            instituteId: instituteId!
-                                        });
-                                    }}
-                                >
-                                    GESTIONAR DISEÑO <ChevronRight className="h-4 w-4 ml-1" />
-                                </Button>
-                            </CardFooter>
-                        </Card>
+                        <>
+                            {/* Card: Justificación de Inasistencias */}
+                            <Card className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white border-2">
+                                <CardHeader className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <Badge className="bg-primary text-white uppercase font-black text-[9px] px-3">Modelo Oficial</Badge>
+                                        <Badge variant="outline" className="text-[9px] font-black uppercase">Estructurado</Badge>
+                                    </div>
+                                    <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight">
+                                        Justificación de Inasistencias
+                                    </CardTitle>
+                                    <CardDescription className="text-xs font-medium mt-2">
+                                        Solicitud formal para justificar faltas mediante selección de motivos y fechas.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardFooter className="p-6 pt-0 mt-auto flex gap-2">
+                                    <Button 
+                                        className="w-full font-black uppercase text-xs h-10 shadow-lg"
+                                        onClick={() => {
+                                            const existing = templates.find(t => t.name.includes('Justificación'));
+                                            if (existing) handleOpenEditor(existing);
+                                            else handleOpenEditor({
+                                                id: 'new_justificacion',
+                                                name: 'Solicitud de Justificación de Inasistencias',
+                                                category: 'Solicitud',
+                                                layoutType: 'structured_solicitud',
+                                                sumilla: 'SOLICITO: Justificación de inasistencias por {motivo_justificacion}.',
+                                                addresseeType: 'Coordinator',
+                                                content: 'Por intermedio de la presente, me dirijo a su despacho para solicitar la justificación de mis inasistencias a clases ocurridas {fechas_inasistencia}, debido a {motivo_justificacion}. {adjuntos_detalle}.',
+                                                requirementType: 'Gratuito',
+                                                isActive: true,
+                                                variables: [],
+                                                createdAt: null as any,
+                                                instituteId: instituteId!
+                                            });
+                                        }}
+                                    >
+                                        GESTIONAR DISEÑO <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+
+                            {/* Card: Solicitud de Constancia de Estudios */}
+                            <Card className="group hover:border-primary/40 hover:shadow-2xl transition-all duration-500 rounded-3xl overflow-hidden flex flex-col border-primary/5 bg-white border-2">
+                                <CardHeader className="p-6">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <Badge className="bg-primary text-white uppercase font-black text-[9px] px-3">Oficial</Badge>
+                                        <Badge variant="outline" className="text-[9px] font-black uppercase">Pago Requerido</Badge>
+                                    </div>
+                                    <CardTitle className="text-xl font-black uppercase tracking-tight leading-tight">
+                                        Constancia de Estudios
+                                    </CardTitle>
+                                    <CardDescription className="text-xs font-medium mt-2">
+                                        Solicitud formal para la emisión de una constancia de estudios vigente. Requiere validación de pago.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardFooter className="p-6 pt-0 mt-auto flex gap-2">
+                                    <Button 
+                                        className="w-full font-black uppercase text-xs h-10 shadow-lg"
+                                        onClick={() => {
+                                            const existing = templates.find(t => t.name.includes('Constancia'));
+                                            if (existing) handleOpenEditor(existing);
+                                            else handleOpenEditor({
+                                                id: 'new_constancia',
+                                                name: 'Solicitud de Constancia de Estudios',
+                                                category: 'Solicitud',
+                                                layoutType: 'structured_solicitud',
+                                                sumilla: 'SOLICITO: Expedición de Constancia de Estudios.',
+                                                addresseeType: 'Coordinator',
+                                                content: 'Que, por convenir a mis intereses personales para fines {fines_tramite}, solicito se me expida una Constancia de Estudios que acredite mi situación académica actual en el programa de {carrera}. Adjunto para tal fin el recibo de pago correspondiente por derecho de trámite.',
+                                                requirementType: 'Pago Validado',
+                                                isActive: true,
+                                                variables: [],
+                                                createdAt: null as any,
+                                                instituteId: instituteId!
+                                            });
+                                        }}
+                                    >
+                                        GESTIONAR DISEÑO <ChevronRight className="h-4 w-4 ml-1" />
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        </>
                     )}
 
                     <div className="border-2 border-dashed rounded-3xl flex flex-col items-center justify-center p-8 text-center opacity-30">
@@ -570,6 +619,7 @@ export function TemplateManager() {
                                                 .replace(/{motivo_justificacion}/g, `<span class="font-black underline bg-yellow-50">${dummyData.motivo}</span>`)
                                                 .replace(/{fechas_inasistencia}/g, `<span class="font-black underline bg-yellow-50">${dummyData.fechas}</span>`)
                                                 .replace(/{adjuntos_detalle}/g, `<span class="font-black underline bg-yellow-50">${dummyData.adjuntos}</span>`)
+                                                .replace(/{fines_tramite}/g, `<span class="font-black underline bg-yellow-50">${dummyData.fines}</span>`)
                                             }
                                         </div>
 

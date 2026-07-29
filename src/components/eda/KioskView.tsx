@@ -201,7 +201,9 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
         return text
             .replace(/{motivo_justificacion}/g, `<span class="font-black underline">${(formData['{motivo_justificacion}'] || '').toUpperCase()}</span>`)
             .replace(/{fechas_inasistencia}/g, `<span class="font-black underline">${(formData['{fechas_inasistencia}'] || '').toUpperCase()}</span>`)
-            .replace(/{adjuntos_detalle}/g, `<span class="font-black underline">${(formData['{adjuntos_detalle}'] || '').toUpperCase()}</span>`);
+            .replace(/{adjuntos_detalle}/g, `<span class="font-black underline">${(formData['{adjuntos_detalle}'] || '').toUpperCase()}</span>`)
+            .replace(/{fines_tramite}/g, `<span class="font-black underline">${(formData['{fines_tramite}'] || '').toUpperCase()}</span>`)
+            .replace(/{ciclo_referencia}/g, `<span class="font-black underline">${(formData['{ciclo_referencia}'] || '').toUpperCase()}</span>`);
     };
 
     const getPrinterStatusColor = () => {
@@ -349,7 +351,54 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                         </div>
                                     </div>
                                 </div>
-                            ) : <div className="py-12 text-center text-slate-400">Modelo en configuración.</div>}
+                            ) : selectedTemplate.name.includes('Constancia') ? (
+                                <div className="space-y-8 flex-1 flex flex-col min-h-0 justify-center items-center">
+                                    <div className="max-w-md w-full space-y-6">
+                                        <div className="space-y-4">
+                                            <Label className="text-sm font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                                <div className="h-8 w-8 bg-primary text-white rounded-full flex items-center justify-center text-xs italic font-black">1</div>
+                                                ¿Para qué fines requiere la constancia?
+                                            </Label>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                {['Laborales', 'Académicos', 'Trámites Personales'].map(f => (
+                                                    <Button 
+                                                        key={f} 
+                                                        variant={formData['{fines_tramite}'] === f ? 'default' : 'outline'} 
+                                                        className={cn(
+                                                            "h-16 text-sm font-black uppercase rounded-2xl border-2 transition-all justify-between px-6",
+                                                            formData['{fines_tramite}'] === f ? "scale-[1.02] shadow-xl border-primary" : "opacity-60"
+                                                        )}
+                                                        onClick={() => setFormData({...formData, '{fines_tramite}': f})}
+                                                    >
+                                                        {f}
+                                                        {formData['{fines_tramite}'] === f && <CheckCircle2 className="h-5 w-5" />}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 bg-blue-50 border-2 border-dashed border-blue-200 rounded-3xl flex gap-4 items-center">
+                                            <div className="p-2.5 bg-white rounded-xl text-blue-600 shadow-sm"><Info className="h-6 w-6" /></div>
+                                            <p className="text-xs font-bold text-blue-800 leading-tight">
+                                                Se generará la constancia acreditando su situación académica actual en el programa de <span className="underline">{studentProgramName}</span>.
+                                            </p>
+                                        </div>
+
+                                        <div className="pt-8 border-t flex gap-4">
+                                            <Button variant="ghost" onClick={() => setStep('category')} className="h-14 flex-1 text-sm font-black uppercase rounded-2xl border-2">VOLVER</Button>
+                                            <Button 
+                                                disabled={!formData['{fines_tramite}']} 
+                                                onClick={handleFinalizeAssistant} 
+                                                className="h-14 flex-[2] text-sm font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-primary/20"
+                                            >
+                                                CONTINUAR <ChevronRight className="ml-2 h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="py-12 text-center text-slate-400">Modelo en configuración.</div>
+                            )}
                         </Card>
                     </div>
                 )}
