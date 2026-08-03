@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAchievementIndicators } from '@/config/firebase';
+import { getAchievementIndicators } from '@/services/academic-service';
 import type { AchievementIndicator, Unit } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -15,9 +15,10 @@ import { EditIndicatorDialog } from './EditIndicatorDialog';
 
 interface IndicatorsManagerProps {
   unit: Unit;
+  year: string;
 }
 
-export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
+export function IndicatorsManager({ unit, year }: IndicatorsManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [indicators, setIndicators] = useState<AchievementIndicator[]>([]);
@@ -32,8 +33,7 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
     if (!instituteId || !unit.id) return;
     setLoading(true);
     try {
-      const fetchedIndicators = await getAchievementIndicators(instituteId, unit.id);
-      // Sort indicators by startWeek
+      const fetchedIndicators = await getAchievementIndicators(instituteId, unit.id, year, unit.period);
       const sortedIndicators = fetchedIndicators.sort((a, b) => a.startWeek - b.startWeek);
       setIndicators(sortedIndicators);
     } catch (error) {
@@ -46,7 +46,7 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit.id, toast]);
+  }, [instituteId, unit.id, unit.period, year, toast]);
 
   useEffect(() => {
     fetchIndicators();
@@ -69,14 +69,14 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
 
   return (
     <div className="space-y-6">
-      <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} />
+      <AddIndicatorForm unit={unit} year={year} onIndicatorAdded={handleDataChanged} />
       
       <Separator />
 
       <Card>
         <CardHeader>
-          <CardTitle>Indicadores Registrados</CardTitle>
-          <CardDescription>Lista de indicadores de logro para esta unidad didáctica.</CardDescription>
+          <CardTitle>Indicadores Registrados ({year} - {unit.period})</CardTitle>
+          <CardDescription>Lista de indicadores de logro para esta instancia académica.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
@@ -91,13 +91,15 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
                             key={indicator.id}
                             indicator={indicator}
                             unitId={unit.id}
+                            year={year}
+                            period={unit.period}
                             onIndicatorDeleted={handleDataChanged}
                             onEdit={handleEdit}
                         />
                     ))
                 ) : (
                     <p className="text-center text-muted-foreground py-4">
-                        Aún no se han registrado indicadores para esta unidad.
+                        Aún no se han registrado indicadores para este periodo académico.
                     </p>
                 )}
             </div>
@@ -107,6 +109,7 @@ export function IndicatorsManager({ unit }: IndicatorsManagerProps) {
       {selectedIndicator && (
           <EditIndicatorDialog 
             unit={unit}
+            year={year}
             indicator={selectedIndicator}
             isOpen={isEditOpen}
             onClose={handleCloseEdit}

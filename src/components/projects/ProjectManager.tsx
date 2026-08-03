@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -44,11 +45,12 @@ type ProjectFormValues = z.infer<typeof projectSchema>;
 
 interface ProjectManagerProps {
     unit: Unit;
+    year: string;
 }
 
 type ViewState = 'list' | 'create' | 'edit' | 'details';
 
-export function ProjectManager({ unit }: ProjectManagerProps) {
+export function ProjectManager({ unit, year }: ProjectManagerProps) {
     const { user, instituteId } = useAuth();
     const { toast } = useToast();
     const [view, setView] = useState<ViewState>('list');
@@ -78,8 +80,8 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
         setLoading(true);
         try {
             const [fetchedProjects, teams] = await Promise.all([
-                getUnitProjects(instituteId, unit.id),
-                getProjectTeams(instituteId, unit.id)
+                getUnitProjects(instituteId, unit.id, year, unit.period),
+                getProjectTeams(instituteId, unit.id, year, unit.period)
             ]);
             setProjects(fetchedProjects);
 
@@ -99,7 +101,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit.id, isTeacher, user?.documentId]);
+    }, [instituteId, unit, year, isTeacher, user?.documentId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -108,16 +110,16 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
         setIsSaving(true);
         try {
             if (view === 'create') {
-                await createUnitProject(instituteId, unit.id, {
+                await createUnitProject(instituteId, unit.id, year, unit.period, {
                     ...data,
                     unitId: unit.id,
                     instituteId,
                     authorId: user.uid,
                     authorName: user.displayName || 'Docente'
                 });
-                toast({ title: "Proyecto Publicado", description: "El nuevo reto ha sido añadido a la unidad." });
+                toast({ title: "Proyecto Publicado", description: "El nuevo reto ha sido añadido a la instancia académica." });
             } else if (view === 'edit' && selectedProject) {
-                await updateUnitProject(instituteId, unit.id, selectedProject.id, data);
+                await updateUnitProject(instituteId, unit.id, year, unit.period, selectedProject.id, data);
                 toast({ title: "Cambios Guardados", description: "La información del reto ha sido actualizada." });
             }
             setView('list');
@@ -138,7 +140,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
     const handleDelete = async (id: string) => {
         if (!instituteId) return;
         try {
-            await deleteUnitProject(instituteId, unit.id, id);
+            await deleteUnitProject(instituteId, unit.id, year, unit.period, id);
             toast({ title: "Proyecto Eliminado" });
             fetchData();
         } catch (error) {
@@ -162,7 +164,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                         <CardTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-3">
                             <Rocket className="h-6 w-6 text-primary" /> {view === 'create' ? 'Diseñar Nuevo Reto ABP' : 'Editar Diseño del Reto'}
                         </CardTitle>
-                        <CardDescription>Defina un problema del mundo real para que sus alumnos prototipen una solución.</CardDescription>
+                        <CardDescription>Defina un problema para la instancia {year} - {unit.period}.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Form {...form}>
@@ -218,7 +220,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                     <Card className="border-none shadow-xl overflow-hidden rounded-3xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
                         <CardHeader className="p-8">
                             <div className="flex justify-between items-start">
-                                <Badge className="bg-white/20 text-white border-none uppercase font-black">Proyecto Activo</Badge>
+                                <Badge className="bg-white/20 text-white border-none uppercase font-black">Proyecto {year}</Badge>
                                 {selectedProject.fabLabRequired && <Badge className="bg-accent text-accent-foreground font-black">FAB LAB REQUERIDO</Badge>}
                             </div>
                             <CardTitle className="text-4xl font-black uppercase tracking-tighter mt-6 leading-tight">{selectedProject.title}</CardTitle>
@@ -255,8 +257,8 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                 <div className="flex items-center gap-3">
                     <LayoutGrid className="h-6 w-6 text-primary" />
                     <div>
-                        <h3 className="text-2xl font-black uppercase tracking-tight text-primary">Repositorio de Retos ABP</h3>
-                        <p className="text-sm text-muted-foreground font-medium">Gestione los proyectos de innovación disponibles para los grupos de trabajo.</p>
+                        <h3 className="text-2xl font-black uppercase tracking-tight text-primary">Retos ABP ({year} - {unit.period})</h3>
+                        <p className="text-sm text-muted-foreground font-medium">Gestione los proyectos activos para esta instancia académica.</p>
                     </div>
                 </div>
                 {isTeacher && <Button onClick={() => setView('create')} className="font-black shadow-lg h-12 px-6"><Plus className="mr-2 h-5 w-5" /> NUEVO RETO</Button>}
@@ -292,7 +294,7 @@ export function ProjectManager({ unit }: ProjectManagerProps) {
                 {projects.length === 0 && (
                     <div className="col-span-full py-20 text-center text-muted-foreground border-2 border-dashed rounded-3xl bg-muted/5">
                         <Rocket className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                        <p className="font-bold uppercase text-sm">No hay retos publicados para esta unidad todavía.</p>
+                        <p className="font-bold uppercase text-sm">No hay retos publicados para este periodo académico.</p>
                     </div>
                 )}
             </div>

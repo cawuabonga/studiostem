@@ -587,113 +587,6 @@ export interface Role {
   permissions: Record<Permission, boolean>;
 }
 
-export const PERMISSIONS_CONFIG: { category: string; description: string; permissions: { id: Permission; label: string }[] }[] = [
-    {
-        category: 'Gestión del Instituto',
-        description: 'Permisos relacionados con la configuración general y la página pública del instituto.',
-        permissions: [
-            { id: 'admin:institute:manage', label: 'Gestionar Perfil Público del Instituto' },
-        ],
-    },
-    {
-        category: 'Gestión Administrativa',
-        description: 'Permisos para la gestión de tasas, pagos, infraestructura y control de acceso.',
-        permissions: [
-            { id: 'admin:fees:manage', label: 'Gestionar Tasas Educativas' },
-            { id: 'admin:payments:validate', label: 'Validar Pagos de Estudiantes' },
-            { id: 'admin:access-control:manage', label: 'Gestionar Control de Acceso' },
-            { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia de Personal' },
-            { id: 'admin:infra:manage', label: 'Gestionar Infraestructura (Edificios, Ambientes, Activos)' },
-            { id: 'admin:supplies:manage', label: 'Gestionar Abastecimiento e Insumos' },
-            { id: 'admin:deliveries:view', label: 'Ver Entregas (PECOSAS)' },
-            { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
-            { id: 'admin:jobs:monitor', label: 'Monitorear Ofertas Laborales' },
-            { id: 'admin:health:manage', label: 'Gestionar Tópico y Salud Institucional' },
-            { id: 'admin:eda:manage', label: 'Gestionar Sistema EDA (Documentos)' },
-        ],
-    },
-    {
-        category: 'Gestión Académica',
-        description: 'Permisos relacionados con la administración de programas, unidades, asignaciones y matrículas.',
-        permissions: [
-            { id: 'academic:program:manage', label: 'Gestionar Programas de Estudio' },
-            { id: 'academic:unit:manage', label: 'Gestionar Todas las Unidades Didácticas' },
-            { id: 'academic:unit:manage:own', label: 'Gestionar Unidades del Propio Programa (Coordinador)' },
-            { id: 'academic:assignment:manage', label: 'Gestionar Asignaciones de Docentes' },
-            { id: 'academic:teacher:view', label: 'Ver Lista de Docentes' },
-            { id: 'academic:workload:view', label: 'Ver Carga Horaria' },
-            { id: 'academic:workload:monitor', label: 'Monitor de Actividades No Lectivas' },
-            { id: 'academic:enrollment:manage', label: 'Gestionar Matrículas' },
-            { id: 'academic:periods:manage', label: 'Gestionar Períodos Lectivos' },
-            { id: 'academic:load:view', label: 'Ver Dashboard de Carga Académica' },
-            { id: 'academic:efsrt:manage', label: 'Gestionar Experiencias Formativas (EFSRT)' },
-        ],
-    },
-     {
-        category: 'Planificación y Horarios',
-        description: 'Permisos para gestionar ambientes, generar horarios y visualizar la carga horaria.',
-        permissions: [
-            { id: 'planning:schedule:manage', label: 'Generar y Gestionar Horarios' },
-            { id: 'planning:schedule:view:own', label: 'Ver Mi Horario' },
-        ],
-    },
-    {
-        category: 'Gestión de Usuarios',
-        description: 'Permisos para la creación y gestión de perfiles de personal y estudiantes.',
-        permissions: [
-            { id: 'users:staff:manage', label: 'Gestionar Personal (Docentes, etc.)' },
-            { id: 'users:student:manage', label: 'Gestionar Estudiantes' },
-        ],
-    },
-    {
-        category: 'Acciones de Personal',
-        description: 'Permisos para acciones que el personal y estudiantes pueden realizar.',
-        permissions: [
-            { id: 'teacher:unit:view', label: 'Ver sus Unidades Asignadas' },
-            { id: 'teacher:efsrt:supervise', label: 'Supervisar Experiencias Formativas (EFSRT)' },
-            { id: 'teacher:workload:report', label: 'Reportar Horas No Lectivas' },
-            { id: 'student:unit:view', label: 'Ver sus Unidades Matriculadas' },
-            { id: 'student:grades:view', label: 'Ver sus Calificaciones' },
-            { id: 'student:payments:manage', label: 'Gestionar sus Pagos' },
-            { id: 'student:efsrt:view', label: 'Ver su progreso en EFSRT' },
-            { id: 'user:supplies:request', label: 'Solicitar Insumos' },
-            { id: 'user:access:view:own', label: 'Ver Mi Historial de Accesos' },
-            { id: 'user:medical:view:own', label: 'Ver Mi Historial Médico' },
-            { id: 'user:eda:use', label: 'Utilizar Puntos de Impresión EDA' },
-        ],
-    },
-     {
-        category: 'Acciones de Egresados',
-        description: 'Permisos específicos para los estudiantes que han culminado sus estudios.',
-        permissions: [
-            { id: 'graduate:jobs:view', label: 'Ver Bolsa Laboral para Egresados' },
-            { id: 'graduate:profile:view', label: 'Ver Perfil Público de Egresado' },
-        ],
-    },
-     {
-        category: 'Bolsa Laboral',
-        description: 'Permisos para la gestión de empleo y reclutamiento.',
-        permissions: [
-            { id: 'student:jobs:view', label: 'Ver Ofertas Laborales' },
-            { id: 'student:jobs:apply', label: 'Postular a Empleos' },
-            { id: 'company:jobs:manage', label: 'Publicar y Gestionar Ofertas (Empresa)' },
-            { id: 'company:applicants:view', label: 'Ver Perfiles de Postulantes' },
-        ],
-    },
-     {
-        category: 'Super Administrador',
-        description: 'Permisos de nivel superior para la gestión de toda la plataforma.',
-        permissions: [
-            { id: 'superadmin:institute:manage', label: 'Gestionar Institutos' },
-            { id: 'superadmin:users:manage', label: 'Gestionar Todos los Usuarios' },
-            { id: 'superadmin:design:manage', label: 'Gestionar Diseño del Login' },
-            { id: 'superadmin:roles:manage', label: 'Gestionar Roles y Permisos' },
-            { id: 'superadmin:plans:manage', label: 'Gestionar Planes de Servicio' },
-            { id: 'superadmin:observability:view', label: 'Ver Métricas de Observabilidad' },
-        ],
-    },
-];
-
 export interface StudentEgresoAudit {
     eligible: boolean;
     pendingUnits: string[];
@@ -725,4 +618,112 @@ export interface InstituteMetrics {
     activeToday: DailyActivity;
     totalPayments: number;
     totalRevenue: number;
+}
+
+export interface EnrolledUnit extends Unit {
+    programName: string;
+    enrollmentYear: string;
+}
+
+export interface GradeEntry {
+    type: 'task' | 'manual';
+    refId: string;
+    label: string;
+    grade: number | null;
+    weekNumber: number;
+}
+
+export interface AcademicRecord {
+    id: string;
+    studentId: string;
+    unitId: string;
+    programId: string;
+    year: string;
+    period: UnitPeriod;
+    grades: Record<string, GradeEntry[]>; // indicatorId -> list of grades
+    evaluations: Record<string, ManualEvaluation[]>; // indicatorId -> list of manual headers
+    finalGrade: number | null;
+    attendancePercentage: number;
+    status: 'cursando' | 'aprobado' | 'desaprobado' | 'retirado';
+}
+
+export interface ManualEvaluation {
+    id: string;
+    indicatorId: string;
+    label: string;
+    weekNumber: number;
+    createdAt: Timestamp;
+}
+
+export interface AttendanceRecord {
+    id: string; // unitId_year_period
+    unitId: string;
+    year: string;
+    period: UnitPeriod;
+    records: Record<string, Record<string, AttendanceStatus[]>>; // studentId -> weekKey -> statuses
+}
+
+export type AttendanceStatus = 'P' | 'T' | 'F' | 'J' | 'U'; // Present, Tardy, Absent, Justified, Unknown
+
+export interface WeekData {
+    weekNumber: number;
+    isVisible: boolean;
+    contents: Content[];
+    tasks: Task[];
+    capacityElement: string;
+    learningActivities: string;
+    basicContents: string;
+}
+
+export interface Content {
+    id: string;
+    title: string;
+    type: 'text' | 'link' | 'file';
+    value: string;
+    createdAt: Timestamp;
+}
+
+export type ContentType = Content['type'];
+
+export interface Task {
+    id: string;
+    title: string;
+    description: string;
+    dueDate: Timestamp;
+    createdAt: Timestamp;
+    fileUrl?: string;
+    referenceLink?: string;
+    indicatorId?: string; // Optional link to learning achievement
+}
+
+export interface TaskSubmission {
+    id: string; // studentId
+    studentName: string;
+    submittedAt: Timestamp;
+    fileUrl?: string;
+    link?: string;
+    grade?: number;
+    feedback?: string;
+}
+
+export interface Syllabus {
+    summary: string;
+    competence: string;
+    capacity?: string;
+    transversalCompetencies?: string;
+    methodology: string;
+    bibliography: string;
+}
+
+export interface AcademicYearSettings {
+    [period: string]: {
+        startDate: Timestamp;
+        endDate: Timestamp;
+    }
+}
+
+export interface SyllabusDesignOptions {
+    showLogo: boolean;
+    showInfoTable: boolean;
+    showSignature: boolean;
 }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -21,9 +22,10 @@ import { cn } from '@/lib/utils';
 
 interface TeamManagerProps {
     unit: Unit;
+    year: string;
 }
 
-export function TeamManager({ unit }: TeamManagerProps) {
+export function TeamManager({ unit, year }: TeamManagerProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [projects, setProjects] = useState<Project[]>([]);
@@ -38,11 +40,10 @@ export function TeamManager({ unit }: TeamManagerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const currentYear = new Date().getFullYear().toString();
             const [fetchedProjects, fetchedTeams, enrolledStudents] = await Promise.all([
-                getUnitProjects(instituteId, unit.id),
-                getProjectTeams(instituteId, unit.id),
-                getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period)
+                getUnitProjects(instituteId, unit.id, year, unit.period),
+                getProjectTeams(instituteId, unit.id, year, unit.period),
+                getEnrolledStudentProfiles(instituteId, unit.id, year, unit.period)
             ]);
             
             setProjects(fetchedProjects);
@@ -53,7 +54,7 @@ export function TeamManager({ unit }: TeamManagerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit]);
+    }, [instituteId, unit, year]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -64,7 +65,7 @@ export function TeamManager({ unit }: TeamManagerProps) {
         }
 
         try {
-            await saveProjectTeam(instituteId, unit.id, {
+            await saveProjectTeam(instituteId, unit.id, year, unit.period, {
                 ...formData,
                 progress: 0
             });
@@ -92,8 +93,8 @@ export function TeamManager({ unit }: TeamManagerProps) {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight text-primary">Gestión de Equipos y Retos</h3>
-                    <p className="text-sm text-muted-foreground font-medium">Asigne a los estudiantes en grupos y vincúlelos a un proyecto de innovación.</p>
+                    <h3 className="text-xl font-black uppercase tracking-tight text-primary">Equipos e Innovación ({year})</h3>
+                    <p className="text-sm text-muted-foreground font-medium">Asigne estudiantes en grupos para la instancia académica actual.</p>
                 </div>
                 <Button onClick={() => setIsDialogOpen(true)} className="font-bold shadow-lg" disabled={projects.length === 0}>
                     <Plus className="mr-2 h-4 w-4" /> CONFORMAR EQUIPO
@@ -103,7 +104,7 @@ export function TeamManager({ unit }: TeamManagerProps) {
             {projects.length === 0 && (
                 <div className="p-6 border-2 border-dashed rounded-3xl bg-amber-50 text-amber-800 flex items-center gap-4">
                     <Rocket className="h-10 w-10 opacity-40" />
-                    <p className="text-sm font-bold">Primero debe crear al menos un Reto ABP en la pestaña "Proyecto de Innovación" para conformar equipos.</p>
+                    <p className="text-sm font-bold">Primero debe crear al menos un Reto ABP en la pestaña "Proyecto de Innovación" para conformar equipos en este año.</p>
                 </div>
             )}
 

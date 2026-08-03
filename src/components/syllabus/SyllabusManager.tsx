@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { getSyllabus, saveSyllabus } from '@/config/firebase';
+import { getSyllabus, saveSyllabus } from '@/services/academic-service';
 import type { Unit, Syllabus } from '@/types';
 import { Loader2, Save, Printer, Sparkles, FileText, Target, GraduationCap, Library, BookOpen, UserCheck } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
@@ -31,9 +31,10 @@ type SyllabusFormValues = z.infer<typeof syllabusSchema>;
 
 interface SyllabusManagerProps {
   unit: Unit;
+  year: string;
 }
 
-export function SyllabusManager({ unit }: SyllabusManagerProps) {
+export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -57,7 +58,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     if (!instituteId) return;
     setLoading(true);
     try {
-        const syllabusData = await getSyllabus(instituteId, unit.id);
+        const syllabusData = await getSyllabus(instituteId, unit.id, year, unit.period);
         if (syllabusData) {
             form.reset({
                 ...syllabusData,
@@ -71,7 +72,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit.id, form, toast]);
+  }, [instituteId, unit.id, unit.period, year, form, toast]);
 
   useEffect(() => {
     fetchSyllabusData();
@@ -81,7 +82,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     if (!instituteId) return;
     setIsSaving(true);
     try {
-      await saveSyllabus(instituteId, unit.id, data);
+      await saveSyllabus(instituteId, unit.id, year, unit.period, data);
       toast({ title: "¡Éxito!", description: "La información del sílabo ha sido guardada correctamente." });
     } catch (error: any) {
       toast({ title: "Error", description: "No se pudo guardar la información del sílabo.", variant: "destructive" });
@@ -97,7 +98,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
         form.setValue('summary', summary, { shouldValidate: true });
         toast({ title: "Sumilla Generada", description: "La IA ha procesado una propuesta profesional basada en el nombre de la unidad." });
     } catch (error) {
-        toast({ title: "Error", description: "No se pudo conectar con el motor de IA. Revisa la configuración en el panel de SuperAdmin.", variant: "destructive"});
+        toast({ title: "Error", description: "No se pudo conectar con el motor de IA.", variant: "destructive"});
     } finally {
         setIsGenerating(false);
     }
@@ -140,11 +141,10 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
     <div className="max-w-7xl mx-auto">
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                {/* Cabecera del Editor */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-background p-6 rounded-xl border shadow-sm sticky top-0 z-20">
                     <div className="space-y-1">
-                        <h2 className="text-2xl font-black tracking-tight text-primary uppercase">Editor del Sílabo Oficial</h2>
-                        <p className="text-sm text-muted-foreground font-medium">Gestión de la estructura curricular de la unidad didáctica.</p>
+                        <h2 className="text-2xl font-black tracking-tight text-primary uppercase">Editor del Sílabo Oficial ({year})</h2>
+                        <p className="text-sm text-muted-foreground font-medium">Gestión de la estructura curricular para el periodo {unit.period}.</p>
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
                         <Button type="button" variant="outline" onClick={handlePrint} disabled={isPrinting} className="flex-1 md:flex-none font-bold border-2">
@@ -158,10 +158,7 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                     </div>
                 </div>
 
-                {/* Grid de Secciones Reorganizado */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                    
-                    {/* Sumilla - Columna Principal (Span 4 filas para equilibrar) */}
                     <div className="lg:col-span-5 lg:row-span-4 h-full">
                         <Card className="h-full border-t-4 border-t-primary shadow-md flex flex-col">
                             <CardHeader className="bg-muted/30 pb-4">
@@ -199,7 +196,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Fila 1 Derecha: Competencia */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-2">
@@ -225,7 +221,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Fila 2 Derecha: Capacidad de la Unidad */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-2">
@@ -251,7 +246,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Fila 3 Derecha: Competencias Transversales */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-2">
@@ -277,7 +271,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Fila 4 Derecha: Metodología */}
                     <div className="lg:col-span-7">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-2">
@@ -303,7 +296,6 @@ export function SyllabusManager({ unit }: SyllabusManagerProps) {
                         </Card>
                     </div>
 
-                    {/* Bibliografía - Ancho Completo */}
                     <div className="lg:col-span-12">
                         <Card className="border-t-4 border-t-primary shadow-md">
                             <CardHeader className="bg-muted/30 pb-4">

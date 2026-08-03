@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -9,7 +10,13 @@ import { Label } from '@/components/ui/label';
 import { ContentManager } from './ContentManager';
 import { TaskManager } from './TaskManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { setWeekVisibility, getWeekData, saveWeekSyllabusData, getWeeksData, getAcademicPeriods } from '@/config/firebase';
+import { 
+    setWeekVisibility, 
+    getWeekData, 
+    saveWeekSyllabusData, 
+    getWeeksData 
+} from '@/services/academic-service';
+import { getAcademicPeriods } from '@/config/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { Textarea } from '../ui/textarea';
@@ -22,16 +29,16 @@ import { es } from 'date-fns/locale';
 interface WeekCardProps {
     weekNumber: number;
     unit: Unit;
+    year: string;
     weekData?: WeekData;
     isStudentView: boolean;
     periodStartDate?: Date;
     onClick: () => void;
 }
 
-function WeekCard({ weekNumber, unit, weekData, isStudentView, periodStartDate, onClick }: WeekCardProps) {
+function WeekCard({ weekNumber, unit, year, weekData, isStudentView, periodStartDate, onClick }: WeekCardProps) {
     const isVisible = weekData?.isVisible ?? false;
     
-    // In student view, if the week is not visible, we don't render the card at all.
     if (isStudentView && !isVisible) return null;
 
     const contentCount = weekData?.contents?.length || 0;
@@ -98,12 +105,13 @@ function WeekCard({ weekNumber, unit, weekData, isStudentView, periodStartDate, 
 interface WeekDetailProps {
     weekNumber: number; 
     unit: Unit; 
+    year: string;
     isStudentView: boolean;
     onBack: () => void;
     onDataChanged: () => void;
 }
 
-function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: WeekDetailProps) {
+function WeekDetail({ weekNumber, unit, year, isStudentView, onBack, onDataChanged }: WeekDetailProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     const [weekData, setWeekData] = useState<WeekData | null>(null);
@@ -114,7 +122,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
         if (!instituteId) return;
         setLoading(true);
         try {
-            const data = await getWeekData(instituteId, unit.id, weekNumber);
+            const data = await getWeekData(instituteId, unit.id, year, unit.period, weekNumber);
             setWeekData(data || {
                 weekNumber,
                 isVisible: false,
@@ -129,7 +137,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit.id, weekNumber, toast]);
+    }, [instituteId, unit.id, unit.period, year, weekNumber, toast]);
 
     useEffect(() => { fetchWeekData(); }, [fetchWeekData]);
 
@@ -137,7 +145,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
         if (!instituteId) return;
         setIsUpdating(true);
         try {
-            await setWeekVisibility(instituteId, unit.id, weekNumber, isEnabled);
+            await setWeekVisibility(instituteId, unit.id, year, unit.period, weekNumber, isEnabled);
             setWeekData(prev => prev ? { ...prev, isVisible: isEnabled } : null);
             toast({ title: "Visibilidad Actualizada", description: isEnabled ? 'La semana ahora es visible para los alumnos.' : 'La semana ha sido ocultada.' });
             onDataChanged();
@@ -152,18 +160,16 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
         if (!instituteId || !weekData) return;
         setIsUpdating(true);
         try {
-            // Validate data to avoid sending undefined values to Firebase
             const updatePayload = {
                 capacityElement: weekData.capacityElement || '',
                 learningActivities: weekData.learningActivities || '',
                 basicContents: weekData.basicContents || '',
             };
             
-            await saveWeekSyllabusData(instituteId, unit.id, weekNumber, updatePayload);
+            await saveWeekSyllabusData(instituteId, unit.id, year, unit.period, weekNumber, updatePayload);
             toast({ title: "¡Éxito!", description: "Información del sílabo guardada correctamente." });
             onDataChanged();
         } catch (error: any) {
-            console.error("Save Syllabus Error:", error);
             toast({ 
                 title: "Error de Guardado", 
                 description: error.message || "No se pudo guardar la información académica.", 
@@ -187,7 +193,7 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
             <div className="flex items-center justify-between">
                 <Button variant="ghost" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" /> Volver a las semanas</Button>
                 <div className="text-right">
-                    <h2 className="text-2xl font-bold text-primary">Programación Semanal</h2>
+                    <h2 className="text-2xl font-bold text-primary">Programación Semanal ({year})</h2>
                     <p className="text-sm text-muted-foreground font-medium">Semana {weekNumber}</p>
                 </div>
             </div>
@@ -273,11 +279,11 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
                         </CardContent>
                     </Card>
 
-                    <ContentManager unit={unit as any} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
+                    <ContentManager unit={unit} year={year} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
                 </div>
 
                 <div className="space-y-6">
-                    <TaskManager unit={unit as any} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
+                    <TaskManager unit={unit} year={year} weekNumber={weekNumber} isStudentView={isStudentView} onDataChanged={fetchWeekData} />
                 </div>
             </div>
         </div>
@@ -286,15 +292,28 @@ function WeekDetail({ weekNumber, unit, isStudentView, onBack, onDataChanged }: 
 
 interface WeeklyPlannerProps {
     unit: Unit;
+    year?: string;
     isStudentView: boolean;
 }
 
-export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
-    const { instituteId } = useAuth();
+export function WeeklyPlanner({ unit, year, isStudentView }: WeeklyPlannerProps) {
+    const { instituteId, user } = useAuth();
     const [weeksData, setWeeksData] = useState<WeekData[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
     const [periodStartDate, setPeriodStartDate] = useState<Date | undefined>(undefined);
+    
+    // Determine effective year: from prop (teacher view) or from enrollment (student view)
+    const effectiveYear = useMemo(() => {
+        if (year) return year;
+        if (isStudentView) {
+            // Find enrollment year for this unit
+            const enrollment = (user as any)?.enrollments?.find((e: any) => e.unitId === unit.id);
+            return enrollment?.year || new Date().getFullYear().toString();
+        }
+        return new Date().getFullYear().toString();
+    }, [year, isStudentView, user, unit.id]);
+
     const totalWeeks = unit.totalWeeks || 16;
     const { toast } = useToast();
 
@@ -302,14 +321,12 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const currentYear = new Date().getFullYear().toString();
             const [data, academicPeriods] = await Promise.all([
-                getWeeksData(instituteId, unit.id),
-                getAcademicPeriods(instituteId, currentYear)
+                getWeeksData(instituteId, unit.id, effectiveYear, unit.period),
+                getAcademicPeriods(instituteId, effectiveYear)
             ]);
             
             setWeeksData(data);
-            
             const startDate = academicPeriods?.[unit.period]?.startDate?.toDate();
             setPeriodStartDate(startDate);
 
@@ -319,7 +336,7 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit.id, unit.period, toast]);
+    }, [instituteId, unit.id, unit.period, effectiveYear, toast]);
 
     useEffect(() => {
         fetchAllWeeks();
@@ -352,7 +369,7 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
                         <div>
                             <CardTitle className="text-xl">Sin contenidos publicados</CardTitle>
                             <CardDescription className="max-w-xs mx-auto mt-2">
-                                El docente aún no ha publicado el material de estudio para esta unidad didáctica.
+                                El docente aún no ha publicado el material de estudio para esta unidad didáctica en el periodo {effectiveYear}.
                             </CardDescription>
                         </div>
                     </CardContent>
@@ -373,6 +390,7 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
                             key={weekNumber}
                             weekNumber={weekNumber}
                             unit={unit}
+                            year={effectiveYear}
                             weekData={weekData}
                             isStudentView={isStudentView}
                             periodStartDate={periodStartDate}
@@ -382,13 +400,14 @@ export function WeeklyPlanner({ unit, isStudentView }: WeeklyPlannerProps) {
                 })}
             </div>
         );
-    }, [loading, weeksData, isStudentView, unit, totalWeeks, periodStartDate]);
+    }, [loading, weeksData, isStudentView, unit, totalWeeks, periodStartDate, effectiveYear]);
 
     if (selectedWeek) {
         return (
             <WeekDetail
                 weekNumber={selectedWeek}
                 unit={unit}
+                year={effectiveYear}
                 isStudentView={isStudentView}
                 onBack={() => setSelectedWeek(null)}
                 onDataChanged={handleDataChanged}

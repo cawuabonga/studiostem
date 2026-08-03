@@ -8,20 +8,22 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { 
     getEnrolledStudentProfiles, 
-    getAchievementIndicators, 
     getAcademicRecordsForUnit, 
     batchUpdateAcademicRecords, 
-    addManualEvaluationToRecord, 
-    deleteManualEvaluationFromRecord, 
     getPrograms, 
     getTeachers, 
     getAssignments, 
     closeUnitGrades,
-    getWeeksData
 } from '@/config/firebase';
+import {
+    getAchievementIndicators,
+    getWeeksData,
+    addManualEvaluationToRecord,
+    deleteManualEvaluationFromRecord
+} from '@/services/academic-service';
 import { Skeleton } from '../ui/skeleton';
 import { Button } from '../ui/button';
-import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard, NotebookPen } from 'lucide-react';
+import { Save, Loader2, Printer, Lock, CheckCircle2, LayoutDashboard } from 'lucide-react';
 import { produce } from 'immer';
 import { IndicatorGradebook } from './IndicatorGradebook';
 import { Badge } from '../ui/badge';
@@ -45,6 +47,7 @@ import { IndicatorGradebookPrint } from './IndicatorGradebookPrint';
 
 interface GradebookManagerProps {
     unit: Unit;
+    year: string;
 }
 
 const calculateAverage = (grades: (number | null)[]): number | null => {
@@ -54,7 +57,7 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
     return Math.round(sum / validGrades.length);
 };
 
-export function GradebookManager({ unit }: GradebookManagerProps) {
+export function GradebookManager({ unit, year }: GradebookManagerProps) {
     const { instituteId, institute } = useAuth();
     const { toast } = useToast();
     
@@ -75,9 +78,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
-            const currentYear = new Date().getFullYear().toString();
-            
-            const allWeeksData = await getWeeksData(instituteId, unit.id);
+            const allWeeksData = await getWeeksData(instituteId, unit.id, year, unit.period);
             const allTasks = allWeeksData.flatMap(w => (w.tasks || []).map(t => ({ ...t, weekNumber: w.weekNumber })));
             setUnitTasks(allTasks);
 
@@ -88,9 +89,9 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 allPrograms,
                 allTeachers,
             ] = await Promise.all([
-                getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
-                getAchievementIndicators(instituteId, unit.id),
-                getAcademicRecordsForUnit(instituteId, unit.id, currentYear, unit.period),
+                getEnrolledStudentProfiles(instituteId, unit.id, year, unit.period),
+                getAchievementIndicators(instituteId, unit.id, year, unit.period),
+                getAcademicRecordsForUnit(instituteId, unit.id, year, unit.period),
                 getPrograms(instituteId),
                 getTeachers(instituteId),
             ]);
@@ -98,7 +99,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
             const currentProgram = allPrograms.find(p => p.id === unit.programId) || null;
             setProgram(currentProgram);
 
-            const assignments = await getAssignments(instituteId, currentYear, unit.programId);
+            const assignments = await getAssignments(instituteId, year, unit.programId);
             const teacherId = assignments[unit.period]?.[unit.id];
             if (teacherId) {
                 const assignedTeacher = allTeachers.find(t => t.documentId === teacherId) || null;
@@ -114,11 +115,11 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 let existingRecord = fetchedRecords.find(r => r.studentId === student.documentId);
                 if (!existingRecord) {
                      existingRecord = {
-                        id: `${unit.id}_${student.documentId}_${currentYear}_${unit.period}`,
+                        id: `${unit.id}_${student.documentId}_${year}_${unit.period}`,
                         studentId: student.documentId,
                         unitId: unit.id,
                         programId: unit.programId,
-                        year: currentYear,
+                        year: year,
                         period: unit.period,
                         grades: {},
                         evaluations: {},
@@ -139,7 +140,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         } finally {
             setLoading(false);
         }
-    }, [instituteId, unit]);
+    }, [instituteId, unit, year]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
     
@@ -163,9 +164,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const handleManualEvaluationAdded = async (indicatorId: string, label: string, weekNumber: number) => {
         if (!instituteId) return;
         try {
-            const currentYear = new Date().getFullYear().toString();
             const studentIds = students.map(s => s.documentId);
-            await addManualEvaluationToRecord(instituteId, unit.id, currentYear, unit.period, studentIds, {
+            await addManualEvaluationToRecord(instituteId, unit.id, year, unit.period, studentIds, {
                 indicatorId,
                 label,
                 weekNumber
@@ -180,8 +180,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
     const handleManualEvaluationDeleted = async (indicatorId: string, evaluationId: string) => {
         if (!instituteId) return;
         try {
-            const currentYear = new Date().getFullYear().toString();
-            await deleteManualEvaluationFromRecord(instituteId, unit.id, currentYear, unit.period, indicatorId, evaluationId);
+            await deleteManualEvaluationFromRecord(instituteId, unit.id, year, unit.period, indicatorId, evaluationId);
             toast({ title: "Evaluación Eliminada" });
             fetchData();
         } catch (error: any) {
@@ -218,7 +217,6 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
         if (!instituteId) return;
         setIsClosing(true);
         try {
-            const currentYear = new Date().getFullYear().toString();
             const results = students.map(student => {
                 const record = records[student.documentId];
                 const indicatorAverages = indicators.map(ind => {
@@ -230,7 +228,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                 return { studentId: student.documentId, finalGrade: finalAverage, status: status as any };
             });
 
-            await closeUnitGrades(instituteId, unit.id, currentYear, unit.period, results);
+            await closeUnitGrades(instituteId, unit.id, year, unit.period, results);
             toast({ title: "Acta Cerrada", description: "La unidad didáctica ha sido cerrada oficialmente." });
             fetchData();
         } catch (error: any) {
@@ -261,8 +259,8 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                     <CardHeader>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                             <div>
-                                <CardTitle>Control de Calificaciones</CardTitle>
-                                <CardDescription>Registro auxiliar de evaluación modular por indicadores.</CardDescription>
+                                <CardTitle>Control de Calificaciones - Año {year}</CardTitle>
+                                <CardDescription>Registro auxiliar de evaluación modular para el periodo {unit.period}.</CardDescription>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {isAnyRecordClosed ? (
@@ -330,6 +328,7 @@ export function GradebookManager({ unit }: GradebookManagerProps) {
                             indicator={selectedIndicator} 
                             records={records} 
                             unit={unit}
+                            year={year}
                             tasks={unitTasks}
                             onGradeChange={handleGradeChange} 
                             onManualEvaluationAdded={handleManualEvaluationAdded} 
