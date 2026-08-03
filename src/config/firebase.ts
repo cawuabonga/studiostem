@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -254,7 +253,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
         { id: 'graduate', name: 'Egresado', description: 'Acceso para ex-alumnos con enfoque en bolsa laboral.', permissions: { 'graduate:jobs:view': true, 'graduate:profile:view': true, 'student:grades:view': true, 'student:efsrt:view': true, 'student:payments:manage': true, 'user:access:view:own': true } },
         { id: 'teacher', name: 'Docente', description: 'Acceso para el personal de enseñanza y supervisión.', permissions: { 'teacher:unit:view': true, 'teacher:efsrt:supervise': true, 'user:supplies:request': true, 'user:access:view:own': true, 'planning:schedule:view:own': true } },
         { id: 'company', name: 'Empresa', description: 'Acceso para socios estratégicos de la bolsa laboral.', permissions: { 'company:jobs:manage': true, 'company:applicants:view': true } },
-        { id: 'admin', name: 'Administrador', description: 'Control total de la gestión del instituto.', permissions: { 'admin:institute:manage': true, 'admin:fees:manage': true, 'admin:payments:validate': true, 'admin:access-control:manage': true, 'admin:attendance:report': true, 'admin:infra:manage': true, 'admin:supplies:manage': true, 'admin:deliveries:view': true, 'admin:companies:manage': true, 'admin:jobs:monitor': true, 'academic:program:manage': true, 'academic:unit:manage': true, 'academic:unit:manage:own': true, 'academic:assignment:manage': true, 'academic:teacher:view': true, 'academic:workload:view': true, 'academic:workload:monitor': true, 'academic:enrollment:manage': true, 'academic:periods:manage': true, 'academic:load:view': true, 'academic:efsrt:manage': true, 'planning:schedule:manage': true, 'planning:environment:manage': true, 'planning:schedule:view:own': true, 'users:staff:manage': true, 'users:student:manage': true } }
+        { id: 'admin', name: 'Administrador', description: 'Control total de la gestión del instituto.', permissions: { 'admin:institute:manage': true, 'admin:fees:manage': true, 'admin:payments:validate': true, 'admin:access-control:manage': true, 'admin:attendance:report': true, 'admin:institute:manage': true, 'admin:infra:manage': true, 'admin:supplies:manage': true, 'admin:deliveries:view': true, 'admin:companies:manage': true, 'admin:jobs:monitor': true, 'academic:program:manage': true, 'academic:unit:manage': true, 'academic:unit:manage:own': true, 'academic:assignment:manage': true, 'academic:teacher:view': true, 'academic:workload:view': true, 'academic:workload:monitor': true, 'academic:enrollment:manage': true, 'academic:periods:manage': true, 'academic:load:view': true, 'academic:efsrt:manage': true, 'planning:schedule:manage': true, 'planning:environment:manage': true, 'planning:schedule:view:own': true, 'users:staff:manage': true, 'users:student:manage': true } }
     ];
 
     const batch = writeBatch(db);
@@ -873,6 +872,27 @@ export const getDefaultScheduleTemplate = async (instituteId: string): Promise<S
 export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, schedule: Record<string, ScheduleBlock>): Promise<void> => {
     await setDoc(doc(db, 'institutes', instituteId, 'schedules', `${programId}_${year}_${semester}`), { schedule, programId, year, semester, turno }, { merge: true });
 }
+
+export const getAllSchedules = async (instituteId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
+    const q = query(
+        getSubCollectionRef(instituteId, 'schedules'), 
+        where("year", "==", year), 
+        where("semester", "==", semester)
+    );
+    const snapshot = await getDocs(q);
+    const combinedSchedules: Record<string, ScheduleBlock> = {};
+    
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.schedule) {
+            Object.entries(data.schedule).forEach(([key, block]) => {
+                combinedSchedules[key] = block as ScheduleBlock;
+            });
+        }
+    });
+    
+    return combinedSchedules;
+};
 
 export const getInstituteSchedulesForYear = async (instituteId: string, year: string): Promise<ScheduleBlock[]> => {
     const snap = await getDocs(query(getSubCollectionRef(instituteId, 'schedules'), where("year", "==", year)));
