@@ -758,6 +758,34 @@ export const createMatriculations = async (instituteId: string, studentId: strin
     await batch.commit();
 };
 
+/**
+ * Realiza una matrícula masiva para múltiples estudiantes.
+ */
+export const bulkCreateMatriculations = async (instituteId: string, studentIds: string[], units: Unit[], year: string, semester: number) => {
+    const batch = writeBatch(db);
+    const col = getSubCollectionRef(instituteId, 'matriculations');
+    
+    for (const studentId of studentIds) {
+        units.forEach(u => {
+            batch.set(doc(col), {
+                studentId,
+                unitId: u.id,
+                programId: u.programId,
+                year,
+                period: u.period,
+                semester: u.semester,
+                moduleId: u.moduleId,
+                status: 'cursando',
+                createdAt: Timestamp.now()
+            });
+        });
+        // Actualizar el semestre actual del estudiante en su perfil para seguimiento
+        const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+        batch.update(studentRef, { currentSemester: semester });
+    }
+    await batch.commit();
+};
+
 export const getEnrolledUnits = async (instituteId: string, studentId: string): Promise<EnrolledUnit[]> => {
     const mSnap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("studentId", "==", studentId)));
     if (mSnap.empty) return [];
@@ -909,7 +937,7 @@ export const programEFSRT = async (instituteId: string, data: any) => {
 
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: any[]) => {
     const col = getSubCollectionRef(instituteId, 'matriculations');
-    const mSnap = await getDocs(query(col, where("unitId", "==", unitId), where("year", "==", year)));
+    const mSnap = await getDocs(query(col, where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
     const mIdsByStudent = new Map<string, string[]>();
     mSnap.forEach(d => {
         const sId = d.data().studentId;
