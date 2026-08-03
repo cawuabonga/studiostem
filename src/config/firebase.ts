@@ -253,7 +253,7 @@ export const addInstitute = async (instituteId: string, data: Omit<Institute, 'i
         { id: 'graduate', name: 'Egresado', description: 'Acceso para ex-alumnos con enfoque en bolsa laboral.', permissions: { 'graduate:jobs:view': true, 'graduate:profile:view': true, 'student:grades:view': true, 'student:efsrt:view': true, 'student:payments:manage': true, 'user:access:view:own': true } },
         { id: 'teacher', name: 'Docente', description: 'Acceso para el personal de enseñanza y supervisión.', permissions: { 'teacher:unit:view': true, 'teacher:efsrt:supervise': true, 'user:supplies:request': true, 'user:access:view:own': true, 'planning:schedule:view:own': true } },
         { id: 'company', name: 'Empresa', description: 'Acceso para socios estratégicos de la bolsa laboral.', permissions: { 'company:jobs:manage': true, 'company:applicants:view': true } },
-        { id: 'admin', name: 'Administrador', description: 'Control total de la gestión del instituto.', permissions: { 'admin:institute:manage': true, 'admin:fees:manage': true, 'admin:payments:validate': true, 'admin:access-control:manage': true, 'admin:attendance:report': true, 'admin:institute:manage': true, 'admin:infra:manage': true, 'admin:supplies:manage': true, 'admin:deliveries:view': true, 'admin:companies:manage': true, 'admin:jobs:monitor': true, 'academic:program:manage': true, 'academic:unit:manage': true, 'academic:unit:manage:own': true, 'academic:assignment:manage': true, 'academic:teacher:view': true, 'academic:workload:view': true, 'academic:workload:monitor': true, 'academic:enrollment:manage': true, 'academic:periods:manage': true, 'academic:load:view': true, 'academic:efsrt:manage': true, 'planning:schedule:manage': true, 'planning:environment:manage': true, 'planning:schedule:view:own': true, 'users:staff:manage': true, 'users:student:manage': true } }
+        { id: 'admin', name: 'Administrador', description: 'Control total de la gestión del instituto.', permissions: { 'admin:institute:manage': true, 'admin:fees:manage': true, 'admin:payments:validate': true, 'admin:access-control:manage': true, 'admin:attendance:report': true, 'admin:institute:manage': true, 'admin:infra:manage': true, 'admin:supplies:manage': true, 'admin:deliveries:view': true, 'admin:companies:manage': true, 'admin:jobs:monitor': true, 'admin:health:manage': true, 'admin:eda:manage': true, 'users:staff:manage': true, 'users:student:manage': true, 'planning:schedule:manage': true, 'planning:environment:manage': true, 'planning:schedule:view:own': true, 'academic:program:manage': true, 'academic:unit:manage': true, 'academic:unit:manage:own': true, 'academic:assignment:manage': true, 'academic:teacher:view': true, 'academic:workload:view': true, 'academic:workload:monitor': true, 'academic:enrollment:manage': true, 'academic:periods:manage': true, 'academic:load:view': true, 'academic:efsrt:manage': true } }
     ];
 
     const batch = writeBatch(db);
@@ -978,6 +978,16 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
 export const getBuildings = async (instituteId: string): Promise<Building[]> => {
     const snapshot = await getDocs(query(getSubCollectionRef(instituteId, 'buildings'), orderBy("name")));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Building));
+};
+
+export const getEnvironments = async (instituteId: string): Promise<Environment[]> => {
+    const bSnap = await getDocs(getSubCollectionRef(instituteId, 'buildings'));
+    let all: Environment[] = [];
+    for (const bDoc of bSnap.docs) {
+        const envSnap = await getDocs(collection(db, 'institutes', instituteId, 'buildings', bDoc.id, 'environments'));
+        all = all.concat(envSnap.docs.map(d => ({ id: d.id, buildingId: bDoc.id, ...d.data() } as Environment)));
+    }
+    return all;
 };
 
 export const getEnvironmentsForBuilding = async (instituteId: string, bId: string): Promise<Environment[]> => {
