@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { getUnits, getDefaultScheduleTemplate, saveSchedule, getAllSchedules, getEnvironments, getTeachers, getAllAssignmentsForYear } from '@/config/firebase';
-import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment, TimeBlock, UnitTurno } from '@/types';
+import type { Unit, ScheduleBlock, ScheduleTemplate, Environment, Teacher, Assignment, TimeBlock, UnitTurno, UnitPeriod } from '@/types';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { UnassignedUnitCard } from './UnassignedUnitCard';
@@ -20,6 +20,7 @@ interface ScheduleGeneratorProps {
     programId: string;
     year: string;
     semester: number;
+    period: UnitPeriod;
     turno: UnitTurno;
 }
 
@@ -31,7 +32,7 @@ interface Suggestion {
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
-export function ScheduleGenerator({ programId, year, semester, turno }: ScheduleGeneratorProps) {
+export function ScheduleGenerator({ programId, year, semester, period, turno }: ScheduleGeneratorProps) {
     const { instituteId } = useAuth();
     const { toast } = useToast();
     
@@ -53,24 +54,27 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
             const [allUnits, defaultTemplate, savedSchedules, fetchedEnvironments, fetchedTeachers, allAssignmentsForYear] = await Promise.all([
                 getUnits(instituteId),
                 getDefaultScheduleTemplate(instituteId),
-                getAllSchedules(instituteId, year, semester), 
+                getAllSchedules(instituteId, year, semester, period), 
                 getEnvironments(instituteId),
                 getTeachers(instituteId),
                 getAllAssignmentsForYear(instituteId, year)
             ]);
 
-            // Filter units specifically for THIS semester AND THIS turno
+            // Filter units specifically for THIS semester AND THIS turno AND THIS period
             const unitsForTurno = allUnits.filter(u => 
                 u.programId === programId && 
                 u.semester === semester && 
-                u.turno === turno
+                u.turno === turno &&
+                u.period === period
             );
             setUnits(unitsForTurno);
             setTemplate(defaultTemplate);
             setAllSchedules(savedSchedules);
             setEnvironments(fetchedEnvironments);
             setTeachers(fetchedTeachers);
-            setAssignments({ ...allAssignmentsForYear['MAR-JUL'], ...allAssignmentsForYear['AGO-DIC'] });
+            
+            // Use assignments for the selected period
+            setAssignments(allAssignmentsForYear[period] || {});
             
         } catch (error) {
             console.error("Error fetching data for schedule generator:", error);
@@ -78,7 +82,7 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
         } finally {
             setLoading(false);
         }
-    }, [instituteId, programId, year, semester, turno, toast]);
+    }, [instituteId, programId, year, semester, period, turno, toast]);
 
     useEffect(() => {
         fetchData();
@@ -131,12 +135,12 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
     const assignedHoursMap = useMemo(() => {
         const map = new Map<string, number>();
         Object.values(allSchedules).forEach(block => {
-            if(block.programId === programId && block.semester === semester) {
+            if(block.programId === programId && block.semester === semester && block.period === period) {
                 map.set(block.unitId, (map.get(block.unitId) || 0) + 1);
             }
         });
         return map;
-    }, [allSchedules, programId, semester]);
+    }, [allSchedules, programId, semester, period]);
 
 
     const handleDragStart = (e: React.DragEvent<HTMLDivElement>, unit: Unit) => {
@@ -181,7 +185,8 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                     environmentId: undefined,
                     programId,
                     semester,
-                    year
+                    year,
+                    period
                 }
             })
         );
@@ -242,7 +247,8 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                         environmentId: undefined, 
                         programId,
                         semester,
-                        year
+                        year,
+                        period
                     };
                 });
             })
@@ -277,16 +283,18 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
         if (!instituteId) return;
         setIsSaving(true);
         try {
-            // Filter only the blocks belonging to this specific section (Program, Semester, Turno)
+            // Filter only the blocks belonging to this specific section (Program, Year, Semester, Period, Turno)
             const scheduleToSave = Object.fromEntries(
                 Object.entries(allSchedules).filter(([key, block]) => 
                     block.programId === programId && 
+                    block.year === year &&
                     block.semester === semester &&
-                    units.some(u => u.id === block.unitId) // Verify it belongs to this shift's units
+                    block.period === period &&
+                    units.some(u => u.id === block.unitId)
                 )
             );
-            await saveSchedule(instituteId, programId, year, semester, turno, scheduleToSave);
-            toast({ title: "Horario Guardado", description: "Se ha guardado el horario de esta sección." });
+            await saveSchedule(instituteId, programId, year, semester, period, turno, scheduleToSave);
+            toast({ title: "Horario Guardado", description: "Se ha guardado el horario de esta sección para el periodo seleccionado." });
         } catch (error) {
             toast({ title: "Error", description: "No se pudo guardar el horario.", variant: "destructive" });
         } finally {
@@ -325,11 +333,14 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
         )
     }
 
-    // Pass the relevant blocks to the grid view
+    // Pass the relevant blocks to the grid view (Current section context)
     const currentViewSchedule = Object.fromEntries(
         Object.entries(allSchedules).filter(([key, block]) => 
             block.programId === programId && 
-            block.semester === semester
+            block.year === year &&
+            block.semester === semester &&
+            block.period === period &&
+            block.turno === turno
         )
     );
 
@@ -342,7 +353,10 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                             <Info className="h-4 w-4" />
                             Unidades ({turno})
                         </CardTitle>
-                        <CardDescription>Arrastra para asignar bloques.</CardDescription>
+                        <CardDescription>
+                            Periodo: {period} <br/>
+                            Arrastra para asignar bloques.
+                        </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-2 max-h-[70vh] overflow-y-auto">
                         {units.length > 0 ? units.map(unit => (
@@ -354,7 +368,7 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                             />
                         )) : (
                             <p className="text-sm text-muted-foreground text-center py-8">
-                                No hay unidades registradas para el turno {turno} en este semestre.
+                                No hay unidades registradas para el turno {turno} en el periodo {period}.
                             </p>
                         )}
                     </CardContent>
@@ -367,7 +381,7 @@ export function ScheduleGenerator({ programId, year, semester, turno }: Schedule
                         <div className="flex justify-between items-center">
                             <div>
                                 <CardTitle>Sección: {semester}° Semestre - {turno}</CardTitle>
-                                <CardDescription>Gestión de horario para este grupo específico.</CardDescription>
+                                <CardDescription>Periodo: {period} {year} | Gestión de horario para este grupo específico.</CardDescription>
                             </div>
                             <Button onClick={handleSaveSchedule} disabled={isSaving}>
                                 {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4"/>}

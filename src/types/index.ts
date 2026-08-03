@@ -727,3 +727,17 @@ export interface SyllabusDesignOptions {
     showInfoTable: boolean;
     showSignature: boolean;
 }
+
+export interface ScheduleBlock {
+    id: string;
+    dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
+    startTime: string;
+    endTime: string;
+    unitId: string;
+    teacherId?: string;
+    environmentId?: string;
+    programId: string;
+    semester: number;
+    period: UnitPeriod;
+    year: string;
+}

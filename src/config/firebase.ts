@@ -1,3 +1,4 @@
+
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -869,16 +870,18 @@ export const getDefaultScheduleTemplate = async (instituteId: string): Promise<S
     return { id: snap.docs[0].id, ...snap.docs[0].data() } as ScheduleTemplate;
 };
 
-export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, turno: UnitTurno, schedule: Record<string, ScheduleBlock>): Promise<void> => {
-    await setDoc(doc(db, 'institutes', instituteId, 'schedules', `${programId}_${year}_${semester}`), { schedule, programId, year, semester, turno }, { merge: true });
+export const saveSchedule = async (instituteId: string, programId: string, year: string, semester: number, period: UnitPeriod, turno: UnitTurno, schedule: Record<string, ScheduleBlock>): Promise<void> => {
+    await setDoc(doc(db, 'institutes', instituteId, 'schedules', `${programId}_${year}_${semester}_${period}_${turno}`), { schedule, programId, year, semester, period, turno }, { merge: true });
 }
 
-export const getAllSchedules = async (instituteId: string, year: string, semester: number): Promise<Record<string, ScheduleBlock>> => {
-    const q = query(
-        getSubCollectionRef(instituteId, 'schedules'), 
+export const getAllSchedules = async (instituteId: string, year: string, semester: number, period?: UnitPeriod): Promise<Record<string, ScheduleBlock>> => {
+    const q_parts: any[] = [
         where("year", "==", year), 
         where("semester", "==", semester)
-    );
+    ];
+    if (period) q_parts.push(where("period", "==", period));
+
+    const q = query(getSubCollectionRef(instituteId, 'schedules'), ...q_parts);
     const snapshot = await getDocs(q);
     const combinedSchedules: Record<string, ScheduleBlock> = {};
     
