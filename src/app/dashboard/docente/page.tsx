@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Filter } from 'lucide-react';
+import { Loader2, Filter, Save } from 'lucide-react';
 
 interface AssignedUnit extends Unit {
     programName: string;
@@ -239,7 +239,7 @@ export default function TeacherDashboardPage() {
                     <DialogFooter className="gap-2">
                          <DialogClose asChild><Button variant="ghost" className="font-bold">Cancelar</Button></DialogClose>
                         <Button onClick={handleUploadImage} disabled={isUploading || !imageFile} className="font-black px-8">
-                            {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                             GUARDAR PORTADA
                         </Button>
                     </DialogFooter>
