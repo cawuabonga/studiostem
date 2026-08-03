@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addAchievementIndicator } from '@/config/firebase';
+import { addAchievementIndicator } from '@/services/academic-service';
 import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { Unit } from '@/types';
@@ -30,10 +30,11 @@ type AddIndicatorFormValues = z.infer<typeof addIndicatorSchema>;
 
 interface AddIndicatorFormProps {
   unit: Unit;
+  year: string;
   onIndicatorAdded: () => void;
 }
 
-export function AddIndicatorForm({ unit, onIndicatorAdded }: AddIndicatorFormProps) {
+export function AddIndicatorForm({ unit, year, onIndicatorAdded }: AddIndicatorFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
@@ -53,7 +54,7 @@ export function AddIndicatorForm({ unit, onIndicatorAdded }: AddIndicatorFormPro
         toast({ title: 'Error', description: 'ID de instituto no encontrado.', variant: 'destructive'});
         return;
     }
-     if (data.endWeek > (unit.totalWeeks || 16)) { // Default to 16 if not set
+     if (data.endWeek > (unit.totalWeeks || 16)) {
         form.setError('endWeek', {
             type: 'manual',
             message: `La semana final no puede exceder el total de semanas de la unidad (${unit.totalWeeks || 16}).`
@@ -63,7 +64,7 @@ export function AddIndicatorForm({ unit, onIndicatorAdded }: AddIndicatorFormPro
 
     setLoading(true);
     try {
-      await addAchievementIndicator(instituteId, unit.id, data);
+      await addAchievementIndicator(instituteId, unit.id, year, unit.period, data);
       toast({
         title: '¡Éxito!',
         description: 'El indicador de logro ha sido añadido.',

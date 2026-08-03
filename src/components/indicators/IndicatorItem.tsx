@@ -5,10 +5,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, Trash2, CalendarRange } from 'lucide-react';
-import type { AchievementIndicator } from '@/types';
+import type { AchievementIndicator, UnitPeriod } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { deleteAchievementIndicator } from '@/config/firebase';
+import { deleteAchievementIndicator } from '@/services/academic-service';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,11 +25,13 @@ import { Badge } from '../ui/badge';
 interface IndicatorItemProps {
   indicator: AchievementIndicator;
   unitId: string;
+  year: string;
+  period: UnitPeriod;
   onIndicatorDeleted: () => void;
   onEdit: (indicator: AchievementIndicator) => void;
 }
 
-export function IndicatorItem({ indicator, unitId, onIndicatorDeleted, onEdit }: IndicatorItemProps) {
+export function IndicatorItem({ indicator, unitId, year, period, onIndicatorDeleted, onEdit }: IndicatorItemProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -41,7 +43,7 @@ export function IndicatorItem({ indicator, unitId, onIndicatorDeleted, onEdit }:
     }
     setIsDeleting(true);
     try {
-      await deleteAchievementIndicator(instituteId, unitId, indicator.id);
+      await deleteAchievementIndicator(instituteId, unitId, year, period, indicator.id);
       toast({ title: "Éxito", description: "Indicador eliminado correctamente." });
       onIndicatorDeleted();
     } catch (error) {

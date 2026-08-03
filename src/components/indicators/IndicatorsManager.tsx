@@ -69,7 +69,7 @@ export function IndicatorsManager({ unit, year }: IndicatorsManagerProps) {
 
   return (
     <div className="space-y-6">
-      <AddIndicatorForm unit={unit} year={year} onIndicatorAdded={handleDataChanged} />
+      <AddIndicatorForm unit={unit} onIndicatorAdded={handleDataChanged} year={year} />
       
       <Separator />
 
@@ -109,10 +109,10 @@ export function IndicatorsManager({ unit, year }: IndicatorsManagerProps) {
       {selectedIndicator && (
           <EditIndicatorDialog 
             unit={unit}
-            year={year}
             indicator={selectedIndicator}
             isOpen={isEditOpen}
             onClose={handleCloseEdit}
+            year={year}
           />
       )}
     </div>

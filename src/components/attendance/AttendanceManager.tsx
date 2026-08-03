@@ -12,12 +12,12 @@ import {
     saveAttendance, 
     getAcademicPeriods, 
     getScheduledDaysForUnit, 
-    getAchievementIndicators,
     getPrograms,
     getTeachers,
     getAssignments,
     saveAttendanceLimitWeek
 } from '@/config/firebase';
+import { getAchievementIndicators } from '@/services/academic-service';
 import { Skeleton } from '../ui/skeleton';
 import { produce } from 'immer';
 import { AttendanceSheet } from './AttendanceSheet';
@@ -56,7 +56,6 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
         if (!instituteId) return;
         setLoading(true);
         try {
-            // Sincronización de Año: Priorizamos el año pasado por prop (ej. 2026)
             const currentYear = year || new Date().getFullYear().toString();
             
             const [
@@ -72,7 +71,7 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
                 getAttendanceForUnit(instituteId, unit.id, currentYear, unit.period),
                 getAcademicPeriods(instituteId, currentYear),
                 getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester),
-                getAchievementIndicators(instituteId, unit.id),
+                getAchievementIndicators(instituteId, unit.id, currentYear, unit.period),
                 getPrograms(instituteId),
                 getTeachers(instituteId)
             ]);
@@ -80,7 +79,6 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
             const startDate = academicPeriods?.[unit.period]?.startDate?.toDate();
             setPeriodStartDate(startDate);
 
-            // Fetch program and teacher for print headers
             const currentProgram = allPrograms.find(p => p.id === unit.programId) || null;
             setProgram(currentProgram);
 
@@ -91,11 +89,9 @@ export function AttendanceManager({ unit, year }: AttendanceManagerProps) {
                 setTeacher(assignedTeacher);
             }
 
-            // ORDENAR POR APELLIDOS Y FILTRAR DUPLICADOS
             const uniqueStudents = Array.from(new Map(enrolledStudents.map(s => [s.documentId, s])).values());
             setStudents(uniqueStudents.sort((a, b) => a.lastName.localeCompare(b.lastName, 'es')));
             
-            // Lógica automática de columnas: Si no hay horario guardado pero HAY asistencia en la DB, inferimos columnas
             if (scheduledDaysForUnit.length === 0 && attendanceRecord && Object.keys(attendanceRecord.records).length > 0) {
                 const firstStudentId = Object.keys(attendanceRecord.records)[0];
                 const firstWeekData = attendanceRecord.records[firstStudentId]?.week_1 || attendanceRecord.records[firstStudentId]?.week_11;

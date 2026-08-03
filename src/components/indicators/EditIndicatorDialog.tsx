@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { updateAchievementIndicator } from '@/config/firebase';
+import { updateAchievementIndicator } from '@/services/academic-service';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -38,12 +38,13 @@ type EditIndicatorFormValues = z.infer<typeof editIndicatorSchema>;
 
 interface EditIndicatorDialogProps {
   unit: Unit;
+  year: string;
   indicator: AchievementIndicator;
   isOpen: boolean;
   onClose: (updated?: boolean) => void;
 }
 
-export function EditIndicatorDialog({ unit, indicator, isOpen, onClose }: EditIndicatorDialogProps) {
+export function EditIndicatorDialog({ unit, year, indicator, isOpen, onClose }: EditIndicatorDialogProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = React.useState(false);
@@ -82,7 +83,7 @@ export function EditIndicatorDialog({ unit, indicator, isOpen, onClose }: EditIn
 
     setLoading(true);
     try {
-      await updateAchievementIndicator(instituteId, unit.id, indicator.id, data);
+      await updateAchievementIndicator(instituteId, unit.id, year, unit.period, indicator.id, data);
       toast({
         title: '¡Éxito!',
         description: 'El indicador de logro ha sido actualizado.',
