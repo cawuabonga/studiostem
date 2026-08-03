@@ -239,7 +239,7 @@ export default function TeacherDashboardPage() {
                     <DialogFooter className="gap-2">
                          <DialogClose asChild><Button variant="ghost" className="font-bold">Cancelar</Button></DialogClose>
                         <Button onClick={handleUploadImage} disabled={isUploading || !imageFile} className="font-black px-8">
-                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
+                            {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
                             GUARDAR PORTADA
                         </Button>
                     </DialogFooter>
