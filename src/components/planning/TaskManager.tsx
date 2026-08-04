@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -157,6 +158,13 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
 
   const handleSaveGrade = async () => {
       if (!instituteId || !selectedTaskForGrading || !gradingData.studentId) return;
+      
+      const gradeNum = Number(gradingData.grade);
+      if (isNaN(gradeNum) || gradeNum < 0 || gradeNum > 20) {
+        toast({ title: "Valor inválido", description: "La nota debe estar entre 0 y 20.", variant: "destructive" });
+        return;
+      }
+
       setIsSubmitting(true);
       try {
           const currentYear = year || new Date().getFullYear().toString();
@@ -170,13 +178,28 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
               selectedTaskForGrading.title,
               gradingData.studentId, 
               gradingData.studentName,
-              Number(gradingData.grade), 
+              gradeNum, 
               gradingData.feedback
           );
+          
           toast({ title: "Nota Guardada" });
           
+          // Local update instead of full reload
+          setStudentsWithSubmissions(prev => prev.map(item => {
+              if (item.documentId === gradingData.studentId) {
+                  return {
+                      ...item,
+                      submission: {
+                          ...(item.submission || { id: item.documentId, studentName: item.fullName, taskId: selectedTaskForGrading.id, submittedAt: Timestamp.now() }),
+                          grade: gradeNum,
+                          feedback: gradingData.feedback
+                      }
+                  }
+              }
+              return item;
+          }));
+
           setGradingData({ studentId: '', studentName: '', grade: '', feedback: '' });
-          await handleOpenGrading(selectedTaskForGrading);
       } catch (error) {
           toast({ title: "Error", variant: "destructive" });
       } finally { setIsSubmitting(false); }
@@ -495,18 +518,18 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
                     </div>
                     <DialogDescription className="text-base">Gestione las entregas recibidas y asigne notas a los alumnos matriculados.</DialogDescription>
                     
-                    <div className="grid grid-cols-3 gap-6 mt-6">
-                        <div className="bg-slate-50 border rounded-2xl p-4 flex flex-col items-center">
-                            <p className="text-[10px] font-black uppercase text-slate-500 mb-1 tracking-widest">Matriculados</p>
-                            <p className="text-3xl font-black">{gradingStats.total}</p>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                        <div className="bg-slate-50 border rounded-xl p-3 flex flex-col items-center">
+                            <p className="text-[8px] font-black uppercase text-slate-500 mb-0.5 tracking-widest">Matriculados</p>
+                            <p className="text-xl font-black">{gradingStats.total}</p>
                         </div>
-                        <div className="bg-green-50 border border-green-100 rounded-2xl p-4 flex flex-col items-center">
-                            <p className="text-[10px] font-black uppercase text-green-600 mb-1 tracking-widest">Entregados</p>
-                            <p className="text-3xl font-black text-green-700">{gradingStats.submitted}</p>
+                        <div className="bg-green-50 border border-green-100 rounded-xl p-3 flex flex-col items-center">
+                            <p className="text-[8px] font-black uppercase text-green-600 mb-0.5 tracking-widest">Entregados</p>
+                            <p className="text-xl font-black text-green-700">{gradingStats.submitted}</p>
                         </div>
-                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex flex-col items-center">
-                            <p className="text-[10px] font-black uppercase text-amber-600 mb-1 tracking-widest">Pendientes</p>
-                            <p className="text-3xl font-black text-amber-700">{gradingStats.pending}</p>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex flex-col items-center">
+                            <p className="text-[8px] font-black uppercase text-amber-600 mb-0.5 tracking-widest">Pendientes</p>
+                            <p className="text-xl font-black text-amber-700">{gradingStats.pending}</p>
                         </div>
                     </div>
                 </DialogHeader>
@@ -524,7 +547,7 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
 
                                     return (
                                         <div key={item.documentId} className={cn(
-                                            "p-5 rounded-2xl border bg-background transition-all flex flex-col lg:flex-row justify-between gap-6 shadow-sm hover:shadow-md",
+                                            "p-5 rounded-2xl border bg-background transition-all flex flex-col lg:flex-row justify-between gap-6 shadow-sm hover:border-primary/30",
                                             !isDelivered && "bg-slate-50/50 opacity-80"
                                         )}>
                                             <div className="flex items-center gap-5 flex-1 min-w-0">
@@ -572,7 +595,17 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
                                                                     type="number" 
                                                                     className="font-black text-center h-10 text-lg border-primary/20 focus-visible:ring-primary" 
                                                                     value={gradingData.grade} 
-                                                                    onChange={e => setGradingData(p => ({...p, grade: e.target.value}))} 
+                                                                    onChange={e => {
+                                                                        const val = e.target.value;
+                                                                        if (val === '') {
+                                                                            setGradingData(p => ({...p, grade: ''}));
+                                                                            return;
+                                                                        }
+                                                                        const num = Number(val);
+                                                                        if (num >= 0 && num <= 20) {
+                                                                            setGradingData(p => ({...p, grade: val}));
+                                                                        }
+                                                                    }} 
                                                                 />
                                                             </div>
                                                             <div className="flex-1 space-y-1.5">
