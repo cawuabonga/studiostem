@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -257,7 +256,7 @@ export const deleteManualEvaluationFromRecord = async (instituteId: string, unit
 
 /**
  * Registra o actualiza la calificación de un estudiante en una tarea específica.
- * Robusto: Crea el registro de entrega (setDoc con merge) si no existe.
+ * Robusto: Crea el registro de entrega (setDoc con merge) si no existe dentro de la semana del planner.
  */
 export const gradeTaskSubmission = async (
     instituteId: string, 
@@ -278,9 +277,9 @@ export const gradeTaskSubmission = async (
     const indicators = await getAchievementIndicators(instituteId, unitId, year, period);
     const indicator = indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
 
-    // 1. Actualizar el registro de entrega individual
-    // Usamos setDoc con merge: true para permitir calificar aunque el alumno no haya subido archivo (documento no exista)
-    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions', `${taskId}_${studentId}`);
+    // 1. Actualizar el registro de entrega individual DENTRO DE LA SEMANA DEL PLANNER
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'instances', `${year}_${period}`, 'weeklyPlanner', `week_${weekNumber}`, 'taskSubmissions', `${taskId}_${studentId}`);
+    
     await setDoc(subRef, { 
         id: studentId,
         studentName,

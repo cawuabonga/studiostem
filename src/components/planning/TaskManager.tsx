@@ -70,7 +70,7 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
       if (isStudentView && user?.documentId) {
           const subs: Record<string, TaskSubmission | null> = {};
           for (const task of tasksList) {
-              const allSubs = await getTaskSubmissions(instituteId, unit.id, weekNumber, task.id);
+              const allSubs = await getTaskSubmissions(instituteId, unit.id, year, unit.period, weekNumber, task.id);
               subs[task.id] = allSubs.find(s => s.id === user.documentId) || null;
           }
           setExistingSubmissions(subs);
@@ -110,6 +110,8 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
         await submitTask(
             instituteId, 
             unit.id, 
+            year,
+            unit.period,
             weekNumber, 
             selectedTaskForSubmission.id, 
             studentProfile, 
@@ -135,7 +137,7 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
           const currentYear = year || new Date().getFullYear().toString();
           const [allEnrolled, taskSubs] = await Promise.all([
               getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
-              getTaskSubmissions(instituteId, unit.id, weekNumber, task.id)
+              getTaskSubmissions(instituteId, unit.id, year, unit.period, weekNumber, task.id)
           ]);
 
           const merged: StudentWithSubmission[] = allEnrolled

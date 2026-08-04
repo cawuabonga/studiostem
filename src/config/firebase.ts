@@ -816,6 +816,10 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
 };
 
 // --- GESTIÓN DE REGISTROS ACADÉMICOS (ACTUALIZADO A NUEVA RUTA) ---
+export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
+    return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
+};
+
 export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
     const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
     const snap = await getDoc(recordRef);
@@ -1186,9 +1190,55 @@ export const registerHistoricalMatriculation = async (instituteId: string, stude
     await batch.commit();
 }
 
-export const getTaskSubmissions = async (instituteId: string, unitId: string, weekNumber: number, taskId: string): Promise<TaskSubmission[]> => {
-    const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions'));
+/**
+ * Obtiene las entregas de una tarea específica, guardadas dentro de la planificación semanal.
+ */
+export const getTaskSubmissions = async (
+    instituteId: string, 
+    unitId: string, 
+    year: string, 
+    period: string, 
+    weekNumber: number, 
+    taskId: string
+): Promise<TaskSubmission[]> => {
+    const colRef = collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'instances', `${year}_${period}`, 'weeklyPlanner', `week_${weekNumber}`, 'taskSubmissions');
+    const snap = await getDocs(colRef);
     return snap.docs
         .filter(d => d.id.startsWith(`${taskId}_`))
         .map(d => ({ id: d.id.split('_')[1], ...d.data() } as TaskSubmission));
 }
+
+/**
+ * Registra la entrega de un estudiante para una tarea.
+ */
+export const submitTask = async (
+    instituteId: string,
+    unitId: string,
+    year: string,
+    period: string,
+    weekNumber: number,
+    taskId: string,
+    student: StudentProfile,
+    file?: File,
+    link?: string
+) => {
+    const subId = `${taskId}_${student.documentId}`;
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'instances', `${year}_${period}`, 'weeklyPlanner', `week_${weekNumber}`, 'taskSubmissions', subId);
+    
+    let fileUrl = '';
+    if (file) {
+        fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/${year}_${period}/week_${weekNumber}/tasks/${taskId}/submissions/${student.documentId}`);
+    }
+
+    const submissionData: any = {
+        id: student.documentId,
+        studentName: student.fullName,
+        taskId: taskId,
+        submittedAt: Timestamp.now(),
+    };
+
+    if (fileUrl) submissionData.fileUrl = fileUrl;
+    if (link) submissionData.link = link;
+
+    await setDoc(subRef, submissionData, { merge: true });
+};
