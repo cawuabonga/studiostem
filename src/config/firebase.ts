@@ -44,7 +44,7 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
 
 const getSubCollectionRef = (instituteId: string, name: string) => collection(db, 'institutes', instituteId, name);
 
-// --- HELPER PARA RUTAS DE CALIFICACIONES ---
+// --- HELPER PARA RUTAS DE CALIFICACIONES (RUTA CÉNTRICA EN ESTUDIANTE) ---
 export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
     return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
 };
@@ -815,10 +815,7 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile));
 };
 
-// --- GESTIÓN DE REGISTROS ACADÉMICOS (ACTUALIZADO A NUEVA RUTA) ---
-export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
-    return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
-};
+// --- GESTIÓN DE REGISTROS ACADÉMICOS ---
 
 export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
     const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
