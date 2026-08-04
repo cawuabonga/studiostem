@@ -182,6 +182,21 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
       } finally { setIsSubmitting(false); }
   };
 
+  const handlePermanentDelete = async (taskId: string) => {
+    if (!instituteId) return;
+    setIsSubmitting(true);
+    try {
+        await deleteTaskFromWeek(instituteId, unit.id, year, unit.period, weekNumber, taskId);
+        toast({ title: "Tarea Eliminada", description: "La actividad y sus calificaciones han sido borradas." });
+        fetchTasks();
+        onDataChanged();
+    } catch (error) {
+        toast({ title: "Error", variant: "destructive" });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   const gradingStats = useMemo(() => {
     const total = studentsWithSubmissions.length;
     const submitted = studentsWithSubmissions.filter(s => !!s.submission?.submittedAt).length;
@@ -295,9 +310,32 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
                                                 <DropdownMenuItem onClick={() => { setEditingTask(task); setIsFormOpen(true); }} className="font-medium">
                                                     <Edit className="h-4 w-4 mr-2" /> Editar Tarea
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive font-medium" onClick={() => deleteTaskFromWeek(instituteId!, unit.id, year, unit.period, weekNumber, task.id).then(() => fetchTasks())}>
-                                                    <Trash2 className="h-4 w-4 mr-2" /> Eliminar
-                                                </DropdownMenuItem>
+                                                
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-destructive font-medium">
+                                                            <Trash2 className="h-4 w-4 mr-2" /> Eliminar
+                                                        </DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle className="text-destructive">¿ELIMINAR TAREA Y CALIFICACIONES?</AlertDialogTitle>
+                                                            <AlertDialogDescription className="text-slate-600">
+                                                                Esta acción es irreversible. Al eliminar la tarea <strong>"{task.title}"</strong>, se borrarán automáticamente todas las notas vinculadas a esta actividad en el historial de todos los estudiantes.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction 
+                                                                onClick={() => handlePermanentDelete(task.id)} 
+                                                                className="bg-destructive hover:bg-destructive/90"
+                                                                disabled={isSubmitting}
+                                                            >
+                                                                {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : "Confirmar Eliminación"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </div>

@@ -207,15 +207,71 @@ export const updateTaskInWeek = async (instituteId: string, unitId: string, year
     }
 };
 
-export const deleteTaskFromWeek = async (instituteId: string, unitId: string, year: string, period: string, weekNumber: number, taskId: string) => {
-    const weekDocRef = doc(getAcademicInstanceRef(instituteId, unitId, year, period), 'weeklyPlanner', `week_${weekNumber}`);
+/**
+ * Elimina una tarea de forma permanente, limpiando también todas las calificaciones
+ * asociadas en el historial de los alumnos.
+ */
+export const deleteTaskFromWeek = async (
+    instituteId: string, 
+    unitId: string, 
+    year: string, 
+    period: UnitPeriod, 
+    weekNumber: number, 
+    taskId: string
+) => {
+    const instanceRef = getAcademicInstanceRef(instituteId, unitId, year, period);
+    const weekDocRef = doc(instanceRef, 'weeklyPlanner', `week_${weekNumber}`);
     const weekSnap = await getDoc(weekDocRef);
     const weekData = weekSnap.data() as WeekData;
     
     if (!weekData || !weekData.tasks) return;
     
-    const item = weekData.tasks.find(t => t.id === taskId);
-    if (item) await updateDoc(weekDocRef, { tasks: arrayRemove(item) });
+    const taskItem = weekData.tasks.find(t => t.id === taskId);
+    if (!taskItem) return;
+
+    // 1. Eliminar tarea del array de planificación semanal
+    await updateDoc(weekDocRef, { tasks: arrayRemove(taskItem) });
+
+    // 2. Eliminar todas las entregas/notas individuales guardadas dentro de la semana
+    const submissionsCol = collection(weekDocRef, 'taskSubmissions');
+    const subsSnap = await getDocs(submissionsCol);
+    const batch = writeBatch(db);
+    
+    subsSnap.forEach(d => {
+        if (d.id.startsWith(`${taskId}_`)) {
+            batch.delete(d.ref);
+        }
+    });
+
+    // 3. Limpiar las calificaciones del consolidado (Academic Records) de todos los alumnos
+    const recordsColGroup = query(
+        collectionGroup(db, 'units'), 
+        where("instituteId", "==", instituteId), 
+        where("unitId", "==", unitId), 
+        where("year", "==", year),
+        where("period", "==", period)
+    );
+    
+    const recordsSnap = await getDocs(recordsColGroup);
+    recordsSnap.forEach(d => {
+        const data = d.data() as AcademicRecord;
+        if (data.grades) {
+            let changed = false;
+            const updatedGrades: Record<string, any[]> = {};
+            
+            Object.entries(data.grades).forEach(([indicatorId, gradesArray]) => {
+                const filtered = gradesArray.filter(g => g.refId !== taskId);
+                if (filtered.length !== gradesArray.length) changed = true;
+                updatedGrades[indicatorId] = filtered;
+            });
+
+            if (changed) {
+                batch.update(d.ref, { grades: updatedGrades });
+            }
+        }
+    });
+
+    await batch.commit();
 };
 
 export const addManualEvaluationToRecord = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, ids: string[], data: any) => {
