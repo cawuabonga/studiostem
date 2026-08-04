@@ -5,7 +5,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc, collection, getDocs, updateDoc, query, orderBy, addDoc, deleteDoc, writeBatch, where, Timestamp, arrayRemove, arrayUnion, onSnapshot, Unsubscribe, limit, collectionGroup, runTransaction, deleteField, startAfter, endBefore, limitToLast, DocumentSnapshot, increment, getCountFromServer } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity } from '@/types';
+import type { AppUser, UserRole, Institute, Program, Unit, Teacher, LoginDesign, LoginImage, ProgramModule, Assignment, StaffProfile, StudentProfile, AchievementIndicator, Content, Task, Matriculation, UnitPeriod, EnrolledUnit, AcademicRecord, ManualEvaluation, AttendanceRecord, AttendanceStatus, Payment, PaymentStatus, PaymentConcept, WeekData, Syllabus, Role, Permission, NonTeachingActivity, NonTeachingAssignment, AccessLog, AccessPoint, MatriculationReportData, Environment, ScheduleTemplate, ScheduleBlock, AcademicYearSettings, InstitutePublicProfile, News, Album, Photo, Building, Asset, AssetHistoryLog, AssetType, SupplyItem, StockHistoryLog, SupplyRequest, SupplyRequestStatus, Delivery, EFSRTAssignment, EFSRTStatus, EFSRTVisit, UnitTurno, TaskSubmission, AIConfig, StudentEgresoAudit, SocialLinks, CompanyProfile, JobOffer, JobApplication, Plan, InstituteMetrics, DailyActivity } from '@/types';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDvjGh3BgWZKeHkXVl0uOkoiWoowjjEX9c",
@@ -44,7 +44,7 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
 
 const getSubCollectionRef = (instituteId: string, name: string) => collection(db, 'institutes', instituteId, name);
 
-// --- HELPER PARA RUTAS DE CALIFICACIONES (RUTA CÉNTRICA EN ESTUDIANTE) ---
+// --- GESTIÓN DE REGISTROS ACADÉMICOS (Ruta céntrica en Estudiante) ---
 export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
     return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
 };
@@ -518,7 +518,10 @@ export const getStudentsPaginated = async (options: { instituteId: string; progr
     let students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StudentProfile));
     if (options.excludeEgresados) students = students.filter(s => s.academicStatus !== 'Egresado');
     if (options.semester) students = students.filter(p => (p.currentSemester || 1) === options.semester);
-    return { students: students.slice(0, options.limitCount), lastVisible: snapshot.docs[snapshot.docs.length - 1] || null };
+    return { 
+        students: students.slice(0, options.limitCount), 
+        lastVisible: snapshot.docs[snapshot.docs.length - 1] || null 
+    };
 };
 
 export const getStudentProfile = async (instituteId: string, studentId: string): Promise<StudentProfile | null> => {
@@ -849,13 +852,39 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
     }
 }
 
+/**
+ * Obtiene la asistencia de toda una unidad recolectando los datos de cada estudiante.
+ */
 export const getAttendanceForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AttendanceRecord | null> => {
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'attendance', `${unitId}_${year}_${period}`));
-    return snap.exists() ? { id: snap.id, ...snap.data() } as AttendanceRecord : null;
+    const records = await getAcademicRecordsForUnit(instituteId, unitId, year, period);
+    if (records.length === 0) return null;
+    
+    const attendanceMap: Record<string, Record<string, AttendanceStatus[]>> = {};
+    records.forEach(r => {
+        if (r.attendance) {
+            attendanceMap[r.studentId] = r.attendance;
+        }
+    });
+
+    return {
+        id: `${unitId}_${year}_${period}`,
+        unitId,
+        year,
+        period,
+        records: attendanceMap
+    };
 };
 
+/**
+ * Guarda las asistencias de toda la clase actualizando el registro individual de cada estudiante.
+ */
 export const saveAttendance = async (instituteId: string, data: AttendanceRecord) => {
-    await setDoc(doc(db, 'institutes', instituteId, 'attendance', data.id), data, { merge: true });
+    const batch = writeBatch(db);
+    for (const studentId in data.records) {
+        const recordRef = getAcademicRecordRef(instituteId, studentId, data.year, data.unitId);
+        batch.update(recordRef, { attendance: data.records[studentId] });
+    }
+    await batch.commit();
 };
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {

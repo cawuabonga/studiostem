@@ -3,8 +3,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAcademicRecordForStudent, getAttendanceForUnit, getWeeksData, getScheduledDaysForUnit } from '@/config/firebase';
-import type { Unit, AcademicRecord, AttendanceRecord, AttendanceStatus, WeekData, Task } from '@/types';
+import { getAcademicRecordForStudent, getWeeksData, getScheduledDaysForUnit } from '@/config/firebase';
+import type { Unit, AcademicRecord, AttendanceStatus, WeekData } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,6 @@ interface UnitProgressSummaryProps {
 export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
     const { user, instituteId } = useAuth();
     const [record, setRecord] = useState<AcademicRecord | null>(null);
-    const [attendance, setAttendance] = useState<AttendanceRecord | null>(null);
     const [weeksData, setWeeksData] = useState<WeekData[]>([]);
     const [scheduledDays, setScheduledDays] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,14 +29,12 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         if (!instituteId || !user?.documentId) return;
         setLoading(true);
         try {
-            const [recordData, attendanceData, allWeeks, days] = await Promise.all([
+            const [recordData, allWeeks, days] = await Promise.all([
                 getAcademicRecordForStudent(instituteId, unit.id, user.documentId, currentYear, unit.period),
-                getAttendanceForUnit(instituteId, unit.id, currentYear, unit.period),
                 getWeeksData(instituteId, unit.id),
                 getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester)
             ]);
             setRecord(recordData);
-            setAttendance(attendanceData);
             setWeeksData(allWeeks);
             setScheduledDays(days);
         } catch (error) {
@@ -62,9 +59,9 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         return Math.round(indicatorAverages.reduce((a, b) => a + b, 0) / indicatorAverages.length);
     }, [record]);
 
-    // Calcular porcentaje de inasistencia sincronizado con el docente
+    // Calcular porcentaje de inasistencia sincronizado con el docente (desde el registro académico)
     const attendanceStats = useMemo(() => {
-        if (!attendance?.records[user?.documentId || '']) return { percentage: 0, count: 0, isAtRisk: false };
+        if (!record?.attendance) return { percentage: 0, count: 0, isAtRisk: false, limitWeek: unit.attendanceLimitWeek || 16 };
         
         let absences = 0;
         const currentLimit = unit.attendanceLimitWeek || unit.totalWeeks || 16;
@@ -73,7 +70,7 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         const sessionsPerWeek = scheduledDays.length || 2; 
         const totalSessionsUntilLimit = currentLimit * sessionsPerWeek;
 
-        Object.entries(attendance.records[user?.documentId || '']).forEach(([weekKey, statuses]) => {
+        Object.entries(record.attendance).forEach(([weekKey, statuses]) => {
             const weekNum = parseInt(weekKey.replace('week_', ''));
             // Solo contamos faltas hasta la semana de corte
             if (weekNum <= currentLimit) {
@@ -90,7 +87,7 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
             isAtRisk: percentage >= 30,
             limitWeek: currentLimit
         };
-    }, [attendance, user?.documentId, unit.attendanceLimitWeek, unit.totalWeeks, scheduledDays]);
+    }, [record, unit.attendanceLimitWeek, unit.totalWeeks, scheduledDays]);
 
     // Resumen de tareas
     const taskStats = useMemo(() => {

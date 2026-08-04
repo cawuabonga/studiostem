@@ -642,6 +642,7 @@ export interface AcademicRecord {
     period: UnitPeriod;
     grades: Record<string, GradeEntry[]>; // indicatorId -> list of grades
     evaluations: Record<string, ManualEvaluation[]>; // indicatorId -> list of manual headers
+    attendance?: Record<string, AttendanceStatus[]>; // week_1 -> ['P', 'F']
     finalGrade: number | null;
     attendancePercentage: number;
     status: 'cursando' | 'aprobado' | 'desaprobado' | 'retirado';
