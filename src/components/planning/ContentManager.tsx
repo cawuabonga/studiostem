@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddContentForm } from './AddContentForm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { FileText, Link as LinkIcon, Type, PlusCircle, MoreVertical, Edit, Trash2, PlayCircle, Eye } from 'lucide-react';
+import { FileText, Link as LinkIcon, Type, PlusCircle, MoreVertical, Edit, Trash2, PlayCircle, Eye, MoreHorizontal } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -235,6 +235,7 @@ export function ContentManager({ unit, year, weekNumber, isStudentView, onDataCh
                 </DialogHeader>
                 <AddContentForm 
                     unit={unit}
+                    year={year}
                     weekNumber={weekNumber}
                     onDataChanged={handleDataChange}
                     onCancel={() => setIsFormOpen(false)}

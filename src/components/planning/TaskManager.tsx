@@ -23,7 +23,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '../ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 interface TaskManagerProps {
   unit: Unit;
@@ -321,6 +321,7 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
                 </DialogHeader>
                 <AddTaskForm 
                     unit={unit} 
+                    year={year}
                     weekNumber={weekNumber} 
                     initialData={editingTask} 
                     onDataChanged={() => { setIsFormOpen(false); fetchTasks(); onDataChanged(); }} 

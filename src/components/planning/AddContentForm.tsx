@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -13,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addContentToWeek, updateContentInWeek } from '@/config/firebase';
+import { addContentToWeek, updateContentInWeek } from '@/services/academic-service';
 import type { Content, ContentType, Unit } from '@/types';
 import { Loader2 } from 'lucide-react';
 
@@ -82,13 +80,14 @@ type AddContentFormValues = z.infer<typeof addContentSchema>;
 
 interface AddContentFormProps {
   unit: Unit;
+  year: string;
   weekNumber: number;
   initialData?: Content | null;
   onDataChanged: () => void;
   onCancel: () => void;
 }
 
-export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, onCancel }: AddContentFormProps) {
+export function AddContentForm({ unit, year, weekNumber, initialData, onDataChanged, onCancel }: AddContentFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -139,10 +138,10 @@ export function AddContentForm({ unit, weekNumber, initialData, onDataChanged, o
         const contentData: Partial<Content> = { title: data.title, type: data.type, value: data.value || '' };
         
         if (isEditMode && initialData) {
-             await updateContentInWeek(instituteId, unit.id, weekNumber, initialData.id, contentData, file);
+             await updateContentInWeek(instituteId, unit.id, year, unit.period, weekNumber, initialData.id, contentData, file);
              toast({ title: '¡Éxito!', description: 'El contenido ha sido actualizado.' });
         } else {
-            await addContentToWeek(instituteId, unit.id, weekNumber, contentData as Omit<Content, 'id'>, file);
+            await addContentToWeek(instituteId, unit.id, year, unit.period, weekNumber, contentData as Omit<Content, 'id'>, file);
             toast({ title: '¡Éxito!', description: 'El contenido ha sido añadido a la semana.' });
         }
         

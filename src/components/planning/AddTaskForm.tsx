@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,7 +17,7 @@ import { Timestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { addTaskToWeek, updateTaskInWeek, getAchievementIndicators } from '@/config/firebase';
+import { addTaskToWeek, updateTaskInWeek, getAchievementIndicators } from '@/services/academic-service';
 import type { Task, Unit, AchievementIndicator } from '@/types';
 import { Separator } from '../ui/separator';
 import { DialogFooter } from '@/components/ui/dialog';
@@ -36,13 +35,14 @@ type AddTaskFormValues = z.infer<typeof addTaskSchema>;
 
 interface AddTaskFormProps {
   unit: Unit;
+  year: string;
   weekNumber: number;
   initialData?: Task | null;
   onDataChanged: () => void;
   onCancel: () => void;
 }
 
-export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCancel }: AddTaskFormProps) {
+export function AddTaskForm({ unit, year, weekNumber, initialData, onDataChanged, onCancel }: AddTaskFormProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -59,9 +59,9 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
 
   useEffect(() => {
     if (instituteId && unit.id) {
-        getAchievementIndicators(instituteId, unit.id).then(setIndicators).catch(console.error);
+        getAchievementIndicators(instituteId, unit.id, year, unit.period).then(setIndicators).catch(console.error);
     }
-  }, [instituteId, unit.id]);
+  }, [instituteId, unit.id, year, unit.period]);
 
   const suggestedIndicator = useMemo(() => {
       return indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
@@ -98,10 +98,10 @@ export function AddTaskForm({ unit, weekNumber, initialData, onDataChanged, onCa
         const fileToUpload = data.file?.[0];
 
         if (isEditMode && initialData) {
-            await updateTaskInWeek(instituteId, unit.id, weekNumber, initialData.id, taskPayload, fileToUpload);
+            await updateTaskInWeek(instituteId, unit.id, year, unit.period, weekNumber, initialData.id, taskPayload, fileToUpload);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido actualizada.' });
         } else {
-            await addTaskToWeek(instituteId, unit.id, weekNumber, taskPayload, fileToUpload);
+            await addTaskToWeek(instituteId, unit.id, year, unit.period, weekNumber, taskPayload, fileToUpload);
             toast({ title: '¡Éxito!', description: 'La tarea ha sido añadida a la semana.' });
         }
         
