@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -22,7 +23,8 @@ import {
     addDoc,
     writeBatch,
     arrayUnion,
-    arrayRemove
+    arrayRemove,
+    collectionGroup
 } from 'firebase/firestore';
 import type { 
     Unit, 
@@ -229,7 +231,14 @@ export const addManualEvaluationToRecord = async (instituteId: string, unitId: s
 
 export const deleteManualEvaluationFromRecord = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, indicatorId: string, evalId: string) => {
     const batch = writeBatch(db);
-    const recordsColGroup = query(collectionGroup(db, 'units'), where("instituteId", "==", instituteId), where("unitId", "==", unitId), where("year", "==", year));
+    // Buscamos todas las unidades que coincidan en el grupo de colecciones
+    const recordsColGroup = query(
+        collectionGroup(db, 'units'), 
+        where("instituteId", "==", instituteId), 
+        where("unitId", "==", unitId), 
+        where("year", "==", year),
+        where("period", "==", period)
+    );
     const snapshot = await getDocs(recordsColGroup);
     
     snapshot.forEach(d => {
@@ -237,7 +246,10 @@ export const deleteManualEvaluationFromRecord = async (instituteId: string, unit
         if (data.evaluations && data.evaluations[indicatorId]) {
             const updated = data.evaluations[indicatorId].filter(e => e.id !== evalId);
             const updatedGrades = (data.grades?.[indicatorId] || []).filter(g => g.refId !== evalId);
-            batch.update(d.ref, { [`evaluations.${indicatorId}`]: updated, [`grades.${indicatorId}`]: updatedGrades });
+            batch.update(d.ref, { 
+                [`evaluations.${indicatorId}`]: updated, 
+                [`grades.${indicatorId}`]: updatedGrades 
+            });
         }
     });
     await batch.commit();

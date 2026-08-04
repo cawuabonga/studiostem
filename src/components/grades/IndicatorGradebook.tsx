@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -12,10 +13,22 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import type { StudentProfile, AchievementIndicator, AcademicRecord, Unit, Task } from '@/types';
 import { PlusCircle, Trash2, Calculator } from 'lucide-react';
 import { AddManualEvaluationDialog } from './AddManualEvaluationDialog';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 interface IndicatorGradebookProps {
     students: StudentProfile[];
@@ -36,6 +49,7 @@ const calculateAverage = (grades: (number | null)[]): number | null => {
 };
 
 export function IndicatorGradebook({ students, indicator, records, unit, tasks, onGradeChange, onManualEvaluationAdded, onManualEvaluationDeleted }: IndicatorGradebookProps) {
+    const { toast } = useToast();
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selectedWeek, setSelectedWeek] = useState<number>(indicator.startWeek);
     
@@ -65,6 +79,24 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
     const handleOpenDialog = (week: number) => {
         setSelectedWeek(week);
         setDialogOpen(true);
+    };
+
+    const handleDeleteClick = (indicatorId: string, evaluationId: string, label: string) => {
+        // Verificar si hay notas registradas en esta columna en CUALQUIER registro de estudiante
+        const hasGrades = Object.values(records).some(record => 
+            record.grades?.[indicatorId]?.some(g => g.refId === evaluationId && g.grade !== null && g.grade !== undefined)
+        );
+
+        if (hasGrades) {
+            toast({
+                title: "Acción Bloqueada",
+                description: `No se puede eliminar la columna "${label}" porque ya contiene calificaciones registradas. Borre las notas manualmente primero si desea eliminar la columna.`,
+                variant: "destructive"
+            });
+            return;
+        }
+
+        onManualEvaluationDeleted(indicatorId, evaluationId);
     };
 
     if (students.length === 0) return <p className="text-center py-12 text-muted-foreground">No hay alumnos matriculados en esta unidad.</p>;
@@ -109,12 +141,32 @@ export function IndicatorGradebook({ students, indicator, records, unit, tasks, 
                                                     {ev.type === 'task' ? 'T' : 'M'}
                                                 </Badge>
                                                 {ev.type === 'manual' && !isActaClosed && (
-                                                    <Button 
-                                                        variant="ghost" size="icon" className="h-4 w-4 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        onClick={() => onManualEvaluationDeleted(indicator.id, ev.id)}
-                                                    >
-                                                        <Trash2 className="h-3 w-3" />
-                                                    </Button>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <Button 
+                                                                variant="ghost" size="icon" className="h-4 w-4 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader>
+                                                                <AlertDialogTitle>¿Eliminar columna de evaluación?</AlertDialogTitle>
+                                                                <AlertDialogDescription>
+                                                                    Esta acción eliminará la columna "{ev.label}" para todos los estudiantes de esta sección. No se puede deshacer.
+                                                                </AlertDialogDescription>
+                                                            </AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                <AlertDialogAction 
+                                                                    onClick={() => handleDeleteClick(indicator.id, ev.id, ev.label)}
+                                                                    className="bg-destructive hover:bg-destructive/90"
+                                                                >
+                                                                    Eliminar Columna
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
                                                 )}
                                             </div>
                                         </div>
