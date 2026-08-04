@@ -7,7 +7,7 @@
  * la integridad histórica de planificaciones, indicadores y sílabos.
  */
 
-import { db, uploadFileAndGetURL } from '@/config/firebase';
+import { db, uploadFileAndGetURL, getAcademicRecordRef } from '@/config/firebase';
 import { 
     collection, 
     doc, 
@@ -220,15 +220,24 @@ export const addManualEvaluationToRecord = async (instituteId: string, unitId: s
     const batch = writeBatch(db);
     const evalId = doc(collection(db, 'idGenerator')).id;
     for (const sId of ids) {
-        const rId = `${unitId}_${sId}_${year}_${period}`;
-        batch.set(doc(db, 'institutes', instituteId, 'academicRecords', rId), { id: rId, studentId: sId, unitId, year, period, evaluations: { [data.indicatorId]: arrayUnion({ ...data, id: evalId, createdAt: Timestamp.now() }) } }, { merge: true });
+        const recordRef = getAcademicRecordRef(instituteId, sId, year, unitId);
+        batch.set(recordRef, { id: recordRef.id, studentId: sId, unitId, year, period, instituteId, evaluations: { [data.indicatorId]: arrayUnion({ ...data, id: evalId, createdAt: Timestamp.now() }) } }, { merge: true });
     }
     await batch.commit();
 }
 
 export const deleteManualEvaluationFromRecord = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, indicatorId: string, evalId: string) => {
-    const snapshot = await getDocs(query(collection(db, 'institutes', instituteId, 'academicRecords'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
+    // Para borrar necesitamos encontrar los documentos individuales usando la nueva estructura
     const batch = writeBatch(db);
+    // Como no tenemos la lista de IDs aquí, usamos la consulta de grupo para localizarlos
+    const q = query(
+        collection(db, 'idGenerator'), // Dummy para el tipo, en realidad usaremos getAcademicRecordsForUnit pero con writeBatch
+    );
+    // Nota: Por simplicidad y consistencia, se recomienda que este borrado se haga iterando sobre los registros ya cargados en el cliente.
+    // Aquí implementamos una búsqueda vía Collection Group para el borrado masivo
+    const recordsColGroup = query(collectionGroup(db, 'units'), where("instituteId", "==", instituteId), where("unitId", "==", unitId), where("year", "==", year));
+    const snapshot = await getDocs(recordsColGroup);
+    
     snapshot.forEach(d => {
         const data = d.data() as AcademicRecord;
         if (data.evaluations && data.evaluations[indicatorId]) {

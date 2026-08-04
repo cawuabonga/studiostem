@@ -645,6 +645,7 @@ export interface AcademicRecord {
     finalGrade: number | null;
     attendancePercentage: number;
     status: 'cursando' | 'aprobado' | 'desaprobado' | 'retirado';
+    instituteId: string; // Requerido para consultas de grupo
 }
 
 export interface ManualEvaluation {

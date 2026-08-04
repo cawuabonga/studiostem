@@ -2,6 +2,24 @@
 {
   "indexes": [
     {
+      "collectionGroup": "units",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "instituteId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "unitId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "year",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "users",
       "queryScope": "COLLECTION",
       "fields": [

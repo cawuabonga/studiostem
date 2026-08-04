@@ -45,6 +45,11 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
 
 const getSubCollectionRef = (instituteId: string, name: string) => collection(db, 'institutes', instituteId, name);
 
+// --- HELPER PARA RUTAS DE CALIFICACIONES (NUEVA ESTRUCTURA) ---
+export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
+    return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
+};
+
 // --- Roles y Permisos ---
 
 export const getRoles = async (instituteId: string): Promise<Role[]> => {
@@ -811,14 +816,23 @@ export const getEnrolledStudentProfiles = async (instituteId: string, unitId: st
     return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile));
 };
 
+// --- GESTIÓN DE REGISTROS ACADÉMICOS (ACTUALIZADO A NUEVA RUTA) ---
 export const getAcademicRecordForStudent = async (instituteId: string, unitId: string, studentId: string, year: string, period: UnitPeriod): Promise<AcademicRecord | null> => {
-    const rId = `${unitId}_${studentId}_${year}_${period}`;
-    const snap = await getDoc(doc(db, 'institutes', instituteId, 'academicRecords', rId));
+    const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
+    const snap = await getDoc(recordRef);
     return snap.exists() ? snap.data() as AcademicRecord : null;
 };
 
 export const getAcademicRecordsForUnit = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<AcademicRecord[]> => {
-    const snapshot = await getDocs(query(getSubCollectionRef(instituteId, 'academicRecords'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
+    // Usamos Collection Group para obtener todos los documentos 'units' que pertenezcan a la unidad deseada
+    const q = query(
+        collectionGroup(db, 'units'), 
+        where("instituteId", "==", instituteId),
+        where("unitId", "==", unitId), 
+        where("year", "==", year), 
+        where("period", "==", period)
+    );
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AcademicRecord));
 };
 
@@ -828,7 +842,8 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
         const chunk = records.slice(i, i + CHUNK_SIZE);
         const batch = writeBatch(db);
         for (const record of chunk) {
-            batch.set(doc(db, 'institutes', instituteId, 'academicRecords', record.id), record, { merge: true });
+            const recordRef = getAcademicRecordRef(instituteId, record.studentId, record.year, record.unitId);
+            batch.set(recordRef, record, { merge: true });
         }
         await batch.commit();
     }
@@ -971,7 +986,8 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         const chunk = results.slice(i, i + 5);
         const batch = writeBatch(db);
         chunk.forEach(r => {
-            batch.update(doc(db, 'institutes', instituteId, 'academicRecords', `${unitId}_${r.studentId}_${year}_${period}`), { finalGrade: r.finalGrade, status: r.status });
+            const recordRef = getAcademicRecordRef(instituteId, r.studentId, year, unitId);
+            batch.update(recordRef, { finalGrade: r.finalGrade, status: r.status });
             (mIdsByStudent.get(r.studentId) || []).forEach(mId => batch.update(doc(col, mId), { status: r.status }));
         });
         await batch.commit();
@@ -1159,4 +1175,31 @@ export const updateEnvironment = async (inst: string, bld: string, id: string, d
 
 export const deleteEnvironment = async (inst: string, bld: string, id: string) => {
     await deleteDoc(doc(db, 'institutes', inst, 'buildings', bld, 'environments', id));
+}
+
+export const registerHistoricalMatriculation = async (instituteId: string, studentId: string, unit: Unit, data: { grade: number, year: string, period: UnitPeriod }) => {
+    const batch = writeBatch(db);
+    const mId = doc(collection(db, 'idGenerator')).id;
+    batch.set(doc(db, 'institutes', instituteId, 'matriculations', mId), { studentId, unitId: unit.id, programId: unit.programId, year: data.year, period: data.period, semester: unit.semester, status: 'aprobado', createdAt: Timestamp.now() });
+    
+    const recordRef = getAcademicRecordRef(instituteId, studentId, data.year, unit.id);
+    batch.set(recordRef, { id: recordRef.id, studentId, unitId: unit.id, programId: unit.programId, year: data.year, period: data.period, finalGrade: data.grade, status: 'aprobado', instituteId }, { merge: true });
+    await batch.commit();
+}
+
+export const gradeTaskSubmission = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, weekNumber: number, taskId: string, taskTitle: string, studentId: string, studentName: string, grade: number, feedback: string) => {
+    const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
+    const snap = await getDoc(recordRef);
+    const indicators = await getAchievementIndicators(instituteId, unitId, year, period);
+    const indicator = indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
+
+    if (indicator) {
+        const gradeEntry = { type: 'task', refId: taskId, label: taskTitle, grade, weekNumber };
+        let grades = snap.exists() ? (snap.data() as AcademicRecord).grades || {} : {};
+        let indGrades = grades[indicator.id] || [];
+        const idx = indGrades.findIndex(g => g.refId === taskId);
+        if (idx !== -1) indGrades[idx] = gradeEntry; else indGrades.push(gradeEntry);
+        grades[indicator.id] = indGrades;
+        await setDoc(recordRef, { id: recordRef.id, studentId, unitId, programId: (snap.data() as any)?.programId || '', year, period, grades, instituteId }, { merge: true });
+    }
 }
