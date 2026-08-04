@@ -1,4 +1,3 @@
-
 'use client';
 
 import { initializeApp, getApp, getApps } from 'firebase/app';
@@ -45,7 +44,7 @@ export const uploadFileAndGetURL = async (file: File, path: string): Promise<str
 
 const getSubCollectionRef = (instituteId: string, name: string) => collection(db, 'institutes', instituteId, name);
 
-// --- HELPER PARA RUTAS DE CALIFICACIONES (NUEVA ESTRUCTURA) ---
+// --- HELPER PARA RUTAS DE CALIFICACIONES ---
 export const getAcademicRecordRef = (instituteId: string, studentId: string, year: string, unitId: string) => {
     return doc(db, 'institutes', instituteId, 'academicRecords', studentId, 'years', year, 'units', unitId);
 };
@@ -1187,11 +1186,42 @@ export const registerHistoricalMatriculation = async (instituteId: string, stude
     await batch.commit();
 }
 
+export const getTaskSubmissions = async (instituteId: string, unitId: string, weekNumber: number, taskId: string): Promise<TaskSubmission[]> => {
+    const snap = await getDocs(collection(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions'));
+    return snap.docs
+        .filter(d => d.id.startsWith(`${taskId}_`))
+        .map(d => ({ id: d.id.split('_')[1], ...d.data() } as TaskSubmission));
+}
+
+export const submitTask = async (instituteId: string, unitId: string, weekNumber: number, taskId: string, student: StudentProfile, file?: File, link?: string) => {
+    const studentId = student.documentId;
+    const subId = `${taskId}_${studentId}`;
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions', subId);
+    
+    let fileUrl = '';
+    if (file) {
+        fileUrl = await uploadFileAndGetURL(file, `institutes/${instituteId}/units/${unitId}/tasks/${taskId}/submissions/${studentId}`);
+    }
+
+    await setDoc(subRef, {
+        id: studentId,
+        studentName: student.fullName,
+        submittedAt: Timestamp.now(),
+        fileUrl: fileUrl || null,
+        link: link || null,
+        taskId: taskId
+    }, { merge: true });
+};
+
 export const gradeTaskSubmission = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, weekNumber: number, taskId: string, taskTitle: string, studentId: string, studentName: string, grade: number, feedback: string) => {
     const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
     const snap = await getDoc(recordRef);
     const indicators = await getAchievementIndicators(instituteId, unitId, year, period);
     const indicator = indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
+
+    // Update the submission record as well
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions', `${taskId}_${studentId}`);
+    await updateDoc(subRef, { grade, feedback });
 
     if (indicator) {
         const gradeEntry = { type: 'task', refId: taskId, label: taskTitle, grade, weekNumber };

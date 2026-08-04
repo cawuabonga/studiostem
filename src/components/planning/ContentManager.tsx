@@ -1,9 +1,8 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeekData, deleteContentFromWeek } from '@/config/firebase';
+import { getWeekData, deleteContentFromWeek } from '@/services/academic-service';
 import type { Content, Unit } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,6 +37,7 @@ import { Button } from '../ui/button';
 
 interface ContentManagerProps {
   unit: Unit;
+  year: string;
   weekNumber: number;
   isStudentView: boolean;
   onDataChanged: () => void;
@@ -61,7 +61,7 @@ const getIconForType = (content: Content) => {
     }
 }
 
-export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged }: ContentManagerProps) {
+export function ContentManager({ unit, year, weekNumber, isStudentView, onDataChanged }: ContentManagerProps) {
   const { instituteId } = useAuth();
   const { toast } = useToast();
   const [contents, setContents] = useState<Content[]>([]);
@@ -74,7 +74,7 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
     if (!instituteId) return;
     setLoading(true);
     try {
-      const weekData = await getWeekData(instituteId, unit.id, weekNumber);
+      const weekData = await getWeekData(instituteId, unit.id, year, unit.period, weekNumber);
       setContents(weekData?.contents || []);
     } catch (error) {
       console.error(`Error fetching contents for week ${weekNumber}:`, error);
@@ -86,7 +86,7 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit.id, weekNumber, toast]);
+  }, [instituteId, unit.id, unit.period, year, weekNumber, toast]);
 
   useEffect(() => {
     fetchContents();
@@ -107,7 +107,7 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
   const handleDelete = async (contentToDelete: Content) => {
     if (!instituteId) return;
     try {
-        await deleteContentFromWeek(instituteId, unit.id, weekNumber, contentToDelete);
+        await deleteContentFromWeek(instituteId, unit.id, year, unit.period, weekNumber, contentToDelete);
         toast({ title: "Contenido Eliminado", description: "El recurso ha sido eliminado correctamente." });
         handleDataChange();
     } catch (error) {
@@ -185,8 +185,8 @@ export function ContentManager({ unit, weekNumber, isStudentView, onDataChanged 
                                         <AlertDialog>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreVertical className="h-4 w-4" />
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                                        <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">

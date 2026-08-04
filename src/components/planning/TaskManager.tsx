@@ -1,9 +1,9 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeekData, deleteTaskFromWeek, getTaskSubmissions, submitTask, gradeTaskSubmission, getStudentProfile, getEnrolledStudentProfiles } from '@/config/firebase';
+import { getWeekData, deleteTaskFromWeek } from '@/services/academic-service';
+import { getTaskSubmissions, submitTask, gradeTaskSubmission, getStudentProfile, getEnrolledStudentProfiles } from '@/config/firebase';
 import type { Task, Unit, TaskSubmission, StudentProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,6 +27,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 
 interface TaskManagerProps {
   unit: Unit;
+  year: string;
   weekNumber: number;
   isStudentView: boolean;
   onDataChanged: () => void;
@@ -36,7 +37,7 @@ interface StudentWithSubmission extends StudentProfile {
     submission: TaskSubmission | null;
 }
 
-export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: TaskManagerProps) {
+export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChanged }: TaskManagerProps) {
   const { instituteId, user } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -62,7 +63,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
     if (!instituteId) return;
     setLoading(true);
     try {
-      const weekData = await getWeekData(instituteId, unit.id, weekNumber);
+      const weekData = await getWeekData(instituteId, unit.id, year, unit.period, weekNumber);
       const tasksList = weekData?.tasks || [];
       setTasks(tasksList);
 
@@ -79,7 +80,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
     } finally {
       setLoading(false);
     }
-  }, [instituteId, unit.id, weekNumber, isStudentView, user?.documentId, toast]);
+  }, [instituteId, unit.id, unit.period, year, weekNumber, isStudentView, user?.documentId, toast]);
 
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
@@ -131,7 +132,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
       setSelectedTaskForGrading(task);
       setGradingLoading(true);
       try {
-          const currentYear = new Date().getFullYear().toString();
+          const currentYear = year || new Date().getFullYear().toString();
           const [allEnrolled, taskSubs] = await Promise.all([
               getEnrolledStudentProfiles(instituteId, unit.id, currentYear, unit.period),
               getTaskSubmissions(instituteId, unit.id, weekNumber, task.id)
@@ -156,7 +157,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
       if (!instituteId || !selectedTaskForGrading || !gradingData.studentId) return;
       setIsSubmitting(true);
       try {
-          const currentYear = new Date().getFullYear().toString();
+          const currentYear = year || new Date().getFullYear().toString();
           await gradeTaskSubmission(
               instituteId, 
               unit.id, 
@@ -292,7 +293,7 @@ export function TaskManager({ unit, weekNumber, isStudentView, onDataChanged }: 
                                                 <DropdownMenuItem onClick={() => { setEditingTask(task); setIsFormOpen(true); }} className="font-medium">
                                                     <Edit className="h-4 w-4 mr-2" /> Editar Tarea
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive font-medium" onClick={() => deleteTaskFromWeek(instituteId!, unit.id, weekNumber, task.id).then(() => fetchTasks())}>
+                                                <DropdownMenuItem className="text-destructive font-medium" onClick={() => deleteTaskFromWeek(instituteId!, unit.id, year, unit.period, weekNumber, task.id).then(() => fetchTasks())}>
                                                     <Trash2 className="h-4 w-4 mr-2" /> Eliminar
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
