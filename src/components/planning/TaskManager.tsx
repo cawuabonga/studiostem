@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWeekData, deleteTaskFromWeek } from '@/services/academic-service';
-import { getTaskSubmissions, submitTask, gradeTaskSubmission, getStudentProfile, getEnrolledStudentProfiles } from '@/config/firebase';
+import { getWeekData, deleteTaskFromWeek, gradeTaskSubmission } from '@/services/academic-service';
+import { getTaskSubmissions, submitTask, getStudentProfile, getEnrolledStudentProfiles } from '@/config/firebase';
 import type { Task, Unit, TaskSubmission, StudentProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -160,7 +160,7 @@ export function TaskManager({ unit, year, weekNumber, isStudentView, onDataChang
           const currentYear = year || new Date().getFullYear().toString();
           await gradeTaskSubmission(
               instituteId, 
-              unit.id, 
+              unit, 
               currentYear,
               unit.period,
               weekNumber, 

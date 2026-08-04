@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -33,7 +32,9 @@ import type {
     Content, 
     Task, 
     UnitPeriod,
-    AcademicRecord
+    AcademicRecord,
+    TaskSubmission,
+    StudentProfile
 } from '@/types';
 
 /**
@@ -227,14 +228,7 @@ export const addManualEvaluationToRecord = async (instituteId: string, unitId: s
 }
 
 export const deleteManualEvaluationFromRecord = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, indicatorId: string, evalId: string) => {
-    // Para borrar necesitamos encontrar los documentos individuales usando la nueva estructura
     const batch = writeBatch(db);
-    // Como no tenemos la lista de IDs aquí, usamos la consulta de grupo para localizarlos
-    const q = query(
-        collection(db, 'idGenerator'), // Dummy para el tipo, en realidad usaremos getAcademicRecordsForUnit pero con writeBatch
-    );
-    // Nota: Por simplicidad y consistencia, se recomienda que este borrado se haga iterando sobre los registros ya cargados en el cliente.
-    // Aquí implementamos una búsqueda vía Collection Group para el borrado masivo
     const recordsColGroup = query(collectionGroup(db, 'units'), where("instituteId", "==", instituteId), where("unitId", "==", unitId), where("year", "==", year));
     const snapshot = await getDocs(recordsColGroup);
     
@@ -248,3 +242,66 @@ export const deleteManualEvaluationFromRecord = async (instituteId: string, unit
     });
     await batch.commit();
 }
+
+/**
+ * Registra o actualiza la calificación de un estudiante en una tarea específica.
+ * Robusto: Crea el registro de entrega (setDoc con merge) si no existe.
+ */
+export const gradeTaskSubmission = async (
+    instituteId: string, 
+    unit: Unit, 
+    year: string, 
+    period: UnitPeriod, 
+    weekNumber: number, 
+    taskId: string, 
+    taskTitle: string, 
+    studentId: string, 
+    studentName: string, 
+    grade: number, 
+    feedback: string
+) => {
+    const unitId = unit.id;
+    const recordRef = getAcademicRecordRef(instituteId, studentId, year, unitId);
+    const snap = await getDoc(recordRef);
+    const indicators = await getAchievementIndicators(instituteId, unitId, year, period);
+    const indicator = indicators.find(ind => weekNumber >= ind.startWeek && weekNumber <= ind.endWeek);
+
+    // 1. Actualizar el registro de entrega individual
+    // Usamos setDoc con merge: true para permitir calificar aunque el alumno no haya subido archivo (documento no exista)
+    const subRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId, 'taskSubmissions', `${taskId}_${studentId}`);
+    await setDoc(subRef, { 
+        id: studentId,
+        studentName,
+        taskId,
+        grade, 
+        feedback,
+        lastGradedAt: Timestamp.now()
+    }, { merge: true });
+
+    // 2. Sincronizar con el registro consolidado del estudiante
+    if (indicator) {
+        const gradeEntry = { type: 'task' as const, refId: taskId, label: taskTitle, grade, weekNumber };
+        let grades = snap.exists() ? (snap.data() as AcademicRecord).grades || {} : {};
+        let indGrades = grades[indicator.id] || [];
+        
+        const idx = indGrades.findIndex(g => g.refId === taskId);
+        if (idx !== -1) {
+            indGrades[idx] = gradeEntry;
+        } else {
+            indGrades.push(gradeEntry);
+        }
+        
+        grades[indicator.id] = indGrades;
+
+        await setDoc(recordRef, { 
+            id: recordRef.id, 
+            studentId, 
+            unitId, 
+            programId: unit.programId, 
+            year, 
+            period, 
+            grades, 
+            instituteId 
+        }, { merge: true });
+    }
+};
