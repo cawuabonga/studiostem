@@ -1002,6 +1002,28 @@ export const programEFSRT = async (instituteId: string, data: any) => {
     await addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), { ...data, status: 'Programado', visits: [], createdAt: Timestamp.now() });
 };
 
+export const updateEFSRTAssignment = async (instituteId: string, id: string, data: any): Promise<void> => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'efsrtAssignments', id), data);
+};
+
+export const deleteEFSRTAssignment = async (instituteId: string, id: string): Promise<void> => {
+    try {
+        const assignmentRef = doc(db, 'institutes', instituteId, 'efsrtAssignments', id);
+        await deleteDoc(assignmentRef);
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const registerHistoricalEFSRT = async (instituteId: string, data: any): Promise<void> => {
+    await addDoc(collection(db, 'institutes', instituteId, 'efsrtAssignments'), { 
+        ...data, 
+        status: 'Aprobado', 
+        visits: [], 
+        createdAt: Timestamp.now() 
+    });
+};
+
 export const closeUnitGrades = async (instituteId: string, unitId: string, year: string, period: UnitPeriod, results: any[]) => {
     const col = getSubCollectionRef(instituteId, 'matriculations');
     const mSnap = await getDocs(query(col, where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
