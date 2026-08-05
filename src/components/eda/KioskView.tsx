@@ -7,9 +7,9 @@
  * Sincronizado dinámicamente con el color primario del instituto.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { listenToPrintPoint, closeKioskSession, getDocumentTemplates, registerGenerationLog } from '@/services/eda-service';
-import { getStudentProfile, getInstitute, getStaffProfiles, getStudentPaymentsByStatus, getPrograms } from '@/config/firebase';
+import { getStudentProfile, getStaffProfileByDocumentId, getInstitute, getStaffProfiles, getStudentPaymentsByStatus, getPrograms } from '@/config/firebase';
 import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile, Program } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -58,10 +58,10 @@ interface KioskViewProps {
 
 type KioskStep = 'idle' | 'menu' | 'category' | 'assistant' | 'validation' | 'preview';
 
-export function KioskView({ pointId, instituteId }: KioskViewProps) {
+export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewProps) {
     const { toast } = useToast();
     const [point, setPoint] = useState<PrintPoint | null>(null);
-    const [student, setStudent] = useState<StudentProfile | null>(null);
+    const [student, setStudent] = useState<any | null>(null);
     const [institute, setInstitute] = useState<Institute | null>(null);
     const [templates, setTemplates] = useState<DocumentTemplate[]>([]);
     const [staff, setStaff] = useState<StaffProfile[]>([]);
@@ -80,70 +80,102 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
 
-    // 1. Escuchar el Punto de Impresión (Sincronización de Hardware)
-    useEffect(() => {
-        if (!instituteId || !pointId) return;
-        const unsub = listenToPrintPoint(instituteId, pointId, (p) => {
-            setPoint(p);
-            if (p?.currentStudentId) {
-                loadStudentSession(p.currentStudentId);
-            } else {
-                setStudent(null);
-                setStep('idle');
-            }
-        });
-        return () => unsub();
-    }, [instituteId, pointId]);
+    // Determinar ID de instituto efectivo (Prioriza el del terminal si ya está cargado)
+    const effectiveInstituteId = point?.instituteId || propInstituteId;
 
-    // 2. Cargar datos base del instituto
-    useEffect(() => {
-        if (!instituteId) return;
-        Promise.all([
-            getInstitute(instituteId),
-            getDocumentTemplates(instituteId),
-            getStaffProfiles(instituteId),
-            getPrograms(instituteId)
-        ]).then(([inst, temps, staffList, progs]) => {
-            setInstitute(inst);
-            setTemplates(temps);
-            setStaff(staffList);
-            setPrograms(progs);
-            setLoading(false);
-        });
-    }, [instituteId]);
+    /**
+     * Carga el perfil del alumno o personal detectado.
+     * Soporta ambos tipos de perfil para máxima flexibilidad en el terminal.
+     */
+    const loadUserSession = useCallback(async (userId: string, instId: string) => {
+        // Evitar recargas si el usuario ya es el mismo (previene parpadeo)
+        if (student && student.documentId === userId) return;
 
-    const loadStudentSession = async (sId: string) => {
         setLoading(true);
-        const profile = await getStudentProfile(instituteId, sId);
-        if (profile) {
-            setStudent(profile);
-            setStep('menu');
-        }
-        setLoading(false);
-    };
-
-    const handleManualLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!manualDni || !instituteId) return;
-        setLoading(true);
+        console.log(`[KIOSKO] Cargando sesión para usuario: ${userId} en instituto: ${instId}`);
+        
         try {
-            const profile = await getStudentProfile(instituteId, manualDni);
+            // Intentamos cargar como estudiante primero
+            let profile: any = await getStudentProfile(instId, userId);
+            
+            // Si no es estudiante, intentamos cargar como personal
+            if (!profile) {
+                profile = await getStaffProfileByDocumentId(instId, userId);
+                if (profile) profile.isStaff = true;
+            }
+
             if (profile) {
                 setStudent(profile);
                 setStep('menu');
-                setManualDni('');
             } else {
-                toast({ title: "No encontrado", description: "No existe un estudiante con ese DNI.", variant: "destructive" });
+                console.error("[KIOSKO] Perfil no encontrado en la base de datos.");
+                toast({ title: "Error de Perfil", description: "No se encontraron tus datos académicos.", variant: "destructive" });
             }
-        } catch (e) {
-            toast({ title: "Error", description: "Fallo en la conexión.", variant: "destructive" });
+        } catch (error) {
+            console.error("[KIOSKO] Error al cargar sesión:", error);
         } finally {
             setLoading(false);
         }
+    }, [student, toast]);
+
+    // 1. Escuchar el Punto de Impresión (Sincronización en Tiempo Real con Hardware)
+    useEffect(() => {
+        if (!propInstituteId || !pointId) return;
+
+        const unsub = listenToPrintPoint(propInstituteId, pointId, (p) => {
+            setPoint(p);
+            
+            if (p?.currentStudentId) {
+                const targetInstId = p.instituteId || propInstituteId;
+                loadUserSession(p.currentStudentId, targetInstId);
+            } else {
+                // Solo volvemos a idle si realmente se limpió la sesión
+                if (student) {
+                    setStudent(null);
+                    setStep('idle');
+                }
+            }
+        });
+        return () => unsub();
+    }, [propInstituteId, pointId, loadUserSession, student]);
+
+    // 2. Cargar datos base del instituto para el funcionamiento del Kiosko
+    useEffect(() => {
+        if (!effectiveInstituteId) return;
+        
+        const loadBaseData = async () => {
+            try {
+                const [inst, temps, staffList, progs] = await Promise.all([
+                    getInstitute(effectiveInstituteId),
+                    getDocumentTemplates(effectiveInstituteId),
+                    getStaffProfiles(effectiveInstituteId),
+                    getPrograms(effectiveInstituteId)
+                ]);
+                setInstitute(inst);
+                setTemplates(temps);
+                setStaff(staffList);
+                setPrograms(progs);
+            } catch (error) {
+                console.error("[KIOSKO] Error cargando datos base:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadBaseData();
+    }, [effectiveInstituteId]);
+
+    const handleManualLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!manualDni || !effectiveInstituteId) return;
+        await loadUserSession(manualDni, effectiveInstituteId);
+        setManualDni('');
     };
 
     const handleLogout = async () => {
-        await closeKioskSession(instituteId, pointId);
+        if (effectiveInstituteId) {
+            await closeKioskSession(effectiveInstituteId, pointId);
+        }
         setStep('idle');
         setStudent(null);
     };
@@ -167,7 +199,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
 
         if (selectedTemplate.requirementType === 'Pago Validado') {
             try {
-                const payments = await getStudentPaymentsByStatus(instituteId, student.documentId, 'Aprobado');
+                const payments = await getStudentPaymentsByStatus(effectiveInstituteId, student.documentId, 'Aprobado');
                 const hasPayment = payments.some(p => p.concept === selectedTemplate.requirementValue);
                 if (!hasPayment) {
                     setValidationError(`Este trámite requiere un pago validado de "${selectedTemplate.requirementValue}". Acérquese a Tesorería.`);
@@ -245,7 +277,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                     <form onSubmit={handleManualLogin} className="pt-4 w-full max-w-xs mx-auto space-y-3">
                         <div className="relative">
                             <Keyboard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
-                            <Input placeholder="DNI para pruebas..." value={manualDni} onChange={e => setManualDni(e.target.value)} className="bg-black/20 border-white/30 text-white placeholder:text-white/40 text-center h-14 rounded-2xl text-xl font-bold tracking-widest focus-visible:ring-white/20" />
+                            <Input placeholder="Ingrese DNI..." value={manualDni} onChange={e => setManualDni(e.target.value)} className="bg-black/20 border-white/30 text-white placeholder:text-white/40 text-center h-14 rounded-2xl text-xl font-bold tracking-widest focus-visible:ring-white/20" />
                         </div>
                         <Button type="submit" variant="secondary" className="w-full font-black uppercase text-xs tracking-widest h-14 rounded-2xl shadow-xl hover:scale-105 transition-transform" disabled={!manualDni || loading}>
                             {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "INICIAR SESIÓN MANUAL"}
@@ -266,10 +298,10 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
             <header className="bg-primary p-4 md:p-6 text-primary-foreground flex justify-between items-center shadow-xl shrink-0 print:hidden">
                 <div className="flex items-center gap-4">
                     <div className="h-14 w-14 relative rounded-xl overflow-hidden border-2 border-white/20 shadow-lg bg-white/10">
-                        <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || 'S'}`} alt="" fill className="object-cover" />
+                        <Image src={student?.photoURL || `https://placehold.co/200x200.png?text=${student?.fullName?.[0] || student?.displayName?.[0] || 'U'}`} alt="" fill className="object-cover" />
                     </div>
                     <div>
-                        <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{student?.fullName}</h2>
+                        <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight leading-none">{student?.fullName || student?.displayName}</h2>
                         <p className="text-xs md:text-sm font-bold text-white/70 uppercase tracking-widest mt-1">DNI: {student?.documentId} • {studentProgramName}</p>
                     </div>
                 </div>
@@ -423,12 +455,12 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                                     </div>
                                     <div className="text-right mb-12"><p className="text-[10pt] font-black uppercase inline-block border-b-2 border-black pb-0.5">{selectedTemplate.sumilla?.replace(/{motivo_justificacion}/g, (formData['{motivo_justificacion}'] || '').toUpperCase())}</p></div>
                                     <div className="mt-12 mb-8 space-y-1"><p className="font-black text-[10pt] uppercase leading-none">SEÑOR {selectedTemplate.addresseeType === 'Director' ? 'DIRECTOR GENERAL' : 'COORDINADOR DEL PROGRAMA DE ESTUDIOS'}:</p><p className="font-bold text-[10pt] uppercase underline decoration-2 underline-offset-4">{selectedTemplate.addresseeType === 'Director' ? selectedTemplate.directorName : coordinatorName}</p><p className="font-bold text-[10pt] uppercase">{institute?.name}</p></div>
-                                    <div className="text-justify text-[10pt] leading-loose mb-6">Yo, <span className="font-black underline">{student?.fullName}</span>, identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, estudiante del programa de estudios de <span className="font-bold">{studentProgramName}</span>, perteneciente al <span className="font-bold">{student?.currentSemester || 1}° Semestre</span>, turno <span className="font-bold">{student?.turno}</span>, con domicilio en <span className="font-bold">{student?.address || '---'}</span>, ante usted con el debido respeto me presento y expongo:</div>
+                                    <div className="text-justify text-[10pt] leading-loose mb-6">Yo, <span className="font-black underline">{student?.fullName || student?.displayName}</span>, identificado con DNI N° <span className="font-mono font-bold">{student?.documentId}</span>, {student.isStaff ? 'miembro del personal' : 'estudiante'} del programa de estudios de <span className="font-bold">{studentProgramName}</span>, {student.isStaff ? '' : `perteneciente al ${student?.currentSemester || 1}° Semestre, `}turno <span className="font-bold">{student?.turno || 'N/A'}</span>, con domicilio en <span className="font-bold">{student?.address || '---'}</span>, ante usted con el debido respeto me presento y expongo:</div>
                                     <div className="text-justify leading-loose text-[10pt] min-h-[100px] whitespace-pre-wrap font-medium"><div dangerouslySetInnerHTML={{ __html: getFormattedContent(selectedTemplate.content) }} /></div>
                                     <div className="mt-4 mb-4 font-bold uppercase text-[10pt] leading-relaxed">POR LO TANTO:<br/>Espero acceda a mi solicitud por ser de justicia.</div>
                                     <div className={cn("mt-32 mb-8", formData['{adjuntos_detalle}']?.includes('ADJUNTO EL CERTIFICADO') ? "font-bold uppercase text-[9pt]" : "")}>{formData['{adjuntos_detalle}']?.includes('ADJUNTO EL CERTIFICADO') ? "ADJUNTO: DOCUMENTOS." : ""}</div>
                                     <div className="text-right mt-8 italic text-[9pt] text-gray-700">Dado en la sede institucional, a los {format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: es })}.</div>
-                                    <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center"><p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName}</p><p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p><p className="text-[6.5pt] font-bold text-gray-400 uppercase tracking-tighter mt-1">{studentProgramName}</p></div>
+                                    <div className="mt-20 pt-2 border-t border-black w-72 mx-auto text-center"><p className="font-black uppercase text-[9pt] tracking-tight">{student?.fullName || student?.displayName}</p><p className="text-[7pt] font-black text-gray-500 uppercase tracking-widest leading-none">DNI: {student?.documentId}</p><p className="text-[6.5pt] font-bold text-gray-400 uppercase tracking-tighter mt-1">{studentProgramName}</p></div>
                                 </div>
                             </Card>
                         </div>
@@ -440,7 +472,7 @@ export function KioskView({ pointId, instituteId }: KioskViewProps) {
                             <Card className="rounded-[2rem] border-none shadow-xl bg-primary text-primary-foreground p-6 space-y-4">
                                 <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center"><Printer className="h-6 w-6 text-white" /></div>
                                 <div><h4 className="text-xl font-black uppercase tracking-tight">Confirmar e Imprimir</h4><p className="text-xs text-white/70 font-medium mt-1">Revise su información. Al confirmar se generará un cargo oficial.</p></div>
-                                <Button className="w-full h-16 text-xl font-black uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/80 shadow-xl rounded-xl" onClick={() => { if (!point?.printerStatus || point.printerStatus === 'Offline') { toast({ title: "Error", description: "Impresora desconectada.", variant: "destructive" }); return; } registerGenerationLog(instituteId, { studentId: student!.documentId, studentName: student!.fullName, templateId: selectedTemplate!.id, templateName: selectedTemplate!.name, printPointId: pointId, status: 'Exitoso', instituteId }); window.print(); handleLogout(); }} disabled={!point?.printerStatus || point.printerStatus === 'Offline'}>{(!point?.printerStatus || point.printerStatus === 'Offline') ? 'IMPRESORA OFF' : 'IMPRIMIR'}</Button>
+                                <Button className="w-full h-16 text-xl font-black uppercase tracking-widest bg-accent text-accent-foreground hover:bg-accent/80 shadow-xl rounded-xl" onClick={() => { if (!point?.printerStatus || point.printerStatus === 'Offline') { toast({ title: "Error", description: "Impresora desconectada.", variant: "destructive" }); return; } registerGenerationLog(effectiveInstituteId, { studentId: student!.documentId, studentName: student!.fullName || student!.displayName, templateId: selectedTemplate!.id, templateName: selectedTemplate!.name, printPointId: pointId, status: 'Exitoso', instituteId: effectiveInstituteId }); window.print(); handleLogout(); }} disabled={!point?.printerStatus || point.printerStatus === 'Offline'}>{(!point?.printerStatus || point.printerStatus === 'Offline') ? 'IMPRESORA OFF' : 'IMPRIMIR'}</Button>
                             </Card>
                             <Button variant="ghost" onClick={() => setStep('assistant')} className="h-12 font-black uppercase rounded-xl border-2 border-slate-200"><ArrowLeft className="mr-2 h-4 w-4" /> CORREGIR</Button>
                         </div>

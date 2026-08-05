@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Servicio especializado para el sistema EDA (Elaboración de Documentos Automáticos).
  * Maneja la gestión de puntos de impresión, plantillas de documentos y logs de generación.
@@ -50,7 +51,10 @@ export const listenToPrintPoint = (instituteId: string, pointId: string, callbac
     return onSnapshot(q, (snap) => {
         if (!snap.empty) {
             const d = snap.docs[0];
-            callback({ id: d.id, ...d.data() } as PrintPoint);
+            const data = d.data() as PrintPoint;
+            // Si el documento no tiene el instituteId guardado, intentamos deducirlo de la ruta
+            const docInstId = data.instituteId || d.ref.parent.parent?.id;
+            callback({ id: d.id, ...data, instituteId: docInstId || instituteId } as PrintPoint);
         } else {
             // Intento secundario: buscar directamente en el instituto asignado
             const docRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointId);
