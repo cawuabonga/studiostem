@@ -95,10 +95,14 @@ export const registerEdaScan = async (rfidCardId: string, accessPointId: string)
         }
 
         const userData = userDoc.data();
-        const instituteId = userData.instituteId;
+        
+        // MEJORA: Si no tiene instituteId en los datos, lo extraemos de la ruta del documento
+        // La ruta es /institutes/{instituteId}/studentProfiles/{studentId}
+        // userDoc.ref.parent es la colección, userDoc.ref.parent.parent es el documento del instituto
+        const instituteId = userData.instituteId || userDoc.ref.parent.parent?.id;
 
         if (!instituteId) {
-            throw new Error('Perfil de usuario incompleto: falta instituteId.');
+            throw new Error('No se pudo determinar el instituto asociado al perfil del usuario.');
         }
 
         // 2. BUSCAR EL PUNTO DE IMPRESIÓN ESPECÍFICO EN ESE INSTITUTO
