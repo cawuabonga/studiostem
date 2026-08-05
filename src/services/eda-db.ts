@@ -74,10 +74,11 @@ export const updatePrinterTelemetry = async (
 /**
  * Registra un evento de escaneo RFID en un terminal EDA.
  * Soporta identificación de Estudiantes y Personal.
+ * Versión robusta para entornos SaaS.
  */
-export const registerEdaScan = async (rfidCardId: string, accessPointId: string) => {
+export const registerEdaScan = async (rfidCardId: string, terminalPointId: string) => {
     try {
-        // 1. BUSCAR AL USUARIO (Estudiante o Personal)
+        // 1. BUSCAR AL USUARIO (Estudiante o Personal) GLOBALMENTE
         const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('rfidCardId', '==', rfidCardId));
         const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
         
@@ -95,31 +96,30 @@ export const registerEdaScan = async (rfidCardId: string, accessPointId: string)
         }
 
         const userData = userDoc.data();
-        
-        // MEJORA: Si no tiene instituteId en los datos, lo extraemos de la ruta del documento
-        // La ruta es /institutes/{instituteId}/studentProfiles/{studentId}
-        // userDoc.ref.parent es la colección, userDoc.ref.parent.parent es el documento del instituto
-        const instituteId = userData.instituteId || userDoc.ref.parent.parent?.id;
+        const userInstituteId = userData.instituteId || userDoc.ref.parent.parent?.id;
 
-        if (!instituteId) {
-            throw new Error('No se pudo determinar el instituto asociado al perfil del usuario.');
-        }
-
-        // 2. BUSCAR EL PUNTO DE IMPRESIÓN ESPECÍFICO EN ESE INSTITUTO
-        const apQuery = query(
-            collection(db, 'institutes', instituteId, 'edaPrintPoints'), 
-            where('pointId', '==', accessPointId)
+        // 2. BUSCAR EL TERMINAL GLOBALMENTE (Detección de procedencia)
+        const pointQuery = query(
+            collectionGroup(db, 'edaPrintPoints'),
+            where('pointId', '==', terminalPointId)
         );
-        const apSnap = await getDocs(apQuery);
+        const pointSnap = await getDocs(pointQuery);
 
-        if (apSnap.empty) {
-            throw new Error(`El terminal "${accessPointId}" no existe en el instituto del usuario.`);
+        if (pointSnap.empty) {
+            throw new Error(`El terminal "${terminalPointId}" no está registrado en la red STEM.`);
         }
 
-        const pointRef = apSnap.docs[0].ref;
+        const terminalDoc = pointSnap.docs[0];
+        const terminalInstituteId = terminalDoc.data().instituteId || terminalDoc.ref.parent.parent?.id;
 
-        // 3. DESBLOQUEAR LA SESIÓN EN EL KIOSKO
-        await updateDoc(pointRef, {
+        // 3. VALIDAR QUE EL USUARIO Y EL TERMINAL PERTENECEN AL MISMO INSTITUTO
+        if (userInstituteId !== terminalInstituteId) {
+            console.error(`[SECURITY] Intento de acceso cruzado: Usuario(${userInstituteId}) en Terminal(${terminalInstituteId})`);
+            throw new Error('El alumno no pertenece a la institución de este terminal.');
+        }
+
+        // 4. DESBLOQUEAR LA SESIÓN EN EL KIOSKO
+        await updateDoc(terminalDoc.ref, {
             currentStudentId: userDoc.id,
             lastScanAt: Timestamp.now()
         });
