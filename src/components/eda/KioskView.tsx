@@ -4,10 +4,10 @@
 /**
  * @fileOverview Componente Maestro del Kiosko EDA (Point Print).
  * Interfaz táctil de alta fidelidad optimizada para trámites físicos.
- * Sincronizado dinámicamente con el color primario del instituto.
+ * Incluye temporizador de inactividad configurable y control de login manual.
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { listenToPrintPoint, closeKioskSession, getDocumentTemplates, registerGenerationLog } from '@/services/eda-service';
 import { getStudentProfile, getStaffProfileByDocumentId, getInstitute, getStaffProfiles, getStudentPaymentsByStatus, getPrograms } from '@/config/firebase';
 import type { PrintPoint, StudentProfile, DocumentTemplate, Institute, StaffProfile, Program } from '@/types';
@@ -41,7 +41,8 @@ import {
     Clock,
     Globe,
     ShieldCheck,
-    Activity
+    Activity,
+    History
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -74,31 +75,83 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
     const [loading, setLoading] = useState(true);
     const [manualDni, setManualDni] = useState('');
 
+    // Timer logic
+    const [timeLeft, setTimeLeft] = useState(50);
+    const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
     // Form flow state
     const [formData, setFormData] = useState<Record<string, string>>({});
     const [selectedDates, setSelectedDates] = useState<Date[] | undefined>([]);
     const [isValidating, setIsValidating] = useState(false);
     const [validationError, setValidationError] = useState<string | null>(null);
 
-    // Determinar ID de instituto efectivo (Prioriza el del terminal si ya está cargado)
     const effectiveInstituteId = point?.instituteId || propInstituteId;
+
+    // --- LÓGICA DE TEMPORIZADOR DE INACTIVIDAD ---
+    
+    const handleLogout = useCallback(async () => {
+        if (effectiveInstituteId) {
+            await closeKioskSession(effectiveInstituteId, pointId);
+        }
+        setStep('idle');
+        setStudent(null);
+        setTimeLeft(point?.inactivityTimeout || 50);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }, [effectiveInstituteId, pointId, point?.inactivityTimeout]);
+
+    const resetTimer = useCallback(() => {
+        if (step !== 'idle') {
+            setTimeLeft(point?.inactivityTimeout || 50);
+        }
+    }, [step, point?.inactivityTimeout]);
+
+    // Iniciar temporizador cuando el usuario entra
+    useEffect(() => {
+        if (step !== 'idle') {
+            // Reiniciar timer al cambiar de pantalla
+            setTimeLeft(point?.inactivityTimeout || 50);
+
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            
+            timerIntervalRef.current = setInterval(() => {
+                setTimeLeft(prev => {
+                    if (prev <= 1) {
+                        handleLogout();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        } else {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        }
+
+        return () => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+        };
+    }, [step, handleLogout, point?.inactivityTimeout]);
+
+    // Capturar cualquier toque en la pantalla para resetear el timer
+    useEffect(() => {
+        const handleInteraction = () => resetTimer();
+        window.addEventListener('touchstart', handleInteraction);
+        window.addEventListener('mousedown', handleInteraction);
+
+        return () => {
+            window.removeEventListener('touchstart', handleInteraction);
+            window.removeEventListener('mousedown', handleInteraction);
+        };
+    }, [resetTimer]);
 
     /**
      * Carga el perfil del alumno o personal detectado.
-     * Soporta ambos tipos de perfil para máxima flexibilidad en el terminal.
      */
     const loadUserSession = useCallback(async (userId: string, instId: string) => {
-        // Evitar recargas si el usuario ya es el mismo (previene parpadeo)
         if (student && student.documentId === userId) return;
 
         setLoading(true);
-        console.log(`[KIOSKO] Cargando sesión para usuario: ${userId} en instituto: ${instId}`);
-        
         try {
-            // Intentamos cargar como estudiante primero
             let profile: any = await getStudentProfile(instId, userId);
-            
-            // Si no es estudiante, intentamos cargar como personal
             if (!profile) {
                 profile = await getStaffProfileByDocumentId(instId, userId);
                 if (profile) profile.isStaff = true;
@@ -108,7 +161,6 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
                 setStudent(profile);
                 setStep('menu');
             } else {
-                console.error("[KIOSKO] Perfil no encontrado en la base de datos.");
                 toast({ title: "Error de Perfil", description: "No se encontraron tus datos académicos.", variant: "destructive" });
             }
         } catch (error) {
@@ -118,18 +170,16 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
         }
     }, [student, toast]);
 
-    // 1. Escuchar el Punto de Impresión (Sincronización en Tiempo Real con Hardware)
+    // 1. Escuchar el Punto de Impresión (Tiempo Real)
     useEffect(() => {
         if (!propInstituteId || !pointId) return;
 
         const unsub = listenToPrintPoint(propInstituteId, pointId, (p) => {
             setPoint(p);
-            
             if (p?.currentStudentId) {
                 const targetInstId = p.instituteId || propInstituteId;
                 loadUserSession(p.currentStudentId, targetInstId);
             } else {
-                // Solo volvemos a idle si realmente se limpió la sesión
                 if (student) {
                     setStudent(null);
                     setStep('idle');
@@ -139,7 +189,7 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
         return () => unsub();
     }, [propInstituteId, pointId, loadUserSession, student]);
 
-    // 2. Cargar datos base del instituto para el funcionamiento del Kiosko
+    // 2. Cargar datos base del instituto
     useEffect(() => {
         if (!effectiveInstituteId) return;
         
@@ -170,14 +220,6 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
         if (!manualDni || !effectiveInstituteId) return;
         await loadUserSession(manualDni, effectiveInstituteId);
         setManualDni('');
-    };
-
-    const handleLogout = async () => {
-        if (effectiveInstituteId) {
-            await closeKioskSession(effectiveInstituteId, pointId);
-        }
-        setStep('idle');
-        setStudent(null);
     };
 
     const categories = useMemo(() => {
@@ -271,18 +313,23 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
                         <div className="h-20 w-20 mx-auto bg-primary rounded-full flex items-center justify-center shadow-xl shadow-primary/20"><Fingerprint className="h-10 w-10 text-white" /></div>
                         <div className="space-y-2">
                             <h2 className="text-3xl font-black uppercase tracking-tight text-primary">Identifíquese</h2>
-                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID o ingrese su DNI debajo.</p>
+                            <p className="text-xl font-medium text-slate-500">Pase su carnet RFID por el lector.</p>
                         </div>
                     </div>
-                    <form onSubmit={handleManualLogin} className="pt-4 w-full max-w-xs mx-auto space-y-3">
-                        <div className="relative">
-                            <Keyboard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
-                            <Input placeholder="Ingrese DNI..." value={manualDni} onChange={e => setManualDni(e.target.value)} className="bg-black/20 border-white/30 text-white placeholder:text-white/40 text-center h-14 rounded-2xl text-xl font-bold tracking-widest focus-visible:ring-white/20" />
-                        </div>
-                        <Button type="submit" variant="secondary" className="w-full font-black uppercase text-xs tracking-widest h-14 rounded-2xl shadow-xl hover:scale-105 transition-transform" disabled={!manualDni || loading}>
-                            {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "INICIAR SESIÓN MANUAL"}
-                        </Button>
-                    </form>
+                    
+                    {/* Caja de DNI Manual Condicional */}
+                    {point?.allowManualLogin && (
+                        <form onSubmit={handleManualLogin} className="pt-4 w-full max-w-xs mx-auto space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div className="relative">
+                                <Keyboard className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+                                <Input placeholder="Ingrese DNI..." value={manualDni} onChange={e => setManualDni(e.target.value)} className="bg-black/20 border-white/30 text-white placeholder:text-white/40 text-center h-14 rounded-2xl text-xl font-bold tracking-widest focus-visible:ring-white/20" />
+                            </div>
+                            <Button type="submit" variant="secondary" className="w-full font-black uppercase text-xs tracking-widest h-14 rounded-2xl shadow-xl hover:scale-105 transition-transform" disabled={!manualDni || loading}>
+                                {loading ? <Loader2 className="animate-spin h-5 w-5" /> : "INICIAR SESIÓN MANUAL"}
+                            </Button>
+                        </form>
+                    )}
+
                     <div className="pt-8 flex flex-col items-center gap-2">
                         <Badge variant="outline" className="bg-black/40 h-10 px-6 rounded-full border-white/10 text-white font-bold uppercase tracking-widest text-[10px] backdrop-blur-md">
                             Terminal: {point?.name || 'Local'} • ID: {pointId}
@@ -305,7 +352,18 @@ export function KioskView({ pointId, instituteId: propInstituteId }: KioskViewPr
                         <p className="text-xs md:text-sm font-bold text-white/70 uppercase tracking-widest mt-1">DNI: {student?.documentId} • {studentProgramName}</p>
                     </div>
                 </div>
-                <Button variant="ghost" onClick={handleLogout} className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/10 hover:bg-white/20 text-white border-2 border-white/20"><LogOut className="h-6 w-6" /></Button>
+                
+                {/* Panel de Salida y Temporizador */}
+                <div className="flex items-center gap-4">
+                    <div className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all",
+                        timeLeft <= 10 ? "bg-red-500/20 border-red-500 animate-pulse" : "bg-white/10 border-white/20"
+                    )}>
+                        <Clock className={cn("h-4 w-4", timeLeft <= 10 ? "text-red-400" : "text-white/60")} />
+                        <span className="font-mono font-black text-xl w-8 text-center">{timeLeft}</span>
+                    </div>
+                    <Button variant="ghost" onClick={handleLogout} className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-white/10 hover:bg-white/20 text-white border-2 border-white/20"><LogOut className="h-6 w-6" /></Button>
+                </div>
             </header>
 
             <main className="flex-1 overflow-hidden p-4 md:p-6 print:overflow-visible print:p-0">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -54,10 +55,13 @@ import {
     Circle, 
     MapPin,
     Printer,
-    ImageIcon
+    ImageIcon,
+    Clock,
+    Keyboard
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -79,6 +83,8 @@ const pointSchema = z.object({
   location: z.string().min(3, 'La ubicación física es requerida.'),
   status: z.enum(['Online', 'Offline', 'Mantenimiento'] as const),
   backgroundImage: z.instanceof(FileList).optional(),
+  allowManualLogin: z.boolean().default(false),
+  inactivityTimeout: z.coerce.number().min(10).max(300).default(50),
 });
 
 type FormValues = z.infer<typeof pointSchema>;
@@ -95,7 +101,11 @@ export function PrintPointManager() {
 
     const form = useForm<FormValues>({
         resolver: zodResolver(pointSchema),
-        defaultValues: { status: 'Offline' }
+        defaultValues: { 
+            status: 'Offline',
+            allowManualLogin: false,
+            inactivityTimeout: 50
+        }
     });
 
     const fetchData = useCallback(async () => {
@@ -120,7 +130,9 @@ export function PrintPointManager() {
             name: point?.name || '',
             location: point?.location || '',
             status: point?.status || 'Offline',
-            backgroundImage: undefined
+            backgroundImage: undefined,
+            allowManualLogin: point?.allowManualLogin ?? false,
+            inactivityTimeout: point?.inactivityTimeout ?? 50
         });
         setIsDialogOpen(true);
     };
@@ -184,9 +196,9 @@ export function PrintPointManager() {
                             <TableHeader className="bg-slate-50/50">
                                 <TableRow>
                                     <TableHead className="font-black text-[10px] uppercase pl-8 py-4">Identidad y Estado</TableHead>
-                                    <TableHead className="font-black text-[10px] uppercase">Ubicación Física</TableHead>
-                                    <TableHead className="font-black text-[10px] uppercase text-center">Fondo Kiosko</TableHead>
-                                    <TableHead className="font-black text-[10px] uppercase">Última Actividad</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase">Configuración Kiosko</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase text-center">Fondo</TableHead>
+                                    <TableHead className="font-black text-[10px] uppercase">Ubicación</TableHead>
                                     <TableHead className="text-right font-black text-[10px] uppercase pr-8">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -215,9 +227,15 @@ export function PrintPointManager() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                                                <MapPin className="h-3.5 w-3.5 text-primary" />
-                                                {point.location}
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <Keyboard className={cn("h-3.5 w-3.5", point.allowManualLogin ? "text-primary" : "text-slate-300")} />
+                                                    <span className="text-[10px] font-bold uppercase">{point.allowManualLogin ? "Login DNI Activo" : "Solo RFID"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className="h-3.5 w-3.5 text-slate-400" />
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase">Timeout: {point.inactivityTimeout || 50}s</span>
+                                                </div>
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
@@ -230,11 +248,9 @@ export function PrintPointManager() {
                                             )}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Sincronizado</span>
-                                                <span className="text-xs font-black">
-                                                    {point.lastHeartbeat ? formatDistanceToNow(point.lastHeartbeat.toDate(), { addSuffix: true, locale: es }) : 'Nunca'}
-                                                </span>
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-600 uppercase">
+                                                <MapPin className="h-3.5 w-3.5 text-primary" />
+                                                {point.location}
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-right pr-8">
@@ -268,7 +284,7 @@ export function PrintPointManager() {
                         <DialogTitle className="text-2xl font-black uppercase tracking-tight leading-none">
                             {editingPoint ? 'Editar Point Print' : 'Nuevo Point Print'}
                         </DialogTitle>
-                        <DialogDescription className="text-primary-foreground/80 font-medium">Configure los parámetros técnicos y estéticos del terminal.</DialogDescription>
+                        <DialogDescription className="text-primary-foreground/80 font-medium">Configure los parámetros técnicos y de seguridad del terminal.</DialogDescription>
                     </DialogHeader>
                     
                     <Form {...form}>
@@ -302,6 +318,30 @@ export function PrintPointManager() {
                             <Separator />
 
                             <div className="space-y-4">
+                                <h4 className="font-black text-[10px] uppercase tracking-widest text-primary">Ajustes del Kiosko</h4>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <FormField control={form.control} name="allowManualLogin" render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-xl border p-3 bg-muted/30">
+                                            <div className="space-y-0.5">
+                                                <FormLabel className="text-xs font-bold">Login Manual (DNI)</FormLabel>
+                                                <FormDescription className="text-[10px]">Permite ingresar el DNI por teclado en pantalla.</FormDescription>
+                                            </div>
+                                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="inactivityTimeout" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-xs font-bold">Tiempo de Inactividad (seg.)</FormLabel>
+                                            <FormControl><Input type="number" {...field} className="h-10 rounded-xl" /></FormControl>
+                                            <FormDescription className="text-[10px]">Segundos antes de cerrar sesión automáticamente.</FormDescription>
+                                        </FormItem>
+                                    )}/>
+                                </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-4">
                                 <FormLabel className="font-black text-[10px] uppercase tracking-widest text-primary flex items-center gap-2">
                                     <ImageIcon className="h-4 w-4" /> Imagen de Fondo (Kiosko)
                                 </FormLabel>
@@ -318,7 +358,6 @@ export function PrintPointManager() {
                                         <FormControl>
                                             <Input type="file" accept="image/*" {...form.register('backgroundImage')} className="h-10 text-xs bg-muted/50 rounded-xl" />
                                         </FormControl>
-                                        <FormDescription className="text-[9px]">Sube una imagen (HD 1920x1080 recomendado) para personalizar la pantalla de espera de este terminal.</FormDescription>
                                         <FormMessage />
                                     </FormItem>
                                 )}/>

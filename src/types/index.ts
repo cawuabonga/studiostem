@@ -30,6 +30,9 @@ export interface PrintPoint {
     lastHeartbeat?: Timestamp;
     instituteId: string;
     backgroundImageUrl?: string;
+    // Configuración de Kiosko
+    allowManualLogin?: boolean;
+    inactivityTimeout?: number; // Segundos antes del auto-logout
     // Sesión activa para el Kiosko
     currentStudentId?: string | null;
     lastScanAt?: Timestamp | null;
