@@ -1,23 +1,21 @@
 {
   "indexes": [
     {
-      "collectionGroup": "units",
+      "collectionGroup": "studentProfiles",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
-          "fieldPath": "instituteId",
+          "fieldPath": "rfidCardId",
           "order": "ASCENDING"
-        },
+        }
+      ]
+    },
+    {
+      "collectionGroup": "staffProfiles",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
         {
-          "fieldPath": "period",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "unitId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "year",
+          "fieldPath": "rfidCardId",
           "order": "ASCENDING"
         }
       ]

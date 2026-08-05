@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -38,72 +37,98 @@ export const updatePrinterTelemetry = async (
         printerName?: string 
     }
 ) => {
-    // 1. Localizar el punto de impresión en todo el ecosistema (SaaS)
-    const q = query(
-        collectionGroup(db, 'edaPrintPoints'),
-        where('pointId', '==', pointId)
-    );
+    try {
+        // 1. Localizar el punto de impresión en todo el ecosistema (SaaS)
+        const q = query(
+            collectionGroup(db, 'edaPrintPoints'),
+            where('pointId', '==', pointId)
+        );
 
-    const snap = await getDocs(q);
+        const snap = await getDocs(q);
 
-    if (snap.empty) {
-        throw new Error(`No se encontró configuración para el Hard-ID: ${pointId}`);
+        if (snap.empty) {
+            throw new Error(`No se encontró configuración para el Hard-ID: ${pointId}`);
+        }
+
+        // 2. Obtener referencia al documento específico
+        const pointDoc = snap.docs[0];
+        const pointRef = pointDoc.ref;
+
+        // 3. Ejecutar la actualización con marcas de tiempo de servidor
+        await updateDoc(pointRef, {
+            printerStatus: data.status || 'Online',
+            paperStatus: data.paper || 'OK',
+            tonerLevel: data.toner !== undefined ? Number(data.toner) : 85,
+            printerName: data.printerName || 'Impresora Local',
+            lastHeartbeat: serverTimestamp() 
+        });
+
+        return {
+            path: pointRef.path,
+            pointId: pointId
+        };
+    } catch (error: any) {
+        console.error("[TELEMETRY ERROR]", error.message);
+        throw error;
     }
-
-    // 2. Obtener referencia al documento específico
-    const pointDoc = snap.docs[0];
-    const pointRef = pointDoc.ref;
-
-    // 3. Ejecutar la actualización con marcas de tiempo de servidor
-    await updateDoc(pointRef, {
-        printerStatus: data.status || 'Online',
-        paperStatus: data.paper || 'OK',
-        tonerLevel: data.toner !== undefined ? Number(data.toner) : 85,
-        printerName: data.printerName || 'Impresora Local',
-        lastHeartbeat: serverTimestamp() 
-    });
-
-    return {
-        path: pointRef.path,
-        pointId: pointId
-    };
 };
 
 /**
  * Registra un evento de escaneo RFID en un terminal EDA.
+ * Soporta identificación de Estudiantes y Personal.
  */
 export const registerEdaScan = async (rfidCardId: string, accessPointId: string) => {
-    const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
-    const studentSnap = await getDocs(studentQuery);
+    try {
+        // 1. BUSCAR AL USUARIO (Estudiante o Personal)
+        const staffQuery = query(collectionGroup(db, 'staffProfiles'), where('rfidCardId', '==', rfidCardId));
+        const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
+        
+        const [staffSnap, studentSnap] = await Promise.all([getDocs(staffQuery), getDocs(studentQuery)]);
 
-    if (studentSnap.empty) {
-        throw new Error('Tarjeta RFID no vinculada a ningún estudiante');
+        let userDoc = null;
+        if (!studentSnap.empty) {
+            userDoc = studentSnap.docs[0];
+        } else if (!staffSnap.empty) {
+            userDoc = staffSnap.docs[0];
+        }
+
+        if (!userDoc) {
+            throw new Error('Tarjeta RFID no vinculada a ningún usuario en el sistema.');
+        }
+
+        const userData = userDoc.data();
+        const instituteId = userData.instituteId;
+
+        if (!instituteId) {
+            throw new Error('Perfil de usuario incompleto: falta instituteId.');
+        }
+
+        // 2. BUSCAR EL PUNTO DE IMPRESIÓN ESPECÍFICO EN ESE INSTITUTO
+        const apQuery = query(
+            collection(db, 'institutes', instituteId, 'edaPrintPoints'), 
+            where('pointId', '==', accessPointId)
+        );
+        const apSnap = await getDocs(apQuery);
+
+        if (apSnap.empty) {
+            throw new Error(`El terminal "${accessPointId}" no existe en el instituto del usuario.`);
+        }
+
+        const pointRef = apSnap.docs[0].ref;
+
+        // 3. DESBLOQUEAR LA SESIÓN EN EL KIOSKO
+        await updateDoc(pointRef, {
+            currentStudentId: userDoc.id,
+            lastScanAt: Timestamp.now()
+        });
+
+        return {
+            studentName: userData.fullName || userData.displayName || 'Usuario Identificado'
+        };
+    } catch (error: any) {
+        console.error("[EDA DB SCAN ERROR]", error.message);
+        throw error;
     }
-
-    const studentDoc = studentSnap.docs[0];
-    const studentData = studentDoc.data();
-    const instituteId = studentData.instituteId;
-
-    const apQuery = query(
-        collection(db, 'institutes', instituteId, 'edaPrintPoints'), 
-        where('pointId', '==', accessPointId)
-    );
-    const apSnap = await getDocs(apQuery);
-
-    if (apSnap.empty) {
-        throw new Error('Terminal Point Print no encontrado en este instituto');
-    }
-
-    const pointRef = apSnap.docs[0].ref;
-
-    await updateDoc(pointRef, {
-        currentStudentId: studentDoc.id,
-        lastScanAt: Timestamp.now()
-    });
-
-    return {
-        studentName: studentData.fullName || studentData.displayName
-    };
 };
 
 /**
