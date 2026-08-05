@@ -1,11 +1,10 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { db } from '@/config/firebase';
-import { collection, getDocs, query, where, collectionGroup, doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { registerEdaScan } from '@/services/eda-db';
 
 /**
  * @fileOverview API Endpoint para que el hardware (ESP32) notifique un escaneo RFID en un terminal EDA.
- * Actualiza el estado del punto de impresión para que el Kiosko web reaccione.
+ * Esta versión utiliza el servicio centralizado para garantizar la integridad de la sesión.
  */
 
 export async function POST(req: NextRequest) {
@@ -13,48 +12,36 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { rfidCardId, accessPointId } = body;
 
+        // Validación de parámetros básicos
         if (!rfidCardId || !accessPointId) {
-            return NextResponse.json({ error: 'Faltan parámetros: rfidCardId o accessPointId' }, { status: 400 });
+            return NextResponse.json(
+                { error: 'Faltan parámetros: rfidCardId o accessPointId' }, 
+                { status: 400 }
+            );
         }
 
-        // 1. Identificar al estudiante por su tarjeta RFID en todo el ecosistema
-        const studentQuery = query(collectionGroup(db, 'studentProfiles'), where('rfidCardId', '==', rfidCardId));
-        const studentSnap = await getDocs(studentQuery);
+        console.log(`[EDA SCAN] Intento de login en ${accessPointId} con tarjeta ${rfidCardId}`);
 
-        if (studentSnap.empty) {
-            return NextResponse.json({ error: 'Tarjeta RFID no vinculada a ningún estudiante' }, { status: 404 });
-        }
-
-        const studentDoc = studentSnap.docs[0];
-        const studentData = studentDoc.data();
-        const instituteId = studentData.instituteId;
-
-        // 2. Encontrar el punto de impresión EDA correspondiente
-        const apCol = collection(db, 'institutes', instituteId, 'edaPrintPoints');
-        const apQuery = query(apCol, where('pointId', '==', accessPointId));
-        const apSnap = await getDocs(apQuery);
-
-        if (apSnap.empty) {
-            return NextResponse.json({ error: 'Terminal Point Print no encontrado en este instituto' }, { status: 404 });
-        }
-
-        const pointDocId = apSnap.docs[0].id;
-        const pointRef = doc(db, 'institutes', instituteId, 'edaPrintPoints', pointDocId);
-
-        // 3. Actualizar la sesión del terminal
-        await updateDoc(pointRef, {
-            currentStudentId: studentDoc.id,
-            lastScanAt: Timestamp.now()
-        });
+        // Ejecutamos la lógica de negocio a través del servicio de DB
+        const result = await registerEdaScan(rfidCardId, accessPointId);
 
         return NextResponse.json({ 
             success: true, 
-            studentName: studentData.fullName || studentData.displayName,
-            action: 'session_started'
+            studentName: result.studentName,
+            action: 'session_started',
+            message: `Bienvenido, ${result.studentName}`
         });
 
     } catch (error: any) {
-        console.error("[EDA SCAN API ERROR]", error);
-        return NextResponse.json({ error: 'Internal Error', message: error.message }, { status: 500 });
+        console.error("[EDA SCAN API ERROR]", error.message);
+        
+        // Manejo de errores específicos para que el hardware sepa qué LED encender
+        const status = error.message.includes('no vinculada') ? 404 : 500;
+        
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Scan Failed', 
+            message: error.message 
+        }, { status });
     }
 }
