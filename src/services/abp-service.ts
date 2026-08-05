@@ -1,6 +1,3 @@
-
-'use client';
-
 /**
  * @fileOverview Servicio especializado para la Metodología ABP (Aprendizaje Basado en Proyectos).
  * Maneja el diseño de retos, rúbricas y conformación de equipos de innovación.

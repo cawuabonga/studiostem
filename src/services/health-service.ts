@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @fileOverview Servicio especializado para la gestión del área de Tópico y Salud.
  * Permite gestionar fichas médicas y registrar consultas para toda la comunidad institucional.

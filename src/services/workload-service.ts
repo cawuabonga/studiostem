@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @fileOverview Servicio modular para la gestión de Horas No Lectivas de los docentes.
  * Permite listar actividades asignadas y subir evidencias (informes/fotos).

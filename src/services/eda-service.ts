@@ -1,6 +1,3 @@
-
-'use client';
-
 /**
  * @fileOverview Servicio especializado para el sistema EDA (Elaboración de Documentos Automáticos).
  * Maneja la gestión de puntos de impresión, plantillas de documentos y logs de generación.

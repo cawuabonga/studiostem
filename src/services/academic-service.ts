@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @fileOverview Servicio especializado para la gestión de Unidades Didácticas.
  * Maneja la lógica de instancias por año y periodo académico para garantizar
@@ -291,7 +289,7 @@ export const deleteManualEvaluationFromRecord = async (instituteId: string, unit
         collectionGroup(db, 'units'), 
         where("instituteId", "==", instituteId), 
         where("unitId", "==", unitId), 
-        where("year", "==", year),
+        where("year", "==", year), 
         where("period", "==", period)
     );
     const snapshot = await getDocs(recordsColGroup);

@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * @fileOverview Servicio de Base de Datos para el ecosistema EDA.
  * Centraliza las operaciones de Firestore para Puntos de Impresión,
