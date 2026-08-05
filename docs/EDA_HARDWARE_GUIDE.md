@@ -1,7 +1,7 @@
 
 # Guía de Programación ESP32 para Point Print (EDA)
 
-Este documento contiene el código optimizado para el hardware que gestiona la identificación de alumnos en los terminales de impresión automática, respetando el esquema de conexiones estándar de la plataforma STEM.
+Este documento contiene el código optimizado para el hardware que gestiona la identificación de alumnos en los terminales de impresión automática, respetando el esquema de conexiones estándar de tu placa.
 
 ## 1. Funcionamiento
 El dispositivo lee el carnet RFID y notifica a la nube. El Kiosko (Tablet/PC) reacciona instantáneamente cargando el perfil del alumno. El hardware proporciona feedback visual y sonoro según el éxito de la identificación.
@@ -28,20 +28,20 @@ const char* serverUrl = "https://studiostem--stem-v2-4y6a0.us-east4.hosted.app/a
 const char* POINT_ID = "EDA-001"; 
 
 // ============================================================
-// DEFINICIÓN DE PINES (Respetando esquema de Control de Acceso)
+// DEFINICIÓN DE PINES (Respetando tu esquema de conexiones)
 // ============================================================
-#define RST_PIN   22  // Reset para MFRC522
-#define SS_PIN    21  // SDA (Slave Select) para MFRC522
+#define RST_PIN   22  // Pin D22 para Reset del MFRC522
+#define SS_PIN    21  // Pin D21 para SDA (Slave Select) del MFRC522
 
-#define GREEN_LED_PIN 2   // LED Verde: Login Correcto
-#define RED_LED_PIN   4   // LED Rojo: Error / No Vinculada
-#define BUZZER_PIN    15  // Feedback Sonoro
+#define GREEN_LED_PIN 2   // Pin D2 para LED Verde
+#define RED_LED_PIN   4   // Pin D4 para LED Rojo
+#define BUZZER_PIN    15  // Pin D15 para Buzzer
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 void setup() {
   Serial.begin(115200);
-  SPI.begin();
+  SPI.begin(); // Inicializa SPI en pines estándar (D18, D23, D19)
   mfrc522.PCD_Init();
   
   pinMode(GREEN_LED_PIN, OUTPUT);
