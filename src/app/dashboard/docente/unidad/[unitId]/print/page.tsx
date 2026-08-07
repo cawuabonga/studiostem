@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useAuth } from "@/contexts/AuthContext";
 import type { Unit, Syllabus, WeekData, AchievementIndicator, Program, Teacher, SyllabusDesignOptions } from '@/types';
-import { getUnit, getSyllabus, getWeekData, getAchievementIndicators, getPrograms, getTeachers, getAssignments, getAcademicPeriods } from '@/config/firebase';
+import { getUnit, getPrograms, getTeachers, getAssignments, getAcademicPeriods } from '@/config/firebase';
+import { getSyllabus, getWeekData, getAchievementIndicators } from '@/services/academic-service';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -60,7 +61,7 @@ function PrintSyllabusContent() {
                 end: academicYearData?.[unit.period]?.endDate?.toDate()
             };
 
-            const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, i + 1));
+            const weekPromises = Array.from({ length: unit.totalWeeks }, (_, i) => getWeekData(instituteId, unit.id, currentYear, unit.period, i + 1));
             const [
                 allPrograms,
                 allTeachers,
@@ -70,9 +71,9 @@ function PrintSyllabusContent() {
             ] = await Promise.all([
                 getPrograms(instituteId),
                 getTeachers(instituteId),
-                getSyllabus(instituteId, unit.id),
+                getSyllabus(instituteId, unit.id, currentYear, unit.period),
                 Promise.all(weekPromises),
-                getAchievementIndicators(instituteId, unit.id),
+                getAchievementIndicators(instituteId, unit.id, currentYear, unit.period),
             ]);
 
             const program = allPrograms.find(p => p.id === unit.programId) || null;

@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAcademicRecordForStudent, getWeeksData, getScheduledDaysForUnit } from '@/config/firebase';
+import { getAcademicRecordForStudent, getScheduledDaysForUnit } from '@/config/firebase';
+import { getWeeksData } from '@/services/academic-service';
 import type { Unit, AcademicRecord, AttendanceStatus, WeekData } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -31,7 +32,7 @@ export function UnitProgressSummary({ unit }: UnitProgressSummaryProps) {
         try {
             const [recordData, allWeeks, days] = await Promise.all([
                 getAcademicRecordForStudent(instituteId, unit.id, user.documentId, currentYear, unit.period),
-                getWeeksData(instituteId, unit.id),
+                getWeeksData(instituteId, unit.id, currentYear, unit.period),
                 getScheduledDaysForUnit(instituteId, unit.id, currentYear, unit.semester)
             ]);
             setRecord(recordData);

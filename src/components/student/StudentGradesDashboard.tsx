@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { getEnrolledUnits, getAcademicRecordForStudent, getAchievementIndicators } from "@/config/firebase";
+import { getEnrolledUnits, getAcademicRecordForStudent } from "@/config/firebase";
+import { getAchievementIndicators } from "@/services/academic-service";
 import type { EnrolledUnit, AcademicRecord, AchievementIndicator } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StudentUnitGradesCard } from "./StudentUnitGradesCard";
@@ -36,7 +37,7 @@ export function StudentGradesDashboard() {
         
         const unitsData = await Promise.all(enrolledUnits.map(async (unit) => {
             const record = await getAcademicRecordForStudent(instituteId, unit.id, user.documentId, currentYear, unit.period);
-            const indicators = await getAchievementIndicators(instituteId, unit.id);
+            const indicators = await getAchievementIndicators(instituteId, unit.id, currentYear, unit.period);
             return { ...unit, record, indicators: indicators.sort((a,b) => a.name.localeCompare(b.name)) };
         }));
 
