@@ -61,7 +61,7 @@ export function PlansManager() {
     const handleDelete = async (planId: string) => {
         try {
             await deletePlan(planId);
-            toast({ title: "Plan Eliminado" });
+            toast({ title: "Plan Eliminar" });
             fetchData();
         } catch (error) {
             toast({ title: "Error", description: "No se pudo eliminar el plan.", variant: "destructive" });
@@ -70,6 +70,7 @@ export function PlansManager() {
 
     /**
      * Motor de Impresión Directa Profesional (vía Iframe)
+     * Se aumenta el timeout a 2500ms para asegurar la carga del logo.
      */
     const handlePrintQuote = (plan: Plan) => {
         setPlanToPrint(plan);
@@ -105,6 +106,12 @@ export function PlansManager() {
                         <head>
                             <title>Proforma STEM - ${plan.name}</title>
                             ${styles}
+                            <style>
+                                @media print {
+                                    body { background: white !important; }
+                                    .quote-print-container { background: white !important; }
+                                }
+                            </style>
                         </head>
                         <body>
                             <div class="print-container">
@@ -115,11 +122,12 @@ export function PlansManager() {
                 `);
                 iframeDoc.close();
                 
+                // Tiempo de espera para carga de recursos gráficos (2.5 segundos)
                 setTimeout(() => {
                     iframe.contentWindow?.focus();
                     iframe.contentWindow?.print();
                     setPlanToPrint(null);
-                }, 800);
+                }, 2500);
             }
         }, 300);
     };
@@ -140,7 +148,7 @@ export function PlansManager() {
                     <p className="text-sm text-muted-foreground">Define los paquetes comerciales para las instituciones.</p>
                 </div>
                 <Button onClick={() => handleOpenDialog()} className="font-black shadow-lg">
-                    <PlusCircle className="mr-2 h-4 w-4" /> CREAR NUEVO PLAN
+                    <PlusCircle className="mr-2 h-5 w-4" /> CREAR NUEVO PLAN
                 </Button>
             </div>
 

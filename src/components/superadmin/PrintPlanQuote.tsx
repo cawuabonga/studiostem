@@ -34,7 +34,7 @@ const Header = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber
         <div className="w-full border-b-2 border-black pb-4 flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
-                    <img src={platformLogo} alt="Logo" className="w-12 h-12 object-contain" />
+                    <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
                 ) : (
                     <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-lg">
                         <span className="text-[8pt] font-black italic">STEM</span>
@@ -127,9 +127,9 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
 
                     <div className="flex flex-col items-center gap-12 mb-20">
                         {design?.logoUrl ? (
-                            <img src={design.logoUrl} alt="Logo" className="h-48 w-48 object-contain" />
+                            <img src={design.logoUrl} alt="Logo" className="h-40 w-40 object-contain" />
                         ) : (
-                            <div className="w-40 h-40 bg-black text-white flex items-center justify-center rounded-[2.5rem]">
+                            <div className="w-32 h-32 bg-black text-white flex items-center justify-center rounded-[2.5rem]">
                                 <span className="text-4xl font-black italic">STEM</span>
                             </div>
                         )}
