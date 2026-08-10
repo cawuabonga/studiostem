@@ -23,7 +23,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Componente de Encabezado Institucional
+ * Componente de Encabezado Institucional para cada hoja
  */
 const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTitle: string }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -31,7 +31,7 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
     const today = new Date();
 
     return (
-        <div className="print-header flex items-center justify-between mb-8 border-b-2 border-black pb-4 w-full">
+        <div className="mb-8 border-b-2 border-black pb-4 flex items-center justify-between">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-12 h-12 object-contain" />
@@ -54,12 +54,12 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
 };
 
 /**
- * Pie de página institucional con numeración automática
+ * Pie de página institucional con numeración absoluta
  */
 const PageFooter = ({ pageNumber, design }: { pageNumber: number, design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="print-footer mt-auto pt-4 border-t border-slate-200 flex justify-between items-center w-full">
+        <div className="absolute bottom-[15mm] left-[20mm] right-[20mm] pt-4 border-t border-slate-200 flex justify-between items-center bg-white">
             <div className="text-left">
                 <p className="text-[6.5pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
                     {platformTitle} • PROPUESTA DE SERVICIO
@@ -79,45 +79,40 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
     const creators = design?.creators || "Equipo de Desarrollo STEM";
 
     return (
-        <div className="printable-area font-sans text-black bg-white w-full">
+        <div className="printable-area font-sans text-black bg-white">
             <style jsx global>{`
+                @media screen {
+                    .page-container {
+                        max-width: 210mm;
+                        margin: 20px auto;
+                        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                        border: 1px solid #eee;
+                    }
+                }
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 10mm 15mm 10mm 15mm;
+                        margin: 0; /* Control total manual */
                     }
                     body {
                         margin: 0 !important;
                         padding: 0 !important;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
-                        background: white !important;
-                        display: block !important;
-                    }
-                    html, body {
-                        height: auto !important;
-                        overflow: visible !important;
-                    }
-                    .page-container {
-                        width: 100%;
-                        height: 275mm; /* Altura de página ajustada para evitar cortes */
-                        page-break-after: always;
-                        break-after: page;
-                        display: flex !important;
-                        flex-direction: column !important;
-                        position: relative;
-                        background: white !important;
-                        box-sizing: border-box;
-                    }
-                    .no-print-break {
-                        page-break-inside: avoid !important;
-                        break-inside: avoid !important;
                     }
                 }
                 .page-container {
-                    display: flex;
-                    flex-direction: column;
+                    width: 210mm;
+                    height: 297mm;
+                    padding: 20mm;
+                    position: relative;
+                    background: white;
                     box-sizing: border-box;
+                    page-break-after: always;
+                    overflow: hidden;
+                }
+                .no-print-break {
+                    page-break-inside: avoid;
                 }
             `}</style>
 
@@ -125,7 +120,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-container">
                 <PageHeader design={design} pageTitle="Presentación de Solución" />
                 
-                <div className="flex-grow flex flex-col items-center justify-center text-center">
+                <div className="mt-20 flex flex-col items-center justify-center text-center">
                     <div className="space-y-4 mb-16">
                         <p className="text-[12pt] font-black tracking-[0.5em] text-slate-300 uppercase">
                             Plan de Implementación
@@ -152,14 +147,14 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="w-full max-w-xl bg-slate-50 border-y-2 border-black py-10">
+                    <div className="w-full max-w-xl bg-slate-50 border-y-2 border-black py-10 mb-12">
                         <p className="text-[9pt] font-black text-primary uppercase tracking-[0.4em] mb-3">Propuesta Técnica para el Plan:</p>
                         <h2 className="text-[24pt] font-black uppercase tracking-tight text-black px-6">
                             {plan.name}
                         </h2>
                     </div>
 
-                    <div className="w-full mt-20 flex justify-between items-end text-left px-8">
+                    <div className="w-full mt-12 flex justify-between items-end text-left px-8">
                         <div className="space-y-1">
                             <p className="text-[7.5pt] font-black uppercase text-slate-400 tracking-widest">Ingeniería y Desarrollo</p>
                             <p className="text-[10pt] font-bold uppercase">{creators}</p>
@@ -178,7 +173,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-container">
                 <PageHeader design={design} pageTitle="Cotización de Servicios" />
 
-                <div className="flex-grow space-y-10">
+                <div className="space-y-8">
                     <div className="text-center my-4">
                         <h2 className="text-[22pt] font-black uppercase tracking-tighter leading-none mb-2">PROPUESTA ECONÓMICA</h2>
                         <div className="inline-block px-5 py-1 bg-black text-white text-[8pt] font-black uppercase tracking-[0.3em]">
@@ -186,12 +181,12 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <p className="text-[10.5pt] leading-relaxed text-justify text-slate-700 font-medium">
+                    <p className="text-[10.5pt] leading-relaxed text-justify text-slate-700 font-medium px-4">
                         Ponemos a su consideración la propuesta comercial para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución está diseñada para centralizar la gestión académica y administrativa, optimizando recursos mediante el uso de infraestructura en la nube y automatización de procesos críticos.
                     </p>
 
                     {/* Cuadro de Inversión */}
-                    <div className="relative py-10 px-8 border-2 border-black rounded-[2rem] bg-white shadow-lg overflow-hidden no-print-break">
+                    <div className="mx-4 py-10 px-8 border-2 border-black rounded-[2rem] bg-white shadow-lg overflow-hidden no-print-break relative">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <CreditCard className="w-24 h-24" />
                         </div>
@@ -219,25 +214,25 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50 no-print-break">
+                    <div className="grid grid-cols-3 gap-4 px-4">
+                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
                             <ShieldCheck className="h-7 w-7 text-primary mb-2" />
                             <p className="text-[7pt] font-black uppercase tracking-widest text-slate-400 mb-0.5">Seguridad</p>
                             <p className="text-[9pt] font-bold text-slate-800">Cifrado SSL</p>
                         </div>
-                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50 no-print-break">
+                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
                             <Globe className="h-7 w-7 text-primary mb-2" />
                             <p className="text-[7pt] font-black uppercase tracking-widest text-slate-400 mb-0.5">Hosting</p>
                             <p className="text-[9pt] font-bold text-slate-800">Google Cloud</p>
                         </div>
-                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50 no-print-break">
+                        <div className="flex flex-col items-center text-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
                             <Cpu className="h-7 w-7 text-primary mb-2" />
                             <p className="text-[7pt] font-black uppercase tracking-widest text-slate-400 mb-0.5">IA</p>
                             <p className="text-[9pt] font-bold text-slate-800">Motor Híbrido</p>
                         </div>
                     </div>
 
-                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-200 no-print-break">
+                    <div className="mx-4 p-6 bg-slate-50 rounded-2xl border border-slate-200">
                         <h4 className="text-[8pt] font-black uppercase text-slate-500 tracking-widest mb-2 flex items-center gap-2">
                             <Info className="h-3.5 w-3.5" /> Resumen de Beneficios
                         </h4>
@@ -254,55 +249,55 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-container">
                 <PageHeader design={design} pageTitle="Anexo: Especificaciones del Plan" />
 
-                <div className="flex-grow flex flex-col">
-                    <div className="flex justify-between items-center mb-8 pb-1 border-b border-black no-print-break">
+                <div className="px-4">
+                    <div className="flex justify-between items-center mb-8 pb-1 border-b border-black">
                         <h3 className="text-[12pt] font-black uppercase tracking-tight flex items-center gap-2">
                             <ListChecks className="h-5 w-5 text-primary" /> Funcionalidades Incluidas
                         </h3>
                         <Badge variant="outline" className="font-black uppercase text-[7pt] border-black px-3 h-6">{plan.name}</Badge>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-x-10 gap-y-8">
+                    <div className="grid grid-cols-2 gap-x-10 gap-y-6">
                         {plan.features.map((feature, i) => {
                             const [name, ...descParts] = feature.split(':');
                             const description = descParts.join(':');
                             const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
 
                             return (
-                                <div key={i} className="space-y-2 no-print-break">
-                                    <h4 className="text-[10pt] font-black text-primary uppercase tracking-tight border-l-3 border-primary pl-2">
+                                <div key={i} className="space-y-1.5 no-print-break">
+                                    <h4 className="text-[9.5pt] font-black text-primary uppercase tracking-tight border-l-2 border-primary pl-2">
                                         {name}
                                     </h4>
-                                    <div className="space-y-1.5 ml-3">
+                                    <div className="space-y-1 ml-3">
                                         {items.length > 0 ? items.map((item, idx) => (
                                             <div key={idx} className="text-[8.5pt] text-slate-600 font-bold leading-snug flex items-start gap-1.5">
                                                 <div className="h-1 w-1 rounded-full bg-slate-300 mt-1.5 shrink-0" />
                                                 <span>{item}</span>
                                             </div>
                                         )) : (
-                                            <p className="text-[8.5pt] text-slate-400 italic">Módulo habilitado según estándares del plan.</p>
+                                            <p className="text-[8pt] text-slate-400 italic">Módulo habilitado según estándares del plan.</p>
                                         )}
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
+                </div>
 
-                    <div className="mt-auto mb-8 pt-12">
-                        <div className="grid grid-cols-2 gap-20 px-8 text-center no-print-break">
-                            <div className="space-y-1">
-                                <div className="h-14"></div>
-                                <div className="border-t border-black pt-1">
-                                    <p className="text-[9pt] font-black uppercase">{platformTitle} Team</p>
-                                    <p className="text-[6.5pt] text-slate-400 font-bold uppercase tracking-widest">Dirección de Ingeniería</p>
-                                </div>
+                <div className="absolute bottom-[40mm] left-[20mm] right-[20mm]">
+                    <div className="grid grid-cols-2 gap-20 px-8 text-center">
+                        <div className="space-y-1">
+                            <div className="h-14"></div>
+                            <div className="border-t border-black pt-1">
+                                <p className="text-[9pt] font-black uppercase">{platformTitle} Team</p>
+                                <p className="text-[6.5pt] text-slate-400 font-bold uppercase tracking-widest">Dirección de Ingeniería</p>
                             </div>
-                            <div className="space-y-1">
-                                <div className="h-14"></div>
-                                <div className="border-t border-black pt-1">
-                                    <p className="text-[9pt] font-black uppercase">Cliente Institucional</p>
-                                    <p className="text-[6.5pt] text-slate-400 font-bold uppercase tracking-widest">Sello y Firma de Aceptación</p>
-                                </div>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="h-14"></div>
+                            <div className="border-t border-black pt-1">
+                                <p className="text-[9pt] font-black uppercase">Cliente Institucional</p>
+                                <p className="text-[6.5pt] text-slate-400 font-bold uppercase tracking-widest">Sello y Firma de Aceptación</p>
                             </div>
                         </div>
                     </div>
