@@ -69,13 +69,11 @@ export function PlansManager() {
     };
 
     /**
-     * Motor de Impresión Directa (Sin abrir nuevas pestañas)
-     * Utiliza un iframe oculto para una experiencia fluida.
+     * Motor de Impresión Directa Profesional (vía Iframe)
      */
     const handlePrintQuote = (plan: Plan) => {
         setPlanToPrint(plan);
         
-        // Pequeño delay para asegurar que React renderice el contenido en el área oculta
         setTimeout(() => {
             const printContent = document.getElementById('plan-quote-print-area')?.innerHTML;
             if (!printContent) return;
@@ -107,13 +105,6 @@ export function PlansManager() {
                         <head>
                             <title>Proforma STEM - ${plan.name}</title>
                             ${styles}
-                            <style>
-                                @media print {
-                                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
-                                    @page { size: A4 portrait; margin: 0; }
-                                }
-                                html, body { background: white !important; }
-                            </style>
                         </head>
                         <body>
                             <div class="print-container">
@@ -124,12 +115,11 @@ export function PlansManager() {
                 `);
                 iframeDoc.close();
                 
-                // Disparar impresión
                 setTimeout(() => {
                     iframe.contentWindow?.focus();
                     iframe.contentWindow?.print();
-                    setPlanToPrint(null); // Limpiar estado después de imprimir
-                }, 500);
+                    setPlanToPrint(null);
+                }, 800);
             }
         }, 300);
     };
@@ -251,7 +241,7 @@ export function PlansManager() {
                 existingPlan={selectedPlan}
             />
 
-            {/* AREA DE IMPRESIÓN OCULTA (DOM para captura de HTML) */}
+            {/* AREA DE IMPRESIÓN OCULTA */}
             <div id="plan-quote-print-area" className="hidden">
                 {planToPrint && (
                     <PrintPlanQuote plan={planToPrint} design={design} />
