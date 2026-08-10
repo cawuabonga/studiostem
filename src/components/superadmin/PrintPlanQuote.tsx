@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -7,6 +6,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { CheckCircle2, ShieldCheck, Globe, CreditCard, Cpu, ListChecks, FileText, LayoutGrid, Zap, Rocket, Crown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface PrintPlanQuoteProps {
     plan: Plan;
