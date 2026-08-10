@@ -1,10 +1,27 @@
+
 "use client";
 
 import React from 'react';
 import type { Plan, LoginDesign } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, ListChecks, FileText, Zap, Rocket, Crown, ShieldCheck, Globe, Cpu, CreditCard, Info } from 'lucide-react';
+import { 
+    CheckCircle2, 
+    ListChecks, 
+    FileText, 
+    Zap, 
+    Rocket, 
+    Crown, 
+    ShieldCheck, 
+    Globe, 
+    Cpu, 
+    CreditCard, 
+    Info,
+    Printer,
+    Clock,
+    ExternalLink,
+    AlertTriangle
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -22,7 +39,7 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
     const today = new Date();
 
     return (
-        <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-black">
+        <div className="flex justify-between items-start mb-6 pb-4 border-b-2 border-black w-full">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-12 h-12 object-contain" />
@@ -50,7 +67,7 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
 const PageFooter = ({ pageNumber, design }: { pageNumber: number, design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center">
+        <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center w-full">
             <p className="text-[7pt] text-slate-300 font-black uppercase tracking-[0.3em]">
                 {platformTitle} • VALIDEZ DIGITAL VERIFICADA
             </p>
@@ -74,6 +91,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         max-width: 210mm;
                         margin: 20px auto;
                         box-shadow: 0 0 20px rgba(0,0,0,0.1);
+                        border: 1px solid #eee;
                     }
                 }
                 @media print {
@@ -82,14 +100,17 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         margin: 0;
                     }
                     body {
+                        margin: 0;
+                        padding: 0;
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
                     }
                     .page-container {
                         width: 210mm;
-                        height: 297mm;
+                        height: 296mm; /* Ajuste para evitar página extra */
                         padding: 20mm;
                         page-break-after: always;
+                        break-after: page;
                         position: relative;
                         overflow: hidden;
                         box-sizing: border-box;
@@ -109,6 +130,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     display: flex;
                     flex-direction: column;
                     background: white;
+                    box-sizing: border-box;
                 }
             `}</style>
 

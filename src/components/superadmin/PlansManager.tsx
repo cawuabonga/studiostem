@@ -87,9 +87,10 @@ export function PlansManager() {
                             ${styles}
                             <style>
                                 @media print {
-                                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                                    .printable-area { border: 2px dashed #000; padding: 20mm; }
+                                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; }
+                                    @page { size: A4 portrait; margin: 0; }
                                 }
+                                html, body { background: white !important; }
                             </style>
                         </head>
                         <body>${printContent}</body>
