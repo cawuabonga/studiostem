@@ -17,10 +17,6 @@ import {
     Cpu, 
     CreditCard, 
     Info,
-    Printer,
-    Clock,
-    ExternalLink,
-    AlertTriangle,
     BadgeCheck
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,7 +28,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Componente de Encabezado Institucional
+ * Componente de Encabezado Institucional para cada página
  */
 const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTitle: string }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -40,7 +36,7 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
     const today = new Date();
 
     return (
-        <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black w-full shrink-0">
+        <div className="flex justify-between items-start mb-8 pb-4 border-b-2 border-black w-full shrink-0 no-print-break">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-14 h-14 object-contain" />
@@ -63,13 +59,13 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
 };
 
 /**
- * Componente de Pie de Página
+ * Componente de Pie de Página con numeración
  */
 const PageFooter = ({ pageNumber, design }: { pageNumber: number, design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
         <div className="mt-auto pt-4 border-t border-slate-100 flex justify-between items-center w-full shrink-0">
-            <div className="flex flex-col">
+            <div className="flex flex-col text-left">
                 <span className="text-[8pt] text-slate-400 font-black uppercase tracking-[0.3em]">
                     {platformTitle} • PROPUESTA DE SERVICIO
                 </span>
@@ -112,7 +108,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     }
                     .page-container {
                         width: 100%;
-                        height: 265mm; /* Ajuste para compensar márgenes de @page */
+                        height: 265mm; 
                         page-break-after: always;
                         break-after: page;
                         display: flex !important;
@@ -299,7 +295,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
 
                     <div className="mt-auto pb-10">
-                        <div className="grid grid-cols-2 gap-32 px-12 text-center">
+                        <div className="grid grid-cols-2 gap-32 px-12 text-center no-print-break">
                             <div className="space-y-3">
                                 <div className="h-24"></div>
                                 <div className="border-t-2 border-black pt-3">
@@ -323,4 +319,3 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
         </div>
     );
 }
-
