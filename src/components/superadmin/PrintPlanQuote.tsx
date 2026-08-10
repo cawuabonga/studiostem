@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -22,8 +21,7 @@ import {
     CalendarDays,
     Clock,
     DollarSign,
-    TrendingUp,
-    BadgeInfo
+    TrendingUp
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -33,7 +31,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Componente de Encabezado - Flujo de Bloque
+ * Componente de Encabezado Institucional
  */
 const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTitle: string }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -64,12 +62,12 @@ const PageHeader = ({ design, pageTitle }: { design: LoginDesign | null, pageTit
 };
 
 /**
- * Pie de página - Con mt-auto para fijarse abajo en el flex
+ * Pie de página fijo para impresión
  */
 const PageFooter = ({ pageNumber, design }: { pageNumber: number, design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="mt-auto pt-4 border-t border-slate-200 flex justify-between items-center w-full">
+        <div className="footer-fixed pt-4 border-t border-slate-200 flex justify-between items-center w-full">
             <div className="text-left">
                 <p className="text-[6.5pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
                     {platformTitle} • PROPUESTA DE SERVICIO
@@ -98,12 +96,15 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         box-shadow: 0 0 20px rgba(0,0,0,0.1);
                         border: 1px solid #eee;
                         min-height: 297mm;
+                        position: relative;
+                        padding: 20mm 15mm;
+                        background: white;
                     }
                 }
                 @media print {
                     @page {
                         size: A4 portrait;
-                        margin: 15mm;
+                        margin: 0;
                     }
                     body {
                         margin: 0 !important;
@@ -111,20 +112,26 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         background: white !important;
                     }
                     .page-section {
-                        display: flex !important;
-                        flex-direction: column !important;
-                        height: 265mm !important; /* Altura de seguridad para evitar saltos accidentales */
+                        position: relative !important;
+                        width: 210mm !important;
+                        height: 297mm !important;
                         page-break-after: always !important;
                         break-after: page !important;
-                        overflow: hidden;
+                        display: block !important;
+                        padding: 20mm 15mm !important;
+                        box-sizing: border-box !important;
+                        overflow: hidden !important;
+                    }
+                    .footer-fixed {
+                        position: absolute !important;
+                        bottom: 15mm !important;
+                        left: 15mm !important;
+                        right: 15mm !important;
                     }
                 }
                 h1, h2, h3, h4 {
                     font-family: 'Montserrat', sans-serif !important;
                     margin: 0;
-                }
-                .no-print-break {
-                    page-break-inside: avoid;
                 }
             `}</style>
 
@@ -132,7 +139,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-section">
                 <PageHeader design={design} pageTitle="Presentación de Solución" />
                 
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                <div className="flex flex-col items-center justify-center text-center h-[200mm]">
                     <div className="space-y-4 mb-16">
                         <p className="text-[14pt] font-black tracking-[0.6em] text-slate-300 uppercase">
                             Plan de Implementación
@@ -185,7 +192,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-section">
                 <PageHeader design={design} pageTitle="Cotización de Servicios" />
 
-                <div className="flex-1 flex flex-col pt-4">
+                <div className="flex flex-col pt-4">
                     <div className="text-center mb-10">
                         <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-3">PROPUESTA ECONÓMICA</h2>
                         <div className="inline-block px-6 py-1.5 bg-black text-white text-[9pt] font-black uppercase tracking-[0.3em]">
@@ -193,7 +200,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="space-y-8 flex-1">
+                    <div className="space-y-8">
                         <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium">
                             Estimados, ponemos a su consideración la propuesta comercial para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución está diseñada para centralizar la gestión académica y administrativa, optimizando recursos mediante el uso de infraestructura en la nube y automatización de procesos críticos.
                         </p>
@@ -245,7 +252,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                             </div>
                         </div>
 
-                        <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-200">
+                        <div className="p-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
                             <h4 className="text-[9pt] font-black uppercase text-slate-500 tracking-widest mb-3 flex items-center gap-2">
                                 <Info className="h-4 w-4" /> Resumen del Plan
                             </h4>
@@ -263,7 +270,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="page-section">
                 <PageHeader design={design} pageTitle="Anexo: Especificaciones del Plan" />
 
-                <div className="flex-1 flex flex-col pt-4">
+                <div className="flex flex-col pt-4">
                     <div className="mb-10">
                         <div className="flex justify-between items-center mb-6 pb-2 border-b-2 border-black">
                             <h3 className="text-[14pt] font-black uppercase tracking-tight flex items-center gap-3">
@@ -272,18 +279,18 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                             <Badge variant="outline" className="font-black uppercase text-[8pt] border-black px-4 h-7">{plan.name}</Badge>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-x-12 gap-y-8">
+                        <div className="grid grid-cols-2 gap-x-12 gap-y-6">
                             {plan.features.map((feature, i) => {
                                 const [name, ...descParts] = feature.split(':');
                                 const description = descParts.join(':');
                                 const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
 
                                 return (
-                                    <div key={i} className="space-y-2 no-print-break">
+                                    <div key={i} className="space-y-2 break-inside-avoid">
                                         <h4 className="text-[10pt] font-black text-primary uppercase tracking-tight border-l-4 border-primary pl-3">
                                             {name}
                                         </h4>
-                                        <div className="space-y-1.5 ml-4">
+                                        <div className="space-y-1 ml-4">
                                             {items.length > 0 ? items.map((item, idx) => (
                                                 <div key={idx} className="text-[9pt] text-slate-600 font-bold leading-snug flex items-start gap-2">
                                                     <div className="h-1.5 w-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
@@ -304,7 +311,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                             <div className="space-y-2">
                                 <div className="h-16"></div>
                                 <div className="border-t-2 border-black pt-2">
-                                    <p className="text-[10pt] font-black uppercase">{platformTitle} Team</p>
+                                    <p className="text-[10pt] font-black uppercase">{creators}</p>
                                     <p className="text-[7pt] text-slate-400 font-bold uppercase tracking-[0.2em]">Dirección de Ingeniería</p>
                                 </div>
                             </div>
