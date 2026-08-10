@@ -4,7 +4,7 @@ import React from 'react';
 import type { Plan, LoginDesign } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { CheckCircle2, ListChecks, FileText, Zap, Rocket, Crown, ShieldCheck, Globe, Cpu, CreditCard } from 'lucide-react';
+import { CheckCircle2, ListChecks, FileText, Zap, Rocket, Crown, ShieldCheck, Globe, Cpu, CreditCard, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
