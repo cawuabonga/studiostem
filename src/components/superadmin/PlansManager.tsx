@@ -68,19 +68,41 @@ export function PlansManager() {
         }
     };
 
+    /**
+     * Motor de Impresión Directa (Sin abrir nuevas pestañas)
+     * Utiliza un iframe oculto para una experiencia fluida.
+     */
     const handlePrintQuote = (plan: Plan) => {
         setPlanToPrint(plan);
+        
+        // Pequeño delay para asegurar que React renderice el contenido en el área oculta
         setTimeout(() => {
             const printContent = document.getElementById('plan-quote-print-area')?.innerHTML;
             if (!printContent) return;
 
-            const printWindow = window.open('', '_blank');
+            const iframeId = 'plan-quote-silent-iframe';
+            let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+            
+            if (!iframe) {
+                iframe = document.createElement('iframe');
+                iframe.id = iframeId;
+                iframe.style.position = 'fixed';
+                iframe.style.right = '0';
+                iframe.style.bottom = '0';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                document.body.appendChild(iframe);
+            }
+
             const styles = Array.from(document.styleSheets)
                 .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
                 .join('');
 
-            if (printWindow) {
-                printWindow.document.write(`
+            const iframeDoc = iframe.contentWindow?.document;
+            if (iframeDoc) {
+                iframeDoc.open();
+                iframeDoc.write(`
                     <html>
                         <head>
                             <title>Proforma STEM - ${plan.name}</title>
@@ -93,18 +115,23 @@ export function PlansManager() {
                                 html, body { background: white !important; }
                             </style>
                         </head>
-                        <body>${printContent}</body>
+                        <body>
+                            <div class="print-container">
+                                ${printContent}
+                            </div>
+                        </body>
                     </html>
                 `);
-                printWindow.document.close();
-                printWindow.focus();
+                iframeDoc.close();
+                
+                // Disparar impresión
                 setTimeout(() => {
-                    printWindow.print();
-                    printWindow.close();
-                    setPlanToPrint(null);
+                    iframe.contentWindow?.focus();
+                    iframe.contentWindow?.print();
+                    setPlanToPrint(null); // Limpiar estado después de imprimir
                 }, 500);
             }
-        }, 100);
+        }, 300);
     };
 
     const getPlanIcon = (index: number) => {
@@ -224,7 +251,7 @@ export function PlansManager() {
                 existingPlan={selectedPlan}
             />
 
-            {/* Hidden Print Area */}
+            {/* AREA DE IMPRESIÓN OCULTA (DOM para captura de HTML) */}
             <div id="plan-quote-print-area" className="hidden">
                 {planToPrint && (
                     <PrintPlanQuote plan={planToPrint} design={design} />
