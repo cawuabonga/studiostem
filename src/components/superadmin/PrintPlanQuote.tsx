@@ -23,15 +23,15 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Encabezado Institucional - Se repite en cada sección
+ * Reusable Header for each printed page
  */
-const PageHeader = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: number }) => {
+const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | null, pageNumber: number, subtitle?: string }) => {
     const platformTitle = design?.title || "STEM V2";
     const platformLogo = design?.logoUrl;
     const today = new Date();
 
     return (
-        <div className="w-full border-b-2 border-black pb-4 flex items-center justify-between mb-8">
+        <div className="w-full border-b-2 border-black pb-4 flex items-center justify-between mb-8 h-[70px] shrink-0">
             <div className="flex items-center gap-3">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
@@ -42,31 +42,29 @@ const PageHeader = ({ design, pageNumber }: { design: LoginDesign | null, pageNu
                 )}
                 <div className="text-left">
                     <h1 className="text-[11pt] font-black uppercase leading-tight text-black">{platformTitle}</h1>
-                    <p className="text-[7pt] font-bold text-slate-500 uppercase tracking-widest">Propuesta Técnica Comercial</p>
+                    <p className="text-[7pt] font-bold text-slate-500 uppercase tracking-widest">{subtitle || "Propuesta Técnica Comercial"}</p>
                 </div>
             </div>
             <div className="text-right">
-                <div className="bg-black text-white px-2 py-0.5 rounded text-[7pt] font-black uppercase mb-1">
-                    PÁGINA 0{pageNumber} / 03
-                </div>
-                <p className="text-[6pt] font-mono font-bold text-black">{format(today, 'dd/MM/yyyy')}</p>
+                <p className="text-[7pt] font-black text-black uppercase mb-1">PÁGINA 0{pageNumber} / 03</p>
+                <p className="text-[6pt] font-mono font-bold text-gray-400">{format(today, 'dd/MM/yyyy')}</p>
             </div>
         </div>
     );
 };
 
 /**
- * Pie de página Institucional - Se empuja al final de cada sección
+ * Reusable Footer for each printed page
  */
 const PageFooter = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="w-full mt-auto pt-4 border-t border-slate-200 flex justify-between items-center">
+        <div className="w-full mt-auto pt-4 border-t border-slate-200 flex justify-between items-center h-[50px] shrink-0">
             <div className="text-left">
                 <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-0.5">
                     {platformTitle} • ECOSISTEMA EDUCATIVO MODULAR
                 </p>
-                <p className="text-[6pt] text-slate-300 font-bold uppercase italic">Validez digital certificada mediante firma electrónica de servidor</p>
+                <p className="text-[6pt] text-slate-300 font-bold uppercase italic">Documento generado digitalmente - Validez institucional</p>
             </div>
             <div className="text-right">
                 <p className="text-[7pt] font-black text-slate-400 uppercase">{design?.creators || "STEM Dev Team"}</p>
@@ -80,7 +78,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
     const platformTitle = design?.title || "STEM V2";
 
     return (
-        <div className="quote-print-container bg-white text-black font-sans">
+        <div className="quote-print-wrapper bg-white text-black font-sans">
             <style jsx global>{`
                 @media print {
                     @page {
@@ -91,54 +89,50 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         margin: 0 !important;
                         padding: 0 !important;
                         background: white !important;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    }
+                    .page-section {
+                        display: flex !important;
+                        flex-direction: column !important;
+                        width: 210mm !important;
+                        height: 297mm !important;
+                        padding: 15mm 20mm !important;
+                        box-sizing: border-box !important;
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        position: relative !important;
+                        overflow: hidden !important;
+                        background: white !important;
                     }
                 }
                 
-                .a4-page-section {
-                    width: 210mm;
-                    height: 296mm; /* Un mm menos para evitar hojas en blanco accidentales */
-                    margin: 0 auto;
-                    padding: 15mm 20mm;
-                    display: flex;
-                    flex-direction: column;
-                    page-break-after: always;
-                    break-after: page;
-                    background: white;
-                    box-sizing: border-box;
-                    position: relative;
-                }
-
                 @media screen {
-                    .quote-print-container {
+                    .quote-print-wrapper {
                         background: #f1f5f9;
                         padding: 40px 0;
                     }
-                    .a4-page-section {
-                        margin-bottom: 20px;
+                    .page-section {
+                        width: 210mm;
+                        height: 297mm;
+                        margin: 0 auto 20px;
+                        padding: 15mm 20mm;
+                        display: flex;
+                        flex-direction: column;
+                        background: white;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-                        border: 1px solid #e2e8f0;
+                        box-sizing: border-box;
                     }
-                }
-
-                h1, h2, h3, h4 {
-                    color: black !important;
                 }
             `}</style>
 
-            {/* --- PÁGINA 1: PORTADA --- */}
-            <section className="a4-page-section">
-                <PageHeader design={design} pageNumber={1} />
+            {/* PÁGINA 1: PORTADA */}
+            <section className="page-section">
+                <PageHeader design={design} pageNumber={1} subtitle="Portada de Presentación" />
                 
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                    <div className="space-y-4 mb-12">
-                        <p className="text-[14pt] font-black tracking-[0.6em] text-slate-300 uppercase">Cotización preparada para:</p>
-                        <div className="h-1 w-24 bg-black mx-auto"></div>
-                    </div>
-
-                    <div className="w-full bg-slate-50 border-y-2 border-black py-12 mb-16">
-                        <h2 className="text-[32pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+                    <p className="text-[12pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
+                    
+                    <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16">
+                        <h2 className="text-[36pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
                             {plan.name}
                         </h2>
                     </div>
@@ -160,7 +154,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="mt-20 flex justify-between items-end w-full border-t border-slate-100 pt-8">
+                    <div className="mt-auto flex justify-between items-end w-full border-t border-slate-100 pt-8">
                         <div className="text-left space-y-1">
                             <p className="text-[8pt] font-black uppercase text-slate-400 tracking-widest">Ingeniería y Desarrollo</p>
                             <p className="text-[11pt] font-bold uppercase">{design?.creators || "Equipo de Desarrollo"}</p>
@@ -175,31 +169,30 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 <PageFooter design={design} />
             </section>
 
-            {/* --- PÁGINA 2: PROPUESTA ECONÓMICA --- */}
-            <section className="a4-page-section">
-                <PageHeader design={design} pageNumber={2} />
+            {/* PÁGINA 2: PROPUESTA ECONÓMICA */}
+            <section className="page-section">
+                <PageHeader design={design} pageNumber={2} subtitle="Propuesta Económica e Inversión" />
                 
-                <div className="flex-1 space-y-8">
-                    <div className="text-center mb-10">
-                        <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-2 text-primary">PROPUESTA ECONÓMICA</h2>
+                <div className="flex-1 py-6 space-y-10">
+                    <div className="text-center">
+                        <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-2 text-primary">INVERSIÓN DEL SERVICIO</h2>
                         <div className="inline-block px-5 py-1 bg-black text-white text-[9pt] font-black uppercase tracking-[0.3em]">
                             Confidencial Institucional
                         </div>
                     </div>
 
                     <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium px-4">
-                        Tras analizar las necesidades de su institución, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, segura y escalable.
+                        Estimados señores, tras analizar las necesidades de su institución, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, segura y escalable.
                     </p>
 
-                    {/* Cuadro de Inversión Principal */}
-                    <div className="py-10 px-10 border-2 border-black rounded-[2.5rem] bg-white shadow-xl relative overflow-hidden">
+                    <div className="py-12 px-10 border-2 border-black rounded-[2.5rem] bg-white shadow-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <CreditCard className="w-24 h-24 text-black" />
                         </div>
                         <div className="grid grid-cols-12 gap-6 items-center relative z-10">
                             <div className="col-span-7 space-y-3">
-                                <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest">Suscripción de Servicio</p>
-                                <h3 className="text-[26pt] font-black uppercase text-primary leading-tight tracking-tighter">
+                                <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest">Suscripción SaaS</p>
+                                <h3 className="text-[28pt] font-black uppercase text-primary leading-tight tracking-tighter">
                                     {plan.name}
                                 </h3>
                                 <div className="flex items-center gap-2">
@@ -245,14 +238,14 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 <PageFooter design={design} />
             </section>
 
-            {/* --- PÁGINA 3: DESGLOSE TÉCNICO --- */}
-            <section className="a4-page-section">
-                <PageHeader design={design} pageNumber={3} />
+            {/* PÁGINA 3: DESGLOSE TÉCNICO Y FIRMAS */}
+            <section className="page-section">
+                <PageHeader design={design} pageNumber={3} subtitle="Detalle de Capacidades y Firmas" />
                 
-                <div className="flex-1">
+                <div className="flex-1 py-6 flex flex-col">
                     <div className="flex justify-between items-center mb-8 pb-3 border-b-2 border-black">
                         <h3 className="text-[16pt] font-black uppercase tracking-tight flex items-center gap-3">
-                            <ListChecks className="h-7 w-7 text-primary" /> Módulos y Capacidades Técnicas
+                            <ListChecks className="h-7 w-7 text-primary" /> Módulos Incluidos
                         </h3>
                         <Badge variant="outline" className="font-black uppercase text-[8pt] border-black px-4 h-7">{plan.name}</Badge>
                     </div>
@@ -274,7 +267,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                                                 <span>{item}</span>
                                             </div>
                                         )) : (
-                                            <p className="text-[8.5pt] text-slate-400 italic">Capacidades habilitadas según nivel de servicio.</p>
+                                            <p className="text-[8.5pt] text-slate-400 italic">Habilitado según nivel de servicio.</p>
                                         )}
                                     </div>
                                 </div>
@@ -282,7 +275,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         })}
                     </div>
 
-                    <div className="mt-20 pt-16">
+                    <div className="mt-auto mb-10">
                         <div className="grid grid-cols-2 gap-24 text-center px-10">
                             <div className="border-t-2 border-black pt-2">
                                 <p className="text-[10pt] font-black uppercase text-black">{design?.creators || "Ingeniería STEM"}</p>
