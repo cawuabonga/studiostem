@@ -13,7 +13,8 @@ import {
     Globe,
     Cpu,
     CreditCard,
-    BadgeCheck
+    BadgeCheck,
+    Briefcase
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,7 +24,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Reusable Header for each printed page
+ * Encabezado Institucional Fijo para cada página
  */
 const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | null, pageNumber: number, subtitle?: string }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -31,7 +32,7 @@ const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | nu
     const today = new Date();
 
     return (
-        <div className="w-full border-b-2 border-black pb-4 flex items-center justify-between mb-8 h-[70px] shrink-0">
+        <div className="absolute top-[15mm] left-[20mm] right-[20mm] border-b-2 border-black pb-4 flex items-center justify-between h-[60px]">
             <div className="flex items-center gap-3">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
@@ -54,12 +55,12 @@ const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | nu
 };
 
 /**
- * Reusable Footer for each printed page
+ * Pie de Página Institucional Fijo para cada página
  */
 const PageFooter = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="w-full mt-auto pt-4 border-t border-slate-200 flex justify-between items-center h-[50px] shrink-0">
+        <div className="absolute bottom-[15mm] left-[20mm] right-[20mm] pt-4 border-t border-slate-200 flex justify-between items-center h-[40px]">
             <div className="text-left">
                 <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-0.5">
                     {platformTitle} • ECOSISTEMA EDUCATIVO MODULAR
@@ -90,18 +91,25 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         padding: 0 !important;
                         background: white !important;
                     }
-                    .page-section {
-                        display: flex !important;
-                        flex-direction: column !important;
+                    .page-container {
+                        position: relative !important;
                         width: 210mm !important;
                         height: 297mm !important;
-                        padding: 15mm 20mm !important;
-                        box-sizing: border-box !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
                         page-break-after: always !important;
                         break-after: page !important;
-                        position: relative !important;
                         overflow: hidden !important;
                         background: white !important;
+                        display: block !important;
+                    }
+                    .content-safe-area {
+                        position: absolute !important;
+                        top: 45mm !important;
+                        bottom: 40mm !important;
+                        left: 20mm !important;
+                        right: 20mm !important;
+                        overflow: hidden !important;
                     }
                 }
                 
@@ -110,25 +118,31 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         background: #f1f5f9;
                         padding: 40px 0;
                     }
-                    .page-section {
+                    .page-container {
                         width: 210mm;
                         height: 297mm;
                         margin: 0 auto 20px;
-                        padding: 15mm 20mm;
-                        display: flex;
-                        flex-direction: column;
+                        position: relative;
                         background: white;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.1);
                         box-sizing: border-box;
+                        overflow: hidden;
+                    }
+                    .content-safe-area {
+                        position: absolute;
+                        top: 45mm;
+                        bottom: 40mm;
+                        left: 20mm;
+                        right: 20mm;
                     }
                 }
             `}</style>
 
             {/* PÁGINA 1: PORTADA */}
-            <section className="page-section">
+            <section className="page-container">
                 <PageHeader design={design} pageNumber={1} subtitle="Portada de Presentación" />
                 
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
+                <div className="content-safe-area flex flex-col items-center justify-center text-center">
                     <p className="text-[12pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
                     
                     <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16">
@@ -170,10 +184,10 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             </section>
 
             {/* PÁGINA 2: PROPUESTA ECONÓMICA */}
-            <section className="page-section">
+            <section className="page-container">
                 <PageHeader design={design} pageNumber={2} subtitle="Propuesta Económica e Inversión" />
                 
-                <div className="flex-1 py-6 space-y-10">
+                <div className="content-safe-area flex flex-col justify-center space-y-10">
                     <div className="text-center">
                         <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-2 text-primary">INVERSIÓN DEL SERVICIO</h2>
                         <div className="inline-block px-5 py-1 bg-black text-white text-[9pt] font-black uppercase tracking-[0.3em]">
@@ -181,7 +195,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium px-4">
+                    <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium">
                         Estimados señores, tras analizar las necesidades de su institución, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, segura y escalable.
                     </p>
 
@@ -192,7 +206,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         <div className="grid grid-cols-12 gap-6 items-center relative z-10">
                             <div className="col-span-7 space-y-3">
                                 <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest">Suscripción SaaS</p>
-                                <h3 className="text-[28pt] font-black uppercase text-primary leading-tight tracking-tighter">
+                                <h3 className="text-[24pt] font-black uppercase text-primary leading-tight tracking-tighter">
                                     {plan.name}
                                 </h3>
                                 <div className="flex items-center gap-2">
@@ -204,14 +218,14 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                                 <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest mb-1">Inversión {plan.billingCycle}</p>
                                 <div className="flex items-baseline justify-end gap-1 text-black">
                                     <span className="text-[16pt] font-bold">S/</span>
-                                    <span className="text-[48pt] font-black leading-none">{plan.price.toFixed(0)}</span>
+                                    <span className="text-[42pt] font-black leading-none">{plan.price.toFixed(0)}</span>
                                 </div>
                                 <p className="text-[8pt] font-bold text-slate-400 uppercase mt-2">Importe neto por sede</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-6 px-4">
+                    <div className="grid grid-cols-3 gap-6">
                         {[
                             { icon: ShieldCheck, t: "Seguridad", v: "Cifrado SSL" },
                             { icon: Globe, t: "Hosting", v: "Nube Google" },
@@ -225,7 +239,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         ))}
                     </div>
 
-                    <div className="p-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200 mx-4">
+                    <div className="p-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
                         <h4 className="text-[9pt] font-black uppercase text-slate-400 tracking-widest mb-2 flex items-center gap-2">
                             <Info className="h-4 w-4" /> Resumen del Plan
                         </h4>
@@ -239,10 +253,10 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             </section>
 
             {/* PÁGINA 3: DESGLOSE TÉCNICO Y FIRMAS */}
-            <section className="page-section">
+            <section className="page-container">
                 <PageHeader design={design} pageNumber={3} subtitle="Detalle de Capacidades y Firmas" />
                 
-                <div className="flex-1 py-6 flex flex-col">
+                <div className="content-safe-area flex flex-col">
                     <div className="flex justify-between items-center mb-8 pb-3 border-b-2 border-black">
                         <h3 className="text-[16pt] font-black uppercase tracking-tight flex items-center gap-3">
                             <ListChecks className="h-7 w-7 text-primary" /> Módulos Incluidos
