@@ -88,7 +88,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         page-break-before: always;
                         break-before: page;
                     }
-                    /* Truco de Tabla para encabezado repetible */
+                    /* Lógica de tabla para repetir encabezado */
                     .print-table {
                         width: 100%;
                         border-collapse: collapse;
@@ -96,7 +96,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     .print-table thead {
                         display: table-header-group;
                     }
-                    /* Pie de página fijo en la base de la hoja a 10mm */
+                    /* Pie de página fijo a 10mm */
                     .fixed-footer {
                         position: fixed;
                         bottom: 10mm;
@@ -219,8 +219,8 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </td>
                     </tr>
 
-                    {/* --- PÁGINA 3: DESGLOSE TÉCNICO --- */}
-                    <tr className="page-break-before">
+                    {/* --- PÁGINA 3: DESGLOSE TÉCNICO (FORZAMOS SALTO) --- */}
+                    <tr style={{ breakBefore: 'page' }}>
                         <td className="py-8">
                             <div className="space-y-8 px-10">
                                 <h3 className="text-[18pt] font-black uppercase tracking-tight flex items-center gap-3 border-b-2 border-black pb-2">
@@ -231,7 +231,6 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                                     {plan.features.map((feature, i) => {
                                         const [name, ...descParts] = feature.split(':');
                                         const description = descParts.join(':');
-                                        // Dividir la descripción por punto y coma para el listado vertical
                                         const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
 
                                         return (
@@ -258,11 +257,11 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
 
                                 <div className="pt-20 mt-auto no-print-break">
                                     <div className="grid grid-cols-2 gap-24 text-center px-10">
-                                        <div className="border-t border-black pt-2">
+                                        <div className="border-t-2 border-black pt-2">
                                             <p className="text-[9pt] font-black uppercase text-black">{platformCreators}</p>
                                             <p className="text-[7pt] text-slate-400 font-bold uppercase">Dirección de Ingeniería</p>
                                         </div>
-                                        <div className="border-t border-black pt-2 text-black">
+                                        <div className="border-t-2 border-black pt-2 text-black">
                                             <p className="text-[9pt] font-black uppercase">Sello de Aceptación</p>
                                             <p className="text-[7pt] text-slate-400 font-bold uppercase">Firma del Cliente</p>
                                         </div>
