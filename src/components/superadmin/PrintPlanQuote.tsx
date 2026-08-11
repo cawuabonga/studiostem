@@ -23,7 +23,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Encabezado Institucional - Se integra físicamente en cada hoja
+ * Encabezado Institucional - Se integra físicamente en CADA hoja
  */
 const PageHeader = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: number }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -56,7 +56,7 @@ const PageHeader = ({ design, pageNumber }: { design: LoginDesign | null, pageNu
 };
 
 /**
- * Pie de página Institucional - Se ancla a la base de cada hoja
+ * Pie de página Institucional - Se ancla a la base de CADA hoja
  */
 const PageFooter = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
