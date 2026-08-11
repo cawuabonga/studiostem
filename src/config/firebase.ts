@@ -1081,15 +1081,66 @@ export const getCompanyProfiles = async (instituteId: string): Promise<CompanyPr
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as CompanyProfile));
 };
 
+// --- Bolsa Laboral CRUD ---
+
 export const getJobOffers = async (instituteId: string, opt: any = {}): Promise<JobOffer[]> => {
     const col = getSubCollectionRef(instituteId, 'jobOffers');
-    const q_parts = [orderBy('createdAt', 'desc')];
+    const q_parts: any[] = [orderBy('createdAt', 'desc')];
     if (opt.companyId) q_parts.unshift(where('companyId', '==', opt.companyId));
     else if (!opt.all) q_parts.unshift(where('status', '==', 'Abierta')); 
     const snap = await getDocs(query(col, ...q_parts));
     let list = snap.docs.map(d => ({ id: d.id, ...d.data() } as JobOffer));
     if (opt.programId) list = list.filter(o => o.programIds.includes(opt.programId) || o.programIds.length === 0);
     return list;
+};
+
+export const addJobOffer = async (instituteId: string, data: any): Promise<void> => {
+    const col = getSubCollectionRef(instituteId, 'jobOffers');
+    await addDoc(col, {
+        ...data,
+        status: 'Abierta',
+        applicantCount: 0,
+        createdAt: Timestamp.now()
+    });
+};
+
+export const updateJobOffer = async (instituteId: string, offerId: string, data: Partial<JobOffer>): Promise<void> => {
+    const ref = doc(db, 'institutes', instituteId, 'jobOffers', offerId);
+    await updateDoc(ref, data);
+};
+
+export const deleteJobOffer = async (instituteId: string, offerId: string): Promise<void> => {
+    const ref = doc(db, 'institutes', instituteId, 'jobOffers', offerId);
+    await deleteDoc(ref);
+};
+
+export const applyToJob = async (instituteId: string, data: any): Promise<void> => {
+    const col = getSubCollectionRef(instituteId, 'jobApplications');
+    await runTransaction(db, async (transaction) => {
+        const offerRef = doc(db, 'institutes', instituteId, 'jobOffers', data.jobId);
+        const offerSnap = await transaction.get(offerRef);
+        if (!offerSnap.exists()) throw new Error("La oferta ya no existe.");
+        
+        const currentCount = offerSnap.data().applicantCount || 0;
+        transaction.update(offerRef, { applicantCount: currentCount + 1 });
+        transaction.set(doc(col), {
+            ...data,
+            status: 'Pendiente',
+            appliedAt: Timestamp.now()
+        });
+    });
+};
+
+export const getJobApplications = async (instituteId: string, jobId: string): Promise<JobApplication[]> => {
+    const col = getSubCollectionRef(instituteId, 'jobApplications');
+    const q = query(col, where('jobId', '==', jobId), orderBy('appliedAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as JobApplication));
+};
+
+export const updateJobApplication = async (instituteId: string, appId: string, data: Partial<JobApplication>): Promise<void> => {
+    const ref = doc(db, 'institutes', instituteId, 'jobApplications', appId);
+    await updateDoc(ref, data);
 };
 
 export const getApplicationsForStudent = async (instituteId: string, sId: string): Promise<JobApplication[]> => {
