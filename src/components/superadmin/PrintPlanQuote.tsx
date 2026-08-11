@@ -77,6 +77,9 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         margin: 0;
                         padding: 0;
                     }
+                    .quote-print-system {
+                        counter-reset: page;
+                    }
                     .page-break-after {
                         page-break-after: always;
                         break-after: page;
@@ -93,33 +96,29 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     .print-table thead {
                         display: table-header-group;
                     }
-                    /* Pie de página fijo en la base de la hoja */
+                    /* Pie de página fijo en la base de la hoja a 10mm */
                     .fixed-footer {
                         position: fixed;
-                        bottom: 0;
+                        bottom: 10mm;
                         left: 0;
                         right: 0;
-                        height: 10mm;
+                        height: 12mm;
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
-                        font-size: 7pt;
+                        font-size: 7.5pt;
                         color: #94a3b8;
                         background: white;
                         z-index: 100;
                     }
                     .page-number:after {
-                        content: "PÁGINA " counter(page) " / 03";
-                    }
-                    /* Ocultar pie de página en la portada */
-                    .cover-page ~ .fixed-footer {
-                        display: flex;
+                        content: "PÁGINA " counter(page, decimal-leading-zero) " / 03";
                     }
                 }
             `}</style>
 
             {/* --- PÁGINA 1: PORTADA --- */}
-            <div className="cover-page page-break-after h-[270mm] flex flex-col items-center justify-between py-20 text-center relative bg-white">
+            <div className="cover-page page-break-after h-[275mm] flex flex-col items-center justify-between py-20 text-center relative bg-white">
                 <div className="w-full flex flex-col items-center">
                     <p className="text-[12pt] font-black tracking-[0.6em] text-slate-200 uppercase mb-16">Propuesta de Implementación</p>
                     
@@ -158,15 +157,17 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 <thead>
                     <tr>
                         <td>
-                            <PageHeader design={design} />
+                            <div className="px-6">
+                                <PageHeader design={design} />
+                            </div>
                         </td>
                     </tr>
                 </thead>
                 <tbody>
                     {/* --- PÁGINA 2: PROPUESTA ECONÓMICA --- */}
                     <tr>
-                        <td className="py-12">
-                            <div className="space-y-12 px-6">
+                        <td className="py-8">
+                            <div className="space-y-12 px-10">
                                 <div className="text-center space-y-4">
                                     <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none text-primary">Propuesta Económica</h2>
                                     <div className="inline-block px-6 py-1 bg-black text-white text-[8pt] font-black uppercase tracking-[0.4em]">Inversión Corporativa</div>
@@ -220,29 +221,42 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
 
                     {/* --- PÁGINA 3: DESGLOSE TÉCNICO --- */}
                     <tr className="page-break-before">
-                        <td className="py-12">
-                            <div className="space-y-10 px-6">
+                        <td className="py-8">
+                            <div className="space-y-8 px-10">
                                 <h3 className="text-[18pt] font-black uppercase tracking-tight flex items-center gap-3 border-b-2 border-black pb-2">
                                     <ListChecks className="h-6 w-6 text-primary" /> Módulos y Capacidades Incluidas
                                 </h3>
                                 
-                                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                                <div className="grid grid-cols-2 gap-x-10 gap-y-8">
                                     {plan.features.map((feature, i) => {
-                                        const [name, description] = feature.split(':');
+                                        const [name, ...descParts] = feature.split(':');
+                                        const description = descParts.join(':');
+                                        // Dividir la descripción por punto y coma para el listado vertical
+                                        const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
+
                                         return (
-                                            <div key={i} className="space-y-1.5">
-                                                <h4 className="text-[9pt] font-black text-primary uppercase border-l-4 border-primary pl-3 leading-none py-1 bg-primary/5">
+                                            <div key={i} className="space-y-2">
+                                                <h4 className="text-[9.5pt] font-black text-primary uppercase border-l-4 border-primary pl-3 leading-none py-1 bg-primary/5 tracking-tighter">
                                                     {name}
                                                 </h4>
-                                                <p className="text-[8.5pt] text-slate-600 font-medium leading-tight ml-4">
-                                                    {description || 'Funcionalidad completa habilitada.'}
-                                                </p>
+                                                <div className="ml-5 space-y-1.5">
+                                                    {items.length > 0 ? items.map((item, itemIdx) => (
+                                                        <div key={itemIdx} className="text-[8.5pt] text-slate-600 font-medium leading-tight flex items-start gap-1.5">
+                                                            <div className="h-1 w-1 rounded-full bg-slate-300 mt-1.5 shrink-0" />
+                                                            <span>{item}</span>
+                                                        </div>
+                                                    )) : (
+                                                        <p className="text-[8.5pt] text-slate-600 font-medium leading-tight ml-4">
+                                                            Funcionalidad completa habilitada.
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         );
                                     })}
                                 </div>
 
-                                <div className="pt-24 mt-auto">
+                                <div className="pt-20 mt-auto no-print-break">
                                     <div className="grid grid-cols-2 gap-24 text-center px-10">
                                         <div className="border-t border-black pt-2">
                                             <p className="text-[9pt] font-black uppercase text-black">{platformCreators}</p>
@@ -260,7 +274,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 </tbody>
             </table>
 
-            {/* --- PIE DE PÁGINA FIJO (10mm margen inferior) --- */}
+            {/* PIE DE PÁGINA FIJO INSTITUCIONAL (10mm margen inferior) */}
             <div className="fixed-footer px-10">
                 <div className="text-left">
                     <p className="font-black uppercase tracking-[0.2em]">{platformTitle} • {format(new Date(), "yyyy")}</p>
