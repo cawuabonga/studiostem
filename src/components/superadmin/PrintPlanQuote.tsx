@@ -21,7 +21,7 @@ interface PrintPlanQuoteProps {
 
 /**
  * Componente de Encabezado Institucional
- * Sin líneas divisorias y altura optimizada de 25mm.
+ * Diseño minimalista sin líneas y altura de 25mm.
  */
 const PageHeader = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -31,20 +31,20 @@ const PageHeader = ({ design }: { design: LoginDesign | null }) => {
         <div className="absolute top-0 left-0 w-full h-[25mm] flex items-center justify-between px-[15mm] bg-white z-10">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
-                    <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
+                    <img src={platformLogo} alt="Logo" className="w-8 h-8 object-contain" />
                 ) : (
-                    <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-lg">
-                        <span className="text-[7pt] font-black italic">STEM</span>
+                    <div className="w-8 h-8 bg-black text-white flex items-center justify-center rounded-lg">
+                        <span className="text-[6pt] font-black italic">STEM</span>
                     </div>
                 )}
                 <div className="text-left">
-                    <h1 className="text-[12pt] font-black uppercase leading-tight text-black">{platformTitle}</h1>
-                    <p className="text-[7pt] font-bold text-slate-500 uppercase tracking-widest">Propuesta Técnica Comercial</p>
+                    <h1 className="text-[10pt] font-black uppercase leading-tight text-black">{platformTitle}</h1>
+                    <p className="text-[6pt] font-bold text-slate-400 uppercase tracking-widest">Propuesta Técnica Comercial</p>
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-[8pt] font-black text-black uppercase mb-1">Documento Oficial</p>
-                <p className="text-[6.5pt] font-mono font-bold text-gray-400">REF: {format(new Date(), 'yyyyMMdd')}-SAAS</p>
+                <p className="text-[7pt] font-black text-black uppercase mb-0.5">Documento Oficial</p>
+                <p className="text-[6pt] font-mono font-bold text-gray-300">REF: {format(new Date(), 'yyyyMMdd')}-SAAS</p>
             </div>
         </div>
     );
@@ -52,20 +52,21 @@ const PageHeader = ({ design }: { design: LoginDesign | null }) => {
 
 /**
  * Componente de Pie de Página
- * Fijado a exactamente 10mm del borde inferior.
+ * Fijado físicamente a 10mm del borde inferior.
+ * Recibe el número de página para evitar errores de contadores CSS.
  */
-const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: number }) => {
+const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: string }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="absolute bottom-[10mm] left-0 w-full h-[12mm] flex justify-between items-center px-[15mm] bg-white z-10">
+        <div className="absolute bottom-[10mm] left-0 w-full h-[10mm] flex justify-between items-center px-[15mm] bg-white z-10">
             <div className="text-left">
-                <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
+                <p className="text-[6.5pt] text-slate-400 font-black uppercase tracking-[0.2em] leading-none mb-0.5">
                     {platformTitle} • ECOSISTEMA EDUCATIVO
                 </p>
-                <p className="text-[6pt] text-slate-300 font-bold uppercase italic">Generado digitalmente por la plataforma central</p>
+                <p className="text-[5.5pt] text-slate-300 font-bold uppercase italic">Generado digitalmente por la plataforma central</p>
             </div>
             <div className="text-right">
-                <p className="text-[8pt] font-black text-black uppercase tracking-tighter">PÁGINA 0{pageNumber} / 03</p>
+                <p className="text-[7.5pt] font-black text-black uppercase tracking-tighter">PÁGINA {pageNumber} / 03</p>
             </div>
         </div>
     );
@@ -101,6 +102,16 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         box-sizing: border-box !important;
                         position: relative !important;
                     }
+                    .content-area {
+                        position: absolute;
+                        top: 30mm;
+                        left: 15mm;
+                        right: 15mm;
+                        bottom: 25mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    }
                 }
                 
                 @media screen {
@@ -118,6 +129,16 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         overflow: hidden;
                         position: relative;
                     }
+                    .content-area {
+                        position: absolute;
+                        top: 30mm;
+                        left: 15mm;
+                        right: 15mm;
+                        bottom: 25mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    }
                 }
             `}</style>
 
@@ -125,7 +146,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
             <div className="print-page">
                 <PageHeader design={design} />
                 
-                <div className="h-full w-full flex flex-col items-center justify-center text-center px-[20mm] pt-[25mm] pb-[22mm]">
+                <div className="content-area text-center">
                     <p className="text-[12pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
                     
                     <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16 shadow-inner">
@@ -144,7 +165,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="absolute bottom-[25mm] left-[20mm] right-[20mm] flex justify-between items-end border-t border-slate-100 pt-8">
+                    <div className="mt-24 w-full flex justify-between items-end border-t border-slate-100 pt-8 px-12">
                         <div className="text-left space-y-1">
                             <p className="text-[8pt] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Ingeniería y Desarrollo</p>
                             <p className="text-[10pt] font-bold uppercase text-black">{design?.creators || "Equipo de Desarrollo"}</p>
@@ -156,14 +177,14 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
                 </div>
 
-                <PageFooter design={design} pageNumber={1} />
+                <PageFooter design={design} pageNumber="01" />
             </div>
 
             {/* --- PÁGINA 2: PROPUESTA E INVERSIÓN --- */}
             <div className="print-page">
                 <PageHeader design={design} />
                 
-                <div className="h-full w-full flex flex-col justify-center px-[20mm] pt-[25mm] pb-[22mm] space-y-10">
+                <div className="content-area space-y-10">
                     <div className="text-center">
                         <h2 className="text-[26pt] font-black uppercase tracking-tighter leading-none mb-3 text-primary">PROPUESTA ECONÓMICA</h2>
                         <div className="inline-block px-6 py-1.5 bg-black text-white text-[9pt] font-black uppercase tracking-[0.4em] rounded-sm">
@@ -220,14 +241,14 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
                 </div>
 
-                <PageFooter design={design} pageNumber={2} />
+                <PageFooter design={design} pageNumber="02" />
             </div>
 
             {/* --- PÁGINA 3: DESGLOSE TÉCNICO Y FIRMAS --- */}
             <div className="print-page">
                 <PageHeader design={design} />
                 
-                <div className="h-full w-full flex flex-col justify-center px-[20mm] pt-[25mm] pb-[22mm] space-y-12">
+                <div className="content-area space-y-12">
                     <div className="flex justify-between items-center pb-4 border-b-2 border-black mx-4">
                         <h3 className="text-[18pt] font-black uppercase tracking-tight flex items-center gap-3">
                             <ListChecks className="h-8 w-8 text-primary" /> Módulos Incluidos
@@ -273,7 +294,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
                 </div>
 
-                <PageFooter design={design} pageNumber={3} />
+                <PageFooter design={design} pageNumber="03" />
             </div>
         </div>
     );
