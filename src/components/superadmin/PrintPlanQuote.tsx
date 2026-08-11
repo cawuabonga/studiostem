@@ -8,19 +8,14 @@ import { es } from 'date-fns/locale';
 import { 
     CheckCircle2, 
     ShieldCheck, 
-    Info, 
-    ListChecks,
-    Globe,
-    Cpu,
-    CreditCard,
-    BadgeCheck,
-    Briefcase,
+    Globe, 
+    Star,
     Zap,
     Rocket,
     Crown,
-    Star
+    CreditCard,
+    ListChecks
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 
 interface PrintPlanQuoteProps {
     plan: Plan;
@@ -28,7 +23,8 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Componente de Encabezado Institucional que se repite en cada página.
+ * Componente de Encabezado Institucional
+ * Se incluye físicamente en cada página para garantizar su repetición.
  */
 const PageHeader = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -58,12 +54,13 @@ const PageHeader = ({ design }: { design: LoginDesign | null }) => {
 };
 
 /**
- * Componente de Pie de Página Institucional que se repite en cada página.
+ * Componente de Pie de Página
+ * Fijado a 10mm del borde inferior de la hoja A4.
  */
 const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: number }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="w-full h-[20mm] border-t border-slate-200 flex justify-between items-center px-[15mm] shrink-0 bg-white">
+        <div className="w-full h-[20mm] border-t border-slate-200 flex justify-between items-center px-[15mm] shrink-0 bg-white mb-[10mm] mt-auto">
             <div className="text-left">
                 <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
                     {platformTitle} • ECOSISTEMA EDUCATIVO
@@ -71,7 +68,7 @@ const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNu
                 <p className="text-[6pt] text-slate-300 font-bold uppercase italic">Generado digitalmente por la plataforma central</p>
             </div>
             <div className="text-right">
-                <p className="text-[8pt] font-black text-black uppercase">PÁGINA 0{pageNumber} / 03</p>
+                <p className="text-[8pt] font-black text-black uppercase tracking-tighter">PÁGINA 0{pageNumber} / 03</p>
             </div>
         </div>
     );
@@ -80,6 +77,13 @@ const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNu
 export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
     const today = new Date();
     const platformTitle = design?.title || "STEM V2";
+
+    const getPlanIcon = (name: string) => {
+        const lower = name.toLowerCase();
+        if (lower.includes('premium') || lower.includes('crown') || lower.includes('oro')) return <Crown className="h-20 w-20 text-amber-500" />;
+        if (lower.includes('pro') || lower.includes('rocket')) return <Rocket className="h-20 w-20 text-purple-500" />;
+        return <Zap className="h-20 w-20 text-blue-500" />;
+    };
 
     return (
         <div className="quote-print-wrapper bg-white text-black font-sans">
@@ -93,6 +97,8 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         margin: 0 !important;
                         padding: 0 !important;
                         background: white !important;
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                     .print-page {
                         width: 210mm;
@@ -104,6 +110,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         overflow: hidden !important;
                         background: white !important;
                         box-sizing: border-box !important;
+                        position: relative !important;
                     }
                 }
                 
@@ -121,6 +128,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         background: white;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.1);
                         overflow: hidden;
+                        position: relative;
                     }
                 }
             `}</style>
@@ -130,39 +138,36 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 <PageHeader design={design} />
                 
                 <div className="flex-1 flex flex-col items-center justify-center text-center px-[20mm]">
-                    <p className="text-[11pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
+                    <p className="text-[12pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
                     
-                    <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16">
-                        <h2 className="text-[32pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
+                    <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16 shadow-inner">
+                        <h2 className="text-[34pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
                             {plan.name}
                         </h2>
                     </div>
 
-                    <div className="flex flex-col items-center gap-8">
-                        {design?.logoUrl ? (
-                            <img src={design.logoUrl} alt="Logo" className="h-28 w-28 object-contain" />
-                        ) : (
-                            <div className="w-24 h-24 bg-black text-white flex items-center justify-center rounded-2xl">
-                                <span className="text-3xl font-black italic">STEM</span>
-                            </div>
-                        )}
+                    <div className="flex flex-col items-center gap-10">
+                        <div className="p-6 bg-white rounded-[2rem] shadow-xl border-2 border-slate-50">
+                            {getPlanIcon(plan.name)}
+                        </div>
                         
-                        <div className="space-y-2">
-                            <h1 className="text-[24pt] font-black uppercase tracking-tighter leading-none text-primary">
+                        <div className="space-y-3">
+                            {design?.logoUrl && <img src={design.logoUrl} alt="Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />}
+                            <h1 className="text-[26pt] font-black uppercase tracking-tighter leading-none text-primary">
                                 {platformTitle}
                             </h1>
-                            <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-[0.2em]">Arquitectura Educativa Modular</p>
+                            <p className="text-[11pt] font-bold text-slate-400 uppercase tracking-[0.3em]">Arquitectura Educativa Modular</p>
                         </div>
                     </div>
 
-                    <div className="mt-20 flex justify-between items-end w-full border-t border-slate-100 pt-8">
+                    <div className="mt-auto w-full flex justify-between items-end border-t border-slate-100 pt-8 pb-4">
                         <div className="text-left space-y-1">
-                            <p className="text-[7pt] font-black uppercase text-slate-400 tracking-widest">Ingeniería y Desarrollo</p>
-                            <p className="text-[10pt] font-bold uppercase">{design?.creators || "Equipo de Desarrollo"}</p>
+                            <p className="text-[8pt] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Ingeniería y Desarrollo</p>
+                            <p className="text-[11pt] font-bold uppercase text-black">{design?.creators || "Equipo de Desarrollo"}</p>
                         </div>
                         <div className="text-right space-y-1">
-                            <p className="text-[7pt] font-black uppercase text-slate-400 tracking-widest">Fecha de Emisión</p>
-                            <p className="text-[10pt] font-black uppercase">{format(today, "MMMM yyyy", { locale: es })}</p>
+                            <p className="text-[8pt] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Fecha de Emisión</p>
+                            <p className="text-[11pt] font-black uppercase text-black">{format(today, "MMMM yyyy", { locale: es })}</p>
                         </div>
                     </div>
                 </div>
@@ -176,57 +181,57 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 
                 <div className="flex-1 flex flex-col justify-center px-[20mm] space-y-10">
                     <div className="text-center">
-                        <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-2 text-primary">PROPUESTA ECONÓMICA</h2>
-                        <div className="inline-block px-4 py-1 bg-black text-white text-[8pt] font-black uppercase tracking-[0.3em]">
+                        <h2 className="text-[26pt] font-black uppercase tracking-tighter leading-none mb-3 text-primary">PROPUESTA ECONÓMICA</h2>
+                        <div className="inline-block px-6 py-1.5 bg-black text-white text-[9pt] font-black uppercase tracking-[0.4em] rounded-sm">
                             Inversión Institucional
                         </div>
                     </div>
 
-                    <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium">
-                        Estimados señores, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, eficiente y escalable para su institución educativa.
+                    <p className="text-[12pt] leading-relaxed text-justify text-slate-700 font-medium px-4">
+                        Estimados señores, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, eficiente y escalable, diseñada para optimizar los procesos de su institución.
                     </p>
 
-                    <div className="py-12 px-10 border-2 border-black rounded-[2.5rem] bg-white shadow-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <CreditCard className="w-24 h-24 text-black" />
+                    <div className="py-12 px-12 border-2 border-black rounded-[3rem] bg-white shadow-2xl relative overflow-hidden mx-4">
+                        <div className="absolute top-0 right-0 p-10 opacity-[0.03]">
+                            <CreditCard className="w-32 h-32 text-black" />
                         </div>
                         <div className="grid grid-cols-12 gap-6 items-center relative z-10">
-                            <div className="col-span-7 space-y-3">
-                                <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest">Suscripción Anual SaaS</p>
-                                <h3 className="text-[24pt] font-black uppercase text-primary leading-tight tracking-tighter">
+                            <div className="col-span-7 space-y-4">
+                                <p className="text-[11pt] font-bold text-slate-400 uppercase tracking-widest">Suscripción SaaS {plan.billingCycle}</p>
+                                <h3 className="text-[28pt] font-black uppercase text-primary leading-tight tracking-tighter">
                                     {plan.name}
                                 </h3>
                                 <div className="flex items-center gap-2">
-                                    <BadgeCheck className="h-5 w-5 text-green-600" />
-                                    <span className="text-[9pt] font-black uppercase text-slate-600">Servicio y Soporte Incluido</span>
+                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                    <span className="text-[10pt] font-black uppercase text-slate-600 tracking-tight">Soporte y Actualizaciones Incluidas</span>
                                 </div>
                             </div>
-                            <div className="col-span-5 text-right border-l-2 border-slate-100 pl-8">
-                                <p className="text-[9pt] font-bold text-slate-400 uppercase tracking-widest mb-1">Costo {plan.billingCycle}</p>
+                            <div className="col-span-5 text-right border-l-2 border-slate-100 pl-10">
+                                <p className="text-[10pt] font-bold text-slate-400 uppercase tracking-widest mb-1">Monto {plan.billingCycle}</p>
                                 <div className="flex items-baseline justify-end gap-1 text-black">
-                                    <span className="text-[16pt] font-bold">S/</span>
-                                    <span className="text-[42pt] font-black leading-none">{plan.price.toFixed(0)}</span>
+                                    <span className="text-[18pt] font-bold">S/</span>
+                                    <span className="text-[48pt] font-black leading-none">{plan.price.toFixed(0)}</span>
                                 </div>
-                                <p className="text-[7pt] font-bold text-slate-400 uppercase mt-2">Importe neto por sede</p>
+                                <p className="text-[8pt] font-black text-slate-500 uppercase mt-2 tracking-tighter">Importe neto por sede</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
-                            <ShieldCheck className="h-8 w-8 text-primary mb-3" />
+                    <div className="grid grid-cols-3 gap-8 px-4">
+                        <div className="flex flex-col items-center text-center p-6 border rounded-[2rem] bg-slate-50/50 shadow-sm">
+                            <ShieldCheck className="h-10 w-10 text-primary mb-3" />
                             <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">Seguridad</p>
-                            <p className="text-[10pt] font-bold text-slate-800">Cifrado SSL</p>
+                            <p className="text-[11pt] font-bold text-slate-800">Cifrado SSL</p>
                         </div>
-                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
-                            <Globe className="h-8 w-8 text-primary mb-3" />
+                        <div className="flex flex-col items-center text-center p-6 border rounded-[2rem] bg-slate-50/50 shadow-sm">
+                            <Globe className="h-10 w-10 text-primary mb-3" />
                             <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">Acceso</p>
-                            <p className="text-[10pt] font-bold text-slate-800">100% Nube</p>
+                            <p className="text-[11pt] font-bold text-slate-800">100% Nube</p>
                         </div>
-                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
-                            <Star className="h-8 w-8 text-primary mb-3" />
+                        <div className="flex flex-col items-center text-center p-6 border rounded-[2rem] bg-slate-50/50 shadow-sm">
+                            <Star className="h-10 w-10 text-primary mb-3" />
                             <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">Garantía</p>
-                            <p className="text-[10pt] font-bold text-slate-800">Soporte 24/7</p>
+                            <p className="text-[11pt] font-bold text-slate-800">Soporte 24/7</p>
                         </div>
                     </div>
                 </div>
@@ -239,30 +244,30 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 <PageHeader design={design} />
                 
                 <div className="flex-1 flex flex-col justify-center px-[20mm] space-y-12">
-                    <div className="flex justify-between items-center pb-3 border-b-2 border-black">
-                        <h3 className="text-[16pt] font-black uppercase tracking-tight flex items-center gap-3">
-                            <ListChecks className="h-7 w-7 text-primary" /> Módulos y Capacidades
+                    <div className="flex justify-between items-center pb-4 border-b-2 border-black mx-4">
+                        <h3 className="text-[18pt] font-black uppercase tracking-tight flex items-center gap-3">
+                            <ListChecks className="h-8 w-8 text-primary" /> Módulos Incluidos
                         </h3>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+                    <div className="grid grid-cols-2 gap-x-12 gap-y-8 px-4">
                         {plan.features.map((feature, i) => {
                             const [name, description] = feature.split(':');
                             const items = description ? description.split(';').map(s => s.trim()).filter(Boolean) : [];
 
                             return (
-                                <div key={i} className="space-y-2">
-                                    <h4 className="text-[10pt] font-black text-primary uppercase tracking-tight border-l-4 border-primary pl-3 leading-none py-1 bg-primary/5">
+                                <div key={i} className="space-y-2.5">
+                                    <h4 className="text-[10pt] font-black text-primary uppercase tracking-tight border-l-4 border-primary pl-4 leading-none py-1.5 bg-primary/5 rounded-r-lg">
                                         {name}
                                     </h4>
-                                    <div className="space-y-1 ml-4">
+                                    <div className="space-y-1.5 ml-6">
                                         {items.length > 0 ? items.map((item, idx) => (
-                                            <div key={idx} className="text-[8.5pt] text-slate-600 font-bold leading-tight flex items-start gap-2">
+                                            <div key={idx} className="text-[9pt] text-slate-600 font-bold leading-tight flex items-start gap-2.5">
                                                 <div className="h-1.5 w-1.5 rounded-full bg-slate-300 mt-1.5 shrink-0" />
                                                 <span>{item}</span>
                                             </div>
                                         )) : (
-                                            <p className="text-[8.5pt] text-slate-400 italic">Habilitado según nivel de servicio.</p>
+                                            <p className="text-[9pt] text-slate-400 italic">Habilitado según nivel de servicio.</p>
                                         )}
                                     </div>
                                 </div>
@@ -270,15 +275,15 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         })}
                     </div>
 
-                    <div className="mt-12">
-                        <div className="grid grid-cols-2 gap-24 text-center px-10">
-                            <div className="border-t-2 border-black pt-2">
+                    <div className="mt-auto pb-12">
+                        <div className="grid grid-cols-2 gap-32 text-center px-16">
+                            <div className="border-t-2 border-black pt-3">
                                 <p className="text-[10pt] font-black uppercase text-black">{design?.creators || "Ingeniería STEM"}</p>
-                                <p className="text-[7pt] text-slate-400 font-bold uppercase tracking-widest">Dirección de Desarrollo</p>
+                                <p className="text-[8pt] text-slate-400 font-bold uppercase tracking-widest">Dirección de Desarrollo</p>
                             </div>
-                            <div className="border-t-2 border-black pt-2 text-black">
-                                <p className="text-[10pt] font-black uppercase">Cliente Institucional</p>
-                                <p className="text-[7pt] text-slate-400 font-bold uppercase tracking-widest">Sello y Firma de Aceptación</p>
+                            <div className="border-t-2 border-black pt-3 text-black">
+                                <p className="text-[10pt] font-black uppercase">Firma del Cliente</p>
+                                <p className="text-[8pt] text-slate-400 font-bold uppercase tracking-widest">Sello de Aceptación</p>
                             </div>
                         </div>
                     </div>
