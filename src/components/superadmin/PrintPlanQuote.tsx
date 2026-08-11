@@ -14,7 +14,10 @@ import {
     Cpu,
     CreditCard,
     BadgeCheck,
-    Briefcase
+    Briefcase,
+    Zap,
+    Rocket,
+    Crown
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -24,7 +27,7 @@ interface PrintPlanQuoteProps {
 }
 
 /**
- * Encabezado Institucional Fijo para cada página
+ * Componente interno para el Encabezado que se repetirá en cada página física.
  */
 const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | null, pageNumber: number, subtitle?: string }) => {
     const platformTitle = design?.title || "STEM V2";
@@ -32,43 +35,43 @@ const PageHeader = ({ design, pageNumber, subtitle }: { design: LoginDesign | nu
     const today = new Date();
 
     return (
-        <div className="absolute top-[15mm] left-[20mm] right-[20mm] border-b-2 border-black pb-4 flex items-center justify-between h-[60px]">
-            <div className="flex items-center gap-3">
+        <div className="absolute top-0 left-0 right-0 h-[35mm] border-b-2 border-black flex items-center justify-between px-[15mm]">
+            <div className="flex items-center gap-4">
                 {platformLogo ? (
-                    <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
+                    <img src={platformLogo} alt="Logo" className="w-12 h-12 object-contain" />
                 ) : (
                     <div className="w-10 h-10 bg-black text-white flex items-center justify-center rounded-lg">
                         <span className="text-[7pt] font-black italic">STEM</span>
                     </div>
                 )}
                 <div className="text-left">
-                    <h1 className="text-[11pt] font-black uppercase leading-tight text-black">{platformTitle}</h1>
-                    <p className="text-[7pt] font-bold text-slate-500 uppercase tracking-widest">{subtitle || "Propuesta Técnica Comercial"}</p>
+                    <h1 className="text-[12pt] font-black uppercase leading-tight text-black">{platformTitle}</h1>
+                    <p className="text-[7.5pt] font-bold text-slate-500 uppercase tracking-widest">{subtitle || "Propuesta Técnica Comercial"}</p>
                 </div>
             </div>
             <div className="text-right">
-                <p className="text-[7pt] font-black text-black uppercase mb-1">PÁGINA 0{pageNumber} / 03</p>
-                <p className="text-[6pt] font-mono font-bold text-gray-400">{format(today, 'dd/MM/yyyy')}</p>
+                <p className="text-[8pt] font-black text-black uppercase mb-1">PÁGINA 0{pageNumber} / 03</p>
+                <p className="text-[6.5pt] font-mono font-bold text-gray-400">{format(today, 'dd/MM/yyyy')}</p>
             </div>
         </div>
     );
 };
 
 /**
- * Pie de Página Institucional Fijo para cada página
+ * Componente interno para el Pie de Página que se repetirá en cada página física.
  */
 const PageFooter = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="absolute bottom-[15mm] left-[20mm] right-[20mm] pt-4 border-t border-slate-200 flex justify-between items-center h-[40px]">
+        <div className="absolute bottom-0 left-0 right-0 h-[25mm] border-t border-slate-200 flex justify-between items-center px-[15mm] bg-white">
             <div className="text-left">
-                <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-0.5">
+                <p className="text-[7.5pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
                     {platformTitle} • ECOSISTEMA EDUCATIVO MODULAR
                 </p>
-                <p className="text-[6pt] text-slate-300 font-bold uppercase italic">Documento generado digitalmente - Validez institucional</p>
+                <p className="text-[6.5pt] text-slate-300 font-bold uppercase italic">Documento oficial generado por la plataforma STEM</p>
             </div>
             <div className="text-right">
-                <p className="text-[7pt] font-black text-slate-400 uppercase">{design?.creators || "STEM Dev Team"}</p>
+                <p className="text-[7.5pt] font-black text-slate-400 uppercase tracking-widest">{design?.creators || "STEM Dev Team"}</p>
             </div>
         </div>
     );
@@ -91,25 +94,26 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         padding: 0 !important;
                         background: white !important;
                     }
-                    .page-container {
+                    .print-page {
                         position: relative !important;
                         width: 210mm !important;
-                        height: 297mm !important;
-                        padding: 0 !important;
-                        margin: 0 !important;
+                        height: 296mm !important; /* Ligeramente menor para evitar hojas en blanco extra */
+                        display: block !important;
                         page-break-after: always !important;
                         break-after: page !important;
                         overflow: hidden !important;
                         background: white !important;
-                        display: block !important;
+                        box-sizing: border-box !important;
                     }
-                    .content-safe-area {
+                    .page-content {
                         position: absolute !important;
-                        top: 45mm !important;
-                        bottom: 40mm !important;
-                        left: 20mm !important;
-                        right: 20mm !important;
-                        overflow: hidden !important;
+                        top: 40mm !important;
+                        bottom: 30mm !important;
+                        left: 15mm !important;
+                        right: 15mm !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
                     }
                 }
                 
@@ -118,35 +122,37 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         background: #f1f5f9;
                         padding: 40px 0;
                     }
-                    .page-container {
+                    .print-page {
                         width: 210mm;
                         height: 297mm;
                         margin: 0 auto 20px;
                         position: relative;
                         background: white;
                         box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-                        box-sizing: border-box;
                         overflow: hidden;
                     }
-                    .content-safe-area {
+                    .page-content {
                         position: absolute;
-                        top: 45mm;
-                        bottom: 40mm;
-                        left: 20mm;
-                        right: 20mm;
+                        top: 40mm;
+                        bottom: 30mm;
+                        left: 15mm;
+                        right: 15mm;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
                     }
                 }
             `}</style>
 
-            {/* PÁGINA 1: PORTADA */}
-            <section className="page-container">
+            {/* --- PÁGINA 1: PORTADA --- */}
+            <div className="print-page">
                 <PageHeader design={design} pageNumber={1} subtitle="Portada de Presentación" />
                 
-                <div className="content-safe-area flex flex-col items-center justify-center text-center">
+                <div className="page-content items-center text-center">
                     <p className="text-[12pt] font-black tracking-[0.6em] text-slate-300 uppercase mb-12">Propuesta preparada para:</p>
                     
                     <div className="w-full bg-slate-50 border-y-2 border-black py-16 mb-16">
-                        <h2 className="text-[36pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
+                        <h2 className="text-[32pt] font-black uppercase tracking-tighter text-black px-6 leading-tight">
                             {plan.name}
                         </h2>
                     </div>
@@ -168,7 +174,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </div>
                     </div>
 
-                    <div className="mt-auto flex justify-between items-end w-full border-t border-slate-100 pt-8">
+                    <div className="mt-16 flex justify-between items-end w-full border-t border-slate-100 pt-8">
                         <div className="text-left space-y-1">
                             <p className="text-[8pt] font-black uppercase text-slate-400 tracking-widest">Ingeniería y Desarrollo</p>
                             <p className="text-[11pt] font-bold uppercase">{design?.creators || "Equipo de Desarrollo"}</p>
@@ -181,13 +187,13 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 </div>
 
                 <PageFooter design={design} />
-            </section>
+            </div>
 
-            {/* PÁGINA 2: PROPUESTA ECONÓMICA */}
-            <section className="page-container">
+            {/* --- PÁGINA 2: PROPUESTA E INVERSIÓN --- */}
+            <div className="print-page">
                 <PageHeader design={design} pageNumber={2} subtitle="Propuesta Económica e Inversión" />
                 
-                <div className="content-safe-area flex flex-col justify-center space-y-10">
+                <div className="page-content space-y-10">
                     <div className="text-center">
                         <h2 className="text-[24pt] font-black uppercase tracking-tighter leading-none mb-2 text-primary">INVERSIÓN DEL SERVICIO</h2>
                         <div className="inline-block px-5 py-1 bg-black text-white text-[9pt] font-black uppercase tracking-[0.3em]">
@@ -196,7 +202,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
 
                     <p className="text-[11pt] leading-relaxed text-justify text-slate-700 font-medium">
-                        Estimados señores, tras analizar las necesidades de su institución, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, segura y escalable.
+                        Estimados señores, tras analizar las necesidades de su institución, presentamos la propuesta económica para la implementación del plan <strong>"{plan.name.toUpperCase()}"</strong>. Nuestra solución garantiza una gestión 100% digital, segura y escalable basada en la nube.
                     </p>
 
                     <div className="py-12 px-10 border-2 border-black rounded-[2.5rem] bg-white shadow-xl relative overflow-hidden">
@@ -226,17 +232,21 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                     </div>
 
                     <div className="grid grid-cols-3 gap-6">
-                        {[
-                            { icon: ShieldCheck, t: "Seguridad", v: "Cifrado SSL" },
-                            { icon: Globe, t: "Hosting", v: "Nube Google" },
-                            { icon: Cpu, t: "IA", v: "Motor Híbrido" }
-                        ].map((item, i) => (
-                            <div key={i} className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
-                                <item.icon className="h-8 w-8 text-primary mb-3" />
-                                <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">{item.t}</p>
-                                <p className="text-[10pt] font-bold text-slate-800">{item.v}</p>
-                            </div>
-                        ))}
+                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
+                            <ShieldCheck className="h-8 w-8 text-primary mb-3" />
+                            <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">Seguridad</p>
+                            <p className="text-[10pt] font-bold text-slate-800">Cifrado SSL</p>
+                        </div>
+                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
+                            <Globe className="h-8 w-8 text-primary mb-3" />
+                            <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">Hosting</p>
+                            <p className="text-[10pt] font-bold text-slate-800">Nube Google</p>
+                        </div>
+                        <div className="flex flex-col items-center text-center p-6 border rounded-3xl bg-slate-50/50">
+                            <Cpu className="h-8 w-8 text-primary mb-3" />
+                            <p className="text-[8pt] font-black uppercase tracking-widest text-slate-400 mb-1">IA</p>
+                            <p className="text-[10pt] font-bold text-slate-800">Motor Híbrido</p>
+                        </div>
                     </div>
 
                     <div className="p-8 bg-slate-50 rounded-[2rem] border-2 border-dashed border-slate-200">
@@ -250,13 +260,13 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 </div>
 
                 <PageFooter design={design} />
-            </section>
+            </div>
 
-            {/* PÁGINA 3: DESGLOSE TÉCNICO Y FIRMAS */}
-            <section className="page-container">
+            {/* --- PÁGINA 3: DESGLOSE TÉCNICO Y FIRMAS --- */}
+            <div className="print-page">
                 <PageHeader design={design} pageNumber={3} subtitle="Detalle de Capacidades y Firmas" />
                 
-                <div className="content-safe-area flex flex-col">
+                <div className="page-content">
                     <div className="flex justify-between items-center mb-8 pb-3 border-b-2 border-black">
                         <h3 className="text-[16pt] font-black uppercase tracking-tight flex items-center gap-3">
                             <ListChecks className="h-7 w-7 text-primary" /> Módulos Incluidos
@@ -289,7 +299,7 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         })}
                     </div>
 
-                    <div className="mt-auto mb-10">
+                    <div className="mt-auto mb-6">
                         <div className="grid grid-cols-2 gap-24 text-center px-10">
                             <div className="border-t-2 border-black pt-2">
                                 <p className="text-[10pt] font-black uppercase text-black">{design?.creators || "Ingeniería STEM"}</p>
@@ -304,7 +314,8 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                 </div>
 
                 <PageFooter design={design} />
-            </section>
+            </div>
         </div>
     );
 }
+
