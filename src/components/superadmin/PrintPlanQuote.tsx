@@ -10,9 +10,6 @@ import {
     ShieldCheck, 
     Globe, 
     Star,
-    Zap,
-    Rocket,
-    Crown,
     CreditCard,
     ListChecks
 } from 'lucide-react';
@@ -24,14 +21,14 @@ interface PrintPlanQuoteProps {
 
 /**
  * Componente de Encabezado Institucional
- * Se incluye físicamente en cada página para garantizar su repetición.
+ * Se ha reducido la altura y eliminado la línea divisoria.
  */
 const PageHeader = ({ design }: { design: LoginDesign | null }) => {
     const platformTitle = design?.title || "STEM V2";
     const platformLogo = design?.logoUrl;
     
     return (
-        <div className="w-full h-[35mm] border-b-2 border-black flex items-center justify-between px-[15mm] shrink-0 bg-white">
+        <div className="w-full h-[25mm] flex items-center justify-between px-[15mm] shrink-0 bg-white">
             <div className="flex items-center gap-4">
                 {platformLogo ? (
                     <img src={platformLogo} alt="Logo" className="w-10 h-10 object-contain" />
@@ -55,12 +52,12 @@ const PageHeader = ({ design }: { design: LoginDesign | null }) => {
 
 /**
  * Componente de Pie de Página
- * Fijado a 10mm del borde inferior de la hoja A4.
+ * Altura reducida a 12mm con margen de 10mm al borde inferior.
  */
 const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNumber: number }) => {
     const platformTitle = design?.title || "STEM V2";
     return (
-        <div className="w-full h-[20mm] border-t border-slate-200 flex justify-between items-center px-[15mm] shrink-0 bg-white mb-[10mm] mt-auto">
+        <div className="w-full h-[12mm] flex justify-between items-center px-[15mm] shrink-0 bg-white mb-[10mm] mt-auto">
             <div className="text-left">
                 <p className="text-[7pt] text-slate-400 font-black uppercase tracking-[0.3em] leading-none mb-1">
                     {platformTitle} • ECOSISTEMA EDUCATIVO
@@ -77,13 +74,6 @@ const PageFooter = ({ design, pageNumber }: { design: LoginDesign | null, pageNu
 export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
     const today = new Date();
     const platformTitle = design?.title || "STEM V2";
-
-    const getPlanIcon = (name: string) => {
-        const lower = name.toLowerCase();
-        if (lower.includes('premium') || lower.includes('crown') || lower.includes('oro')) return <Crown className="h-20 w-20 text-amber-500" />;
-        if (lower.includes('pro') || lower.includes('rocket')) return <Rocket className="h-20 w-20 text-purple-500" />;
-        return <Zap className="h-20 w-20 text-blue-500" />;
-    };
 
     return (
         <div className="quote-print-wrapper bg-white text-black font-sans">
@@ -146,13 +136,9 @@ export function PrintPlanQuote({ plan, design }: PrintPlanQuoteProps) {
                         </h2>
                     </div>
 
-                    <div className="flex flex-col items-center gap-10">
-                        <div className="p-6 bg-white rounded-[2rem] shadow-xl border-2 border-slate-50">
-                            {getPlanIcon(plan.name)}
-                        </div>
-                        
+                    <div className="flex flex-col items-center gap-6">
                         <div className="space-y-3">
-                            {design?.logoUrl && <img src={design.logoUrl} alt="Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />}
+                            {design?.logoUrl && <img src={design.logoUrl} alt="Logo" className="h-20 w-auto mx-auto mb-4 object-contain" />}
                             <h1 className="text-[26pt] font-black uppercase tracking-tighter leading-none text-primary">
                                 {platformTitle}
                             </h1>
