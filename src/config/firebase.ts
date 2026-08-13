@@ -991,6 +991,11 @@ export const getEFSRTAssignmentsForStudent = async (instituteId: string, sId: st
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
 };
 
+export const getEFSRTAssignmentsForSupervisor = async (instituteId: string, sId: string): Promise<EFSRTAssignment[]> => {
+    const snap = await getDocs(query(collection(db, 'institutes', instituteId, 'efsrtAssignments'), where('supervisorId', '==', sId), orderBy('createdAt', 'desc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
+};
+
 export const getAllEFSRTAssignments = async (instituteId: string): Promise<EFSRTAssignment[]> => {
     const snap = await getDocs(collection(db, 'institutes', instituteId, 'efsrtAssignments'));
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as EFSRTAssignment));
@@ -1019,6 +1024,23 @@ export const registerHistoricalEFSRT = async (instituteId: string, data: any): P
         status: 'Aprobado', 
         visits: [], 
         createdAt: Timestamp.now() 
+    });
+};
+
+export const registerEFSRTVisit = async (instituteId: string, assignmentId: string, visit: Omit<EFSRTVisit, 'id'>) => {
+    const ref = doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId);
+    await updateDoc(ref, {
+        visits: arrayUnion({ ...visit, id: doc(collection(db, 'idGenerator')).id })
+    });
+};
+
+export const evaluateEFSRT = async (instituteId: string, assignmentId: string, grade: number, observations: string) => {
+    const ref = doc(db, 'institutes', instituteId, 'efsrtAssignments', assignmentId);
+    await updateDoc(ref, {
+        grade,
+        observations,
+        status: grade >= 13 ? 'Aprobado' : 'Desaprobado',
+        processedAt: Timestamp.now()
     });
 };
 
