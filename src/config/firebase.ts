@@ -1339,3 +1339,168 @@ export const submitTask = async (
 
     await setDoc(subRef, submissionData, { merge: true });
 };
+
+// --- Access Control Functions ---
+
+export const getAccessPoints = async (instituteId: string): Promise<AccessPoint[]> => {
+    const snapshot = await getDocs(query(getSubCollectionRef(instituteId, 'accessPoints'), orderBy("name")));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AccessPoint));
+};
+
+export const getAccessPoint = async (instituteId: string, pointId: string): Promise<AccessPoint | null> => {
+    const docSnap = await getDoc(doc(db, 'institutes', instituteId, 'accessPoints', pointId));
+    return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } as AccessPoint : null;
+};
+
+export const addAccessPoint = async (instituteId: string, data: Omit<AccessPoint, 'id'>) => {
+    await addDoc(getSubCollectionRef(instituteId, 'accessPoints'), data);
+};
+
+export const updateAccessPoint = async (instituteId: string, pointId: string, data: Partial<AccessPoint>) => {
+    await updateDoc(doc(db, 'institutes', instituteId, 'accessPoints', pointId), data);
+};
+
+export const deleteAccessPoint = async (instituteId: string, pointId: string) => {
+    await deleteDoc(doc(db, 'institutes', instituteId, 'accessPoints', pointId));
+};
+
+export const listenToAccessLogs = (options: any, callback: (logs: AccessLog[], lastVisible: DocumentSnapshot | null) => void): Unsubscribe => {
+    const { instituteId, accessPointId, userDocumentId, startDate, endDate, limitCount } = options;
+    const q_parts: any[] = [where("instituteId", "==", instituteId)];
+    
+    if (accessPointId && accessPointId !== 'all') {
+        q_parts.push(where("accessPointId", "==", accessPointId));
+    }
+    
+    if (userDocumentId) {
+        q_parts.push(where("userDocumentId", "==", userDocumentId));
+    }
+    
+    if (startDate) q_parts.push(where("timestamp", ">=", Timestamp.fromDate(startDate)));
+    if (endDate) q_parts.push(where("timestamp", "<=", Timestamp.fromDate(endDate)));
+    
+    q_parts.push(orderBy("timestamp", "desc"));
+    q_parts.push(limit(limitCount || 20));
+    
+    return onSnapshot(query(collectionGroup(db, 'accessLogs'), ...q_parts), (snapshot) => {
+        const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog));
+        const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+        callback(logs, lastVisible);
+    });
+};
+
+export const getAccessLogsPaginated = async (options: any): Promise<{ logs: AccessLog[], lastVisible: DocumentSnapshot | null }> => {
+    const { instituteId, accessPointId, userDocumentId, startDate, endDate, limitCount, startAfterDoc } = options;
+    const q_parts: any[] = [where("instituteId", "==", instituteId)];
+    
+    if (accessPointId && accessPointId !== 'all') {
+        q_parts.push(where("accessPointId", "==", accessPointId));
+    }
+    
+    if (userDocumentId) {
+        q_parts.push(where("userDocumentId", "==", userDocumentId));
+    }
+    
+    if (startDate) q_parts.push(where("timestamp", ">=", Timestamp.fromDate(startDate)));
+    if (endDate) q_parts.push(where("timestamp", "<=", Timestamp.fromDate(endDate)));
+    
+    q_parts.push(orderBy("timestamp", "desc"));
+    if (startAfterDoc) q_parts.push(startAfter(startAfterDoc));
+    q_parts.push(limit(limitCount || 20));
+    
+    const snapshot = await getDocs(query(collectionGroup(db, 'accessLogs'), ...q_parts));
+    const logs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog));
+    const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+    return { logs, lastVisible };
+};
+
+export const listenToAccessLogsForUser = (instituteId: string, documentId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
+    const q = query(
+        collectionGroup(db, 'accessLogs'),
+        where("instituteId", "==", instituteId),
+        where("userDocumentId", "==", documentId),
+        orderBy("timestamp", "desc"),
+        limit(20)
+    );
+    return onSnapshot(q, (snapshot) => {
+        callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog)));
+    });
+};
+
+export const listenToAccessLogsForPoint = (instituteId: string, pointId: string, callback: (logs: AccessLog[]) => void): Unsubscribe => {
+    const q = query(
+        collection(db, 'institutes', instituteId, 'accessPoints', pointId, 'accessLogs'),
+        orderBy("timestamp", "desc"),
+        limit(50)
+    );
+    return onSnapshot(q, (snapshot) => {
+        callback(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog)));
+    });
+};
+
+export const getMonthlyAccessLogs = async (instituteId: string, year: number, month: number, pointId?: string): Promise<AccessLog[]> => {
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+    
+    const q_parts: any[] = [
+        where("instituteId", "==", instituteId),
+        where("timestamp", ">=", Timestamp.fromDate(startDate)),
+        where("timestamp", "<=", Timestamp.fromDate(endDate)),
+    ];
+    
+    if (pointId && pointId !== 'all') {
+        q_parts.push(where("accessPointId", "==", pointId));
+    }
+    
+    const snapshot = await getDocs(query(collectionGroup(db, 'accessLogs'), ...q_parts));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AccessLog));
+};
+
+// --- Egreso (Graduation) Functions ---
+
+export const checkEgresoEligibility = async (instituteId: string, studentId: string): Promise<StudentEgresoAudit> => {
+    const [history, efsrt, units] = await Promise.all([
+        getMatriculationsForStudent(instituteId, studentId),
+        getAllEFSRTAssignments(instituteId),
+        getUnits(instituteId)
+    ]);
+
+    const approvedUnitIds = new Set(history.filter(m => m.status === 'aprobado').map(m => m.unitId));
+    const pendingUnits = units.filter(u => !approvedUnitIds.has(u.id)).map(u => u.name);
+
+    const studentEfsrt = efsrt.filter(a => a.studentId === studentId);
+    const approvedModules = new Set(studentEfsrt.filter(a => a.status === 'Aprobado').map(a => a.moduleId));
+    
+    const studentProfile = await getStudentProfile(instituteId, studentId);
+    const programs = await getPrograms(instituteId);
+    const program = programs.find(p => p.id === studentProfile?.programId);
+    
+    const pendingEFSRT = (program?.modules || [])
+        .filter(m => !approvedModules.has(m.code))
+        .map(m => m.name);
+
+    return {
+        eligible: pendingUnits.length === 0 && pendingEFSRT.length === 0,
+        pendingUnits,
+        pendingEFSRT
+    };
+};
+
+export const promoteToEgresado = async (instituteId: string, studentId: string, year: string): Promise<void> => {
+    const studentRef = doc(db, 'institutes', instituteId, 'studentProfiles', studentId);
+    await updateDoc(studentRef, {
+        academicStatus: 'Egresado',
+        graduationYear: year,
+        role: 'Graduate',
+        roleId: 'graduate'
+    });
+    
+    const snap = await getDoc(studentRef);
+    const linkedUid = snap.data()?.linkedUserUid;
+    if (linkedUid) {
+        await updateDoc(doc(db, 'users', linkedUid), {
+            role: 'Graduate',
+            roleId: 'graduate'
+        });
+    }
+};
