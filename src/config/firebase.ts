@@ -809,6 +809,14 @@ export const getMatriculationsForStudent = async (instituteId: string, sId: stri
     return snap.docs.map(d => ({ id: d.id, ...d.data() } as Matriculation)).sort((a,b) => b.year.localeCompare(a.year) || b.period.localeCompare(a.period));
 };
 
+/**
+ * Elimina un registro de matrícula de forma permanente.
+ */
+export const deleteMatriculation = async (instituteId: string, studentId: string, matriculationId: string): Promise<void> => {
+    const ref = doc(db, 'institutes', instituteId, 'matriculations', matriculationId);
+    await deleteDoc(ref);
+};
+
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<StudentProfile[]> => {
     const mSnap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
     if (mSnap.empty) return [];
@@ -1250,7 +1258,7 @@ export const deleteAsset = async (inst: string, bld: string, env: string, id: st
 
 export const getAssetHistory = async (inst: string, bld: string, env: string, id: string): Promise<AssetHistoryLog[]> => {
     const snap = await getDocs(query(collection(db, 'institutes', inst, 'buildings', bld, 'environments', env, 'assets', id, 'history'), orderBy('timestamp', 'desc')));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() } as AssetHistoryLog));
+    return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as AssetHistoryLog));
 }
 
 export const bulkUpdateAssetsStatus = async (inst: string, assets: Asset[], status: any) => {

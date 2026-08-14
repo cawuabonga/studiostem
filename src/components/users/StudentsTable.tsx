@@ -33,6 +33,10 @@ const PAGE_SIZE = 10;
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 const turnos: UnitTurno[] = ['Mañana', 'Tarde', 'Noche'];
 
+/**
+ * Calcula el semestre actual basado en el año y periodo de admisión.
+ * Sirve como fallback si el perfil no tiene currentSemester definido.
+ */
 const calculateCurrentSemester = (admissionYear: string, admissionPeriod: 'MAR-JUL' | 'AGO-DIC'): number => {
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth(); 
@@ -113,9 +117,16 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
   const filteredProfiles = useMemo(() => {
     let profiles = allProfiles;
     if (programFilter !== 'all') profiles = profiles.filter(p => p.programId === programFilter);
+    
+    // FILTRO DINÁMICO: Prioriza el campo currentSemester del perfil
     if (semesterFilter !== 'all') {
-        profiles = profiles.filter(p => (p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod)) === parseInt(semesterFilter));
+        const targetSem = parseInt(semesterFilter);
+        profiles = profiles.filter(p => {
+            const actualSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
+            return actualSem === targetSem;
+        });
     }
+    
     if (turnoFilter !== 'all') {
         profiles = profiles.filter(p => p.turno === turnoFilter);
     }
@@ -318,7 +329,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
           </TableHeader>
           <TableBody>
             {paginatedProfiles.map((p, index) => {
-              const currentSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
+              const actualSem = p.currentSemester || calculateCurrentSemester(p.admissionYear, p.admissionPeriod);
               return (
                 <TableRow key={p.documentId} data-state={selectedIds.has(p.documentId) && "selected"}>
                   <TableCell><Checkbox checked={selectedIds.has(p.documentId)} onCheckedChange={() => handleSelectOne(p.documentId)}/></TableCell>
@@ -330,7 +341,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                         <span className="font-medium">{p.fullName}</span>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant="outline">{currentSem}° Semestre</Badge></TableCell>
+                  <TableCell><Badge variant="outline">{actualSem}° Semestre</Badge></TableCell>
                   <TableCell><Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-100">{p.turno || 'Sin asignar'}</Badge></TableCell>
                   <TableCell><Badge variant={p.linkedUserUid ? 'default' : 'secondary'}>{p.linkedUserUid ? 'Vinculado' : 'Pendiente'}</Badge></TableCell>
                   <TableCell className="text-right">
