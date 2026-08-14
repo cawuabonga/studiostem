@@ -46,6 +46,12 @@ const nextConfig: NextConfig = {
         hostname: "portal.andina.pe",
         port: "",
         pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+        port: "",
+        pathname: "/**",
       }
     ],
   },
