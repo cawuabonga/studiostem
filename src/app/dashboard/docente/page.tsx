@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -13,7 +14,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Filter, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Filter, Save, ArchiveRestore } from 'lucide-react';
 
 interface AssignedUnit extends Unit {
     programName: string;
@@ -26,6 +28,7 @@ export default function TeacherDashboardPage() {
     const [loading, setLoading] = useState(true);
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
     const [selectedPeriod, setSelectedPeriod] = useState<UnitPeriod | 'all'>('all');
+    const [showClosedUnits, setShowClosedUnits] = useState(false);
 
     // State for image upload dialog
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -141,7 +144,13 @@ export default function TeacherDashboardPage() {
         );
     }
     
-    const filteredUnits = assignedUnits.filter(u => selectedPeriod === 'all' || u.period === selectedPeriod);
+    // FILTRADO DINÁMICO
+    const filteredUnits = assignedUnits.filter(u => {
+        const matchesPeriod = selectedPeriod === 'all' || u.period === selectedPeriod;
+        const matchesClosed = showClosedUnits ? true : !u.isClosed;
+        return matchesPeriod && matchesClosed;
+    });
+
     const unitsMarJul = filteredUnits.filter(u => u.period === 'MAR-JUL');
     const unitsAgoDic = filteredUnits.filter(u => u.period === 'AGO-DIC');
 
@@ -157,7 +166,19 @@ export default function TeacherDashboardPage() {
                                     Estas son las unidades que tienes a tu cargo. Selecciona una para gestionarla.
                                 </CardDescription>
                             </div>
-                            <div className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex flex-col sm:flex-row gap-6 items-end">
+                                {/* Filtro Unidades Cerradas */}
+                                <div className="flex items-center space-x-3 bg-muted/50 p-2 rounded-xl border border-dashed border-primary/20 px-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="closed-units-toggle" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground cursor-pointer">Ver Unidades Cerradas</Label>
+                                    </div>
+                                    <Switch 
+                                        id="closed-units-toggle" 
+                                        checked={showClosedUnits} 
+                                        onCheckedChange={setShowClosedUnits} 
+                                    />
+                                </div>
+
                                 <div className="w-full sm:w-40 space-y-1.5">
                                     <Label htmlFor="year-select" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Seleccionar Año</Label>
                                     <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -192,7 +213,7 @@ export default function TeacherDashboardPage() {
                         <Filter className="h-12 w-12 text-muted-foreground opacity-20" />
                         <div>
                             <p className="text-lg font-bold text-muted-foreground uppercase tracking-tight">Sin unidades encontradas</p>
-                            <p className="text-sm text-muted-foreground">No tienes unidades asignadas para el año {selectedYear} {selectedPeriod !== 'all' ? `en el periodo ${selectedPeriod}` : ''}.</p>
+                            <p className="text-sm text-muted-foreground">No hay unidades para mostrar en el año {selectedYear} con los filtros actuales.</p>
                         </div>
                     </div>
                 ) : (

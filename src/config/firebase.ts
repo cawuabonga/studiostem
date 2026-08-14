@@ -1,3 +1,4 @@
+
 import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAnalytics } from "firebase/analytics";
 import { getAuth, GoogleAuthProvider, updateProfile as firebaseUpdateProfile, sendPasswordResetEmail, createUserWithEmailAndPassword as firebaseCreateUser } from 'firebase/auth';
@@ -1053,6 +1054,10 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         if (!mIdsByStudent.has(sId)) mIdsByStudent.set(sId, []);
         mIdsByStudent.get(sId)!.push(d.id);
     });
+    
+    // Update unit status to Closed
+    const unitRef = doc(db, 'institutes', instituteId, 'unidadesDidacticas', unitId);
+    
     for (let i = 0; i < results.length; i += 5) {
         const chunk = results.slice(i, i + 5);
         const batch = writeBatch(db);
@@ -1063,6 +1068,8 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         });
         await batch.commit();
     }
+
+    await updateDoc(unitRef, { isClosed: true });
 };
 
 export const getBuildings = async (instituteId: string): Promise<Building[]> => {

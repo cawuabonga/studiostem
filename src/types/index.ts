@@ -460,6 +460,7 @@ export interface Unit {
   imageUrl?: string;
   isVirtualClassroomActive?: boolean;
   attendanceLimitWeek?: number;
+  isClosed?: boolean;
 }
 
 export interface Teacher {
@@ -746,4 +747,5 @@ export interface ScheduleBlock {
     semester: number;
     period: UnitPeriod;
     year: string;
+    turno: UnitTurno;
 }
