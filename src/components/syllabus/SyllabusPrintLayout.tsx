@@ -155,7 +155,7 @@ export function SyllabusPrintLayout({
                                         <tbody className="text-[8pt]">
                                             <tr><th className="w-[30%] text-left bg-gray-100 p-1 border border-black uppercase font-black">Sector Económico</th><td className="p-1 border border-black uppercase">{program?.economicSector || '---'}</td></tr>
                                             <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Familia Productiva</th><td className="p-1 border border-black uppercase">{program?.productiveFamily || '---'}</td></tr>
-                                            <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Actividad Económica</th><td className="p-1 border border-black uppercase">{program?.economicActivity || '---'}</td></tr>
+                                            <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Activity Económica</th><td className="p-1 border border-black uppercase">{program?.economicActivity || '---'}</td></tr>
                                             <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Programa de Estudios</th><td className="p-1 border border-black uppercase font-bold">{program?.name}</td></tr>
                                             <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Módulo Profesional</th><td className="p-1 border border-black uppercase">{currentModule?.name}</td></tr>
                                             <tr><th className="text-left bg-gray-100 p-1 border border-black uppercase font-black">Unidad Didáctica</th><td className="p-1 border border-black font-black uppercase text-[9pt] text-primary">{unit.name}</td></tr>
@@ -285,10 +285,21 @@ export function SyllabusPrintLayout({
                                     </div>
                                 </section>
 
-                                {/* IX. BIBLIOGRAFÍA */}
+                                {/* IX. EVALUACIÓN */}
                                 <section className="no-print-break">
                                     <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-3">
                                         <span className="bg-black text-white px-2 py-0.5 text-[9pt] min-w-[30px] text-center rounded-sm">IX</span>
+                                        SISTEMA DE EVALUACIÓN
+                                    </h3>
+                                    <div className="text-justify pl-6 text-[9pt] leading-relaxed border-l-4 border-black">
+                                        {renderHtml(syllabus?.evaluation)}
+                                    </div>
+                                </section>
+
+                                {/* X. BIBLIOGRAFÍA */}
+                                <section className="no-print-break">
+                                    <h3 className="text-[11pt] font-black border-b-2 border-black pb-1 mb-3 flex items-center gap-3">
+                                        <span className="bg-black text-white px-2 py-0.5 text-[9pt] min-w-[30px] text-center rounded-sm">X</span>
                                         FUENTES DE INFORMACIÓN Y BIBLIOGRAFÍA
                                     </h3>
                                     <div className="text-justify pl-6 text-[8pt] leading-relaxed border-l-4 border-black font-mono">
@@ -321,7 +332,7 @@ export function SyllabusPrintLayout({
                 </tbody>
             </table>
 
-            {/* PIE DE PÁGINA FIJO INSTITUCIONAL (Movido al final del DOM para mejor evaluación del contador por el navegador) */}
+            {/* PIE DE PÁGINA FIJO INSTITUCIONAL */}
             <div className="print-footer">
                 <div className="flex flex-col text-left">
                     <span className="uppercase font-black text-[7pt] tracking-tight">{institute?.name}</span>
@@ -335,3 +346,4 @@ export function SyllabusPrintLayout({
         </div>
     );
 }
+

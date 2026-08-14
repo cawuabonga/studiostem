@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,10 +13,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSyllabus, saveSyllabus } from '@/services/academic-service';
 import type { Unit, Syllabus } from '@/types';
-import { Loader2, Save, Printer, Sparkles, FileText, Target, GraduationCap, Library, BookOpen, UserCheck } from 'lucide-react';
+import { Loader2, Save, Printer, Sparkles, FileText, Target, GraduationCap, Library, BookOpen, UserCheck, ClipboardCheck } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { generateSyllabusSummary } from '@/ai/flows/generate-syllabus-summary-flow';
 import { Separator } from '../ui/separator';
+import { cn } from '@/lib/utils';
 
 const syllabusSchema = z.object({
   summary: z.string().min(10, "La sumilla debe tener al menos 10 caracteres."),
@@ -24,10 +25,49 @@ const syllabusSchema = z.object({
   capacity: z.string().optional(),
   transversalCompetencies: z.string().optional(),
   methodology: z.string().min(10, "La metodología debe tener al menos 10 caracteres."),
+  evaluation: z.string().optional(),
   bibliography: z.string().optional(),
 });
 
 type SyllabusFormValues = z.infer<typeof syllabusSchema>;
+
+/**
+ * Componente Textarea que se ajusta automáticamente al tamaño del texto.
+ */
+const AutoResizeTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<typeof Textarea>>(
+  ({ className, ...props }, ref) => {
+    const internalRef = useRef<HTMLTextAreaElement>(null);
+    
+    // Sincronizar refs
+    React.useImperativeHandle(ref, () => internalRef.current!);
+
+    const adjustHeight = () => {
+      const textarea = internalRef.current;
+      if (textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = `${textarea.scrollHeight}px`;
+      }
+    };
+
+    useEffect(() => {
+      adjustHeight();
+    }, [props.value]);
+
+    return (
+      <Textarea
+        {...props}
+        ref={internalRef}
+        onInput={(e) => {
+            adjustHeight();
+            props.onInput?.(e);
+        }}
+        className={cn("min-h-[80px] overflow-hidden leading-relaxed", className)}
+      />
+    );
+  }
+);
+AutoResizeTextarea.displayName = "AutoResizeTextarea";
+
 
 interface SyllabusManagerProps {
   unit: Unit;
@@ -50,6 +90,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
       capacity: '',
       transversalCompetencies: '',
       methodology: 'Se utilizarán los métodos: inductivo, deductivo, analítico y sintético.',
+      evaluation: 'La evaluación es permanente e integral basada en el dominio de los indicadores de logro.',
       bibliography: '',
     },
   });
@@ -61,9 +102,13 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
         const syllabusData = await getSyllabus(instituteId, unit.id, year, unit.period);
         if (syllabusData) {
             form.reset({
-                ...syllabusData,
+                summary: syllabusData.summary || '',
+                competence: syllabusData.competence || '',
                 capacity: syllabusData.capacity || '',
                 transversalCompetencies: syllabusData.transversalCompetencies || '',
+                methodology: syllabusData.methodology || '',
+                evaluation: syllabusData.evaluation || '',
+                bibliography: syllabusData.bibliography || '',
             });
         }
     } catch (error) {
@@ -82,7 +127,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
     if (!instituteId) return;
     setIsSaving(true);
     try {
-      await saveSyllabus(instituteId, unit.id, year, unit.period, data);
+      await saveSyllabus(instituteId, unit.id, year, unit.period, data as any);
       toast({ title: "¡Éxito!", description: "La información del sílabo ha sido guardada correctamente." });
     } catch (error: any) {
       toast({ title: "Error", description: "No se pudo guardar la información del sílabo.", variant: "destructive" });
@@ -159,7 +204,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                    <div className="lg:col-span-5 lg:row-span-4 h-full">
+                    <div className="lg:col-span-5 lg:row-span-5 h-full">
                         <Card className="h-full border-t-4 border-t-primary shadow-md flex flex-col">
                             <CardHeader className="bg-muted/30 pb-4">
                                 <div className="flex items-center gap-3">
@@ -186,7 +231,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                                 </Button>
                                             </div>
                                             <FormControl className="flex-grow">
-                                                <Textarea placeholder="Escriba la sumilla..." className="h-full min-h-[450px] resize-none leading-relaxed border-primary/10 focus-visible:ring-primary/30" {...field} />
+                                                <AutoResizeTextarea placeholder="Escriba la sumilla..." className="border-primary/10 focus-visible:ring-primary/30" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -211,7 +256,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={3} placeholder="Desempeño final esperado..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <AutoResizeTextarea placeholder="Desempeño final esperado..." className="border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -236,7 +281,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={3} placeholder="Logros específicos a desarrollar..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <AutoResizeTextarea placeholder="Logros específicos a desarrollar..." className="border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -261,7 +306,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={3} placeholder="Habilidades para la empleabilidad..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <AutoResizeTextarea placeholder="Habilidades para la empleabilidad..." className="border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -286,7 +331,37 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={3} placeholder="Secuencia metodológica..." className="resize-none leading-relaxed border-primary/10" {...field} />
+                                                <AutoResizeTextarea placeholder="Secuencia metodológica..." className="border-primary/10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <div className="lg:col-span-12">
+                         <Card className="border-t-4 border-t-primary shadow-md">
+                            <CardHeader className="bg-muted/30 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-primary/10 rounded-lg">
+                                        <ClipboardCheck className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-lg font-black uppercase">VII. Sistema de Evaluación</CardTitle>
+                                        <CardDescription>Criterios y procedimientos de calificación.</CardDescription>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-6">
+                                <FormField
+                                    control={form.control}
+                                    name="evaluation"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <AutoResizeTextarea placeholder="Indique cómo evaluará el aprendizaje..." className="border-primary/10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -304,7 +379,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                         <Library className="h-5 w-5 text-primary" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-lg font-black uppercase">VII. Bibliografía y Fuentes</CardTitle>
+                                        <CardTitle className="text-lg font-black uppercase">VIII. Bibliografía y Fuentes</CardTitle>
                                         <CardDescription>Recursos de información sugeridos.</CardDescription>
                                     </div>
                                 </div>
@@ -316,7 +391,7 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
                                     render={({ field }) => (
                                         <FormItem>
                                             <FormControl>
-                                                <Textarea rows={6} placeholder="Fuentes de información (APA)..." className="resize-none leading-relaxed border-primary/10 font-mono text-xs" {...field} />
+                                                <AutoResizeTextarea placeholder="Fuentes de información (APA)..." className="border-primary/10 font-mono text-xs" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
@@ -338,3 +413,4 @@ export function SyllabusManager({ unit, year }: SyllabusManagerProps) {
     </div>
   );
 }
+

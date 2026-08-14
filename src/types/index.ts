@@ -717,6 +717,7 @@ export interface Syllabus {
     capacity?: string;
     transversalCompetencies?: string;
     methodology: string;
+    evaluation?: string;
     bibliography: string;
 }
 
