@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer, Check, ChevronsUpDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +30,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 const semesters = Array.from({ length: 10 }, (_, i) => i + 1);
 
@@ -69,6 +72,9 @@ export default function AdminEFSRTPage() {
     const [selectedStudent, setSelectedStudent] = useState<StudentProfile | null>(null);
     const [selectedAssignment, setSelectedAssignment] = useState<EFSRTAssignment | null>(null);
     
+    // Searchable Combobox state
+    const [supervisorSearchOpen, setSupervisorSearchOpen] = useState(false);
+
     const [formData, setFormData] = useState({
         moduleId: '',
         supervisorId: '',
@@ -645,12 +651,51 @@ export default function AdminEFSRTPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Docente Supervisor</Label>
-                                <Select value={formData.supervisorId} onValueChange={(v) => setFormData(p => ({...p, supervisorId: v}))}>
-                                    <SelectTrigger><SelectValue placeholder="Seleccione docente"/></SelectTrigger>
-                                    <SelectContent>
-                                        {teachers.map(t => <SelectItem key={t.documentId} value={t.documentId}>{t.fullName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={supervisorSearchOpen} onOpenChange={setSupervisorSearchOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={supervisorSearchOpen}
+                                            className="w-full justify-between font-normal h-10"
+                                        >
+                                            <span className="truncate">
+                                                {formData.supervisorId
+                                                    ? teachers.find((t) => t.documentId === formData.supervisorId)?.fullName
+                                                    : "Buscar docente..."}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Nombre del docente..." />
+                                            <CommandList>
+                                                <CommandEmpty>No se encontró docente.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {teachers.map((t) => (
+                                                        <CommandItem
+                                                            key={t.documentId}
+                                                            value={t.fullName}
+                                                            onSelect={() => {
+                                                                setFormData(p => ({...p, supervisorId: t.documentId}));
+                                                                setSupervisorSearchOpen(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    formData.supervisorId === t.documentId ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {t.fullName}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </div>
                         <div className="space-y-2">
