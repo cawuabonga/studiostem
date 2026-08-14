@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Loader2, User, BookOpen, CheckCircle, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import Image from 'next/image';
@@ -74,7 +75,6 @@ export function StudentMatriculationSheet({ instituteId, studentId }: StudentMat
             const completedUnitIds = new Set(matriculationHistory.filter(m => m.status === 'aprobado').map(m => m.unitId));
             
             // FILTRO CRÍTICO: Detectar si el alumno ya está matriculado (Cursando) en la unidad en el periodo actual.
-            // Se asocia por ID de unidad para prevenir duplicados exactos como en la captura del usuario.
             const currentlyEnrolledUnitIds = new Set(
                 matriculationHistory
                     .filter(m => m.status === 'cursando')
