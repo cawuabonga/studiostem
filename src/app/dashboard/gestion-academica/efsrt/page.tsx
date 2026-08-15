@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer, Check, ChevronsUpDown, CalendarDays, Clock } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer, Check, ChevronsUpDown, CalendarDays, Clock, FileWarning } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,6 +57,7 @@ export default function AdminEFSRTPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isPrinting, setIsPrinting] = useState(false);
+    const [isPrintingPendientes, setIsPrintingPendientes] = useState(false);
     
     const [filterSeg, setFilterSeg] = useState('');
     const [semesterFilterSeg, setSemesterFilterSeg] = useState<string>('all');
@@ -258,6 +259,79 @@ export default function AdminEFSRTPage() {
         }
     };
 
+    const handlePrintPendientes = () => {
+        setIsPrintingPendientes(true);
+        const printContent = document.getElementById('efsrt-pendientes-print-area')?.innerHTML;
+        if (!printContent) return;
+
+        const iframeId = 'efsrt-pendientes-print-iframe';
+        let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+        
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = iframeId;
+            iframe.style.position = 'fixed';
+            iframe.style.right = '0';
+            iframe.style.bottom = '0';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+            document.body.appendChild(iframe);
+        }
+
+        const styles = Array.from(document.styleSheets)
+            .map(s => s.href ? `<link rel="stylesheet" href="${s.href}">` : '')
+            .join('');
+
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+            iframeDoc.open();
+            iframeDoc.write(`
+                <html>
+                    <head>
+                        <title>Reporte Pendientes EFSRT</title>
+                        ${styles}
+                        <style>
+                            @media print {
+                                @page { margin: 15mm; size: A4 portrait; }
+                                body { 
+                                    -webkit-print-color-adjust: exact; 
+                                    print-color-adjust: exact; 
+                                    padding: 0; 
+                                    font-family: 'Lato', sans-serif;
+                                    counter-reset: page;
+                                }
+                                .no-print { display: none !important; }
+                                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; page-break-inside: auto; }
+                                tr { page-break-inside: avoid; page-break-after: auto; }
+                                th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 8pt; }
+                                th { background-color: #f3f4f6; text-transform: uppercase; font-weight: bold; }
+                                .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 15px; font-size: 13pt; }
+                                .filter-box { margin-bottom: 20px; padding: 10px; border: 1px solid #eee; background-color: #f9f9f9; border-radius: 4px; font-size: 8pt; }
+                                .signature-area { margin-top: 80px; display: flex; justify-content: center; page-break-inside: avoid; }
+                                .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; line-height: 1.4; }
+                                .print-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; text-align: right; font-size: 7pt; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
+                                .page-number:after { counter-increment: page; content: "Página " counter(page); }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        ${printContent}
+                        <div class="print-footer"><span class="page-number"></span></div>
+                    </body>
+                </html>
+            `);
+            iframeDoc.close();
+            
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setIsPrintingPendientes(false);
+            }, 500);
+        }
+    };
+
     const handleOpenProgram = (student: StudentProfile) => {
         setSelectedStudent(student);
         setSelectedAssignment(null);
@@ -373,13 +447,13 @@ export default function AdminEFSRTPage() {
                         <div className="flex items-center gap-3">
                             <ListChecks className="h-8 w-8" />
                             <div>
-                                <CardTitle className="text-2xl">Gestión de Experiencias Formativas (EFSRT)</CardTitle>
-                                <CardDescription className="text-primary-foreground/80">
-                                    Programa: <span className="font-bold underline">{programs.find(p => p.id === userProgramId)?.name || 'Cargando...'}</span>
+                                <CardTitle className="text-2xl font-black uppercase tracking-tighter">Gestión de Experiencias Formativas (EFSRT)</CardTitle>
+                                <CardDescription className="text-primary-foreground/80 font-bold uppercase text-xs">
+                                    Programa: <span className="underline">{programs.find(p => p.id === userProgramId)?.name || 'Cargando...'}</span>
                                 </CardDescription>
                             </div>
                         </div>
-                        <Button variant="secondary" onClick={handlePrintGeneralReport} disabled={isPrinting || filteredAssignments.length === 0} className="font-bold shadow-lg">
+                        <Button variant="secondary" onClick={handlePrintGeneralReport} disabled={isPrinting || filteredAssignments.length === 0} className="font-black shadow-lg uppercase text-xs tracking-widest px-6">
                             {isPrinting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                             Imprimir Reporte General
                         </Button>
@@ -388,28 +462,28 @@ export default function AdminEFSRTPage() {
             </Card>
 
             <Tabs defaultValue="seguimiento">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="seguimiento">Seguimiento General</TabsTrigger>
-                    <TabsTrigger value="programar">Programar Nueva Práctica</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2 h-14 bg-muted/50 p-1">
+                    <TabsTrigger value="seguimiento" className="font-black uppercase text-xs tracking-widest">Seguimiento General</TabsTrigger>
+                    <TabsTrigger value="programar" className="font-black uppercase text-xs tracking-widest">Programar Nueva Práctica</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="seguimiento" className="pt-4">
-                    <Card>
+                    <Card className="border-t-4 border-t-primary shadow-lg">
                         <CardHeader>
-                            <CardTitle>Listado Maestro de Prácticas</CardTitle>
-                            <CardDescription>Visualiza el estado de todos los estudiantes con EFSRT programadas.</CardDescription>
+                            <CardTitle className="text-xl font-black uppercase tracking-tight text-primary">Listado Maestro de Prácticas</CardTitle>
+                            <CardDescription className="font-medium">Visualiza el estado de todos los estudiantes con EFSRT programadas.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Búsqueda rápida</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Búsqueda rápida</Label>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input placeholder="DNI o nombre..." value={filterSeg} onChange={(e) => setFilterSeg(e.target.value)} className="pl-9" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Módulo</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Módulo</Label>
                                     <Select value={moduleFilterSeg} onValueChange={setModuleFilterSeg}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -421,7 +495,7 @@ export default function AdminEFSRTPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Estado</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Estado</Label>
                                     <Select value={statusFilterSeg} onValueChange={setStatusFilterSeg}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -435,7 +509,7 @@ export default function AdminEFSRTPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Semestre</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Semestre</Label>
                                     <Select value={semesterFilterSeg} onValueChange={setSemesterFilterSeg}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -446,18 +520,18 @@ export default function AdminEFSRTPage() {
                                 </div>
                             </div>
 
-                            <div className="rounded-md border overflow-auto">
+                            <div className="rounded-2xl border overflow-auto bg-white shadow-sm">
                                 <Table>
-                                    <TableHeader>
+                                    <TableHeader className="bg-slate-50/50">
                                         <TableRow>
-                                            <TableHead className="w-[50px]">N°</TableHead>
-                                            <TableHead>Estudiante</TableHead>
-                                            <TableHead>Módulo</TableHead>
-                                            <TableHead>Supervisor</TableHead>
-                                            <TableHead>Empresa</TableHead>
-                                            <TableHead className="text-center">Visitas</TableHead>
-                                            <TableHead>Estado Actual</TableHead>
-                                            <TableHead className="text-right">Acciones</TableHead>
+                                            <TableHead className="w-[50px] font-black text-[10px] uppercase">N°</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Estudiante</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Módulo</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Supervisor</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Empresa</TableHead>
+                                            <TableHead className="text-center font-black text-[10px] uppercase">Visitas</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Estado Actual</TableHead>
+                                            <TableHead className="text-right font-black text-[10px] uppercase">Acciones</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -466,23 +540,23 @@ export default function AdminEFSRTPage() {
                                             const s = students.find(x => x.documentId === a.studentId);
                                             const displayName = s ? `${s.lastName}, ${s.firstName}` : a.studentName;
                                             return (
-                                                <TableRow key={a.id}>
-                                                    <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
-                                                    <TableCell className="font-bold">
+                                                <TableRow key={a.id} className="hover:bg-muted/30 transition-colors">
+                                                    <TableCell className="text-center font-black text-xs text-muted-foreground">{index + 1}</TableCell>
+                                                    <TableCell className="font-black text-xs uppercase text-slate-800">
                                                         {displayName}
-                                                        <p className="text-[10px] font-mono text-muted-foreground">{a.studentId}</p>
+                                                        <p className="text-[10px] font-mono font-bold text-primary">{a.studentId}</p>
                                                     </TableCell>
-                                                    <TableCell className="text-[10px] leading-tight max-w-[200px]">{a.moduleName}</TableCell>
-                                                    <TableCell className="text-xs">{a.supervisorName}</TableCell>
-                                                    <TableCell className="text-xs">{a.location}</TableCell>
-                                                    <TableCell className="text-center"><Badge variant="outline">{a.visits?.length || 0}</Badge></TableCell>
-                                                    <TableCell><Badge className={getStatusColor(status)}>{status}</Badge></TableCell>
+                                                    <TableCell className="text-[10px] leading-tight max-w-[200px] font-medium uppercase">{a.moduleName}</TableCell>
+                                                    <TableCell className="text-[10px] font-bold uppercase text-slate-600">{a.supervisorName}</TableCell>
+                                                    <TableCell className="text-[10px] font-bold uppercase text-slate-600">{a.location}</TableCell>
+                                                    <TableCell className="text-center"><Badge variant="secondary" className="font-black text-[10px]">{a.visits?.length || 0}</Badge></TableCell>
+                                                    <TableCell><Badge className={cn("font-black text-[9px] uppercase border-none", getStatusColor(status))}>{status}</Badge></TableCell>
                                                     <TableCell className="text-right">
                                                         <div className="flex justify-end gap-1">
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(a)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleOpenEdit(a)}>
                                                                 <Edit className="h-4 w-4" />
                                                             </Button>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => handleOpenDelete(a)}>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10 rounded-full" onClick={() => handleOpenDelete(a)}>
                                                                 <Trash2 className="h-4 w-4" />
                                                             </Button>
                                                         </div>
@@ -490,7 +564,7 @@ export default function AdminEFSRTPage() {
                                                 </TableRow>
                                             );
                                         }) : (
-                                            <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground italic">No se encontraron registros.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={8} className="text-center py-20 text-muted-foreground italic">No se encontraron registros activos en el seguimiento.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
@@ -500,22 +574,30 @@ export default function AdminEFSRTPage() {
                 </TabsContent>
 
                 <TabsContent value="programar" className="pt-4">
-                    <Card>
+                    <Card className="border-t-4 border-t-primary shadow-lg">
                         <CardHeader>
-                            <CardTitle>Búsqueda de Estudiantes Pendientes</CardTitle>
-                            <CardDescription>Identifica estudiantes sin prácticas asignadas.</CardDescription>
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <CardTitle className="text-xl font-black uppercase tracking-tight text-primary">Búsqueda de Estudiantes Pendientes</CardTitle>
+                                    <CardDescription className="font-medium">Identifica estudiantes sin prácticas asignadas para el módulo seleccionado.</CardDescription>
+                                </div>
+                                <Button variant="outline" size="sm" onClick={handlePrintPendientes} disabled={studentsToProgram.length === 0 || isPrintingPendientes} className="font-black uppercase text-[10px] tracking-widest h-10 px-4 border-2">
+                                    {isPrintingPendientes ? <Loader2 className="mr-2 h-3 w-3 animate-spin" /> : <Printer className="mr-2 h-3 w-3" />}
+                                    Imprimir Listado
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Buscar Alumno</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Buscar Alumno</Label>
                                     <div className="relative">
                                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         <Input placeholder="DNI o nombre..." value={filterProg} onChange={(e) => setFilterProg(e.target.value)} className="pl-9" />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Filtrar por Semestre</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Filtrar por Semestre</Label>
                                     <Select value={semesterFilterProg} onValueChange={setSemesterFilterProg}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
@@ -525,9 +607,9 @@ export default function AdminEFSRTPage() {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Módulo a Programar</Label>
+                                    <Label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest">Módulo a Programar</Label>
                                     <Select value={moduleFilterProg} onValueChange={setModuleFilterProg}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccione módulo..."/></SelectTrigger>
+                                        <SelectTrigger className="font-bold text-primary border-primary/20"><SelectValue placeholder="Seleccione módulo..."/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Ver Todos</SelectItem>
                                             {currentProgramModules.map(m => (
@@ -538,43 +620,43 @@ export default function AdminEFSRTPage() {
                                 </div>
                             </div>
 
-                            <div className="rounded-md border overflow-auto">
+                            <div className="rounded-2xl border overflow-auto bg-white shadow-sm">
                                 <Table>
-                                    <TableHeader>
+                                    <TableHeader className="bg-slate-50/50">
                                         <TableRow>
-                                            <TableHead className="w-[50px]">N°</TableHead>
-                                            <TableHead>DNI</TableHead>
-                                            <TableHead>Estudiante (Apellidos y Nombres)</TableHead>
-                                            <TableHead>Semestre Actual</TableHead>
-                                            <TableHead className="text-right">Acción</TableHead>
+                                            <TableHead className="w-[50px] font-black text-[10px] uppercase">N°</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">DNI</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Estudiante (Apellidos y Nombres)</TableHead>
+                                            <TableHead className="font-black text-[10px] uppercase">Semestre Actual</TableHead>
+                                            <TableHead className="text-right font-black text-[10px] uppercase">Acción</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {studentsToProgram.length > 0 ? studentsToProgram.map((student, index) => (
-                                            <TableRow key={student.documentId}>
-                                                <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
-                                                <TableCell className="font-mono text-xs">{student.documentId}</TableCell>
-                                                <TableCell className="font-bold uppercase">{student.lastName}, {student.firstName}</TableCell>
-                                                <TableCell className="text-xs">
+                                            <TableRow key={student.documentId} className="hover:bg-primary/5 transition-colors">
+                                                <TableCell className="text-center font-black text-xs text-muted-foreground">{index + 1}</TableCell>
+                                                <TableCell className="font-mono text-xs font-bold text-primary">{student.documentId}</TableCell>
+                                                <TableCell className="font-black text-xs uppercase text-slate-800">{student.lastName}, {student.firstName}</TableCell>
+                                                <TableCell className="text-xs font-bold uppercase text-slate-600">
                                                     Semestre {student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button size="sm" onClick={() => handleOpenProgram(student)}>
+                                                    <Button size="sm" className="font-black uppercase text-[10px] h-8 shadow-sm" onClick={() => handleOpenProgram(student)}>
                                                         <PlusCircle className="mr-2 h-4 w-4" /> Programar
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
                                         )) : (
                                             <TableRow>
-                                                <TableCell colSpan={5} className="h-32 text-center text-muted-foreground italic">
+                                                <TableCell colSpan={5} className="h-40 text-center text-muted-foreground italic">
                                                     {!filterProg && semesterFilterProg === 'all' 
                                                         ? (
-                                                            <div className="flex flex-col items-center gap-2">
-                                                                <Info className="h-5 w-5 opacity-50" />
-                                                                <p>Utilice los filtros superiores para buscar estudiantes.</p>
+                                                            <div className="flex flex-col items-center gap-2 opacity-30">
+                                                                <Info className="h-10 w-10" />
+                                                                <p className="font-black text-[10px] uppercase tracking-widest">Utilice los filtros superiores para buscar estudiantes</p>
                                                             </div>
                                                         )
-                                                        : "No se encontraron estudiantes."}
+                                                        : "No se encontraron estudiantes pendientes con estos criterios."}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -586,7 +668,7 @@ export default function AdminEFSRTPage() {
                 </TabsContent>
             </Tabs>
 
-            {/* AREA DE IMPRESIÓN (OCULTA) */}
+            {/* AREA DE IMPRESIÓN GENERAL (OCULTA) */}
             <div id="efsrt-admin-print-area" className="hidden">
                 <div className="header">
                     <div className="flex items-center gap-4">
@@ -656,6 +738,66 @@ export default function AdminEFSRTPage() {
                         </p>
                         <p style={{ margin: 0, fontSize: '8pt', color: '#444', fontWeight: '600' }}>
                             {programs.find(p => p.id === userProgramId)?.name.toUpperCase() || 'PROGRAMA DE ESTUDIOS'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* AREA DE IMPRESIÓN PENDIENTES (OCULTA) */}
+            <div id="efsrt-pendientes-print-area" className="hidden">
+                <div className="header">
+                    <div className="flex items-center gap-4">
+                        {institute?.logoUrl && <img src={institute.logoUrl} alt="Logo" style={{ height: '60px' }} />}
+                        <div>
+                            <p style={{ fontSize: '14pt', fontWeight: 'bold', margin: 0 }}>{institute?.name.toUpperCase()}</p>
+                            <p style={{ fontSize: '8pt', color: '#666', margin: 0 }}>SISTEMA DE GESTIÓN ACADÉMICA - AUDITORÍA DE PENDIENTES</p>
+                        </div>
+                    </div>
+                    <div style={{ textAlign: 'right', fontSize: '9pt' }}>
+                        <p>FECHA: {format(new Date(), 'dd/MM/yyyy')}</p>
+                    </div>
+                </div>
+
+                <div className="title">
+                    REPORTE DE ESTUDIANTES PENDIENTES DE EXPERIENCIAS FORMATIVAS (EFSRT)
+                </div>
+
+                <div className="filter-box">
+                    <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', fontSize: '7pt' }}>Filtros de Búsqueda Aplicados:</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+                        <p style={{ margin: 0 }}><strong>Ciclo/Semestre:</strong> {semesterFilterProg === 'all' ? 'Todos' : `${semesterFilterProg}° Semestre`}</p>
+                        <p style={{ margin: 0 }}><strong>Módulo Objetivo:</strong> {moduleFilterProg === 'all' ? 'Todos los Módulos' : currentProgramModules.find(m => m.code === moduleFilterProg)?.name}</p>
+                    </div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th style={{ width: '30px' }}>N°</th>
+                            <th style={{ width: '100px' }}>DNI</th>
+                            <th>ESTUDIANTE (APELLIDOS Y NOMBRES)</th>
+                            <th style={{ width: '120px', textAlign: 'center' }}>SEMESTRE ACTUAL</th>
+                            <th style={{ width: '150px', textAlign: 'center' }}>CONDICIÓN</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {studentsToProgram.map((student, idx) => (
+                            <tr key={student.documentId}>
+                                <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{student.documentId}</td>
+                                <td style={{ fontWeight: 'black' }}>{student.lastName.toUpperCase()}, {student.firstName.toUpperCase()}</td>
+                                <td style={{ textAlign: 'center' }}>{student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}° Ciclo</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold', color: '#dc2626' }}>PENDIENTE</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                <div className="signature-area" style={{ marginTop: '80px' }}>
+                    <div className="signature-box">
+                        <p style={{ fontWeight: 'bold', margin: '0 0 2px 0', fontSize: '10pt' }}>DIRECCIÓN ACADÉMICA</p>
+                        <p style={{ margin: 0, fontSize: '8pt', color: '#444', fontWeight: '600' }}>
+                            {institute?.name.toUpperCase()}
                         </p>
                     </div>
                 </div>
