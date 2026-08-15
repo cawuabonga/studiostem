@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer, Check, ChevronsUpDown } from 'lucide-react';
+import { Loader2, Search, ListChecks, PlusCircle, Edit, Trash2, Info, Printer, Check, ChevronsUpDown, CalendarDays, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Timestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -133,7 +133,7 @@ export default function AdminEFSRTPage() {
         return baseAssignments.filter(a => {
             const effectiveStatus = getEffectiveStatus(a);
             
-            // Reconstruimos el nombre para búsqueda y visualización uniforme
+            // Reconstruimos el nombre para búsqueda y visualización uniforme (APELLIDO, NOMBRE)
             const s = students.find(x => x.documentId === a.studentId);
             const displayName = s ? `${s.lastName}, ${s.firstName}` : a.studentName;
 
@@ -233,7 +233,8 @@ export default function AdminEFSRTPage() {
                                 th, td { border: 1px solid black; padding: 6px; text-align: left; font-size: 8pt; }
                                 th { background-color: #f3f4f6; text-transform: uppercase; font-weight: bold; }
                                 .header { display: flex; justify-content: space-between; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
-                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 30px; font-size: 13pt; }
+                                .title { text-align: center; text-transform: uppercase; font-weight: 800; border-bottom: 2px solid black; padding: 10px 0; margin-bottom: 15px; font-size: 13pt; }
+                                .filter-box { margin-bottom: 20px; padding: 10px; border: 1px solid #eee; background-color: #f9f9f9; border-radius: 4px; font-size: 8pt; }
                                 .signature-area { margin-top: 80px; display: flex; justify-content: center; page-break-inside: avoid; }
                                 .signature-box { border-top: 1px solid black; width: 350px; text-align: center; padding-top: 8px; font-size: 9pt; line-height: 1.4; }
                                 .print-footer { position: fixed; bottom: 0; left: 0; right: 0; height: 30px; text-align: right; font-size: 7pt; color: #666; border-top: 1px solid #eee; padding-top: 5px; }
@@ -328,8 +329,8 @@ export default function AdminEFSRTPage() {
                 supervisorId: formData.supervisorId,
                 supervisorName: supervisor?.fullName || 'Supervisor desconocido',
                 location: formData.location,
-                startDate: Timestamp.fromDate(new Date(formData.startDate)),
-                endDate: Timestamp.fromDate(new Date(formData.endDate)),
+                startDate: Timestamp.fromDate(new Date(formData.startDate + 'T12:00:00')),
+                endDate: Timestamp.fromDate(new Date(formData.endDate + 'T12:00:00')),
             };
 
             if (selectedAssignment) {
@@ -604,6 +605,15 @@ export default function AdminEFSRTPage() {
                     REPORTE GENERAL DE SEGUIMIENTO DE EXPERIENCIAS FORMATIVAS EN SITUACIONES REALES DE TRABAJO (EFSRT)
                 </div>
 
+                <div className="filter-box">
+                    <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', textTransform: 'uppercase', color: '#666', fontSize: '7pt' }}>Filtros Aplicados al Reporte:</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '20px' }}>
+                        <p style={{ margin: 0 }}><strong>Módulo:</strong> {moduleFilterSeg === 'all' ? 'Todos los Módulos' : currentProgramModules.find(m => m.code === moduleFilterSeg)?.name}</p>
+                        <p style={{ margin: 0 }}><strong>Estado:</strong> {statusFilterSeg === 'all' ? 'Todos los Estados' : statusFilterSeg.toUpperCase()}</p>
+                        <p style={{ margin: 0 }}><strong>Semestre:</strong> {semesterFilterSeg === 'all' ? 'Todos' : `${semesterFilterSeg}° Semestre`}</p>
+                    </div>
+                </div>
+
                 <table>
                     <thead>
                         <tr>
@@ -611,7 +621,9 @@ export default function AdminEFSRTPage() {
                             <th>ESTUDIANTE / DNI</th>
                             <th>EMPRESA / SEDE</th>
                             <th>DOCENTE SUPERVISOR</th>
-                            <th style={{ width: '100px', textAlign: 'center' }}>ESTADO</th>
+                            <th style={{ width: '75px', textAlign: 'center' }}>F. INICIO</th>
+                            <th style={{ width: '75px', textAlign: 'center' }}>F. FIN</th>
+                            <th style={{ width: '90px', textAlign: 'center' }}>ESTADO</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -627,6 +639,8 @@ export default function AdminEFSRTPage() {
                                     </td>
                                     <td>{a.location.toUpperCase()}</td>
                                     <td>{a.supervisorName.toUpperCase()}</td>
+                                    <td style={{ textAlign: 'center' }}>{format(a.startDate.toDate(), 'dd/MM/yy')}</td>
+                                    <td style={{ textAlign: 'center' }}>{format(a.endDate.toDate(), 'dd/MM/yy')}</td>
                                     <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{getEffectiveStatus(a).toUpperCase()}</td>
                                 </tr>
                             );
