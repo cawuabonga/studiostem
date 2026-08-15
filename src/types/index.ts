@@ -591,6 +591,103 @@ export interface Role {
   permissions: Record<Permission, boolean>;
 }
 
+export const PERMISSIONS_CONFIG: { category: string; description: string; permissions: { id: Permission; label: string }[] }[] = [
+  {
+    category: 'Gestión Académica',
+    description: 'Control de currícula, matrícula y carga docente.',
+    permissions: [
+      { id: 'academic:program:manage', label: 'Gestionar Programas (Carreras)' },
+      { id: 'academic:unit:manage', label: 'Gestionar Unidades Didácticas (Todas)' },
+      { id: 'academic:unit:manage:own', label: 'Gestionar Unidades Propias (Coordinador)' },
+      { id: 'academic:assignment:manage', label: 'Asignar Docentes a Unidades' },
+      { id: 'academic:teacher:view', label: 'Ver Listado de Docentes' },
+      { id: 'academic:workload:view', label: 'Ver Carga Horaria Docente' },
+      { id: 'academic:workload:monitor', label: 'Monitorear Carga No Lectiva' },
+      { id: 'academic:enrollment:manage', label: 'Gestionar Matrícula de Alumnos' },
+      { id: 'academic:periods:manage', label: 'Configurar Calendario Académico' },
+      { id: 'academic:load:view', label: 'Ver Dashboard de Carga Académica' },
+      { id: 'academic:efsrt:manage', label: 'Gestionar Prácticas (EFSRT)' },
+    ],
+  },
+  {
+    category: 'Administración y Finanzas',
+    description: 'Control de tesorería, infraestructura e insumos.',
+    permissions: [
+      { id: 'admin:fees:manage', label: 'Gestionar Tasas y Conceptos' },
+      { id: 'admin:payments:validate', label: 'Validar Pagos (Tesorería)' },
+      { id: 'admin:access-control:manage', label: 'Gestionar Lectores RFID' },
+      { id: 'admin:attendance:report', label: 'Ver Reportes de Asistencia Personal' },
+      { id: 'admin:institute:manage', label: 'Editar Perfil Público del Instituto' },
+      { id: 'admin:infra:manage', label: 'Gestionar Edificios e Inventario' },
+      { id: 'admin:supplies:manage', label: 'Gestionar Almacén e Insumos' },
+      { id: 'admin:deliveries:view', label: 'Ver Historial de Entregas' },
+      { id: 'admin:companies:manage', label: 'Gestionar Empresas Aliadas' },
+      { id: 'admin:jobs:monitor', label: 'Monitorear Bolsa Laboral' },
+      { id: 'admin:health:manage', label: 'Gestionar Tópico y Salud' },
+      { id: 'admin:eda:manage', label: 'Configurar Sistema EDA' },
+    ],
+  },
+  {
+    category: 'Gestión de Usuarios',
+    description: 'Control de perfiles de estudiantes y personal.',
+    permissions: [
+      { id: 'users:staff:manage', label: 'Gestionar Perfiles de Personal' },
+      { id: 'users:student:manage', label: 'Gestionar Perfiles de Estudiantes' },
+    ],
+  },
+  {
+    category: 'Planificación y Horarios',
+    description: 'Generación de horarios y gestión de espacios.',
+    permissions: [
+      { id: 'planning:schedule:manage', label: 'Generar Horarios Institucionales' },
+      { id: 'planning:environment:manage', label: 'Gestionar Aulas y Laboratorios' },
+      { id: 'planning:schedule:view:own', label: 'Ver Mi Horario Personal' },
+    ],
+  },
+  {
+    category: 'Super Administrador (Global)',
+    description: 'Control total de la plataforma multi-instituto.',
+    permissions: [
+      { id: 'superadmin:institute:manage', label: 'Crear y Eliminar Institutos' },
+      { id: 'superadmin:users:manage', label: 'Gestionar Todos los Usuarios' },
+      { id: 'superadmin:design:manage', label: 'Configurar Diseño y Logo Global' },
+      { id: 'superadmin:roles:manage', label: 'Gestionar Roles del Sistema' },
+      { id: 'superadmin:plans:manage', label: 'Gestionar Planes SaaS' },
+      { id: 'superadmin:observability:view', label: 'Ver Salud del Ecosistema' },
+    ],
+  },
+  {
+    category: 'Rol Docente',
+    description: 'Capacidades específicas para el profesorado.',
+    permissions: [
+      { id: 'teacher:unit:view', label: 'Acceder a Mis Unidades Asignadas' },
+      { id: 'teacher:efsrt:supervise', label: 'Supervisar Prácticas (EFSRT)' },
+      { id: 'teacher:workload:report', label: 'Reportar Carga No Lectiva' },
+    ],
+  },
+  {
+    category: 'Rol Estudiante',
+    description: 'Capacidades para alumnos y egresados.',
+    permissions: [
+      { id: 'student:unit:view', label: 'Ver Mis Cursos y Materiales' },
+      { id: 'student:grades:view', label: 'Consultar Mis Calificaciones' },
+      { id: 'student:payments:manage', label: 'Registrar Mis Vouchers' },
+      { id: 'student:efsrt:view', label: 'Ver Mi Seguimiento de Prácticas' },
+      { id: 'student:jobs:view', label: 'Ver Bolsa de Trabajo' },
+      { id: 'student:jobs:apply', label: 'Postular a Ofertas' },
+      { id: 'graduate:jobs:view', label: 'Bolsa Laboral para Egresados' },
+    ],
+  },
+  {
+    category: 'Rol Empresa',
+    description: 'Acceso para socios reclutadores.',
+    permissions: [
+      { id: 'company:jobs:manage', label: 'Publicar Vacantes' },
+      { id: 'company:applicants:view', label: 'Ver Perfiles de Postulantes' },
+    ],
+  },
+];
+
 export interface StudentEgresoAudit {
     eligible: boolean;
     pendingUnits: string[];
