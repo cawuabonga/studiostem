@@ -817,6 +817,56 @@ export const deleteMatriculation = async (instituteId: string, studentId: string
     await deleteDoc(ref);
 };
 
+/**
+ * Obtiene los datos consolidados para el reporte de matrícula.
+ */
+export const getMatriculationReportData = async (instituteId: string, programId: string, year: string, semester: number): Promise<MatriculationReportData> => {
+    const [institute, programs, allUnits] = await Promise.all([
+        getInstitute(instituteId),
+        getPrograms(instituteId),
+        getUnits(instituteId)
+    ]);
+    
+    if (!institute) throw new Error("Institute not found");
+    const program = programs.find(p => p.id === programId);
+    if (!program) throw new Error("Program not found");
+
+    // Filtrar unidades por programa y semestre
+    const semesterUnits = allUnits.filter(u => u.programId === programId && u.semester === semester);
+    
+    const unitsWithStudents = await Promise.all(semesterUnits.map(async (unit) => {
+        const mSnap = await getDocs(query(
+            collection(db, 'institutes', instituteId, 'matriculations'),
+            where("unitId", "==", unit.id),
+            where("year", "==", year)
+        ));
+        
+        const studentIds = mSnap.docs.map(d => d.data().studentId);
+        let students: StudentProfile[] = [];
+        
+        if (studentIds.length > 0) {
+            // Chunking students to handle Firestore "in" limit (30)
+            const studentCol = collection(db, 'institutes', instituteId, 'studentProfiles');
+            for (let i = 0; i < studentIds.length; i += 30) {
+                const chunk = studentIds.slice(i, i + 30);
+                const sSnap = await getDocs(query(studentCol, where("documentId", "in", chunk)));
+                students = [...students, ...sSnap.docs.map(d => ({ id: d.id, ...d.data() } as StudentProfile))];
+            }
+        }
+
+        return {
+            unit,
+            students: students.sort((a,b) => a.lastName.localeCompare(b.lastName, 'es'))
+        };
+    }));
+
+    return {
+        institute,
+        program,
+        units: unitsWithStudents
+    };
+};
+
 export const getEnrolledStudentProfiles = async (instituteId: string, unitId: string, year: string, period: UnitPeriod): Promise<StudentProfile[]> => {
     const mSnap = await getDocs(query(getSubCollectionRef(instituteId, 'matriculations'), where("unitId", "==", unitId), where("year", "==", year), where("period", "==", period)));
     if (mSnap.empty) return [];
