@@ -132,7 +132,12 @@ export default function AdminEFSRTPage() {
 
         return baseAssignments.filter(a => {
             const effectiveStatus = getEffectiveStatus(a);
-            const matchesText = a.studentName.toLowerCase().includes(filterSeg.toLowerCase()) || a.studentId.includes(filterSeg);
+            
+            // Reconstruimos el nombre para búsqueda y visualización uniforme
+            const s = students.find(x => x.documentId === a.studentId);
+            const displayName = s ? `${s.lastName}, ${s.firstName}` : a.studentName;
+
+            const matchesText = displayName.toLowerCase().includes(filterSeg.toLowerCase()) || a.studentId.includes(filterSeg);
             if (!matchesText) return false;
             if (moduleFilterSeg !== 'all' && a.moduleId !== moduleFilterSeg) return false;
             if (statusFilterSeg !== 'all' && effectiveStatus !== statusFilterSeg) return false;
@@ -144,7 +149,13 @@ export default function AdminEFSRTPage() {
                 } else return false;
             }
             return true;
-        }).sort((a, b) => a.studentName.localeCompare(b.studentName, 'es'));
+        }).sort((a, b) => {
+            const sA = students.find(x => x.documentId === a.studentId);
+            const sB = students.find(x => x.documentId === b.studentId);
+            const nameA = sA ? `${sA.lastName}, ${sA.firstName}` : a.studentName;
+            const nameB = sB ? `${sB.lastName}, ${sB.firstName}` : b.studentName;
+            return nameA.localeCompare(nameB, 'es');
+        });
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
     const studentsToProgram = useMemo(() => {
@@ -157,7 +168,8 @@ export default function AdminEFSRTPage() {
             : students.filter(s => s.programId === userProgramId);
 
         return myProgramStudents.filter(student => {
-            const matchesText = student.fullName.toLowerCase().includes(filterProg.toLowerCase()) || student.documentId.includes(filterProg);
+            const displayName = `${student.lastName}, ${student.firstName}`;
+            const matchesText = displayName.toLowerCase().includes(filterProg.toLowerCase()) || student.documentId.includes(filterProg);
             if (!matchesText) return false;
             if (semesterFilterProg !== 'all') {
                 const actualSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
@@ -450,11 +462,13 @@ export default function AdminEFSRTPage() {
                                     <TableBody>
                                         {filteredAssignments.length > 0 ? filteredAssignments.map((a, index) => {
                                             const status = getEffectiveStatus(a);
+                                            const s = students.find(x => x.documentId === a.studentId);
+                                            const displayName = s ? `${s.lastName}, ${s.firstName}` : a.studentName;
                                             return (
                                                 <TableRow key={a.id}>
                                                     <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
                                                     <TableCell className="font-bold">
-                                                        {a.studentName}
+                                                        {displayName}
                                                         <p className="text-[10px] font-mono text-muted-foreground">{a.studentId}</p>
                                                     </TableCell>
                                                     <TableCell className="text-[10px] leading-tight max-w-[200px]">{a.moduleName}</TableCell>
@@ -539,7 +553,7 @@ export default function AdminEFSRTPage() {
                                             <TableRow key={student.documentId}>
                                                 <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
                                                 <TableCell className="font-mono text-xs">{student.documentId}</TableCell>
-                                                <TableCell className="font-bold uppercase">{student.fullName}</TableCell>
+                                                <TableCell className="font-bold uppercase">{student.lastName}, {student.firstName}</TableCell>
                                                 <TableCell className="text-xs">
                                                     Semestre {student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}
                                                 </TableCell>
@@ -601,18 +615,22 @@ export default function AdminEFSRTPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredAssignments.map((a, idx) => (
-                            <tr key={a.id}>
-                                <td style={{ textAlign: 'center' }}>{idx + 1}</td>
-                                <td>
-                                    <p style={{ margin: 0, fontWeight: 'bold' }}>{a.studentName.toUpperCase()}</p>
-                                    <p style={{ margin: 0, fontSize: '7pt', color: '#555' }}>DNI: {a.studentId}</p>
-                                </td>
-                                <td>{a.location.toUpperCase()}</td>
-                                <td>{a.supervisorName.toUpperCase()}</td>
-                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{getEffectiveStatus(a).toUpperCase()}</td>
-                            </tr>
-                        ))}
+                        {filteredAssignments.map((a, idx) => {
+                            const s = students.find(x => x.documentId === a.studentId);
+                            const displayName = s ? `${s.lastName}, ${s.firstName}` : a.studentName;
+                            return (
+                                <tr key={a.id}>
+                                    <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                                    <td>
+                                        <p style={{ margin: 0, fontWeight: 'bold' }}>{displayName.toUpperCase()}</p>
+                                        <p style={{ margin: 0, fontSize: '7pt', color: '#555' }}>DNI: {a.studentId}</p>
+                                    </td>
+                                    <td>{a.location.toUpperCase()}</td>
+                                    <td>{a.supervisorName.toUpperCase()}</td>
+                                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{getEffectiveStatus(a).toUpperCase()}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
 
