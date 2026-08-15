@@ -139,12 +139,12 @@ export default function AdminEFSRTPage() {
             if (semesterFilterSeg !== 'all') {
                 const student = students.find(s => s.documentId === a.studentId);
                 if (student) {
-                    const currentSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
-                    if (currentSem !== parseInt(semesterFilterSeg)) return false;
+                    const actualSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
+                    if (actualSem !== parseInt(semesterFilterSeg)) return false;
                 } else return false;
             }
             return true;
-        }).sort((a, b) => a.studentName.localeCompare(b.studentName));
+        }).sort((a, b) => a.studentName.localeCompare(b.studentName, 'es'));
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
     const studentsToProgram = useMemo(() => {
@@ -160,8 +160,8 @@ export default function AdminEFSRTPage() {
             const matchesText = student.fullName.toLowerCase().includes(filterProg.toLowerCase()) || student.documentId.includes(filterProg);
             if (!matchesText) return false;
             if (semesterFilterProg !== 'all') {
-                const currentSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
-                if (currentSem !== parseInt(semesterFilterProg)) return false;
+                const actualSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
+                if (actualSem !== parseInt(semesterFilterProg)) return false;
             }
             if (moduleFilterProg !== 'all') {
                 const alreadyAssigned = allAssignments.some(a => 
@@ -170,7 +170,7 @@ export default function AdminEFSRTPage() {
                 if (alreadyAssigned) return false;
             }
             return true;
-        }).sort((a, b) => a.lastName.localeCompare(b.lastName));
+        }).sort((a, b) => a.lastName.localeCompare(b.lastName, 'es'));
     }, [students, allAssignments, isFullAdmin, userProgramId, filterProg, semesterFilterProg, moduleFilterProg]);
 
     const handlePrintGeneralReport = () => {
@@ -529,7 +529,7 @@ export default function AdminEFSRTPage() {
                                         <TableRow>
                                             <TableHead className="w-[50px]">N°</TableHead>
                                             <TableHead>DNI</TableHead>
-                                            <TableHead>Nombre Completo</TableHead>
+                                            <TableHead>Estudiante (Apellidos y Nombres)</TableHead>
                                             <TableHead>Semestre Actual</TableHead>
                                             <TableHead className="text-right">Acción</TableHead>
                                         </TableRow>
@@ -539,7 +539,7 @@ export default function AdminEFSRTPage() {
                                             <TableRow key={student.documentId}>
                                                 <TableCell className="text-center font-bold text-muted-foreground">{index + 1}</TableCell>
                                                 <TableCell className="font-mono text-xs">{student.documentId}</TableCell>
-                                                <TableCell className="font-medium">{student.fullName}</TableCell>
+                                                <TableCell className="font-bold uppercase">{student.fullName}</TableCell>
                                                 <TableCell className="text-xs">
                                                     Semestre {student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}
                                                 </TableCell>

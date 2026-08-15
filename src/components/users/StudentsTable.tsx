@@ -21,7 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '../ui/label';
 import { ScrollArea } from '../ui/scroll-area';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '../ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface StudentsTableProps {
     instituteId: string;
@@ -136,7 +136,8 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
             p.documentId.includes(textFilter)
         );
     }
-    return profiles.sort((a, b) => a.lastName.localeCompare(b.lastName));
+    // ORDEN ALFABÉTICO POR APELLIDOS
+    return profiles.sort((a, b) => a.lastName.localeCompare(b.lastName, 'es'));
   }, [allProfiles, textFilter, programFilter, semesterFilter, turnoFilter]);
   
   const paginatedProfiles = useMemo(() => {
@@ -320,7 +321,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
               </TableHead>
               <TableHead className="w-[40px] text-center">N°</TableHead>
               <TableHead>DNI</TableHead>
-              <TableHead>Estudiante</TableHead>
+              <TableHead>Estudiante (Apellidos y Nombres)</TableHead>
               <TableHead>Ciclo Actual</TableHead>
               <TableHead>Turno</TableHead>
               <TableHead>Estado</TableHead>
@@ -338,7 +339,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                   <TableCell>
                     <div className="flex items-center gap-3">
                         <Image src={p.photoURL || `https://placehold.co/40x40.png?text=${p.fullName[0]}`} alt="" width={32} height={32} className="rounded-full object-cover" />
-                        <span className="font-medium">{p.fullName}</span>
+                        <span className="font-bold uppercase text-sm">{p.lastName}, {p.firstName}</span>
                     </div>
                   </TableCell>
                   <TableCell><Badge variant="outline">{actualSem}° Semestre</Badge></TableCell>
