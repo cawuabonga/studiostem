@@ -356,7 +356,7 @@ export function StudentsTable({ instituteId, onDataChange, isMatriculaMode = fal
                             </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" title="Eliminar">
+                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/10" title="Eliminar">
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </AlertDialogTrigger>

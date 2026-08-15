@@ -139,12 +139,12 @@ export default function AdminEFSRTPage() {
             if (semesterFilterSeg !== 'all') {
                 const student = students.find(s => s.documentId === a.studentId);
                 if (student) {
-                    const currentSem = calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
+                    const currentSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
                     if (currentSem !== parseInt(semesterFilterSeg)) return false;
                 } else return false;
             }
             return true;
-        });
+        }).sort((a, b) => a.studentName.localeCompare(b.studentName));
     }, [allAssignments, isFullAdmin, userProgramId, filterSeg, moduleFilterSeg, statusFilterSeg, semesterFilterSeg, students]);
 
     const studentsToProgram = useMemo(() => {
@@ -160,7 +160,7 @@ export default function AdminEFSRTPage() {
             const matchesText = student.fullName.toLowerCase().includes(filterProg.toLowerCase()) || student.documentId.includes(filterProg);
             if (!matchesText) return false;
             if (semesterFilterProg !== 'all') {
-                const currentSem = calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
+                const currentSem = student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod);
                 if (currentSem !== parseInt(semesterFilterProg)) return false;
             }
             if (moduleFilterProg !== 'all') {
@@ -170,7 +170,7 @@ export default function AdminEFSRTPage() {
                 if (alreadyAssigned) return false;
             }
             return true;
-        });
+        }).sort((a, b) => a.lastName.localeCompare(b.lastName));
     }, [students, allAssignments, isFullAdmin, userProgramId, filterProg, semesterFilterProg, moduleFilterProg]);
 
     const handlePrintGeneralReport = () => {
@@ -297,7 +297,7 @@ export default function AdminEFSRTPage() {
 
     const handleSave = async () => {
         if (!instituteId || !selectedStudent || !formData.moduleId || !formData.supervisorId || !formData.startDate || !formData.endDate) {
-            toast({ title: "Datos incompletos", description: "Por favor complete todos los campos.", variant: "destructive" });
+            toast({ title: "Atención", description: "Por favor complete todos los campos.", variant: "destructive" });
             return;
         }
         
@@ -309,7 +309,7 @@ export default function AdminEFSRTPage() {
 
             const data = {
                 studentId: selectedStudent.documentId,
-                studentName: selectedStudent.fullName,
+                studentName: `${selectedStudent.lastName}, ${selectedStudent.firstName}`,
                 programId: selectedStudent.programId,
                 moduleId: formData.moduleId,
                 moduleName: module?.name || 'Módulo desconocido',
@@ -541,7 +541,7 @@ export default function AdminEFSRTPage() {
                                                 <TableCell className="font-mono text-xs">{student.documentId}</TableCell>
                                                 <TableCell className="font-medium">{student.fullName}</TableCell>
                                                 <TableCell className="text-xs">
-                                                    Semestre {calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}
+                                                    Semestre {student.currentSemester || calculateCurrentSemester(student.admissionYear, student.admissionPeriod)}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <Button size="sm" onClick={() => handleOpenProgram(student)}>

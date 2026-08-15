@@ -497,7 +497,7 @@ export const deleteStaffProfile = async (instituteId: string, documentId: string
 export const addStudentProfile = async (instituteId: string, data: Omit<StudentProfile, 'fullName' | 'linkedUserUid' | 'id'>) => {
     const profileRef = doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId);
     if ((await getDoc(profileRef)).exists()) throw new Error(`Documento ${data.documentId} ya existe.`);
-    await setDoc(profileRef, { ...data, instituteId, fullName: `${data.firstName} ${data.lastName}`, linkedUserUid: null, academicStatus: 'Cursando' });
+    await setDoc(profileRef, { ...data, instituteId, fullName: `${data.lastName}, ${data.firstName}`, linkedUserUid: null, academicStatus: 'Cursando' });
 };
 
 export const getStudentProfiles = async (instituteId: string): Promise<StudentProfile[]> => {
@@ -530,7 +530,7 @@ export const getStudentProfile = async (instituteId: string, studentId: string):
 
 export const updateStudentProfile = async (instituteId: string, documentId: string, data: Partial<Omit<StudentProfile, 'id' | 'documentId' | 'photoURL'>>) => {
     const updateData: any = { ...data };
-    if (data.firstName && data.lastName) updateData.fullName = `${data.firstName} ${data.lastName}`;
+    if (data.firstName && data.lastName) updateData.fullName = `${data.lastName}, ${data.firstName}`;
     await updateDoc(doc(db, 'institutes', instituteId, 'studentProfiles', documentId), updateData);
 }
 
@@ -546,13 +546,13 @@ export const bulkDeleteStudents = async (instituteId: string, documentIds: strin
 
 export const bulkAddStudents = async (instituteId: string, list: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
-    list.forEach(data => { batch.set(doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId), { ...data, instituteId, fullName: `${data.firstName} ${data.lastName}`, linkedUserUid: null, academicStatus: 'Cursando' }); });
+    list.forEach(data => { batch.set(doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId), { ...data, instituteId, fullName: `${data.lastName}, ${data.firstName}`, linkedUserUid: null, academicStatus: 'Cursando' }); });
     await batch.commit();
 };
 
 export const bulkAddGraduates = async (instituteId: string, list: Omit<StudentProfile, 'id' | 'fullName'| 'linkedUserUid'>[]) => {
     const batch = writeBatch(db);
-    list.forEach(data => { batch.set(doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId), { ...data, instituteId, fullName: `${data.firstName} ${data.lastName}`, linkedUserUid: null, academicStatus: 'Egresado', role: 'Graduate', roleId: 'graduate' }); });
+    list.forEach(data => { batch.set(doc(db, 'institutes', instituteId, 'studentProfiles', data.documentId), { ...data, instituteId, fullName: `${data.lastName}, ${data.firstName}`, linkedUserUid: null, academicStatus: 'Egresado', role: 'Graduate', roleId: 'graduate' }); });
     await batch.commit();
 };
 
@@ -587,7 +587,7 @@ export const linkUserToProfile = async (uid: string, documentId: string, email: 
     if (!foundProfile) throw new Error("No matching profile found.");
     if (foundProfile.linkedUserUid) throw new Error("Profile already linked.");
     
-    const userUpdate: any = { documentId: searchDocId, instituteId: foundInstituteId, displayName: foundProfile.displayName || foundProfile.name || `${foundProfile.firstName} ${foundProfile.lastName}`, role: foundProfile.role || 'Student', roleId: foundProfile.roleId || 'student' };
+    const userUpdate: any = { documentId: searchDocId, instituteId: foundInstituteId, displayName: foundProfile.displayName || foundProfile.name || `${foundProfile.lastName}, ${foundProfile.firstName}`, role: foundProfile.role || 'Student', roleId: foundProfile.roleId || 'student' };
     if (foundProfile.programId) userUpdate.programId = foundProfile.programId;
     if (foundProfile.photoURL || foundProfile.logoUrl) userUpdate.photoURL = foundProfile.photoURL || foundProfile.logoUrl;
 
