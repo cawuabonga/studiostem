@@ -86,14 +86,19 @@ export default function StudentUnitDetailPage() {
     if (!unit) {
         return <p className="text-center">Unidad no encontrada.</p>;
     }
+
+    // LÓGICA ROBUSTA DE ROLES: Verifica roleId o role (insensible a mayúsculas)
+    const isStudent = 
+        user?.roleId === 'student' || 
+        user?.roleId === 'graduate' || 
+        user?.role?.toLowerCase() === 'student' || 
+        user?.role?.toLowerCase() === 'graduate';
     
     const renderContent = () => {
         if (activeView === 'menu') {
             return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {moduleConfig.map((module) => {
-                        const isStudent = user?.role === 'Student';
-                        
                         // Si el usuario es estudiante, ocultar módulos administrativos
                         if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades')) {
                             return null;
@@ -108,7 +113,7 @@ export default function StudentUnitDetailPage() {
                             <Card 
                                 key={module.id} 
                                 onClick={() => setActiveView(module.id as ActiveView)}
-                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card"
+                                className="flex flex-col cursor-pointer hover:border-primary transition-all shadow-sm hover:shadow-md bg-card border-t-4 border-t-transparent hover:border-t-primary"
                             >
                                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                                     <CardTitle className="text-lg font-bold">{module.title}</CardTitle>
@@ -128,7 +133,7 @@ export default function StudentUnitDetailPage() {
         if (!selectedModule) return null;
 
         const Component = selectedModule.component;
-        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit };
+        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: isStudent } : { unit };
 
         return (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">

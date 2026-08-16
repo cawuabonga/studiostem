@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, Suspense } from 'react';
@@ -91,14 +92,19 @@ function UnitManagementContent() {
     if (!unit) {
         return <p className="text-center">Unidad no encontrada.</p>;
     }
+
+    // LÓGICA ROBUSTA DE ROLES: Verifica roleId o role (insensible a mayúsculas)
+    const isStudent = 
+        user?.roleId === 'student' || 
+        user?.roleId === 'graduate' || 
+        user?.role?.toLowerCase() === 'student' || 
+        user?.role?.toLowerCase() === 'graduate';
     
     const renderContent = () => {
         if (activeView === 'menu') {
             return (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {moduleConfig.map((module) => {
-                        const isStudent = user?.role === 'Student';
-                        
                         if (isStudent && (module.id === 'syllabus' || module.id === 'indicators' || module.id === 'attendance' || module.id === 'grades' || module.id === 'abp-teams')) {
                             return null;
                         }
@@ -131,7 +137,7 @@ function UnitManagementContent() {
         if (!selectedModule) return null;
 
         const Component = selectedModule.component;
-        const componentProps = selectedModule.id === 'planning' ? { unit, isStudentView: user?.role === 'Student' } : { unit, year };
+        const componentProps = selectedModule.id === 'planning' ? { unit, year, isStudentView: isStudent } : { unit, year };
 
         return (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">

@@ -28,21 +28,16 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
 
     if (!user) return null;
 
-    // Ajuste de validación para soportar roles en inglés y español
+    // LÓGICA DE ROLES ROBUSTA: Verifica por roleId que es más estable
     const isTeacher = 
-        user.role === 'Teacher' || 
-        user.role === 'Docente' || 
-        user.role === 'Coordinator' || 
-        user.role === 'Coordinador' || 
-        user.role === 'Admin' || 
-        user.role === 'Administrador' || 
-        user.role === 'SuperAdmin';
+        user.roleId === 'teacher' || 
+        user.roleId === 'coordinator' || 
+        user.roleId === 'admin' ||
+        ['Teacher', 'Coordinator', 'Admin', 'SuperAdmin'].includes(user.role || '');
     
-    // Identificadores de 8x8 JaaS del usuario
     const APP_ID = "vpaas-magic-cookie-c7c6b1a32df24878a851d88c8e4de4e9";
     const roomName = `STEM_V2_AULA_${unit.id.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-    // Escuchar cambios en tiempo real del estado del aula
     useEffect(() => {
         if (!instituteId || !unit.id) return;
 
@@ -91,7 +86,6 @@ export function VirtualClassroom({ unit }: VirtualClassroomProps) {
                 </CardHeader>
                 <CardContent className="flex flex-col items-center space-y-8 pb-12">
                     
-                    {/* Panel de Control para el Docente */}
                     {isTeacher && (
                         <div className="w-full max-w-md p-6 bg-background rounded-xl border-2 border-primary/10 shadow-sm space-y-4">
                             <div className="flex items-center justify-between">
