@@ -903,11 +903,31 @@ export const batchUpdateAcademicRecords = async (instituteId: string, records: A
         const batch = writeBatch(db);
         for (const record of chunk) {
             const recordRef = getAcademicRecordRef(instituteId, record.studentId, record.year, record.unitId);
-            batch.set(recordRef, record, { merge: true });
+            batch.set(recordRef, { ...record, instituteId }, { merge: true });
         }
         await batch.commit();
     }
 }
+
+/**
+ * Guarda las asistencias de toda la clase actualizando el registro individual de cada estudiante.
+ */
+export const saveAttendance = async (instituteId: string, data: AttendanceRecord) => {
+    const batch = writeBatch(db);
+    for (const studentId in data.records) {
+        const recordRef = getAcademicRecordRef(instituteId, studentId, data.year, data.unitId);
+        // Usar set con merge: true es vital para estudiantes nuevos que no tienen el documento creado
+        batch.set(recordRef, { 
+            attendance: data.records[studentId],
+            studentId,
+            unitId: data.unitId,
+            year: data.year,
+            period: data.period,
+            instituteId // Requerido para que la consulta collectionGroup funcione
+        }, { merge: true });
+    }
+    await batch.commit();
+};
 
 /**
  * Obtiene la asistencia de toda una unidad recolectando los datos de cada estudiante.
@@ -930,18 +950,6 @@ export const getAttendanceForUnit = async (instituteId: string, unitId: string, 
         period,
         records: attendanceMap
     };
-};
-
-/**
- * Guarda las asistencias de toda la clase actualizando el registro individual de cada estudiante.
- */
-export const saveAttendance = async (instituteId: string, data: AttendanceRecord) => {
-    const batch = writeBatch(db);
-    for (const studentId in data.records) {
-        const recordRef = getAcademicRecordRef(instituteId, studentId, data.year, data.unitId);
-        batch.update(recordRef, { attendance: data.records[studentId] });
-    }
-    await batch.commit();
 };
 
 export const getScheduledDaysForUnit = async (instituteId: string, unitId: string, year: string, semester: number): Promise<string[]> => {
@@ -1121,7 +1129,8 @@ export const closeUnitGrades = async (instituteId: string, unitId: string, year:
         const batch = writeBatch(db);
         chunk.forEach(r => {
             const recordRef = getAcademicRecordRef(instituteId, r.studentId, year, unitId);
-            batch.update(recordRef, { finalGrade: r.finalGrade, status: r.status });
+            // Usar set con merge para robustez
+            batch.set(recordRef, { finalGrade: r.finalGrade, status: r.status }, { merge: true });
             (mIdsByStudent.get(r.studentId) || []).forEach(mId => batch.update(doc(col, mId), { status: r.status }));
         });
         await batch.commit();
@@ -1591,3 +1600,4 @@ export const promoteToEgresado = async (instituteId: string, studentId: string, 
         });
     }
 };
+
